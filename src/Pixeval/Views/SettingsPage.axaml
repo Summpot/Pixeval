@@ -1,0 +1,29 @@
+<UserControl
+    x:Class="Pixeval.Views.SettingsPage"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:markup="using:FluentIcons.Avalonia.Markup"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    mc:Ignorable="d">
+    <ScrollViewer>
+        <StackPanel x:Name="StackPanel">
+            <controls:SettingsCard
+                ActionIcon="{markup:SymbolIcon ClockAlarm}"
+                Click="SettingsCard_OnClick"
+                Description="123"
+                Header="123"
+                HeaderIcon="{markup:SymbolIcon ClockAlarm}"
+                IsClickEnabled="True" />
+            <StackPanel.Styles>
+                <Style Selector="TextBlock.SettingHeader">
+                    <Setter Property="Theme" Value="{StaticResource BodyStrongTextBlockStyle}" />
+                    <Setter Property="Margin" Value="1,28,0,4" />
+                </Style>
+            </StackPanel.Styles>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

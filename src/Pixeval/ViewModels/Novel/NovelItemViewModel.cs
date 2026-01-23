@@ -1,0 +1,20 @@
+// Copyright (c) Pixeval.
+// Licensed under the GPL v3 License.
+
+using System.Threading.Tasks;
+using Mako.Model;
+using Pixeval.Controls;
+
+namespace Pixeval.ViewModels;
+
+public partial class NovelItemViewModel(Novel novel) : WorkEntryViewModel<Novel>(novel), IFactory<Novel, NovelItemViewModel>
+{
+    /// <inheritdoc />
+    public override bool IsBookmarkSupported => true;
+
+    public static NovelItemViewModel CreateInstance(Novel entry) => new(entry);
+
+    public int TextLength => Entry.TextLength;
+
+    public Task<NovelContent> ContentAsync { get; } = App.AppViewModel.MakoClient.GetNovelContentAsync(novel.Id);
+}

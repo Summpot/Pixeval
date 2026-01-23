@@ -1,0 +1,76 @@
+<local:ViewContainerBase
+    x:Class="Pixeval.Views.ViewContainers.TabViewContainer"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:animatedImage="using:Avalonia.AnimatedImage"
+    xmlns:controls="using:Tabalonia.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:fluent="using:FluentIcons.Avalonia"
+    xmlns:local="using:Pixeval.Views.ViewContainers"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:utilities="using:Pixeval.Utilities"
+    xmlns:viewModels="using:Pixeval.ViewModels"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    x:DataType="{x:Type viewModels:TabViewContainerViewModel}"
+    mc:Ignorable="d">
+    <local:ViewContainerBase.DataContext>
+        <viewModels:TabViewContainerViewModel />
+    </local:ViewContainerBase.DataContext>
+    <controls:TabsControl x:Name="TabsControl" LeftHeaderContentDraggable="True">
+        <controls:TabsControl.LeftHeaderContent>
+            <Image
+                Width="20"
+                Height="20"
+                Margin="16,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Source="{SvgImage avares://Pixeval/Assets/logo.svg}" />
+        </controls:TabsControl.LeftHeaderContent>
+        <controls:TabsControl.RightHeaderContent>
+            <Button
+                MaxWidth="32"
+                MaxHeight="32"
+                Padding="1"
+                Background="Transparent"
+                CornerRadius="100">
+                <Border ClipToBounds="True" CornerRadius="100">
+                    <animatedImage:AnimatedImage Source="{Binding Avatar}" />
+                </Border>
+            </Button>
+        </controls:TabsControl.RightHeaderContent>
+        <controls:TabsControl.LeftContent>
+            <DockPanel
+                Margin="5"
+                HorizontalAlignment="Stretch"
+                VerticalSpacing="5">
+                <DockPanel.DataTemplates>
+                    <DataTemplate x:DataType="{x:Type utilities:NavigationInfo}">
+                        <Button
+                            HorizontalAlignment="Stretch"
+                            Background="Transparent"
+                            Click="NavigationButton_OnClick"
+                            Tag="{Binding PageType}">
+                            <Grid RowDefinitions="Auto,Auto" RowSpacing="5">
+                                <fluent:SymbolIcon
+                                    HorizontalAlignment="Center"
+                                    IconVariant="Color"
+                                    Symbol="{Binding Icon}" />
+                                <TextBlock
+                                    Grid.Row="1"
+                                    HorizontalAlignment="Center"
+                                    FontSize="10"
+                                    Text="{Binding Header}" />
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </DockPanel.DataTemplates>
+                <ItemsControl
+                    HorizontalAlignment="Stretch"
+                    DockPanel.Dock="Bottom"
+                    ItemsSource="{x:Static utilities:AvaloniaHelper.FooterItems}" />
+                <ItemsControl HorizontalAlignment="Stretch" ItemsSource="{x:Static utilities:AvaloniaHelper.HeaderItems}" />
+            </DockPanel>
+        </controls:TabsControl.LeftContent>
+    </controls:TabsControl>
+</local:ViewContainerBase>
