@@ -1,0 +1,140 @@
+<UserControl
+    x:Class="Pixeval.Views.Capability.WorkDetailsPage"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mark="using:FluentIcons.Avalonia.Markup"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:Pixeval.ViewModels.WorkDetails"
+    d:DesignHeight="720"
+    d:DesignWidth="960"
+    x:DataType="vm:WorkDetailsViewModel"
+    mc:Ignorable="d">
+    <Grid RowDefinitions="Auto,*" RowSpacing="8">
+        <Border
+            Padding="12"
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            CornerRadius="10">
+            <DockPanel LastChildFill="False">
+                <Button
+                    Margin="0,0,8,0"
+                    Click="CopyAppLinkButton_OnClick"
+                    DockPanel.Dock="Right">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <mark:SymbolIcon Symbol="Link" />
+                        <TextBlock Text="复制 App 链接" />
+                    </StackPanel>
+                </Button>
+                <Button Click="OpenInBrowserButton_OnClick" DockPanel.Dock="Right">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <mark:SymbolIcon Symbol="GlobeArrowUp" />
+                        <TextBlock Text="在浏览器中打开" />
+                    </StackPanel>
+                </Button>
+                <StackPanel>
+                    <TextBlock FontSize="24" FontWeight="Bold" Text="{Binding Title}" TextWrapping="Wrap" />
+                    <TextBlock Margin="0,4,0,0" Foreground="Gray" Text="{Binding KindText}" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Margin="0,0,0,16" Spacing="10">
+                <Border
+                    Padding="12"
+                    Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                    CornerRadius="10">
+                    <Grid ColumnDefinitions="280,*" ColumnSpacing="12">
+                        <Border ClipToBounds="True" CornerRadius="8">
+                            <Image Height="320" Source="{Binding CoverUrl}" Stretch="UniformToFill" />
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Spacing="8">
+                            <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
+                            <Separator />
+                            <WrapPanel ItemHeight="30" ItemWidth="220">
+                                <TextBlock Text="{Binding WorkId, StringFormat='ID: {0}'}" />
+                                <TextBlock Text="{Binding Author, StringFormat='作者: {0}'}" />
+                                <TextBlock Text="{Binding CreateDateText, StringFormat='创建时间: {0}'}" />
+                            </WrapPanel>
+                            <TextBlock FontWeight="SemiBold" Text="{Binding StatsText}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border
+                    Padding="12"
+                    Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                    CornerRadius="10">
+                    <StackPanel Spacing="8">
+                        <TextBlock FontWeight="Bold" Text="标签" />
+                        <ItemsControl ItemsSource="{Binding Tags}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel ItemSpacing="6" LineSpacing="6" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Padding="6,2"
+                                        Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                        CornerRadius="999">
+                                        <TextBlock Text="{Binding .}" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Padding="12"
+                    Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                    CornerRadius="10"
+                    IsVisible="{Binding HasGallery}">
+                    <StackPanel Spacing="8">
+                        <TextBlock FontWeight="Bold" Text="相关图片" />
+                        <ItemsControl ItemsSource="{Binding GalleryUrls}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel ItemSpacing="8" LineSpacing="8" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Width="180"
+                                        Height="180"
+                                        ClipToBounds="True"
+                                        CornerRadius="8">
+                                        <Image Source="{Binding .}" Stretch="UniformToFill" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Padding="12"
+                    Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                    CornerRadius="10"
+                    IsVisible="{Binding IsNovel}">
+                    <StackPanel Spacing="8">
+                        <TextBlock FontWeight="Bold" Text="小说正文" />
+                        <SelectableTextBlock FontFamily="Consolas" Text="{Binding NovelText}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Padding="10"
+                    Background="IndianRed"
+                    CornerRadius="10"
+                    IsVisible="{Binding !!ErrorMessage}">
+                    <TextBlock Foreground="White" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

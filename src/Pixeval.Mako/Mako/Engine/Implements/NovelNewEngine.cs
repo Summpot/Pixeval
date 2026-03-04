@@ -1,0 +1,24 @@
+// Copyright (c) Mako.
+// Licensed under the MIT License.
+
+using System.Collections.Generic;
+using System.Threading;
+using Mako.Global.Enum;
+using Mako.Model;
+using Mako.Utilities;
+
+namespace Mako.Engine.Implements;
+
+internal class NovelNewEngine(
+    MakoClient makoClient,
+    uint? maxNovelId,
+    TargetFilter filter,
+    EngineHandle? engineHandle)
+    : AbstractPixivFetchEngine<Novel>(makoClient, engineHandle)
+{
+    public override IAsyncEnumerator<Novel> GetAsyncEnumerator(CancellationToken cancellationToken = default) =>
+        new RecursivePixivAsyncEnumerators.Novel<NovelNewEngine>(this,
+            "/v1/novel/new"
+            + $"?filter={filter.GetDescription()}"
+            + maxNovelId?.Let(static s => $"&max_novel_id={s}"));
+}

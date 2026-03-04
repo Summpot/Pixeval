@@ -6,12 +6,17 @@ using Avalonia.Controls;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using FluentIcons.Avalonia;
+using FluentIcons.Common;
 using Mako.Engine;
 using Mako.Global.Enum;
 using Mako.Model;
 using Misaki;
 using Pixeval.AppManagement;
+using Pixeval.Utilities;
 using Pixeval.ViewModels;
+using Pixeval.ViewModels.WorkDetails;
+using Pixeval.Views.Capability;
 
 namespace Pixeval.Views.Work;
 
@@ -59,7 +64,7 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
                 control.Opacity = 1;
     }
 
-    private async void WorkItem_OnTapped(object? sender, TappedEventArgs tappedEventArgs)
+    private void WorkItem_OnTapped(object? sender, TappedEventArgs tappedEventArgs)
     {
         if (sender is not ListBoxItem { DataContext: IWorkViewModel vm } lbi)
             return;
@@ -72,21 +77,43 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
 
         switch (vm, DataContext)
         {
-            case (NovelItemViewModel { IsBookmarkSupported: false, Entry.Id: var id }, _):
-                var novel = await App.AppViewModel.MakoClient.GetIllustrationFromIdAsync(id);
-                // await this.CreateNovelPageAsync(novel);
+            case (NovelItemViewModel { Entry.Id: var id, Entry.Title: var title }, _):
+                NavigateToWorkDetails(id, WorkDetailsKind.Novel, title);
                 break;
-            case (NovelItemViewModel viewModel, NovelViewViewModel viewViewModel):
-                //this.CreateNovelPage(viewModel, viewViewModel);
-                break;
-            case (IllustrationItemViewModel { IsBookmarkSupported: false, Entry: Illustration { Id: var id } }, _):
-                var illustration = await App.AppViewModel.MakoClient.GetIllustrationFromIdAsync(id);
-                // await this.CreateIllustrationPageAsync(illustration);
-                break;
-            case (IllustrationItemViewModel viewModel, IllustrationViewViewModel viewViewModel):
-                //this.CreateIllustrationPage(viewModel, viewViewModel);
+            case (IllustrationItemViewModel { Entry: Illustration { Id: var id, Title: var title, ImageType: var imageType } }, _):
+                NavigateToWorkDetails(
+                    id,
+                    imageType is ImageType.ImageSet ? WorkDetailsKind.Manga : WorkDetailsKind.Illustration,
+                    title);
                 break;
         }
+    }
+
+    private void NavigateToWorkDetails(long workId, WorkDetailsKind kind, string? title)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        var viewContainer = topLevel?.ViewContainer;
+
+        if (viewContainer is null)
+            return;
+
+        var symbol = kind switch
+        {
+            WorkDetailsKind.Novel => Symbol.BookNumber,
+            WorkDetailsKind.Manga => Symbol.ImageMultiple,
+            _ => Symbol.Image
+        };
+
+        viewContainer.NavigateTo(
+            typeof(WorkDetailsPage),
+            new SymbolIcon
+            {
+                Symbol = symbol,
+                FontSize = 16,
+                IconVariant = IconVariant.Color
+            },
+            string.IsNullOrWhiteSpace(title) ? $"作品 {workId}" : title,
+            new WorkDetailsNavigationParameter(workId, kind));
     }
 
     private void WorkItem_OnDoubleTapped(object? sender, TappedEventArgs e)

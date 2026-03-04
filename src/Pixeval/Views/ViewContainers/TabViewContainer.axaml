@@ -70,11 +70,6 @@
                     HorizontalAlignment="Stretch"
                     DockPanel.Dock="Bottom"
                     ItemsSource="{x:Static utilities:AvaloniaHelper.FooterItems}" />
-                <pixControls:SymbolComboBox
-                    x:Name="GlobalWorkTypeComboBox"
-                    DockPanel.Dock="Bottom"
-                    ItemsSource="{x:Static utilities:WorkTypeExtension.Items}"
-                    SelectionChanged="GlobalWorkTypeComboBox_OnSelectionChanged" />
                 <ItemsControl HorizontalAlignment="Stretch" ItemsSource="{x:Static utilities:AvaloniaHelper.HeaderItems}" />
             </DockPanel>
         </controls:TabsControl.LeftContent>
