@@ -6,8 +6,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using Imouto.BooruParser;
 using Mako;
+using Mako.Global.Enum;
 using Mako.Model;
 using Mako.Net;
 using Microsoft.Extensions.DependencyInjection;
@@ -41,6 +43,12 @@ public class AppViewModel(App app, FileLogger logger) : IDisposable
 
     public LoginContext LoginContext { get; } = AppInfo.LoadLoginContext(logger) ?? new LoginContext();
 
+    public PixivBrowserLoginService BrowserLoginService { get; } = new();
+
+    public WorkType CurrentWorkType { get; private set; }
+
+    public event EventHandler<WorkType>? CurrentWorkTypeChanged;
+
     public long PixivUid => MakoClient.Me!.Id;
 
     public void Initialize()
@@ -50,6 +58,53 @@ public class AppViewModel(App app, FileLogger logger) : IDisposable
             AppSettings.AppFontFamilyName = fontFamily;
         if (AppSettings.NovelFontFamily == null!)
             AppSettings.NovelFontFamily = fontFamily;
+
+        if (AppSettings.WorkType is WorkType.Illustration
+            && AppSettings.SimpleWorkType is SimpleWorkType.Novel)
+            AppSettings.WorkType = WorkType.Novel;
+
+        CurrentWorkType = AppSettings.WorkType;
+    }
+
+    public void SetCurrentWorkType(WorkType workType)
+    {
+        AppSettings.WorkType = workType;
+        AppSettings.SimpleWorkType = workType.ToSimpleWorkType();
+
+        if (CurrentWorkType == workType)
+            return;
+
+        CurrentWorkType = workType;
+        CurrentWorkTypeChanged?.Invoke(this, workType);
+    }
+
+    public Uri CreateBrowserLoginUri()
+    {
+        return BrowserLoginService.CreateLoginUri();
+    }
+
+    public async Task<bool> LoginWithRefreshTokenAsync(string refreshToken)
+    {
+        MakoClient.SetToken(refreshToken);
+        if (!await MakoClient.IdentifyTokenAsync().ConfigureAwait(false))
+            return false;
+
+        LoginContext.CurrentRefreshToken = refreshToken;
+        if (MakoClient.Me is { } user)
+            LoginContext.Users[refreshToken] = user;
+
+        AppInfo.SaveLoginContext(LoginContext);
+        return true;
+    }
+
+    public async Task<bool> LoginWithProtocolCallbackAsync(Uri callbackUri)
+    {
+        var refreshToken = await BrowserLoginService
+            .TryExchangeRefreshTokenAsync(MakoClient, callbackUri)
+            .ConfigureAwait(false);
+
+        return !string.IsNullOrWhiteSpace(refreshToken)
+               && await LoginWithRefreshTokenAsync(refreshToken).ConfigureAwait(false);
     }
 
     public void InitializeProvider()

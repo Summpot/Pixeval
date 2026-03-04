@@ -32,6 +32,7 @@
             Grid.Row="2"
             HorizontalAlignment="Stretch"
             HorizontalContentAlignment="Center"
+            Click="OpenBrowserButton_OnClick"
             Content="Open Browser（VPN needed）" />
         <Button
             Grid.Row="3"

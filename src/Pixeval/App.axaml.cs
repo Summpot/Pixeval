@@ -5,6 +5,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform;
+using Avalonia.Threading;
 using Pixeval.AppManagement;
 using Pixeval.I18N;
 using Pixeval.Utilities;
@@ -21,6 +23,8 @@ public class App : Application
     /// 确保随时能记录日志
     /// </summary>
     private FileLogger Logger { get; } = new(AppInfo.LogsFolder);
+
+    private ViewContainerBase? RootViewContainer { get; set; }
 
     public override void Initialize()
     {
@@ -74,6 +78,9 @@ public class App : Application
                 break;
         }
 
+        RootViewContainer = viewContainer;
+        RegisterProtocolActivationHandler();
+
         if (viewContainer is not null)
         {
             _ = LoginAsync(viewContainer);
@@ -89,14 +96,44 @@ public class App : Application
         if (!string.IsNullOrWhiteSpace(token)
             && loginContext.Users.ContainsKey(token))
         {
-            AppViewModel.MakoClient.SetToken(token);
-            if (await AppViewModel.MakoClient.IdentifyTokenAsync())
+            if (await AppViewModel.LoginWithRefreshTokenAsync(token))
             {
                 viewContainer.NavigateTo<RecommendWorksPage>();
                 return;
             }
         }
         viewContainer.NavigateTo<LoginPage>();
+    }
+
+    private void RegisterProtocolActivationHandler()
+    {
+        ProtocolActivationHub.UriActivated += ProtocolActivationHubOnUriActivated;
+
+        if (this.TryGetFeature<IActivatableLifetime>() is { } activatableLifetime)
+        {
+            activatableLifetime.Activated += (_, args) =>
+            {
+                if (args is ProtocolActivatedEventArgs protocolActivatedEventArgs)
+                    ProtocolActivationHub.Publish(protocolActivatedEventArgs.Uri);
+            };
+        }
+
+        foreach (var uri in ProtocolActivationHub.DrainPendingUris())
+            ProtocolActivationHubOnUriActivated(null, uri);
+    }
+
+    private void ProtocolActivationHubOnUriActivated(object? sender, Uri uri)
+    {
+        Dispatcher.UIThread.Post(async () => await HandleProtocolActivationAsync(uri));
+    }
+
+    private async Task HandleProtocolActivationAsync(Uri uri)
+    {
+        if (!AppViewModel.BrowserLoginService.IsPixivCallbackUri(uri))
+            return;
+
+        if (await AppViewModel.LoginWithProtocolCallbackAsync(uri))
+            RootViewContainer?.NavigateTo<RecommendWorksPage>(true);
     }
 
     /// <summary>

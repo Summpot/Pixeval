@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Mako.Global.Enum;
 using Mako.Model;
+using Pixeval.AppManagement;
 using Pixeval.Controls;
 using Pixeval.Utilities;
 using Frame = FluentAvalonia.UI.Controls.Frame;
@@ -14,6 +16,7 @@ public partial class BookmarksPage : UserControl
 {
     private long _userId;
     private bool _suppressChangeSource;
+    private bool _suppressModeSelectionChanged;
 
     public static IReadOnlyList<BookmarkTag> DefaultTags { get; }= [AllBookmarkTag.Instance];
 
@@ -29,13 +32,26 @@ public partial class BookmarksPage : UserControl
                 PrivacyPolicyComboBox.IsEnabled =  PrivacyPolicyComboBox.IsVisible = false;
 
             _userId = uid;
+            SyncFromCurrentWorkType();
             FetchTags();
             ChangeSource();
         });
+
+        AttachedToVisualTree += (_, _) => App.AppViewModel.CurrentWorkTypeChanged += AppViewModelOnCurrentWorkTypeChanged;
+        DetachedFromVisualTree += (_, _) => App.AppViewModel.CurrentWorkTypeChanged -= AppViewModelOnCurrentWorkTypeChanged;
     }
 
     private void WorkTypeComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
     {
+        if (sender == SimpleWorkTypeComboBox)
+        {
+            var selected = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
+            App.AppViewModel.SetCurrentWorkType(selected.ToWorkType(App.AppViewModel.CurrentWorkType));
+
+            if (_suppressModeSelectionChanged)
+                return;
+        }
+
         FetchTags();
         ChangeSource();
     }
@@ -74,5 +90,22 @@ public partial class BookmarksPage : UserControl
             SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>(),
             PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>(),
             tag));
+    }
+
+    private void AppViewModelOnCurrentWorkTypeChanged(object? sender, WorkType workType)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            SyncFromCurrentWorkType();
+            FetchTags();
+            ChangeSource();
+        });
+    }
+
+    private void SyncFromCurrentWorkType()
+    {
+        _suppressModeSelectionChanged = true;
+        SimpleWorkTypeComboBox.SelectedIndex = (int) App.AppViewModel.CurrentWorkType.ToSimpleWorkType();
+        _suppressModeSelectionChanged = false;
     }
 }

@@ -83,6 +83,8 @@ public record AppSettings
     [SettingsEntry(Symbol.Grid, SimpleWorkTypeEntryHeader, SimpleWorkTypeEntryDescription)]
     public SimpleWorkType SimpleWorkType { get; set; }
 
+    public WorkType WorkType { get; set; } = WorkType.Illustration;
+
     [SettingsEntry(Symbol.ArrowTrending, RankOptionEntryHeader, RankOptionEntryDescription)]
     public RankOption IllustrationRankOption { get; set; }
 
@@ -249,8 +251,6 @@ public record AppSettings
     public double WindowHeight { get; set; } = 600;
 
     public bool IsMaximized { get; set; }
-
-    public WorkType WorkType => SimpleWorkType is SimpleWorkType.IllustrationAndManga ? WorkType.Illustration : WorkType.Novel;
 
     public ApplicationTheme ActualTheme => Theme is ApplicationTheme.Default
         ? Application.Current!.ActualThemeVariant == ThemeVariant.Dark ? ApplicationTheme.Dark : ApplicationTheme.Light

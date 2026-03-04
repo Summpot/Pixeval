@@ -1,6 +1,7 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Mako;
 using Mako.Engine;
 using Mako.Global.Enum;
@@ -12,14 +13,30 @@ namespace Pixeval.Views.Capability;
 
 public abstract partial class WorkTypeWorksPage : UserControl
 {
+    private bool _suppressSelectionChanged;
+
     public WorkTypeWorksPage()
     {
         InitializeComponent();
-        AddHandler(Frame.NavigatedToEvent, (sender, e) => ChangeSource());
+
+        AddHandler(Frame.NavigatedToEvent, (sender, e) =>
+        {
+            SyncFromCurrentWorkType();
+            ChangeSource();
+        });
+
+        AttachedToVisualTree += (_, _) => App.AppViewModel.CurrentWorkTypeChanged += AppViewModelOnCurrentWorkTypeChanged;
+        DetachedFromVisualTree += (_, _) => App.AppViewModel.CurrentWorkTypeChanged -= AppViewModelOnCurrentWorkTypeChanged;
     }
 
     private void WorkTypeComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
     {
+        if (sender.SelectedValue is WorkType workType)
+            App.AppViewModel.SetCurrentWorkType(workType);
+
+        if (_suppressSelectionChanged)
+            return;
+
         ChangeSource();
     }
 
@@ -31,6 +48,24 @@ public abstract partial class WorkTypeWorksPage : UserControl
     private void ChangeSource()
     {
         WorkContainer.ResetEngine(GetFetchEngine(App.AppViewModel.MakoClient, WorkTypeComboBox.GetSelectedValue<WorkType>()));
+    }
+
+    private void AppViewModelOnCurrentWorkTypeChanged(object? sender, WorkType workType)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            _suppressSelectionChanged = true;
+            WorkTypeComboBox.SelectedIndex = (int) workType;
+            _suppressSelectionChanged = false;
+            ChangeSource();
+        });
+    }
+
+    private void SyncFromCurrentWorkType()
+    {
+        _suppressSelectionChanged = true;
+        WorkTypeComboBox.SelectedIndex = (int) App.AppViewModel.CurrentWorkType;
+        _suppressSelectionChanged = false;
     }
 
     protected abstract IFetchEngine<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType);

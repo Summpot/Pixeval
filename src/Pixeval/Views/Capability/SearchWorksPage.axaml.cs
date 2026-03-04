@@ -2,9 +2,11 @@ using System;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Mako.Engine;
 using Mako.Global.Enum;
 using Mako.Model;
+using Pixeval.AppManagement;
 using Pixeval.Controls;
 using Frame = FluentAvalonia.UI.Controls.Frame;
 
@@ -13,6 +15,7 @@ namespace Pixeval;
 public partial class SearchWorksPage : UserControl
 {
     private string? _searchText;
+    private bool _suppressModeSelectionChanged;
 
     public SearchWorksPage()
     {
@@ -23,12 +26,22 @@ public partial class SearchWorksPage : UserControl
                 return;
             _searchText = s;
             SimpleWorkTypeComboBox.SelectedIndex = (int) type;
+            App.AppViewModel.SetCurrentWorkType(type.ToWorkType(App.AppViewModel.CurrentWorkType));
             ChangeSource();
         });
+
+        AttachedToVisualTree += (_, _) => App.AppViewModel.CurrentWorkTypeChanged += AppViewModelOnCurrentWorkTypeChanged;
+        DetachedFromVisualTree += (_, _) => App.AppViewModel.CurrentWorkTypeChanged -= AppViewModelOnCurrentWorkTypeChanged;
     }
 
     private void WorkTypeComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
     {
+        var selectedType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
+        App.AppViewModel.SetCurrentWorkType(selectedType.ToWorkType(App.AppViewModel.CurrentWorkType));
+
+        if (_suppressModeSelectionChanged)
+            return;
+
         ChangeSource();
     }
 
@@ -58,5 +71,16 @@ public partial class SearchWorksPage : UserControl
         }
 
         WorkContainer.ResetEngine(engine);
+    }
+
+    private void AppViewModelOnCurrentWorkTypeChanged(object? sender, WorkType workType)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            _suppressModeSelectionChanged = true;
+            SimpleWorkTypeComboBox.SelectedIndex = (int) workType.ToSimpleWorkType();
+            _suppressModeSelectionChanged = false;
+            ChangeSource();
+        });
     }
 }

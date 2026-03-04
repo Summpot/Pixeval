@@ -3,8 +3,12 @@ using System.Diagnostics.CodeAnalysis;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using FluentAvalonia.UI.Controls;
 using FluentAvalonia.UI.Navigation;
+using Mako.Global.Enum;
+using Pixeval.AppManagement;
+using Pixeval.Controls;
 using Pixeval.Utilities;
 using Tabalonia.Controls;
 using Tabalonia.InterTab;
@@ -21,7 +25,15 @@ public partial class TabViewContainer : ViewContainerBase
         {
             InterTabClient = new PixevalInterTabClient()
         };
+
+        if (GlobalWorkTypeComboBoxControl is { } comboBox)
+            comboBox.SelectedIndex = (int) App.AppViewModel.CurrentWorkType;
+
+        AttachedToVisualTree += (_, _) => App.AppViewModel.CurrentWorkTypeChanged += AppViewModelOnCurrentWorkTypeChanged;
+        DetachedFromVisualTree += (_, _) => App.AppViewModel.CurrentWorkTypeChanged -= AppViewModelOnCurrentWorkTypeChanged;
     }
+
+    private SymbolComboBox? GlobalWorkTypeComboBoxControl => this.FindControl<SymbolComboBox>("GlobalWorkTypeComboBox");
 
     /// <inheritdoc />
     protected override void OnLoaded(RoutedEventArgs e)
@@ -100,5 +112,20 @@ public partial class TabViewContainer : ViewContainerBase
 #pragma warning disable IL2072 // Target parameter argument does not satisfy 'DynamicallyAccessedMembersAttribute' in call to target method. The return value of the source method does not have matching annotations.
         this.NavigateTo(type);
 #pragma warning restore IL2072
+    }
+
+    private void GlobalWorkTypeComboBox_OnSelectionChanged(Pixeval.Controls.SymbolComboBox sender, EventArgs e)
+    {
+        if (sender.SelectedValue is WorkType workType)
+            App.AppViewModel.SetCurrentWorkType(workType);
+    }
+
+    private void AppViewModelOnCurrentWorkTypeChanged(object? sender, WorkType workType)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (GlobalWorkTypeComboBoxControl is { } comboBox)
+                comboBox.SelectedIndex = (int) workType;
+        });
     }
 }
