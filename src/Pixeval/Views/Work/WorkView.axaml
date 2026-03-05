@@ -20,6 +20,7 @@
             x:Name="ListBox"
             controls:IncrementalLoadingBehavior.IsEnabled="True"
             controls:IncrementalLoadingBehavior.Threshold="200"
+            ContainerClearing="ListBox_OnContainerClearing"
             ContainerPrepared="ListBox_OnContainerPrepared"
             SelectionChanged="WorkView_OnSelectionChanged"
             SelectionMode="{Binding IsSelecting, Converter={x:Static local:WorkView.SelectionModeConverter}}">

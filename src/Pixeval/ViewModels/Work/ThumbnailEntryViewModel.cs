@@ -17,7 +17,9 @@ public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewMod
 {
     public string Id => Entry.Id;
 
-    private HashSet<int> References { get; } = [];
+    private HashSet<object> References { get; } = new(ReferenceEqualityComparer.Instance);
+
+    private readonly SemaphoreSlim _loadingGate = new(1, 1);
 
     protected abstract string ThumbnailUrl { get; }
 
@@ -27,12 +29,12 @@ public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewMod
     [ObservableProperty]
     public partial Bitmap? Thumbnail { get; protected set; }
 
-    private readonly CancellationTokenSource _loadingThumbnailCts = new();
+    private CancellationTokenSource _loadingThumbnailCts = new();
 
     /// <summary>
     /// 是否正在加载缩略图
     /// </summary>
-    protected bool LoadingThumbnail { get; set; }
+    protected bool LoadingThumbnail { get; private set; }
 
     /// <summary>
     /// 当控件需要显示图片时，调用此方法加载缩略图
@@ -40,18 +42,42 @@ public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewMod
     /// <returns>缩略图首次加载完成则返回<see langword="true"/>，之前已加载、正在加载或加载失败则返回<see langword="false"/></returns>
     public virtual async ValueTask<bool> TryLoadThumbnailAsync(object key)
     {
-        _ = References.Add(key.GetHashCode());
-        if (Thumbnail is null)
+        _ = References.Add(key);
+
+        if (Thumbnail is not null || LoadingThumbnail)
+            return false;
+
+        await _loadingGate.WaitAsync().ConfigureAwait(false);
+        try
         {
+            if (Thumbnail is not null || LoadingThumbnail)
+                return false;
+
             LoadingThumbnail = true;
-            Thumbnail = await CacheHelper.GetBitmapFromCacheAsync(
-                ThumbnailUrl,
-                cancellationToken: _loadingThumbnailCts.Token);
+            _loadingThumbnailCts.Dispose();
+            _loadingThumbnailCts = new CancellationTokenSource();
 
-            LoadingThumbnail = false;
+            var bitmap = await ThumbnailBitmapProvider.Current
+                .GetBitmapAsync(ThumbnailUrl, _loadingThumbnailCts.Token)
+                .ConfigureAwait(false);
+
+            if (bitmap is null)
+                return false;
+
+            ReleaseThumbnail();
+            Thumbnail = bitmap;
+
+            return true;
         }
-
-        return true;
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        finally
+        {
+            LoadingThumbnail = false;
+            _loadingGate.Release();
+        }
     }
 
     /// <summary>
@@ -59,16 +85,14 @@ public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewMod
     /// </summary>
     public void UnloadThumbnail(object key)
     {
-        _ = References.Remove(key.GetHashCode());
+        _ = References.Remove(key);
         if (References.Count is not 0)
             return;
-        if (LoadingThumbnail)
-        {
-            _loadingThumbnailCts.Cancel();
-            LoadingThumbnail = false;
-        }
 
-        Thumbnail = null;
+        if (LoadingThumbnail)
+            _loadingThumbnailCts.Cancel();
+
+        ReleaseThumbnail();
     }
 
     /// <summary>
@@ -77,14 +101,24 @@ public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewMod
     public void Dispose()
     {
         GC.SuppressFinalize(this);
+        References.Clear();
         _loadingThumbnailCts.Cancel();
-        Thumbnail?.Dispose();
-        Thumbnail = null;
+        _loadingThumbnailCts.Dispose();
+        _loadingGate.Dispose();
+        ReleaseThumbnail();
         DisposeOverride();
     }
 
     protected virtual void DisposeOverride()
     {
+    }
+
+    private void ReleaseThumbnail()
+    {
+        if (Thumbnail is { } thumbnail)
+            thumbnail.Dispose();
+
+        Thumbnail = null;
     }
 
     public override bool Equals(object? obj) => obj is ThumbnailEntryViewModel<T> viewModel && Entry.Equals(viewModel.Entry);

@@ -61,6 +61,11 @@ public static class IncrementalLoadingBehavior
             "WeakEventListener",
             typeof(IncrementalLoadingBehavior));
 
+    private static readonly AttachedProperty<IncrementalLoadingState?> IncrementalLoadingStateProperty =
+        AvaloniaProperty.RegisterAttached<ItemsControl, IncrementalLoadingState?>(
+            "IncrementalLoadingState",
+            typeof(IncrementalLoadingBehavior));
+
     static IncrementalLoadingBehavior()
     {
         IsEnabledProperty.Changed.AddClassHandler<ItemsControl>(OnIsEnabledChanged);
@@ -99,6 +104,12 @@ public static class IncrementalLoadingBehavior
         {
             get => itemsControl.GetValue(WeakEventListenerProperty);
             private set => itemsControl.SetValue(WeakEventListenerProperty, value);
+        }
+
+        private IncrementalLoadingState? IncrementalLoadingState
+        {
+            get => itemsControl.GetValue(IncrementalLoadingStateProperty);
+            set => itemsControl.SetValue(IncrementalLoadingStateProperty, value);
         }
 
         private async Task<bool> TryLoadMoreItemsAsync()
@@ -171,17 +182,27 @@ public static class IncrementalLoadingBehavior
 
         private void AttachScrollViewer()
         {
+            itemsControl.DetachScrollViewer();
+
             // Find the ScrollViewer inside the ItemsControl
             var scrollViewer = itemsControl.FindDescendantOfType<ScrollViewer>();
             if (scrollViewer is not null)
             {
-                scrollViewer.PropertyChanged += (sender, args) =>
+                var state = new IncrementalLoadingState
                 {
-                    if (args.Property == ScrollViewer.OffsetProperty
-                        || args.Property == Visual.BoundsProperty)
-                        _ = itemsControl.TryLoadMoreItemsAsync();
+                    ScrollViewer = scrollViewer,
+                    PropertyChangedHandler = (_, args) =>
+                    {
+                        if (args.Property == ScrollViewer.OffsetProperty
+                            || args.Property == Visual.BoundsProperty)
+                            _ = itemsControl.TryLoadMoreItemsAsync();
+                    },
+                    ScrollChangedHandler = async (_, _) => await itemsControl.TryLoadMoreItemsAsync()
                 };
-                scrollViewer.ScrollChanged += async (sender, args) => await itemsControl.TryLoadMoreItemsAsync();
+
+                scrollViewer.PropertyChanged += state.PropertyChangedHandler;
+                scrollViewer.ScrollChanged += state.ScrollChangedHandler;
+                itemsControl.IncrementalLoadingState = state;
 
                 // Initial load: fill the viewport if needed
                 _ = itemsControl.InitialLoadAsync();
@@ -190,6 +211,19 @@ public static class IncrementalLoadingBehavior
 
         private void DetachScrollViewer()
         {
+            itemsControl.WeakEventListener?.Detach();
+
+            if (itemsControl.IncrementalLoadingState is { ScrollViewer: { } scrollViewer } state)
+            {
+                if (state.PropertyChangedHandler is { } propertyChangedHandler)
+                    scrollViewer.PropertyChanged -= propertyChangedHandler;
+
+                if (state.ScrollChangedHandler is { } scrollChangedHandler)
+                    scrollViewer.ScrollChanged -= scrollChangedHandler;
+            }
+
+            itemsControl.IncrementalLoadingState = null;
+
             // Reset loading state
             itemsControl.IsLoadingMore = false;
         }
@@ -253,8 +287,13 @@ public static class IncrementalLoadingBehavior
     {
         if (s is not ItemsControl ic)
             return;
-        if (e.Property == ItemsControl.ItemsSourceProperty && e.NewValue is ISupportIncrementalLoading sil)
-            ic.AttachItemsSource(sil);
+        if (e.Property == ItemsControl.ItemsSourceProperty)
+        {
+            ic.WeakEventListener?.Detach();
+
+            if (e.NewValue is ISupportIncrementalLoading sil)
+                ic.AttachItemsSource(sil);
+        }
     }
 
     private static void OnItemsControlLoaded(object? sender, RoutedEventArgs e)
@@ -267,5 +306,14 @@ public static class IncrementalLoadingBehavior
     {
         if (sender is ItemsControl itemsControl)
             itemsControl.DetachScrollViewer();
+    }
+
+    private sealed class IncrementalLoadingState
+    {
+        public ScrollViewer? ScrollViewer { get; init; }
+
+        public EventHandler<AvaloniaPropertyChangedEventArgs>? PropertyChangedHandler { get; init; }
+
+        public EventHandler<ScrollChangedEventArgs>? ScrollChangedHandler { get; init; }
     }
 }

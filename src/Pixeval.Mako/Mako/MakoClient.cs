@@ -4,6 +4,7 @@
 using System;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Mako.Engine;
 using Mako.Global.Enum;
@@ -12,6 +13,7 @@ using Mako.Model;
 using Mako.Net;
 using Mako.Net.EndPoints;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Misaki;
 
@@ -37,6 +39,8 @@ public partial class MakoClient : IDisposable, IAsyncDisposable, IDownloadHttpCl
     /// <returns>The <see cref="ServiceProvider" /> contains all the required dependencies</returns>
     private ServiceProvider BuildServiceProvider(IServiceCollection serviceCollection)
     {
+        _ = serviceCollection.Configure<HttpClientFactoryOptions>(options => options.HandlerLifetime = Timeout.InfiniteTimeSpan);
+
         _ = serviceCollection
             .AddSingleton(this)
             .AddSingleton<PixivApiHttpMessageHandler>()

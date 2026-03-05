@@ -38,6 +38,8 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
 
     public ItemsViewLayoutType LayoutType { get; set; }
 
+    private object ThumbnailReferenceKey => DataContext ?? this;
+
     public WorkView() => InitializeComponent();
 
     public static readonly DirectProperty<WorkView, SimpleWorkType> TypeProperty =
@@ -57,7 +59,7 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
             || sender is not Control { DataContext: IWorkViewModel vm } control
             || sender is not IWorkAnimatable animatable)
             return;
-        if (await vm.TryLoadThumbnailAsync(viewModel))
+        if (await vm.TryLoadThumbnailAsync(ThumbnailReferenceKey))
             if (control.IsEffectivelyVisible)
                 animatable.StartAnimation();
             else
@@ -223,7 +225,35 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
     {
         if (e.Container is not ListBoxItem lbi)
             return;
+
+        lbi.Tapped -= WorkItem_OnTapped;
+        lbi.DoubleTapped -= WorkItem_OnDoubleTapped;
+        lbi.Unloaded -= ListBoxItem_OnUnloaded;
         lbi.Tapped += WorkItem_OnTapped;
         lbi.DoubleTapped += WorkItem_OnDoubleTapped;
+        lbi.Unloaded += ListBoxItem_OnUnloaded;
+    }
+
+    private void ListBox_OnContainerClearing(object? sender, ContainerClearingEventArgs e)
+    {
+        if (e.Container is not ListBoxItem lbi)
+            return;
+
+        lbi.Tapped -= WorkItem_OnTapped;
+        lbi.DoubleTapped -= WorkItem_OnDoubleTapped;
+        lbi.Unloaded -= ListBoxItem_OnUnloaded;
+        ReleaseContainerThumbnail(lbi);
+    }
+
+    private void ListBoxItem_OnUnloaded(object? sender, RoutedEventArgs e)
+    {
+        if (sender is ListBoxItem lbi)
+            ReleaseContainerThumbnail(lbi);
+    }
+
+    private void ReleaseContainerThumbnail(ListBoxItem lbi)
+    {
+        if (lbi.DataContext is IWorkViewModel vm)
+            vm.UnloadThumbnail(ThumbnailReferenceKey);
     }
 }
