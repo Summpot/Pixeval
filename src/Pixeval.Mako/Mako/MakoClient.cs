@@ -39,8 +39,6 @@ public partial class MakoClient : IDisposable, IAsyncDisposable, IDownloadHttpCl
     /// <returns>The <see cref="ServiceProvider" /> contains all the required dependencies</returns>
     private ServiceProvider BuildServiceProvider(IServiceCollection serviceCollection)
     {
-        _ = serviceCollection.Configure<HttpClientFactoryOptions>(options => options.HandlerLifetime = Timeout.InfiniteTimeSpan);
-
         _ = serviceCollection
             .AddSingleton(this)
             .AddSingleton<PixivApiHttpMessageHandler>()
@@ -48,10 +46,12 @@ public partial class MakoClient : IDisposable, IAsyncDisposable, IDownloadHttpCl
             .AddSingleton<RefreshTokenOption>();
 
         _ = serviceCollection.AddHttpApi<IAuthEndPoint>()
-            .ConfigurePrimaryHttpMessageHandler<PixivApiHttpMessageHandler>();
+            .ConfigurePrimaryHttpMessageHandler<PixivApiHttpMessageHandler>()
+            .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
 
         _ = serviceCollection.AddHttpApi<IAppApiEndPoint>()
-            .ConfigurePrimaryHttpMessageHandler<PixivApiHttpMessageHandler>();
+            .ConfigurePrimaryHttpMessageHandler<PixivApiHttpMessageHandler>()
+            .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
 
         _ = serviceCollection.AddTokenProvider<IAppApiEndPoint, PixivTokenProvider>();
 
@@ -61,12 +61,14 @@ public partial class MakoClient : IDisposable, IAsyncDisposable, IDownloadHttpCl
                 client.DefaultRequestHeaders.Referrer = new Uri("https://www.pixiv.net");
                 client.DefaultRequestHeaders.UserAgent.Add(new("PixivIOSApp", "5.8.7"));
             })
-            .ConfigurePrimaryHttpMessageHandler<PixivImageHttpMessageHandler>();
+            .ConfigurePrimaryHttpMessageHandler<PixivImageHttpMessageHandler>()
+            .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
 
         _ = serviceCollection
             .AddHttpClient(nameof(MakoApiKind.AppApi))
             .ConfigureHttpClient(client => client.BaseAddress = new Uri(MakoHttpOptions.AppApiBaseUrl))
-            .ConfigurePrimaryHttpMessageHandler<PixivApiHttpMessageHandler>();
+            .ConfigurePrimaryHttpMessageHandler<PixivApiHttpMessageHandler>()
+            .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
 
         _ = serviceCollection
             .AddHttpClient(nameof(MakoApiKind.WebApi))
@@ -76,7 +78,8 @@ public partial class MakoClient : IDisposable, IAsyncDisposable, IDownloadHttpCl
         _ = serviceCollection
             .AddHttpClient(nameof(MakoApiKind.AuthApi))
             .ConfigureHttpClient(client => client.BaseAddress = new Uri(MakoHttpOptions.OAuthBaseUrl))
-            .ConfigurePrimaryHttpMessageHandler<PixivApiHttpMessageHandler>();
+            .ConfigurePrimaryHttpMessageHandler<PixivApiHttpMessageHandler>()
+            .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
 
         _ = serviceCollection
             .AddWebApiClient()
