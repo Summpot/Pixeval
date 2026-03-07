@@ -56,6 +56,7 @@ public partial class SettingsPage : UserControl
             .Config(group => group
                 .Enum(t => t.ThumbnailDirection, ThumbnailDirectionExtension.Items)
                 .Enum(t => t.ItemsViewLayoutType, ItemsViewLayoutTypeExtension.Items)
+                .Double(t => t.WorkItemHeight, 140, 420, 10)
                 .Enum(t => t.TargetFilter, TargetFilterExtension.Items)
                 .Collection(t => t.BlockedTags)
                 .Bool(t => t.BrowseOriginalImage)

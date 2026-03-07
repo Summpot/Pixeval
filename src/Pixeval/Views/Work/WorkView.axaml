@@ -30,7 +30,7 @@
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
                     <controls:WrapPanel
-                        ItemHeight="200"
+                        ItemHeight="{Binding $parent[local:WorkView].ItemHeight}"
                         ItemSpacing="5"
                         ItemWidth="{Binding $parent[local:WorkView].ItemWidth}"
                         ItemsAlignment="Stretch"

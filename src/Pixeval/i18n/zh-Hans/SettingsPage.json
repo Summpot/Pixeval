@@ -154,6 +154,13 @@
     "Description": "选择网格布局则每张图片大小相同；选择流式布局则只有每一行的两端会被对齐",
     "Header": "缩略图视图对齐规则"
   },
+  "WorkItemHeightEntry": {
+    "Description": "调整瀑布流中作品卡片的高度",
+    "Header": "瀑布流作品高度"
+  },
+  "WorkItemHeightNumberBox": {
+    "PlaceholderText": "输入高度[140, 420]"
+  },
   "BlockedTagsTokenizingTextBox": {
     "PlaceholderText": "屏蔽的标签"
   },

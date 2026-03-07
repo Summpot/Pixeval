@@ -128,6 +128,9 @@ public record AppSettings
     [SettingsEntry(Symbol.GlanceHorizontal, ItemsViewLayoutTypeEntryHeader, ItemsViewLayoutTypeEntryDescription)]
     public ItemsViewLayoutType ItemsViewLayoutType { get; set; } = ItemsViewLayoutType.LinedFlow;
 
+    [SettingsEntry(Symbol.Grid, "SettingsPage.WorkItemHeightEntry.Header", "SettingsPage.WorkItemHeightEntry.Description", "SettingsPage.WorkItemHeightNumberBox.PlaceholderText")]
+    public double WorkItemHeight { get; set; } = 240;
+
     [SettingsEntry(Symbol.TagDismiss, BlockedTagsEntryHeader, BlockedTagsEntryDescription, BlockedTagsTokenizingTextBoxPlaceholderText)]
     public ObservableCollection<string> BlockedTags { get; set; } = [];
 

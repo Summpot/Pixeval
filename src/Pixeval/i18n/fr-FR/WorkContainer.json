@@ -33,6 +33,9 @@
   "FilterAutoSuggestBox": {
     "PlaceholderText": "Filtrer les artworks (c.f. la page d'aide)"
   },
+  "ThumbnailHeightSlider": {
+    "ToolTip": "Hauteur des éléments de la cascade"
+  },
   "AddToBookmarkTeachingTip": {
     "CloseButtonContent": "Ajouter un favori"
   }

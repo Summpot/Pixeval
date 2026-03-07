@@ -154,6 +154,13 @@
     "Description": "The grid layout constraints images in the same width and height, while flow layout only forces vertical alignments",
     "Header": "Alignment rules for thumbnails"
   },
+  "WorkItemHeightEntry": {
+    "Description": "Adjust the height of work cards in the waterfall view",
+    "Header": "Waterfall item height"
+  },
+  "WorkItemHeightNumberBox": {
+    "PlaceholderText": "[140, 420]"
+  },
   "BlockedTagsTokenizingTextBox": {
     "PlaceholderText": "Blocked tags"
   },

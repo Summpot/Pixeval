@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -35,6 +36,7 @@ public partial class WorkContainer : UserControl
     public WorkContainer()
     {
         InitializeComponent();
+        InitializeThumbnailHeightControls();
 
         CommandBarElements.CollectionChanged += (_, e) =>
         {
@@ -61,6 +63,18 @@ public partial class WorkContainer : UserControl
         SetSortOption();
     }
 
+    private void InitializeThumbnailHeightControls()
+    {
+        var tooltip = I18NManager.GetResource("WorkContainer.ThumbnailHeightSlider.ToolTip");
+        ToolTip.SetTip(ThumbnailHeightSlider, tooltip);
+        ToolTip.SetTip(ThumbnailHeightValueTextBlock, tooltip);
+
+        var height = App.AppViewModel.AppSettings.WorkItemHeight;
+        ThumbnailHeightSlider.Value = height;
+        WorkView.ItemHeight = height;
+        UpdateThumbnailHeightText(height);
+    }
+
     public void SetSortOption()
     {
         if (DataContext is ISortableEntryViewViewModel vm && SortOptionComboBox.GetSelectedValue<WorkSortOption>() is var sortOption)
@@ -83,6 +97,25 @@ public partial class WorkContainer : UserControl
     {
          if (WorkView.ListBox.Scroll is { } scrollView)
              scrollView.Offset = new(0, 0);
+    }
+
+    private void ThumbnailHeightSlider_OnValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
+    {
+        var snappedValue = Math.Round(e.NewValue / 10d) * 10d;
+        if (sender is Slider slider && Math.Abs(slider.Value - snappedValue) > 0.1)
+        {
+            slider.Value = snappedValue;
+            return;
+        }
+
+        App.AppViewModel.AppSettings.WorkItemHeight = snappedValue;
+        WorkView.ItemHeight = snappedValue;
+        UpdateThumbnailHeightText(snappedValue);
+    }
+
+    private void UpdateThumbnailHeightText(double height)
+    {
+        ThumbnailHeightValueTextBlock.Text = $"{height:0}px";
     }
 
     private IWorkViewModel? _currentBookmarkItem;

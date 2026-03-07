@@ -154,6 +154,13 @@
     "Description": "Выбор между сеткой, где все изображения одинакового размера, и потоковым макетом, где выравниваются только края строк",
     "Header": "Правила выравнивания миниатюр"
   },
+  "WorkItemHeightEntry": {
+    "Description": "Настраивает высоту карточек в каскадной ленте",
+    "Header": "Высота карточек водопада"
+  },
+  "WorkItemHeightNumberBox": {
+    "PlaceholderText": "[140, 420]"
+  },
   "BlockedTagsTokenizingTextBox": {
     "PlaceholderText": "Заблокированные теги"
   },

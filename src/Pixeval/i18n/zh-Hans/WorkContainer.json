@@ -33,6 +33,9 @@
   "FilterAutoSuggestBox": {
     "PlaceholderText": "过滤作品（用法见帮助页）"
   },
+  "ThumbnailHeightSlider": {
+    "ToolTip": "瀑布流作品高度"
+  },
   "AddToBookmarkTeachingTip": {
     "CloseButtonContent": "添加收藏"
   }

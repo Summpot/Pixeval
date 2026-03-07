@@ -33,6 +33,9 @@
   "FilterAutoSuggestBox": {
     "PlaceholderText": "Filtering works (See usage on help page)"
   },
+  "ThumbnailHeightSlider": {
+    "ToolTip": "Waterfall item height"
+  },
   "AddToBookmarkTeachingTip": {
     "CloseButtonContent": "Add to bookmark"
   }

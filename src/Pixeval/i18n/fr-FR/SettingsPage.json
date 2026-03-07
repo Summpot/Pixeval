@@ -154,6 +154,13 @@
     "Description": "Toutes les images auront la même taille en mode de maille. En mode de flux, seulement les deux extrémités de la première ligne seront alignées",
     "Header": "Règle d'alignement des thumbnails"
   },
+  "WorkItemHeightEntry": {
+    "Description": "Ajuste la hauteur des cartes dans la vue en cascade",
+    "Header": "Hauteur des éléments de la cascade"
+  },
+  "WorkItemHeightNumberBox": {
+    "PlaceholderText": "[140, 420]"
+  },
   "BlockedTagsTokenizingTextBox": {
     "PlaceholderText": "Tags bloqués"
   },

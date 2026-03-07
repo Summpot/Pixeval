@@ -19,4 +19,6 @@ public static class PixevalSettings
     public static TargetFilter TargetFilter => Settings.TargetFilter;
     
     public static ItemsViewLayoutType LayoutType => Settings.ItemsViewLayoutType;
+
+    public static double WorkItemHeight => Settings.WorkItemHeight;
 }

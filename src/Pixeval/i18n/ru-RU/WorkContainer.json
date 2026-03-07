@@ -33,6 +33,9 @@
   "FilterAutoSuggestBox": {
     "PlaceholderText": "Фильтрация работает (см. страницу помощи по использованию)"
   },
+  "ThumbnailHeightSlider": {
+    "ToolTip": "Высота карточек водопада"
+  },
   "AddToBookmarkTeachingTip": {
     "CloseButtonContent": "Добавить в закладки"
   }

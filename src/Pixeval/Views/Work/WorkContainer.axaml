@@ -36,6 +36,20 @@
                     ItemsSource="{x:Static utilities:WorkSortOptionExtension.Items}"
                     SelectedIndex="{x:Static views:PixevalSettings.WorkSortOptionIndex}"
                     SelectionChanged="SortOptionComboBox_OnSelectionChanged" />
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Opacity="0.7" Text="H" VerticalAlignment="Center" />
+                    <Slider
+                        x:Name="ThumbnailHeightSlider"
+                        Width="120"
+                        Maximum="420"
+                        Minimum="140"
+                        ValueChanged="ThumbnailHeightSlider_OnValueChanged" />
+                    <TextBlock
+                        x:Name="ThumbnailHeightValueTextBlock"
+                        MinWidth="48"
+                        VerticalAlignment="Center"
+                        TextAlignment="Right" />
+                </StackPanel>
                 <AutoCompleteBox
                     x:Name="FilterAutoSuggestBox"
                     Width="250"
@@ -77,6 +91,7 @@
         <work:WorkView
             x:Name="WorkView"
             DataContextChanged="WorkView_OnDataContextChanged"
+            ItemHeight="{x:Static views:PixevalSettings.WorkItemHeight}"
             LayoutType="{x:Static views:PixevalSettings.LayoutType}"
             RequestAddToBookmark="WorkView_OnRequestAddToBookmark" />
     </DockPanel>

@@ -42,6 +42,19 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
         set => SetAndRaise(ItemWidthProperty, ref field, value);
     }
 
+    public static readonly DirectProperty<WorkView, double> ItemHeightProperty =
+        AvaloniaProperty.RegisterDirect<WorkView, double>(nameof(ItemHeight), t => t.ItemHeight, (t, v) => t.ItemHeight = v);
+
+    public double ItemHeight
+    {
+        get;
+        set
+        {
+            SetAndRaise(ItemHeightProperty, ref field, value);
+            RefreshScrollEndPadding();
+        }
+    }
+
     public static FuncValueConverter<bool, SelectionMode> SelectionModeConverter { get; } =
         new(b => b ? SelectionMode.Multiple : SelectionMode.Single);
 
@@ -55,6 +68,8 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
 
     private bool _hasSavedOffset;
 
+    private bool _restoreOffsetPending;
+
     private bool _restoreOffsetScheduled;
 
     private bool _syncScheduled;
@@ -65,7 +80,11 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
 
     private HashSet<IWorkViewModel> ViewportRetainedEntries { get; } = [];
 
-    public WorkView() => InitializeComponent();
+    public WorkView()
+    {
+        InitializeComponent();
+        ItemHeight = PixevalSettings.WorkItemHeight;
+    }
 
     public static readonly DirectProperty<WorkView, SimpleWorkType> TypeProperty =
         AvaloniaProperty.RegisterDirect<WorkView, SimpleWorkType>(nameof(Type),
@@ -243,6 +262,8 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
     {
         base.OnLoaded(e);
         ((IStructuralDisposalCompleter) this).Hook();
+        if (_hasSavedOffset)
+            _restoreOffsetPending = true;
         EnsureScrollViewerAttached();
         ScheduleRestoreOffset();
         ScheduleViewportThumbnailSynchronization();
@@ -255,6 +276,7 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
         {
             _savedOffset = scrollViewer.Offset;
             _hasSavedOffset = true;
+            _restoreOffsetPending = true;
         }
 
         DetachScrollViewer();
@@ -332,6 +354,7 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
         _scrollViewer = scrollViewer;
         _scrollViewer.ScrollChanged += ScrollViewer_OnScrollChanged;
         _scrollViewer.PropertyChanged += ScrollViewer_OnPropertyChanged;
+        RefreshScrollEndPadding(scrollViewer.Viewport.Height);
     }
 
     private void DetachScrollViewer()
@@ -357,16 +380,21 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
 
     private void ScrollViewer_OnPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
+        if (sender is ScrollViewer scrollViewer && e.Property == ScrollViewer.ViewportProperty)
+            RefreshScrollEndPadding(scrollViewer.Viewport.Height);
+
         if (e.Property == ScrollViewer.ViewportProperty || e.Property == ScrollViewer.ExtentProperty)
         {
-            ScheduleRestoreOffset();
+            if (_restoreOffsetPending)
+                ScheduleRestoreOffset();
+
             ScheduleViewportThumbnailSynchronization();
         }
     }
 
     private void ScheduleRestoreOffset()
     {
-        if (!_hasSavedOffset || _restoreOffsetScheduled)
+        if (!_restoreOffsetPending || !_hasSavedOffset || _restoreOffsetScheduled)
             return;
 
         _restoreOffsetScheduled = true;
@@ -379,7 +407,7 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
 
     private void RestoreOffsetIfNeeded()
     {
-        if (!_hasSavedOffset)
+        if (!_restoreOffsetPending || !_hasSavedOffset)
             return;
 
         EnsureScrollViewerAttached();
@@ -402,6 +430,17 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
 
         scrollViewer.Offset = offset;
         _savedOffset = offset;
+        _restoreOffsetPending = false;
+    }
+
+    private void RefreshScrollEndPadding(double viewportHeight = double.NaN)
+    {
+        var effectiveViewportHeight = viewportHeight > 0
+            ? viewportHeight
+            : _scrollViewer?.Viewport.Height ?? 0;
+
+        var bottomPadding = Math.Max(ItemHeight, effectiveViewportHeight > 0 ? effectiveViewportHeight : ItemHeight);
+        ListBox.Padding = new Thickness(0, 0, 0, bottomPadding);
     }
 
     private void ScheduleViewportThumbnailSynchronization()
