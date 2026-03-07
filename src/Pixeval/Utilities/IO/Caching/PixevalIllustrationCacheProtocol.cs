@@ -59,6 +59,11 @@ public class PixevalIllustrationCacheKey(string key) : IEquatable<PixevalIllustr
 
 public class PixevalIllustrationCacheProtocol : ICacheProtocol<PixevalIllustrationCacheKey, PixevalIllustrationCacheHeader>
 {
+    public string GetCacheKey(PixevalIllustrationCacheKey key)
+    {
+        return key.Key;
+    }
+
     public PixevalIllustrationCacheHeader GetHeader(PixevalIllustrationCacheKey key)
     {
         return new PixevalIllustrationCacheHeader(key.BinarySize);

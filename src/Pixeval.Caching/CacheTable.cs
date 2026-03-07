@@ -2,83 +2,45 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Threading;
 using Pixeval.Utilities.Memory;
+using Tenray.ZoneTree;
+using Tenray.ZoneTree.Comparers;
+using Tenray.ZoneTree.Logger;
 
 namespace Pixeval.Caching;
 
-public class CacheTable<TKey, THeader, TProtocol>(
-    TProtocol protocol,
-    CacheToken token)
+public sealed class CacheTable<TKey, THeader, TProtocol> : IDisposable
     where THeader : unmanaged
     where TKey : IEquatable<TKey>
     where TProtocol : ICacheProtocol<TKey, THeader>
 {
-    public MemoryMappedFileMemoryManager MemoryManager { get; } = new(token);
+    private readonly object _syncLock = new();
 
-    private readonly ConcurrentDictionary<TKey, Lock> _locks = new();
+    private readonly string _cacheDirectory;
 
-    private readonly Lock _purgeLock = new();
+    private readonly int _maxCacheSizeInBytes;
 
-    private Dictionary<TKey, (LinkedListNode<TKey> node, nint ptr, int allocatedLength)> _cacheTable = [];
+    private readonly TProtocol _protocol;
 
-    private readonly LinkedList<TKey> _lruCacheIndex = [];
+    private IZoneTree<string, Memory<byte>>? _zoneTree;
 
-    // ReSharper disable once InconsistentNaming
+    private IMaintainer? _maintainer;
+
+    private bool _disposed;
+
     public int CacheLRUFactor { get; set; } = 2;
 
-    private TProtocol _protocol = protocol;
-
-    /// <summary>
-    /// While calling this method, all cache operations should be halted.
-    /// </summary>
-    private unsafe void PurgeCompact()
+    public CacheTable(TProtocol protocol, CacheToken token)
     {
-        // when purging, all operations must be halt
-        lock (_purgeLock)
-        {
-            var retain = _lruCacheIndex.Count / CacheLRUFactor;
+        _protocol = protocol;
+        _cacheDirectory = token.CacheDirectory;
+        _maxCacheSizeInBytes = token.MemoryMappedFileInitialSize;
 
-            var garbage = new Dictionary<nint, (TKey, int)>();
-
-            foreach (var key in _lruCacheIndex.Skip(retain))
-            {
-                if (TryReadCache0(key, out var span, true))
-                {
-                    var pointer = (byte*) Unsafe.AsPointer(ref MemoryMarshal.GetReference(span)) - sizeof(THeader);
-                    garbage[(nint) pointer] = (key, span.Length);
-                }
-            }
-
-            var grouped = _cacheTable.Values.GroupBy(
-                tuple => MemoryManager.BumpPointerAllocators.First(pair => pair.Value.GetBlock((byte*) tuple.ptr) != null).Value,
-                tuple => tuple);
-            foreach (var group in grouped)
-            {
-                var replacement = group.Key.Compact(group.ToDictionary(tuple => tuple.ptr, tuple => tuple.allocatedLength), garbage.Keys.ToHashSet());
-                // forward reference
-                _cacheTable = _cacheTable.SelectMany(pair =>
-                {
-                    return replacement.TryGetValue(pair.Value.ptr, out var newPointer)
-                        ? new[] { KeyValuePair.Create(pair.Key, (pair.Value.node, newPointer, pair.Value.allocatedLength)) }
-                        : new[] { pair };
-                }).ToDictionary();
-            }
-
-            foreach (var (key, _) in garbage.Values)
-            {
-                _ = _locks.Remove(key, out _);
-                _ = _cacheTable.Remove(key);
-            }
-
-            _lruCacheIndex.Skip(retain).ToList().ForEach(g => _lruCacheIndex.Remove(g));
-        }
+        Directory.CreateDirectory(_cacheDirectory);
+        (_zoneTree, _maintainer) = CreateZoneTree(_cacheDirectory);
     }
 
     public AllocatorState TryCache(TKey key, Stream stream)
@@ -88,102 +50,203 @@ public class CacheTable<TKey, THeader, TProtocol>(
 
     public AllocatorState TryCache(TKey key, Span<byte> span)
     {
-        lock (_purgeLock)
-        {
-            if (_locks.TryGetValue(key, out var lk))
-            {
-                lock (lk)
-                    return TryCache0(key, span, false);
-            }
-
-            return TryCache0(key, span, false);
-        }
-    }
-
-    private unsafe AllocatorState TryCache0(TKey key, Span<byte> span, bool collected)
-    {
-        if (_cacheTable.ContainsKey(key))
-        {
-            return AllocatorState.AllocationSuccess;
-        }
-
+        var cacheKey = _protocol.GetCacheKey(key);
         var header = _protocol.SerializeHeader(_protocol.GetHeader(key));
+        var totalLength = header.Length + span.Length;
 
-        var result = MemoryManager.DominantAllocator.TryAllocate(header.Length + span.Length, out var cacheArea);
-        switch (result)
+        if (_maxCacheSizeInBytes > 0 && totalLength > _maxCacheSizeInBytes)
+            return AllocatorState.OutOfMemory;
+
+        lock (_syncLock)
         {
-            case AllocatorState.AllocationSuccess:
-                header.CopyTo(cacheArea);
-                span.CopyTo(cacheArea[header.Length..]);
+            if (_disposed)
+                return AllocatorState.AllocatorClosed;
 
-                _ = _lruCacheIndex.AddFirst(key);
-                _cacheTable[key] = (_lruCacheIndex.First!, (nint) Unsafe.AsPointer(ref cacheArea.GetPinnableReference()), cacheArea.Length);
-
-                _locks[key] = new Lock();
+            if (_zoneTree!.ContainsKey(cacheKey))
                 return AllocatorState.AllocationSuccess;
-            case AllocatorState.OutOfMemory when collected:
-                return result;
-            case AllocatorState.OutOfMemory:
-                PurgeCompact();
-                return TryCache0(key, span, true);
-            default:
-                return result;
+
+            if (!EnsureCapacity(totalLength))
+                return AllocatorState.OutOfMemory;
+
+            var buffer = new byte[totalLength];
+            header.CopyTo(buffer);
+            span.CopyTo(buffer.AsSpan(header.Length));
+
+            _zoneTree.Upsert(cacheKey, buffer);
+            _maintainer!.EvictToDisk();
+
+            return AllocatorState.AllocationSuccess;
         }
     }
 
     public bool TryReadCache(TKey key, out Stream readonlyStream)
     {
-        if (TryReadCache(key, out Span<byte> span))
+        lock (_syncLock)
         {
-            unsafe
+            if (_disposed)
             {
-                var pointer = (byte*) Unsafe.AsPointer(ref MemoryMarshal.GetReference(span));
-                var newStream = new UnmanagedMemoryStream(pointer, span.Length);
-                _ = newStream.Seek(0, SeekOrigin.Begin);
-                readonlyStream = newStream;
-                return true;
+                readonlyStream = null!;
+                return false;
             }
-        }
 
-        readonlyStream = null!;
-        return false;
+            if (!TryGetPayload(_protocol.GetCacheKey(key), out var payload))
+            {
+                readonlyStream = null!;
+                return false;
+            }
+
+            readonlyStream = CreateReadOnlyStream(payload);
+            return true;
+        }
     }
 
     public bool TryReadCache(TKey key, out Span<byte> span)
     {
-        lock (_purgeLock)
+        lock (_syncLock)
         {
-            if (_locks.TryGetValue(key, out var lk))
+            if (_disposed || !TryGetPayload(_protocol.GetCacheKey(key), out var payload))
             {
-                lock (lk)
-                    return TryReadCache0(key, out span, false);
+                span = Span<byte>.Empty;
+                return false;
             }
 
-            return TryReadCache0(key, out span, false);
+            var copy = payload.ToArray();
+            span = copy.AsSpan();
+            return true;
         }
     }
 
-    private unsafe bool TryReadCache0(TKey key, out Span<byte> span, bool transparent)
+    public void Clear()
     {
-        if (_cacheTable.TryGetValue(key, out var tuple))
+        lock (_syncLock)
         {
-            var headerLength = sizeof(THeader);
-            var header = new Span<byte>((byte*) tuple.ptr, headerLength);
-            var headerStruct = _protocol.DeserializeHeader(header);
-            var dataLength = _protocol.GetDataLength(headerStruct);
-            var totalSpan = new Span<byte>((void*) tuple.ptr, tuple.allocatedLength);
-            span = totalSpan[headerLength..(headerLength + dataLength)];
+            if (_disposed)
+                return;
 
-            if (!transparent)
-            {
-                _lruCacheIndex.Remove(tuple.node);
-                _lruCacheIndex.AddFirst(tuple.node);
-            }
+            ResetStore(dropExisting: true);
+        }
+    }
 
+    public void Dispose()
+    {
+        lock (_syncLock)
+        {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            DisposeStore();
+        }
+    }
+
+    private bool EnsureCapacity(int incomingBytes)
+    {
+        if (_maxCacheSizeInBytes <= 0)
             return true;
+
+        var currentSize = CalculateDirectorySize(_cacheDirectory);
+        if (currentSize + incomingBytes <= _maxCacheSizeInBytes)
+            return true;
+
+        ResetStore(dropExisting: true);
+        return CalculateDirectorySize(_cacheDirectory) + incomingBytes <= _maxCacheSizeInBytes;
+    }
+
+    private bool TryGetPayload(string cacheKey, out ReadOnlyMemory<byte> payload)
+    {
+        if (!_zoneTree!.TryGet(cacheKey, out var cachedValue))
+        {
+            payload = ReadOnlyMemory<byte>.Empty;
+            return false;
         }
 
-        span = Span<byte>.Empty;
-        return false;
+        var headerLength = Unsafe.SizeOf<THeader>();
+        if (cachedValue.Length < headerLength)
+        {
+            payload = ReadOnlyMemory<byte>.Empty;
+            return false;
+        }
+
+        var header = _protocol.DeserializeHeader(cachedValue.Span[..headerLength]);
+        var dataLength = _protocol.GetDataLength(header);
+        if (dataLength < 0 || cachedValue.Length < headerLength + dataLength)
+        {
+            payload = ReadOnlyMemory<byte>.Empty;
+            return false;
+        }
+
+        payload = cachedValue[headerLength..(headerLength + dataLength)];
+        return true;
+    }
+
+    private static Stream CreateReadOnlyStream(ReadOnlyMemory<byte> payload)
+    {
+        if (MemoryMarshal.TryGetArray(payload, out ArraySegment<byte> segment) && segment.Array is not null)
+            return new MemoryStream(segment.Array, segment.Offset, segment.Count, writable: false, publiclyVisible: true);
+
+        return new MemoryStream(payload.ToArray(), writable: false);
+    }
+
+    private void ResetStore(bool dropExisting)
+    {
+        DisposeStore(dropExisting);
+        Directory.CreateDirectory(_cacheDirectory);
+        (_zoneTree, _maintainer) = CreateZoneTree(_cacheDirectory);
+    }
+
+    private void DisposeStore(bool dropExisting = false)
+    {
+        if (_maintainer is not null)
+        {
+            _maintainer.TryCancelBackgroundThreads();
+            _maintainer.WaitForBackgroundThreads();
+        }
+
+        try
+        {
+            if (dropExisting && _zoneTree is not null && Directory.Exists(_cacheDirectory))
+            {
+                _zoneTree.Maintenance.Drop();
+                _zoneTree = null;
+            }
+        }
+        finally
+        {
+            _maintainer?.Dispose();
+            _zoneTree?.Dispose();
+            _maintainer = null;
+            _zoneTree = null;
+        }
+    }
+
+    private static long CalculateDirectorySize(string directory)
+    {
+        if (!Directory.Exists(directory))
+            return 0;
+
+        long total = 0;
+        foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+        {
+            total += new FileInfo(file).Length;
+        }
+
+        return total;
+    }
+
+    private static (IZoneTree<string, Memory<byte>> Tree, IMaintainer Maintainer) CreateZoneTree(string cacheDirectory)
+    {
+        var tree = new ZoneTreeFactory<string, Memory<byte>>()
+            .SetComparer(new StringOrdinalComparerAscending())
+            .SetDataDirectory(cacheDirectory)
+            .SetWriteAheadLogDirectory(cacheDirectory)
+            .SetLogLevel(LogLevel.Error)
+            .OpenOrCreate();
+
+        var maintainer = tree.CreateMaintainer();
+        maintainer.ThresholdForMergeOperationStart = 1;
+        maintainer.MaximumReadOnlySegmentCount = 2;
+        maintainer.EnableJobForCleaningInactiveCaches = true;
+
+        return (tree, maintainer);
     }
 }

@@ -7,6 +7,8 @@ namespace Pixeval.Caching;
 
 public interface ICacheProtocol<in TKey, THeader> where THeader : unmanaged
 {
+	string GetCacheKey(TKey key);
+
     THeader GetHeader(TKey key);
 
     Span<byte> SerializeHeader(THeader header);

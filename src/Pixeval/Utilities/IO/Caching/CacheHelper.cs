@@ -29,7 +29,7 @@ public static class CacheHelper
 
     public static void PurgeCache()
     {
-        Directory.Delete(AppInfo.CacheFolder, true);
+        CacheTable.Clear();
     }
 
     /// <summary>
