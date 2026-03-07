@@ -15,6 +15,8 @@ namespace Pixeval.ViewModels;
 public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewModel<T>(entry), IDisposable
     where T : class, IIdentityInfo
 {
+    private const int RetryDelaySeconds = 5;
+
     public string Id => Entry.Id;
 
     private HashSet<object> References { get; } = new(ReferenceEqualityComparer.Instance);
@@ -31,6 +33,8 @@ public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewMod
 
     private CancellationTokenSource _loadingThumbnailCts = new();
 
+    private DateTimeOffset _nextRetryAtUtc;
+
     /// <summary>
     /// 是否正在加载缩略图
     /// </summary>
@@ -44,13 +48,13 @@ public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewMod
     {
         _ = References.Add(key);
 
-        if (Thumbnail is not null || LoadingThumbnail)
+        if (Thumbnail is not null || LoadingThumbnail || DateTimeOffset.UtcNow < _nextRetryAtUtc)
             return false;
 
         await _loadingGate.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (Thumbnail is not null || LoadingThumbnail)
+            if (Thumbnail is not null || LoadingThumbnail || DateTimeOffset.UtcNow < _nextRetryAtUtc)
                 return false;
 
             LoadingThumbnail = true;
@@ -62,15 +66,24 @@ public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewMod
                 .ConfigureAwait(false);
 
             if (bitmap is null)
+            {
+                _nextRetryAtUtc = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(RetryDelaySeconds);
                 return false;
+            }
 
             ReleaseThumbnail();
             Thumbnail = bitmap;
+            _nextRetryAtUtc = DateTimeOffset.MinValue;
 
             return true;
         }
         catch (OperationCanceledException)
         {
+            return false;
+        }
+        catch (Exception)
+        {
+            _nextRetryAtUtc = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(RetryDelaySeconds);
             return false;
         }
         finally

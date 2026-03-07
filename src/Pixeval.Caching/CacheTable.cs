@@ -62,9 +62,6 @@ public sealed class CacheTable<TKey, THeader, TProtocol> : IDisposable
             if (_disposed)
                 return AllocatorState.AllocatorClosed;
 
-            if (_zoneTree!.ContainsKey(cacheKey))
-                return AllocatorState.AllocationSuccess;
-
             if (!EnsureCapacity(totalLength))
                 return AllocatorState.OutOfMemory;
 
@@ -72,10 +69,21 @@ public sealed class CacheTable<TKey, THeader, TProtocol> : IDisposable
             header.CopyTo(buffer);
             span.CopyTo(buffer.AsSpan(header.Length));
 
-            _zoneTree.Upsert(cacheKey, buffer);
+            _zoneTree!.Upsert(cacheKey, buffer);
             _maintainer!.EvictToDisk();
 
             return AllocatorState.AllocationSuccess;
+        }
+    }
+
+    public bool TryRemove(TKey key)
+    {
+        lock (_syncLock)
+        {
+            if (_disposed)
+                return false;
+
+            return _zoneTree!.TryDelete(_protocol.GetCacheKey(key), out _);
         }
     }
 

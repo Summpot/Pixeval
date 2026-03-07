@@ -20,6 +20,7 @@ public partial class WorkDetailsPage : UserControl
     {
         InitializeComponent();
         DataContext = _viewModel;
+        DetachedFromVisualTree += (_, _) => _viewModel.ReleaseResources();
 
         AddHandler(Frame.NavigatedToEvent, (sender, e) =>
         {

@@ -29,6 +29,8 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
 
     private const double ViewportRecyclePreloadMin = 480;
 
+    private static readonly TimeSpan ThumbnailRetryDelay = TimeSpan.FromSeconds(5);
+
     public event EventHandler<WorkView, IWorkViewModel>? RequestAddToBookmark;
 
     public static readonly DirectProperty<WorkView, double> ItemWidthProperty =
@@ -56,6 +58,8 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
     private bool _restoreOffsetScheduled;
 
     private bool _syncScheduled;
+
+    private bool _retryScheduled;
 
     private HashSet<ListBoxItem> TrackedContainers { get; } = [];
 
@@ -140,8 +144,9 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
         if (sender is not ListBoxItem { DataContext: IWorkViewModel vm })
             return;
 
-        if (ListBox.SelectionMode.HasFlag(SelectionMode.Single))
-            return;
+        _ = vm;
+
+        _ = ListBox.SelectionMode.HasFlag(SelectionMode.Single);
     }
 
     private void WorkView_OnSelectionChanged(object? o, SelectionChangedEventArgs selectionChangedEventArgs)
@@ -210,6 +215,7 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
     {
         if (e is { IsBookmarkSupported: false, Entry: WorkBase { User.Id: var id } })
         {
+            _ = id;
             // await TopLevel.GetTopLevel(this)?.ViewContainer.CreateIllustratorPageAsync(id);
         }
     }
@@ -404,10 +410,10 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
             return;
 
         _syncScheduled = true;
-        Dispatcher.UIThread.Post(async () =>
+        Dispatcher.UIThread.Post(() =>
         {
             _syncScheduled = false;
-            await SynchronizeViewportThumbnailsAsync();
+            _ = SynchronizeViewportThumbnailsAsync();
         }, DispatcherPriority.Background);
     }
 
@@ -470,13 +476,34 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
     private async Task LoadAndAnimateAsync(ListBoxItem container, IWorkViewModel viewModel)
     {
         if (!await viewModel.TryLoadThumbnailAsync(ThumbnailReferenceKey))
+        {
+            _ = ViewportRetainedEntries.Remove(viewModel);
+            ScheduleThumbnailRetry();
             return;
+        }
 
         if (!container.IsAttachedToVisualTree())
             return;
 
         if (container.GetVisualDescendants().OfType<IWorkAnimatable>().FirstOrDefault() is { } animatable)
             animatable.StartAnimation();
+    }
+
+    private void ScheduleThumbnailRetry()
+    {
+        if (_retryScheduled)
+            return;
+
+        _retryScheduled = true;
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(ThumbnailRetryDelay).ConfigureAwait(false);
+            Dispatcher.UIThread.Post(() =>
+            {
+                _retryScheduled = false;
+                ScheduleViewportThumbnailSynchronization();
+            }, DispatcherPriority.Background);
+        });
     }
 
     private void ReleaseAllRetainedViewportThumbnails()

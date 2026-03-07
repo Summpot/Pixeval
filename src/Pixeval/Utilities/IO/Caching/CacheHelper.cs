@@ -184,8 +184,21 @@ public static class CacheHelper
     {
         try
         {
-            var stream = await GetStreamFromCacheAsync(key, progress, cancellationToken);
-            return IAnimatedBitmap.Load(stream, true);
+            if (TryGetStreamFromCache(key) is { } cachedStream)
+            {
+                try
+                {
+                    return IAnimatedBitmap.Load(cachedStream, true);
+                }
+                catch (Exception)
+                {
+                    cachedStream.Dispose();
+                    InvalidateCache(key);
+                }
+            }
+
+            if (await DownloadStreamAsync(key, progress, cancellationToken) is { } downloadedStream)
+                return IAnimatedBitmap.Load(downloadedStream, true);
         }
         catch (Exception e)
         {
@@ -203,7 +216,7 @@ public static class CacheHelper
     /// <param name="desiredWidth"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask<Bitmap> GetBitmapFromCacheAsync(
+    public static async ValueTask<Bitmap?> TryGetBitmapAsync(
         string key,
         IProgress<double>? progress = null,
         int? desiredWidth = null,
@@ -211,21 +224,53 @@ public static class CacheHelper
     {
         try
         {
-            return await GetFromFileCacheAsync(key, progress, cancellationToken) is { } stream
-                ? await stream.DecodeBitmapImageAsync(true, desiredWidth)
-                : await ImageNotAvailableTask.Value;
+            if (TryGetStreamFromCache(key) is { } cachedStream)
+            {
+                try
+                {
+                    return await cachedStream.DecodeBitmapImageAsync(true, desiredWidth);
+                }
+                catch (Exception)
+                {
+                    await cachedStream.DisposeAsync();
+                    InvalidateCache(key);
+                }
+            }
+
+            if (await DownloadStreamAsync(key, progress, cancellationToken) is { } downloadedStream)
+                return await downloadedStream.DecodeBitmapImageAsync(true, desiredWidth);
+
+            return null;
         }
         catch (TaskCanceledException)
         {
-            // ignored
+            return null;
         }
         catch (Exception e)
         {
             App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
-                .LogError(nameof(GetBitmapFromCacheAsync), e);
+                .LogError(nameof(TryGetBitmapAsync), e);
         }
 
-        return await ImageNotAvailableTask.Value;
+        return null;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="key"></param>
+    /// <param name="progress"></param>
+    /// <param name="desiredWidth"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async ValueTask<Bitmap> GetBitmapFromCacheAsync(
+        string key,
+        IProgress<double>? progress = null,
+        int? desiredWidth = null,
+        CancellationToken cancellationToken = default)
+    {
+        return await TryGetBitmapAsync(key, progress, desiredWidth, cancellationToken)
+               ?? await ImageNotAvailableTask.Value;
     }
 
     /// <summary>
@@ -239,6 +284,15 @@ public static class CacheHelper
     {
         if (TryGetStreamFromCache(key) is { } stream)
             return stream;
+
+        return await DownloadStreamAsync(key, progress, cancellationToken);
+    }
+
+    private static async ValueTask<Stream?> DownloadStreamAsync(
+        string key,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
         var useFileCache = App.AppViewModel.AppSettings.UseFileCache;
 
         if (await App.AppViewModel.MakoClient.GetImageDownloadClient()
@@ -249,6 +303,7 @@ public static class CacheHelper
                 _ = TryCacheStream(key, s);
                 s.Position = 0;
             }
+
             return s;
         }
 
@@ -273,6 +328,20 @@ public static class CacheHelper
                 .LogError(nameof(IllustrationCacheTable.TryReadCache), e);
         }
         return null;
+    }
+
+    public static bool InvalidateCache(string key)
+    {
+        try
+        {
+            return App.AppViewModel.AppSettings.UseFileCache && CacheTable.TryRemove(new PixevalIllustrationCacheKey(key));
+        }
+        catch (Exception e)
+        {
+            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+                .LogError(nameof(InvalidateCache), e);
+            return false;
+        }
     }
 
     /// <exception cref="InvalidOperationException"/>

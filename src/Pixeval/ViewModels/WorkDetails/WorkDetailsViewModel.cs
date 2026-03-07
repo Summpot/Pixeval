@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Mako.Model;
 using Misaki;
@@ -368,7 +369,9 @@ public partial class WorkDetailsViewModel : ObservableObject
 
     private void ResetState()
     {
-        DisposeTransientAssets();
+        var oldMainImage = MainImage;
+        var oldPageImages = PageImages;
+        var oldRelatedWorks = RelatedWorks;
 
         Title = string.Empty;
         Author = string.Empty;
@@ -386,18 +389,41 @@ public partial class WorkDetailsViewModel : ObservableObject
         RelatedSectionTitle = "相关作品";
         NovelText = string.Empty;
         WorkId = 0;
+
+        DisposeTransientAssetsLater(oldMainImage, oldPageImages, oldRelatedWorks);
     }
 
-    private void DisposeTransientAssets()
+    public void ReleaseResources()
     {
-        MainImage?.Dispose();
+        var oldMainImage = MainImage;
+        var oldPageImages = PageImages;
+        var oldRelatedWorks = RelatedWorks;
+
         MainImage = null;
+        PageImages = [];
+        RelatedWorks = [];
 
-        foreach (var pageImage in PageImages)
-            pageImage.Dispose();
+        DisposeTransientAssetsLater(oldMainImage, oldPageImages, oldRelatedWorks);
+    }
 
-        foreach (var relatedWork in RelatedWorks)
-            relatedWork.Dispose();
+    private static void DisposeTransientAssetsLater(
+        Bitmap? mainImage,
+        IReadOnlyList<WorkDetailsImageItemViewModel> pageImages,
+        IReadOnlyList<RelatedWorkCardViewModel> relatedWorks)
+    {
+        if (mainImage is null && pageImages.Count is 0 && relatedWorks.Count is 0)
+            return;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            mainImage?.Dispose();
+
+            foreach (var pageImage in pageImages)
+                pageImage.Dispose();
+
+            foreach (var relatedWork in relatedWorks)
+                relatedWork.Dispose();
+        }, DispatcherPriority.Background);
     }
 
     private static string NormalizeDescription(string? source)

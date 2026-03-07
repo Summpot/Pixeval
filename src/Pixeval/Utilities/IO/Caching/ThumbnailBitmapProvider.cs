@@ -26,6 +26,6 @@ public static class ThumbnailBitmapProvider
     private sealed class CacheHelperThumbnailBitmapProvider : IThumbnailBitmapProvider
     {
         public async ValueTask<Bitmap?> GetBitmapAsync(string key, CancellationToken cancellationToken = default)
-            => await CacheHelper.GetBitmapFromCacheAsync(key, cancellationToken: cancellationToken).ConfigureAwait(false);
+            => await CacheHelper.TryGetBitmapAsync(key, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }
