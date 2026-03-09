@@ -10,7 +10,6 @@
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:model="using:Mako.Model"
     xmlns:novel="using:Pixeval.ViewModels"
     xmlns:utilities="using:Pixeval.Utilities"
     xmlns:work="using:Pixeval.Views.Work"
@@ -21,8 +20,8 @@
     Design.DataContext="{x:Static utilities:DesignHelper.DesignNovelViewModel}"
     Theme="{StaticResource RoundedButtonStyle}"
     mc:Ignorable="d">
-    <ContentControl>
-        <Grid ClipToBounds="True" ColumnDefinitions="Auto,*">
+    <ContentControl MinWidth="320">
+        <Grid ClipToBounds="True" ColumnDefinitions="Auto,Auto">
             <Grid.ContextFlyout>
                 <MenuFlyout>
                     <MenuItem
@@ -124,6 +123,7 @@
             <DockPanel
                 Grid.Column="1"
                 Margin="10"
+                Width="{Binding PreferredMetadataWidth, Mode=OneTime}"
                 HorizontalSpacing="10"
                 VerticalSpacing="10">
                 <TextBlock
@@ -140,16 +140,14 @@
                         MaxLines="1"
                         Text="{Binding Entry.CreateDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}"
                         TextTrimming="CharacterEllipsis"
-                        TextWrapping="Wrap"
-                        Theme="{StaticResource BodyTextBlockStyle}" />
+                        TextWrapping="Wrap" />
                     <TextBlock
                         x:Name="AuthorTextBlock"
                         Foreground="DarkGray"
                         MaxLines="1"
                         Text="{Binding Entry.User.Name}"
                         TextTrimming="CharacterEllipsis"
-                        TextWrapping="Wrap"
-                        Theme="{StaticResource BodyTextBlockStyle}" />
+                        TextWrapping="Wrap" />
                 </DockPanel>
                 <DockPanel
                     DockPanel.Dock="Bottom"
@@ -181,23 +179,25 @@
                 <ItemsControl
                     x:Name="TagsList"
                     DockPanel.Dock="Top"
-                    ItemsSource="{Binding Entry.Tags}">
+                    ItemsSource="{Binding DisplayTags}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel ItemSpacing="5" LineSpacing="5" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="{x:Type model:Tag}">
+                        <DataTemplate x:DataType="{x:Type novel:NovelDisplayTag}">
                             <Button
                                 Padding="2"
                                 Background="#7F7F7F7F"
                                 Click="UIElement_OnClicked"
+                                Focusable="False"
+                                IsHitTestVisible="{Binding IsInteractive, Mode=OneTime}"
                                 CornerRadius="{StaticResource ControlCornerRadius}">
                                 <TextBlock
-                                    Text="{Binding ToolTip, Mode=OneTime}"
-                                    TextWrapping="NoWrap"
-                                    Theme="{StaticResource CaptionTextBlockStyle}" />
+                                    Text="{Binding DisplayText, Mode=OneTime}"
+                                    ToolTip.Tip="{Binding ToolTipText, Mode=OneTime}"
+                                    TextWrapping="NoWrap" />
                             </Button>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>

@@ -38,17 +38,11 @@
                     SelectionChanged="SortOptionComboBox_OnSelectionChanged" />
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <TextBlock Opacity="0.7" Text="H" VerticalAlignment="Center" />
-                    <Slider
-                        x:Name="ThumbnailHeightSlider"
-                        Width="120"
-                        Maximum="420"
-                        Minimum="140"
-                        ValueChanged="ThumbnailHeightSlider_OnValueChanged" />
-                    <TextBlock
-                        x:Name="ThumbnailHeightValueTextBlock"
-                        MinWidth="48"
-                        VerticalAlignment="Center"
-                        TextAlignment="Right" />
+                    <controls:SymbolComboBox
+                        x:Name="ThumbnailHeightComboBox"
+                        Width="100"
+                        IconMode="False"
+                        SelectionChanged="ThumbnailHeightComboBox_OnSelectionChanged" />
                 </StackPanel>
                 <AutoCompleteBox
                     x:Name="FilterAutoSuggestBox"

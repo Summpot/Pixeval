@@ -1,8 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Mako.Model;
 using Pixeval.Models.Database.Managers;
+using Pixeval.ViewModels;
 
 namespace Pixeval.Views.Work;
 
@@ -13,7 +13,7 @@ public partial class NovelItem : WorkItem
     private void UIElement_OnClicked(object? sender, RoutedEventArgs e)
     {
         e.Handled = true;
-        if (sender is not Control { DataContext: Tag tag })
+        if (sender is not Control { DataContext: NovelDisplayTag { Tag: { } tag } })
             return;
         SearchHistoryPersistentManager.AddHistory(tag.Name, tag.TranslatedName);
         // TopLevel.GetTopLevel(this)?.ViewContainer?.NavigateTo<SearchWorksPage>(tag.Name, (SimpleWorkType.Novel, Name));

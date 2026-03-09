@@ -35,6 +35,8 @@ public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewMod
 
     private DateTimeOffset _nextRetryAtUtc;
 
+    private bool _disposed;
+
     /// <summary>
     /// 是否正在加载缩略图
     /// </summary>
@@ -46,6 +48,9 @@ public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewMod
     /// <returns>缩略图首次加载完成则返回<see langword="true"/>，之前已加载、正在加载或加载失败则返回<see langword="false"/></returns>
     public virtual async ValueTask<bool> TryLoadThumbnailAsync(object key)
     {
+        if (_disposed)
+            return false;
+
         _ = References.Add(key);
 
         if (Thumbnail is not null || LoadingThumbnail || DateTimeOffset.UtcNow < _nextRetryAtUtc)
@@ -54,16 +59,23 @@ public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewMod
         await _loadingGate.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (Thumbnail is not null || LoadingThumbnail || DateTimeOffset.UtcNow < _nextRetryAtUtc)
+            if (_disposed || Thumbnail is not null || LoadingThumbnail || DateTimeOffset.UtcNow < _nextRetryAtUtc)
                 return false;
 
             LoadingThumbnail = true;
-            _loadingThumbnailCts.Dispose();
+            var previousCts = _loadingThumbnailCts;
             _loadingThumbnailCts = new CancellationTokenSource();
+            CancelLoading(previousCts, dispose: true);
 
             var bitmap = await ThumbnailBitmapProvider.Current
                 .GetBitmapAsync(ThumbnailUrl, _loadingThumbnailCts.Token)
                 .ConfigureAwait(false);
+
+            if (_disposed)
+            {
+                bitmap?.Dispose();
+                return false;
+            }
 
             if (bitmap is null)
             {
@@ -78,6 +90,10 @@ public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewMod
             return true;
         }
         catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (ObjectDisposedException) when (_disposed)
         {
             return false;
         }
@@ -98,12 +114,15 @@ public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewMod
     /// </summary>
     public void UnloadThumbnail(object key)
     {
+        if (_disposed)
+            return;
+
         _ = References.Remove(key);
         if (References.Count is not 0)
             return;
 
         if (LoadingThumbnail)
-            _loadingThumbnailCts.Cancel();
+            CancelLoading(_loadingThumbnailCts);
 
         ReleaseThumbnail();
     }
@@ -113,11 +132,13 @@ public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewMod
     /// </summary>
     public void Dispose()
     {
+        if (_disposed)
+            return;
+
         GC.SuppressFinalize(this);
+        _disposed = true;
         References.Clear();
-        _loadingThumbnailCts.Cancel();
-        _loadingThumbnailCts.Dispose();
-        _loadingGate.Dispose();
+        CancelLoading(_loadingThumbnailCts);
         ReleaseThumbnail();
         DisposeOverride();
     }
@@ -132,6 +153,34 @@ public abstract partial class ThumbnailEntryViewModel<T>(T entry) : EntryViewMod
             thumbnail.Dispose();
 
         Thumbnail = null;
+    }
+
+    private static void CancelLoading(CancellationTokenSource? cancellationTokenSource, bool dispose = false)
+    {
+        if (cancellationTokenSource is null)
+            return;
+
+        try
+        {
+            if (!cancellationTokenSource.IsCancellationRequested)
+                cancellationTokenSource.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        finally
+        {
+            if (dispose)
+            {
+                try
+                {
+                    cancellationTokenSource.Dispose();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }
+        }
     }
 
     public override bool Equals(object? obj) => obj is ThumbnailEntryViewModel<T> viewModel && Entry.Equals(viewModel.Entry);

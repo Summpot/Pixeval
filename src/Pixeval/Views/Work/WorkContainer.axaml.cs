@@ -5,11 +5,12 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Linq;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using FluentIcons.Common;
 using Mako.Engine;
 using Mako.Global.Enum;
 using Misaki;
@@ -26,6 +27,18 @@ namespace Pixeval.Views.Work;
 /// </summary>
 public partial class WorkContainer : UserControl
 {
+    private const int ThumbnailHeightMin = 140;
+
+    private const int ThumbnailHeightMax = 420;
+
+    private const int ThumbnailHeightStep = 10;
+
+    private static IReadOnlyList<SymbolComboBoxItem> ThumbnailHeightOptions { get; } = Enumerable
+        .Range(ThumbnailHeightMin / ThumbnailHeightStep, (ThumbnailHeightMax - ThumbnailHeightMin) / ThumbnailHeightStep + 1)
+        .Select(index => index * ThumbnailHeightStep)
+        .Select(height => new SymbolComboBoxItem((double) height, $"{height}px", Symbol.TextLineSpacing))
+        .ToArray();
+
     public event EventHandler<RoutedEventArgs>? RefreshRequested;
 
     /// <summary>
@@ -66,13 +79,12 @@ public partial class WorkContainer : UserControl
     private void InitializeThumbnailHeightControls()
     {
         var tooltip = I18NManager.GetResource("WorkContainer.ThumbnailHeightSlider.ToolTip");
-        ToolTip.SetTip(ThumbnailHeightSlider, tooltip);
-        ToolTip.SetTip(ThumbnailHeightValueTextBlock, tooltip);
+        ThumbnailHeightComboBox.ItemsSource = ThumbnailHeightOptions;
+        ToolTip.SetTip(ThumbnailHeightComboBox, tooltip);
 
-        var height = App.AppViewModel.AppSettings.WorkItemHeight;
-        ThumbnailHeightSlider.Value = height;
-        WorkView.ItemHeight = height;
-        UpdateThumbnailHeightText(height);
+        var height = NormalizeThumbnailHeight(App.AppViewModel.AppSettings.WorkItemHeight);
+        ThumbnailHeightComboBox.SelectedIndex = GetThumbnailHeightOptionIndex(height);
+        ApplyThumbnailHeight(height);
     }
 
     public void SetSortOption()
@@ -99,23 +111,33 @@ public partial class WorkContainer : UserControl
              scrollView.Offset = new(0, 0);
     }
 
-    private void ThumbnailHeightSlider_OnValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
+    private void ThumbnailHeightComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
     {
-        var snappedValue = Math.Round(e.NewValue / 10d) * 10d;
-        if (sender is Slider slider && Math.Abs(slider.Value - snappedValue) > 0.1)
-        {
-            slider.Value = snappedValue;
-            return;
-        }
-
-        App.AppViewModel.AppSettings.WorkItemHeight = snappedValue;
-        WorkView.ItemHeight = snappedValue;
-        UpdateThumbnailHeightText(snappedValue);
+        if (sender.SelectedValue is double height)
+            ApplyThumbnailHeight(height);
     }
 
-    private void UpdateThumbnailHeightText(double height)
+    private void ApplyThumbnailHeight(double height)
     {
-        ThumbnailHeightValueTextBlock.Text = $"{height:0}px";
+        App.AppViewModel.AppSettings.WorkItemHeight = height;
+        WorkView.ItemHeight = height;
+    }
+
+    private static double NormalizeThumbnailHeight(double height)
+    {
+        var snappedValue = Math.Round(height / ThumbnailHeightStep) * ThumbnailHeightStep;
+        return Math.Clamp(snappedValue, ThumbnailHeightMin, ThumbnailHeightMax);
+    }
+
+    private static int GetThumbnailHeightOptionIndex(double height)
+    {
+        var normalizedHeight = NormalizeThumbnailHeight(height);
+        var index = ThumbnailHeightOptions
+            .Select((item, i) => (item, i))
+            .FirstOrDefault(pair => Equals(pair.item.Value, normalizedHeight))
+            .i;
+
+        return index;
     }
 
     private IWorkViewModel? _currentBookmarkItem;

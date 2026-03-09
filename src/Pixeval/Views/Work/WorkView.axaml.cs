@@ -20,6 +20,7 @@ using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.WorkDetails;
 using Pixeval.Views.Capability;
+using WrapPanelItemsAlignment = Pixeval.Controls.WrapPanelItemsAlignment;
 
 namespace Pixeval.Views.Work;
 
@@ -55,6 +56,18 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
         }
     }
 
+    public static readonly DirectProperty<WorkView, WrapPanelItemsAlignment> ItemsAlignmentProperty =
+        AvaloniaProperty.RegisterDirect<WorkView, WrapPanelItemsAlignment>(
+            nameof(ItemsAlignment),
+            t => t.ItemsAlignment,
+            (t, v) => t.ItemsAlignment = v);
+
+    public WrapPanelItemsAlignment ItemsAlignment
+    {
+        get;
+        private set => SetAndRaise(ItemsAlignmentProperty, ref field, value);
+    }
+
     public static FuncValueConverter<bool, SelectionMode> SelectionModeConverter { get; } =
         new(b => b ? SelectionMode.Multiple : SelectionMode.Single);
 
@@ -84,6 +97,7 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
     {
         InitializeComponent();
         ItemHeight = PixevalSettings.WorkItemHeight;
+        ItemsAlignment = WrapPanelItemsAlignment.Stretch;
     }
 
     public static readonly DirectProperty<WorkView, SimpleWorkType> TypeProperty =
@@ -196,20 +210,21 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
     /// </summary>
     public void ResetEngine(IFetchEngine<IArtworkInfo> newEngine, int itemsPerPage = 20, int itemLimit = -1)
     {
-        var type = newEngine.GetType().GetInterfaces()[0].GenericTypeArguments.SingleOrDefault();
+        var isNovelEngine = newEngine is IFetchEngine<Novel>;
         var viewModel = DataContext as ISortableEntryViewViewModel;
         switch (viewModel)
         {
-            case NovelViewViewModel when type == typeof(Novel):
-            case IllustrationViewViewModel when type != typeof(Novel):
+            case NovelViewViewModel when isNovelEngine:
+            case IllustrationViewViewModel when !isNovelEngine:
                 viewModel.ResetEngine(newEngine, itemsPerPage, itemLimit);
                 break;
             default:
-                if (type == typeof(Novel))
+                if (isNovelEngine)
                 {
                     Type = SimpleWorkType.Novel;
                     viewModel?.Dispose();
-                    ItemWidth = 350;
+                    ItemWidth = double.NaN;
+                    ItemsAlignment = WrapPanelItemsAlignment.Start;
                     viewModel = new NovelViewViewModel();
                 }
                 else
@@ -217,6 +232,7 @@ public partial class WorkView : UserControl, IStructuralDisposalCompleter//, IEn
                     Type = SimpleWorkType.IllustrationAndManga;
                     viewModel?.Dispose();
                     ItemWidth = LayoutType is ItemsViewLayoutType.Grid ? 240 : double.NaN;
+                    ItemsAlignment = WrapPanelItemsAlignment.Stretch;
                     viewModel = new IllustrationViewViewModel();
                 }
 
