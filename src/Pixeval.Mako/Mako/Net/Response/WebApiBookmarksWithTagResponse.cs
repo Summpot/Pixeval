@@ -7,21 +7,18 @@ using Mako.Utilities;
 
 namespace Mako.Net.Response;
 
-[Factory]
 public partial record WebApiBookmarksWithTagResponse
 {
     [JsonPropertyName("body")]
     public required WebApiBookmarksWithTagBody ResponseBody { get; set; }
 }
 
-[Factory]
 public partial record WebApiBookmarksWithTagBody
 {
     [JsonPropertyName("works")]
     public required IReadOnlyList<Work> Works { get; set; } = [];
 }
 
-[Factory]
 public partial record Work
 {
     [JsonPropertyName("id")]

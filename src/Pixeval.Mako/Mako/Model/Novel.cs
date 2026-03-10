@@ -12,7 +12,6 @@ using Misaki;
 
 namespace Mako.Model;
 
-[Factory]
 public partial record Novel : WorkBase, IWorkEntry
 {
     [JsonPropertyName("is_original")]

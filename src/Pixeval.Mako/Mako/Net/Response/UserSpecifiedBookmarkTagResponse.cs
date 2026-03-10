@@ -7,7 +7,6 @@ using Mako.Utilities;
 
 namespace Mako.Net.Response;
 
-[Factory]
 public partial record UserSpecifiedBookmarkTagResponse
 {
     [JsonPropertyName("error")]
@@ -20,7 +19,6 @@ public partial record UserSpecifiedBookmarkTagResponse
     public required UserSpecifiedBookmarkTagBody ResponseBody { get; set; }
 }
 
-[Factory]
 public partial record UserSpecifiedBookmarkTagBody
 {
     [JsonPropertyName("public")]
@@ -36,7 +34,6 @@ public partial record UserSpecifiedBookmarkTagBody
     public required bool TooManyBookmarkTags { get; set; }
 }
 
-[Factory]
 public partial record UserSpecifiedBookmarkTag
 {
     [JsonPropertyName("tag")]

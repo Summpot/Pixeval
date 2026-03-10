@@ -6,7 +6,6 @@ using Mako.Utilities;
 
 namespace Mako.Net.Response;
 
-[Factory]
 public partial record RestrictedModeSettingsResponse
 {
     [JsonPropertyName("is_restricted_mode_enabled")]

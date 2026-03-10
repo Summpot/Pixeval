@@ -7,7 +7,6 @@ using Mako.Utilities;
 
 namespace Mako.Model;
 
-[Factory]
 public partial record Comment : IIdEntry
 {
     [JsonPropertyName("id")]
@@ -29,7 +28,6 @@ public partial record Comment : IIdEntry
     public required Stamp? CommentStamp { get; set; }
 }
 
-[Factory]
 public partial record Stamp
 {
     [JsonPropertyName("stamp_id")]
@@ -39,7 +37,6 @@ public partial record Stamp
     public required string StampUrl { get; set; } = DefaultImageUrls.ImageNotAvailable;
 }
 
-[Factory]
 public partial record CommentUser
 {
     [JsonPropertyName("id")]

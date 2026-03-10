@@ -18,22 +18,22 @@ public partial class MakoClient
 {
     private Task<IReadOnlyList<T>> RunWithLoggerAsync<T>(Func<IAppApiEndPoint, Task<IReadOnlyList<T>>> task)
     {
-        return RunWithLoggerAsync(() => task(Provider.GetRequiredService<IAppApiEndPoint>()), []);
+        return RunWithLoggerAsync(() => task(Provider.GetRequiredService<IAppApiEndPoint>()));
     }
 
     private Task<bool> RunWithLoggerAsync(Func<IAppApiEndPoint, Task<bool>> task)
     {
-        return RunWithLoggerAsync(() => task(Provider.GetRequiredService<IAppApiEndPoint>()), false);
+        return RunWithLoggerAsync(() => task(Provider.GetRequiredService<IAppApiEndPoint>()));
     }
 
     private Task<IEnumerable<T>> RunWithLoggerAsync<T>(Func<IAppApiEndPoint, Task<IEnumerable<T>>> task)
     {
-        return RunWithLoggerAsync(() => task(Provider.GetRequiredService<IAppApiEndPoint>()), []);
+        return RunWithLoggerAsync(() => task(Provider.GetRequiredService<IAppApiEndPoint>()));
     }
 
     private Task<HttpResponseMessage> RunWithLoggerAsync(Func<IAppApiEndPoint, Task<HttpResponseMessage>> task)
     {
-        return RunWithLoggerAsync(() => task(Provider.GetRequiredService<IAppApiEndPoint>()), new HttpResponseMessage(HttpStatusCode.RequestTimeout));
+        return RunWithLoggerAsync(() => task(Provider.GetRequiredService<IAppApiEndPoint>()));
     }
 
     private async Task RunWithLoggerAsync(Func<IAppApiEndPoint, Task> task)
@@ -49,53 +49,31 @@ public partial class MakoClient
         }
     }
 
-    private Task<T> RunWithLoggerAsync<T>(Func<IAppApiEndPoint, Task<T>> task) where T : IDefaultFactory<T>
-    {
-        return RunWithLoggerAsync(() => task(Provider.GetRequiredService<IAppApiEndPoint>()), T.CreateDefault);
-    }
-
-    private Task<T> RunWithLoggerAsync<T>(Func<Task<T>> task) where T : IDefaultFactory<T>
-    {
-        return RunWithLoggerAsync(task, T.CreateDefault);
-    }
-
-    private Task<IReadOnlyList<T>> RunWithLoggerAsync<T>(Func<Task<IReadOnlyList<T>>> task) where T : IDefaultFactory<T>
-    {
-        return RunWithLoggerAsync(task, []);
-    }
-
-    private Task<HttpResponseMessage> RunWithLoggerAsync(Func<Task<HttpResponseMessage>> task)
-    {
-        return RunWithLoggerAsync(task, new HttpResponseMessage(HttpStatusCode.RequestTimeout));
-    }
-
-    private async Task<T> RunWithLoggerAsync<T>(Func<Task<T>> task, Func<T> createDefault)
+    private async Task<T> RunWithLoggerAsync<T>(Func<IAppApiEndPoint, Task<T>> task)
     {
         try
         {
             EnsureBuilt();
+            return await task(Provider.GetRequiredService<IAppApiEndPoint>());
+        }
+        catch (Exception e)
+        {
+            LogException(e);
+            throw;
+        }
+    }
 
+    private async Task<T> RunWithLoggerAsync<T>(Func<Task<T>> task)
+    {
+        try
+        {
+            EnsureBuilt();
             return await task();
         }
         catch (Exception e)
         {
             LogException(e);
-            return createDefault();
-        }
-    }
-
-    private async Task<T> RunWithLoggerAsync<T>(Func<Task<T>> task, T createDefault)
-    {
-        try
-        {
-            EnsureBuilt();
-
-            return await task();
-        }
-        catch (Exception e)
-        {
-            LogException(e);
-            return createDefault;
+            throw;
         }
     }
 

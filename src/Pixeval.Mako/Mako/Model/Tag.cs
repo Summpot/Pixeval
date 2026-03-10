@@ -7,7 +7,6 @@ using Misaki;
 
 namespace Mako.Model;
 
-[Factory]
 public partial record Tag : ITag
 {
     [JsonIgnore]

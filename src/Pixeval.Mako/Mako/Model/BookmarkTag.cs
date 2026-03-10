@@ -7,7 +7,6 @@ using Misaki;
 
 namespace Mako.Model;
 
-[Factory]
 public partial class BookmarkTag : ITag
 {
     ITagCategory ITag.Category => ITagCategory.Empty;

@@ -9,7 +9,6 @@ namespace Mako.Model;
 /// <summary>
 /// 这个类型比较特殊，并非网络请求的响应类型，因此放到Model而非Response目录中
 /// </summary>
-[Factory]
 public partial record TokenResponse
 {
     [JsonPropertyName("access_token")]
@@ -35,13 +34,34 @@ public partial record TokenResponse
 
     public static TokenResponse CreateFromRefreshToken(string refreshToken)
     {
-        var tokenResponse = CreateDefault();
-        tokenResponse.RefreshToken = refreshToken;
-        return tokenResponse;
+        return new TokenResponse
+        {
+            RefreshToken = refreshToken,
+            AccessToken = "",
+            TokenType = "",
+            Scope = "",
+            ExpiresIn = 0,
+            User = new TokenUser
+            {
+                ProfileImageUrls = new TokenProfileImageUrls
+                {
+                    Px16X16 = DefaultImageUrls.NoProfile,
+                    Px50X50 = DefaultImageUrls.NoProfile,
+                    Px170X170 = DefaultImageUrls.NoProfile
+                },
+                Id = 0,
+                Name = "",
+                Account = "",
+                MailAddress = "",
+                IsPremium = false,
+                XRestrict = 0,
+                IsMailAuthorized = false,
+                RequirePolicyAgreement = false
+            }
+        };
     }
 }
 
-[Factory]
 public partial record TokenUser
 {
     [JsonPropertyName("profile_image_urls")]
@@ -73,7 +93,6 @@ public partial record TokenUser
     public required bool RequirePolicyAgreement { get; set; }
 }
 
-[Factory]
 public partial record TokenProfileImageUrls
 {
     [JsonPropertyName("px_16x16")]

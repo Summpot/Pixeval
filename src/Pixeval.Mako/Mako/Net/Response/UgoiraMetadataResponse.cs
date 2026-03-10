@@ -7,7 +7,6 @@ using Mako.Utilities;
 
 namespace Mako.Net.Response;
 
-[Factory]
 public partial record UgoiraMetadataResponse
 {
     [JsonPropertyName("ugoira_metadata")]

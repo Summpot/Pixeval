@@ -29,10 +29,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Mako.SourceGen\Mako.SourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="False" />
-    </ItemGroup>
-
-    <ItemGroup>
         <None Include="..\LICENSE">
             <Pack>True</Pack>
             <PackagePath></PackagePath>

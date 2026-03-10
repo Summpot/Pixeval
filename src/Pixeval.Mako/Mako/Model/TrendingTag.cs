@@ -6,7 +6,6 @@ using Mako.Utilities;
 
 namespace Mako.Model;
 
-[Factory]
 public partial record TrendingTag
 {
     [JsonPropertyName("tag")]

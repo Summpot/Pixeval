@@ -12,7 +12,6 @@ using Misaki;
 namespace Mako.Model;
 
 [DebuggerDisplay("{UserInfo}")]
-[Factory]
 public partial record User : IIdEntry
 {
     public long Id => UserInfo.Id;
@@ -31,7 +30,6 @@ public partial record User : IIdEntry
 }
 
 [DebuggerDisplay("{Id}: {Name}")]
-[Factory]
 public partial record UserInfo : IUser, IIdEntry
 {
     [JsonPropertyName("id")]

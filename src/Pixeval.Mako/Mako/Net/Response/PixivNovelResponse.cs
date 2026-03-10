@@ -8,7 +8,6 @@ using Mako.Utilities;
 
 namespace Mako.Net.Response;
 
-[Factory]
 public partial record PixivNovelResponse : IPixivNextUrlResponse<Novel>
 {
     [JsonPropertyName("next_url")]

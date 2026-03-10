@@ -9,7 +9,6 @@ using Mako.Utilities;
 namespace Mako.Net.Response;
 
 [DebuggerDisplay("{UserEntity}")]
-[Factory]
 public partial record PixivSingleUserResponse
 {
     /// <summary>
@@ -28,7 +27,6 @@ public partial record PixivSingleUserResponse
     public required Workspace UserWorkspace { get; set; }
 }
 
-[Factory]
 public partial record Profile
 {
     [JsonPropertyName("webpage")]
@@ -104,7 +102,6 @@ public partial record Profile
     public required bool IsUsingCustomProfileImage { get; set; }
 }
 
-[Factory]
 public partial record ProfilePublicity
 {
     [JsonPropertyName("gender")]
@@ -126,7 +123,6 @@ public partial record ProfilePublicity
     public required bool Pawoo { get; set; }
 }
 
-[Factory]
 public partial record Workspace
 {
     [JsonPropertyName("pc")]

@@ -7,7 +7,6 @@ using Mako.Utilities;
 
 namespace Mako.Net.Response;
 
-[Factory]
 public partial record PixivSpotlightDetailResponse
 {
     [JsonPropertyName("error")]
@@ -20,7 +19,6 @@ public partial record PixivSpotlightDetailResponse
     public required IReadOnlyList<SpotlightBody> ResponseBody { get; set; } = [];
 }
 
-[Factory]
 public partial record SpotlightBody
 {
     [JsonPropertyName("id")]
@@ -72,7 +70,6 @@ public partial record SpotlightBody
     public required bool IsOnlyOneUser { get; set; }
 }
 
-[Factory]
 public partial record Entry
 {
     [JsonPropertyName("id")]
@@ -131,7 +128,6 @@ public partial record Entry
     public required string TwitterCount { get; set; } = "";
 }
 
-[Factory]
 public partial record PixivisionCategory
 {
     [JsonPropertyName("label")]
@@ -141,7 +137,6 @@ public partial record PixivisionCategory
     public required string Introduction { get; set; } = "";
 }
 
-[Factory]
 public partial record PixivisionSubcategory
 {
     [JsonPropertyName("label")]
@@ -163,7 +158,6 @@ public partial record PixivisionSubcategory
     public required string BigImageUrl { get; set; } = "";
 }
 
-[Factory]
 public partial record PixivisionTag
 {
     [JsonPropertyName("id")]
@@ -173,7 +167,6 @@ public partial record PixivisionTag
     public required string Name { get; set; } = "";
 }
 
-[Factory]
 public partial record PixivisionIllustration
 {
     [JsonPropertyName("spotlight_article_id")]
@@ -252,7 +245,6 @@ public partial record PixivisionIllustration
     public required string UserIcon { get; set; } = "";
 }
 
-[Factory]
 public partial record Url
 {
     [JsonPropertyName("1200x1200")]
@@ -268,7 +260,6 @@ public partial record Url
     public required string Ugoira1920X1080 { get; set; } = "";
 }
 
-[Factory]
 public partial record RelatedArticle
 {
     [JsonPropertyName("id")]

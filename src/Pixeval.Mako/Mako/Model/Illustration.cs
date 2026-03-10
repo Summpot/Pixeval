@@ -16,7 +16,6 @@ using Misaki;
 namespace Mako.Model;
 
 // ReSharper disable UnusedAutoPropertyAccessor.Global
-[Factory]
 public partial record Illustration : WorkBase, IWorkEntry, ISingleImage, ISingleAnimatedImage, IImageSet
 {
     [JsonPropertyName("type")]
@@ -377,7 +376,6 @@ public partial record Illustration : WorkBase, IWorkEntry, ISingleImage, ISingle
     }
 }
 
-[Factory]
 public partial record MetaSinglePage
 {
     /// <summary>
@@ -387,7 +385,6 @@ public partial record MetaSinglePage
     public string? OriginalImageUrl { get; set; } = DefaultImageUrls.ImageNotAvailable;
 }
 
-[Factory]
 public partial record MangaImageUrls : ImageUrls
 {
     /// <summary>
@@ -397,7 +394,6 @@ public partial record MangaImageUrls : ImageUrls
     public required string Original { get; set; } = DefaultImageUrls.ImageNotAvailable;
 }
 
-[Factory]
 public partial record MetaPage
 {
     [JsonPropertyName("image_urls")]

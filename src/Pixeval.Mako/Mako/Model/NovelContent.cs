@@ -10,7 +10,6 @@ using Mako.Utilities;
 
 namespace Mako.Model;
 
-[Factory]
 public partial record NovelContent
 {
     [JsonPropertyName("id")]
@@ -89,7 +88,6 @@ public partial record NovelContent
     public required bool IsOriginal { get; set; }
 }
 
-[Factory]
 public partial record Rating
 {
     [JsonPropertyName("like")]
@@ -102,7 +100,6 @@ public partial record Rating
     public required int View { get; set; }
 }
 
-[Factory]
 public partial record SeriesNavigation
 {
     [JsonPropertyName("nextNovel")]
@@ -112,7 +109,6 @@ public partial record SeriesNavigation
     public NovelNavigation? PrevNovel { get; set; }
 }
 
-[Factory]
 public partial record NovelNavigation
 {
     [JsonPropertyName("id")]
@@ -135,7 +131,6 @@ public partial record NovelNavigation
     public string? ViewableMessage { get; set; }
 }
 
-[Factory]
 public partial record NovelImage
 {
     [JsonPropertyName("novelImageId")]
@@ -153,7 +148,6 @@ public partial record NovelImage
     public string OriginalUrl => Urls.Original;
 }
 
-[Factory]
 public partial record NovelImageUrls
 {
     /// <summary>
@@ -178,7 +172,6 @@ public partial record NovelImageUrls
     public required string Original { get; set; } = DefaultImageUrls.ImageNotAvailable;
 }
 
-[Factory]
 public partial record NovelIllustration : IIdEntry
 {
     [JsonPropertyName("visible")]
@@ -209,7 +202,6 @@ public partial record NovelIllustration : IIdEntry
     public string ThumbnailUrl => Illustration.Images.Medium;
 }
 
-[Factory]
 public partial record NovelIllustrationInfo
 {
     [JsonPropertyName("title")]
@@ -234,7 +226,6 @@ public partial record NovelIllustrationInfo
     public required NovelIllustrationUrls Images { get; set; }
 }
 
-[Factory]
 public partial record NovelTag
 {
     [JsonPropertyName("tag")]
@@ -244,7 +235,6 @@ public partial record NovelTag
     public required string UserId { get; set; } = "";
 }
 
-[Factory]
 public partial record NovelIllustrationUrls
 {
     [JsonPropertyName("small")]
@@ -257,7 +247,6 @@ public partial record NovelIllustrationUrls
     public required string? Original { get; set; }
 }
 
-[Factory]
 public partial record NovelUser
 {
     [JsonPropertyName("id")]
@@ -271,7 +260,6 @@ public partial record NovelUser
     public required string Image { get; set; } = DefaultImageUrls.NoProfile;
 }
 
-[Factory]
 public partial record NovelReplaceableGlossary
 {
     [JsonPropertyName("id")]

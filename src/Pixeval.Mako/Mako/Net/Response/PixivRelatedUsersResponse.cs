@@ -8,7 +8,6 @@ using Mako.Utilities;
 
 namespace Mako.Net.Response;
 
-[Factory]
 public partial record PixivRelatedUsersResponse
 {
     [JsonPropertyName("user_previews")]

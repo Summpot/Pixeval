@@ -9,7 +9,6 @@ using Mako.Utilities;
 namespace Mako.Net.Response;
 
 [DebuggerDisplay("{Novel}")]
-[Factory]
 public partial record PixivSingleNovelResponse
 {
     [JsonPropertyName("novel")]
