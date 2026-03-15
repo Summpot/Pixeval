@@ -6,8 +6,10 @@
     xmlns:controls="using:Tabalonia.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:fluent="using:FluentIcons.Avalonia"
+    xmlns:i="using:Pixeval.I18N"
     xmlns:local="using:Pixeval.Views.ViewContainers"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:pixeval="using:Pixeval"
     xmlns:pixControls="using:Pixeval.Controls"
     xmlns:utilities="using:Pixeval.Utilities"
     xmlns:viewModels="using:Pixeval.ViewModels"
@@ -38,6 +40,17 @@
                 <Border ClipToBounds="True" CornerRadius="100">
                     <animatedImage:AnimatedImage Source="{Binding Avatar}" />
                 </Border>
+                <Button.Flyout>
+                    <MenuFlyout>
+                        <MenuItem
+                            Click="SignOutMenuItem_OnClick"
+                            Header="{i:I18N {x:Static pixeval:MainPageResources.LogoutItemText}}">
+                            <MenuItem.Icon>
+                                <fluent:SymbolIcon Symbol="SignOut" />
+                            </MenuItem.Icon>
+                        </MenuItem>
+                    </MenuFlyout>
+                </Button.Flyout>
             </Button>
         </controls:TabsControl.RightHeaderContent>
         <controls:TabsControl.LeftContent>

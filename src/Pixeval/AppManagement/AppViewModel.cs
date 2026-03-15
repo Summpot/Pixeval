@@ -107,6 +107,17 @@ public class AppViewModel(App app, FileLogger logger) : IDisposable
                && await LoginWithRefreshTokenAsync(refreshToken).ConfigureAwait(false);
     }
 
+    public void SignOutCurrentUser()
+    {
+        var currentRefreshToken = LoginContext.CurrentRefreshToken;
+        if (!string.IsNullOrWhiteSpace(currentRefreshToken))
+            LoginContext.Users.Remove(currentRefreshToken);
+
+        LoginContext.CurrentRefreshToken = "";
+        MakoClient.ClearToken();
+        AppInfo.SaveLoginContext(LoginContext);
+    }
+
     public void InitializeProvider()
     {
         Directory.Delete(AppInfo.TempFolder, true);

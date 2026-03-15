@@ -7,6 +7,8 @@ using Avalonia.Threading;
 using FluentAvalonia.UI.Controls;
 using FluentAvalonia.UI.Navigation;
 using Pixeval.AppManagement;
+using Pixeval.I18N;
+using Pixeval.Views;
 using Pixeval.Utilities;
 using Tabalonia.Controls;
 using Tabalonia.InterTab;
@@ -102,6 +104,15 @@ public partial class TabViewContainer : ViewContainerBase
 #pragma warning disable IL2072 // Target parameter argument does not satisfy 'DynamicallyAccessedMembersAttribute' in call to target method. The return value of the source method does not have matching annotations.
         this.NavigateTo(type);
 #pragma warning restore IL2072
+    }
+
+    private void SignOutMenuItem_OnClick(object? sender, RoutedEventArgs e)
+    {
+        App.AppViewModel.SignOutCurrentUser();
+
+        TabsControl.Items.Clear();
+        NavigateTo(typeof(LoginPage), null, I18NManager.GetResource(MainPageResources.LoginTabContent));
+        e.Handled = true;
     }
 
 }
