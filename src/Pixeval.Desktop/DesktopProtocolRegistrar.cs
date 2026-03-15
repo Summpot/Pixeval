@@ -1,14 +1,17 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Microsoft.Win32;
 using Pixeval.AppManagement;
 
 namespace Pixeval.Desktop;
 
-internal static class DesktopProtocolRegistrar
+internal static partial class DesktopProtocolRegistrar
 {
+    private const uint KcfStringEncodingUtf8 = 0x0800_0100;
+
     public static bool EnsureRegistered(out string? error)
     {
         try
@@ -24,6 +27,8 @@ internal static class DesktopProtocolRegistrar
                 EnsureRegisteredWindows(executablePath);
             else if (OperatingSystem.IsLinux())
                 EnsureRegisteredLinux(executablePath);
+            else if (OperatingSystem.IsMacOS())
+                TryEnsureRegisteredMacOS();
 
             error = null;
             return true;
@@ -156,4 +161,148 @@ internal static class DesktopProtocolRegistrar
             // ignore if desktop integration utilities are not available
         }
     }
+
+    [SupportedOSPlatform("macos")]
+    private static void TryEnsureRegisteredMacOS()
+    {
+        foreach (var scheme in new[] { "pixiv", "pixeval" })
+        {
+            if (TryForceMacDefaultHandler(scheme, out var warning))
+                continue;
+
+            Debug.WriteLine($"Pixeval: macOS URL scheme takeover failed for '{scheme}': {warning}");
+        }
+    }
+
+    [SupportedOSPlatform("macos")]
+    private static bool TryForceMacDefaultHandler(string scheme, out string? warning)
+    {
+        var bundleIdentifier = GetCurrentMacBundleIdentifier();
+        if (string.IsNullOrWhiteSpace(bundleIdentifier))
+            bundleIdentifier = AppInfo.AppIdentifier;
+
+        var schemeRef = CreateCfString(scheme);
+        if (schemeRef == IntPtr.Zero)
+        {
+            warning = $"Unable to allocate CFString for scheme '{scheme}'.";
+            return false;
+        }
+
+        var bundleRef = CreateCfString(bundleIdentifier);
+        if (bundleRef == IntPtr.Zero)
+        {
+            CfRelease(schemeRef);
+            warning = $"Unable to allocate CFString for bundle id '{bundleIdentifier}'.";
+            return false;
+        }
+
+        try
+        {
+            var status = LsSetDefaultHandlerForUrlScheme(schemeRef, bundleRef);
+            if (status != 0)
+            {
+                warning = $"LSSetDefaultHandlerForURLScheme returned OSStatus {status} for bundle '{bundleIdentifier}'.";
+                return false;
+            }
+
+            var copiedDefaultHandler = LsCopyDefaultHandlerForUrlScheme(schemeRef);
+            if (copiedDefaultHandler == IntPtr.Zero)
+            {
+                warning = null;
+                return true;
+            }
+
+            try
+            {
+                var effectiveHandler = CfStringToString(copiedDefaultHandler);
+                if (!string.Equals(effectiveHandler, bundleIdentifier, StringComparison.Ordinal))
+                {
+                    warning = $"LaunchServices kept '{effectiveHandler}' as the default handler instead of '{bundleIdentifier}'.";
+                    return false;
+                }
+            }
+            finally
+            {
+                CfRelease(copiedDefaultHandler);
+            }
+
+            warning = null;
+            return true;
+        }
+        finally
+        {
+            CfRelease(bundleRef);
+            CfRelease(schemeRef);
+        }
+    }
+
+    [SupportedOSPlatform("macos")]
+    private static string? GetCurrentMacBundleIdentifier()
+    {
+        var mainBundle = CfBundleGetMainBundle();
+        if (mainBundle == IntPtr.Zero)
+            return null;
+
+        var identifier = CfBundleGetIdentifier(mainBundle);
+        return identifier == IntPtr.Zero ? null : CfStringToString(identifier);
+    }
+
+    [SupportedOSPlatform("macos")]
+    private static IntPtr CreateCfString(string value)
+    {
+        return CfStringCreateWithCString(IntPtr.Zero, value, KcfStringEncodingUtf8);
+    }
+
+    [SupportedOSPlatform("macos")]
+    private static string? CfStringToString(IntPtr value)
+    {
+        if (value == IntPtr.Zero)
+            return null;
+
+        var length = CfStringGetLength(value);
+        if (length <= 0)
+            return string.Empty;
+
+        var maxSize = CfStringGetMaximumSizeForEncoding(length, KcfStringEncodingUtf8) + 1;
+        var buffer = Marshal.AllocHGlobal(maxSize);
+        try
+        {
+            if (!CfStringGetCString(value, buffer, maxSize, KcfStringEncodingUtf8))
+                return null;
+
+            return Marshal.PtrToStringUTF8(buffer);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+    }
+
+    [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation", EntryPoint = "CFBundleGetMainBundle")]
+    private static partial IntPtr CfBundleGetMainBundle();
+
+    [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation", EntryPoint = "CFBundleGetIdentifier")]
+    private static partial IntPtr CfBundleGetIdentifier(IntPtr bundle);
+
+    [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation", EntryPoint = "CFStringCreateWithCString", StringMarshalling = StringMarshalling.Utf8)]
+    private static partial IntPtr CfStringCreateWithCString(IntPtr alloc, string value, uint encoding);
+
+    [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation", EntryPoint = "CFStringGetLength")]
+    private static partial nint CfStringGetLength(IntPtr value);
+
+    [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation", EntryPoint = "CFStringGetMaximumSizeForEncoding")]
+    private static partial nint CfStringGetMaximumSizeForEncoding(nint length, uint encoding);
+
+    [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation", EntryPoint = "CFStringGetCString")]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static partial bool CfStringGetCString(IntPtr value, IntPtr buffer, nint bufferSize, uint encoding);
+
+    [LibraryImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation", EntryPoint = "CFRelease")]
+    private static partial void CfRelease(IntPtr value);
+
+    [LibraryImport("/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices", EntryPoint = "LSSetDefaultHandlerForURLScheme")]
+    private static partial int LsSetDefaultHandlerForUrlScheme(IntPtr scheme, IntPtr handlerBundleId);
+
+    [LibraryImport("/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices", EntryPoint = "LSCopyDefaultHandlerForURLScheme")]
+    private static partial IntPtr LsCopyDefaultHandlerForUrlScheme(IntPtr scheme);
 }
