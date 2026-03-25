@@ -11,6 +11,11 @@ sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        if (DesktopProtocolRegistrar.TryRelaunchAsMacBundle(args))
+            return;
+
+        using var macOsStartupProtocolBridge = MacOSStartupProtocolBridge.TryInstall();
+
         if (!DesktopProtocolRelay.Initialize(args))
             return;
 

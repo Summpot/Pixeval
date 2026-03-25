@@ -18,6 +18,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Include="Info.plist" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\Pixeval\Pixeval.csproj" />
 	</ItemGroup>
 </Project>

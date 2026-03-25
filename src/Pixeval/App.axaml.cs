@@ -52,7 +52,7 @@ public class App : Application
             case IClassicDesktopStyleApplicationLifetime desktop:
                 DisableAvaloniaDataAnnotationValidation();
 
-                desktop.Exit += (o, e) =>
+                desktop.Exit += (_, _) =>
                 {
                     AppInfo.SaveContext();
                     AppInfo.Dispose();
@@ -124,7 +124,19 @@ public class App : Application
 
     private void ProtocolActivationHubOnUriActivated(object? sender, Uri uri)
     {
-        Dispatcher.UIThread.Post(async () => await HandleProtocolActivationAsync(uri));
+        Dispatcher.UIThread.Post(() => _ = HandleProtocolActivationSafelyAsync(uri));
+    }
+
+    private async Task HandleProtocolActivationSafelyAsync(Uri uri)
+    {
+        try
+        {
+            await HandleProtocolActivationAsync(uri);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError($"Failed to process protocol activation for {FormatProtocolUriForLogging(uri)}", e);
+        }
     }
 
     private async Task HandleProtocolActivationAsync(Uri uri)
@@ -132,8 +144,18 @@ public class App : Application
         if (!AppViewModel.BrowserLoginService.IsPixivCallbackUri(uri))
             return;
 
+        Logger.LogInformation($"Received protocol activation for {FormatProtocolUriForLogging(uri)}", null);
+
         if (await AppViewModel.LoginWithProtocolCallbackAsync(uri))
+        {
+            Logger.LogInformation($"Completed protocol activation for {FormatProtocolUriForLogging(uri)}", null);
             RootViewContainer?.NavigateTo<RecommendWorksPage>(true);
+        }
+    }
+
+    private static string FormatProtocolUriForLogging(Uri uri)
+    {
+        return $"{uri.Scheme}://{uri.Host}{uri.AbsolutePath}";
     }
 
     /// <summary>
@@ -155,12 +177,12 @@ public class App : Application
 
     private void RegisterUnhandledExceptionHandler()
     {
-        TaskScheduler.UnobservedTaskException += (o, e) =>
+        TaskScheduler.UnobservedTaskException += (_, e) =>
         {
             Logger.LogError(nameof(TaskScheduler.UnobservedTaskException), e.Exception);
             e.SetObserved();
         };
-        AppDomain.CurrentDomain.UnhandledException += (o, e) =>
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
             if (e.IsTerminating)
                 Logger.LogCritical(nameof(AppDomain.UnhandledException), e.ExceptionObject as Exception);

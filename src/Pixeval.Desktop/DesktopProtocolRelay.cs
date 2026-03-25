@@ -4,7 +4,6 @@ using System.IO;
 using System.IO.Pipes;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Pixeval.AppManagement;
 
 namespace Pixeval.Desktop;
@@ -35,13 +34,16 @@ internal static class DesktopProtocolRelay
             if (protocolArgs.Length > 0)
                 ForwardProtocolArgs(protocolArgs);
 
+            if (OperatingSystem.IsMacOS())
+                return false;
+
             return protocolArgs.Length == 0;
         }
 
         foreach (var protocolArg in protocolArgs)
             ProtocolActivationHub.Publish(protocolArg);
 
-        _ = ListenAsync();
+        StartListener();
         return true;
     }
 
@@ -72,10 +74,7 @@ internal static class DesktopProtocolRelay
             {
                 using var client = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
                 client.Connect(800);
-                using var writer = new StreamWriter(client)
-                {
-                    AutoFlush = true
-                };
+                using var writer = CreateAutoFlushWriter(client);
                 writer.WriteLine(protocolArg);
             }
             catch
@@ -85,22 +84,33 @@ internal static class DesktopProtocolRelay
         }
     }
 
-    private static async Task ListenAsync()
+    private static void StartListener()
     {
-        while (true)
+        var listenerThread = new Thread(ListenLoop)
+        {
+            IsBackground = true,
+            Name = "Pixeval Protocol Pipe Listener"
+        };
+
+        listenerThread.Start();
+    }
+
+    private static void ListenLoop()
+    {
+        while (!Environment.HasShutdownStarted)
         {
             try
             {
-                await using var server = new NamedPipeServerStream(
+                using var server = new NamedPipeServerStream(
                     PipeName,
                     PipeDirection.In,
                     1,
                     PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous);
+                    PipeOptions.None);
 
-                await server.WaitForConnectionAsync(CancellationToken.None).ConfigureAwait(false);
+                server.WaitForConnection();
                 using var reader = new StreamReader(server);
-                var line = await reader.ReadLineAsync().ConfigureAwait(false);
+                var line = reader.ReadLine();
                 ProtocolActivationHub.Publish(line);
             }
             catch
@@ -108,5 +118,13 @@ internal static class DesktopProtocolRelay
                 // Keep listening even if one transfer fails.
             }
         }
+    }
+
+    private static StreamWriter CreateAutoFlushWriter(Stream stream)
+    {
+        return new StreamWriter(stream)
+        {
+            AutoFlush = true
+        };
     }
 }
