@@ -1,0 +1,165 @@
+<UserControl
+    x:Class="Pixeval.Views.Capability.DownloadPage"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Pixeval.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:download="using:Pixeval.ViewModels.Download"
+    xmlns:i="using:Pixeval.I18N"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:pixeval="using:Pixeval"
+    xmlns:views="using:Pixeval.Views.Capability"
+    d:DesignHeight="720"
+    d:DesignWidth="1100"
+    x:DataType="download:DownloadPageViewModel"
+    mc:Ignorable="d">
+    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+        <Border
+            Grid.Row="0"
+            Padding="20"
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            CornerRadius="20">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                <StackPanel Spacing="6">
+                    <TextBlock
+                        FontSize="28"
+                        FontWeight="Bold"
+                        Text="{i:I18N {x:Static pixeval:DownloadPageResources.PageTitleTextBlockText}}" />
+                    <TextBlock
+                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                        Text="统一管理下载队列、已完成记录与失败重试。" />
+                    <TextBlock
+                        FontSize="12"
+                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                        Text="{Binding VisibleSummaryText}" />
+                </StackPanel>
+
+                <WrapPanel Grid.Column="1" HorizontalAlignment="Right" ItemSpacing="8" LineSpacing="8">
+                    <Border
+                        Padding="12,8"
+                        Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                        CornerRadius="14">
+                        <StackPanel>
+                            <TextBlock FontSize="12" Opacity="0.7" Text="全部" />
+                            <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding TotalCount}" />
+                        </StackPanel>
+                    </Border>
+                    <Border
+                        Padding="12,8"
+                        Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                        CornerRadius="14">
+                        <StackPanel>
+                            <TextBlock FontSize="12" Opacity="0.7" Text="活动" />
+                            <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding ActiveCount}" />
+                        </StackPanel>
+                    </Border>
+                    <Border
+                        Padding="12,8"
+                        Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                        CornerRadius="14">
+                        <StackPanel>
+                            <TextBlock FontSize="12" Opacity="0.7" Text="完成" />
+                            <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding CompletedCount}" />
+                        </StackPanel>
+                    </Border>
+                    <Border
+                        Padding="12,8"
+                        Background="#24B3261E"
+                        CornerRadius="14">
+                        <StackPanel>
+                            <TextBlock FontSize="12" Foreground="#FFB3261E" Text="失败" />
+                            <TextBlock FontSize="22" FontWeight="SemiBold" Foreground="#FFB3261E" Text="{Binding FailedCount}" />
+                        </StackPanel>
+                    </Border>
+                </WrapPanel>
+            </Grid>
+        </Border>
+
+        <Border
+            Grid.Row="1"
+            Padding="14"
+            Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+            CornerRadius="18">
+            <Grid ColumnDefinitions="220,*,Auto" ColumnSpacing="10">
+                <ComboBox ItemsSource="{Binding FilterOptions}" SelectedItem="{Binding SelectedFilter, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="download:DownloadFilterOptionItem">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <TextBox
+                    Grid.Column="1"
+                    Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    Watermark="{i:I18N {x:Static pixeval:DownloadPageResources.FilterAutoSuggestBoxPlaceholderText}}" />
+
+                <controls:ToolBar Grid.Column="2">
+                    <Button Click="ClearSelectionButton_OnClick" IsEnabled="{Binding IsAnyEntrySelected}">
+                        <controls:IconText Symbol="SelectAllOff" Text="{Binding SelectionLabel}" />
+                    </Button>
+                    <Button Click="SelectAllButton_OnClick">
+                        <controls:IconText Symbol="SelectAllOn" Text="{i:I18N {x:Static pixeval:DownloadPageResources.SelectAllButtonLabel}}" />
+                    </Button>
+                    <Button Click="ResumeSelectedButton_OnClick" IsEnabled="{Binding IsAnyEntrySelected}">
+                        <controls:IconText Symbol="Play" Text="{i:I18N {x:Static pixeval:DownloadPageResources.ResumeButtonLabel}}" />
+                    </Button>
+                    <Button Click="PauseSelectedButton_OnClick" IsEnabled="{Binding IsAnyEntrySelected}">
+                        <controls:IconText Symbol="Pause" Text="{i:I18N {x:Static pixeval:DownloadPageResources.PauseButtonLabel}}" />
+                    </Button>
+                    <Button Click="CancelSelectedButton_OnClick" IsEnabled="{Binding IsAnyEntrySelected}">
+                        <controls:IconText Symbol="Dismiss" Text="{i:I18N {x:Static pixeval:DownloadPageResources.StopButtonLabel}}" />
+                    </Button>
+                    <Button IsEnabled="{Binding IsAnyEntrySelected}">
+                        <controls:IconText Symbol="Delete" Text="{i:I18N {x:Static pixeval:DownloadPageResources.DeleteButtonLabel}}" />
+                        <Button.Flyout>
+                            <MenuFlyout>
+                                <MenuItem Click="DeleteSelectedRecordsMenuItem_OnClick" Header="仅删除记录" />
+                                <MenuItem Click="DeleteSelectedRecordsAndFilesMenuItem_OnClick" Header="删除记录和本地文件" />
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
+                </controls:ToolBar>
+            </Grid>
+        </Border>
+
+        <Border
+            Grid.Row="2"
+            Padding="8"
+            Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+            CornerRadius="20">
+            <Grid>
+                <ListBox
+                    x:Name="TaskListBox"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    ItemsSource="{Binding View}"
+                    SelectionChanged="TaskListBox_OnSelectionChanged"
+                    SelectionMode="Multiple">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="download:DownloadItemViewModel">
+                            <views:DownloadTaskCard Margin="4,4,4,8" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Border
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="#AA111315"
+                    CornerRadius="20"
+                    IsHitTestVisible="False"
+                    IsVisible="{Binding HasNoItem}"
+                    Padding="24">
+                    <TextBlock
+                        FontSize="18"
+                        FontWeight="SemiBold"
+                        Foreground="#FFFFFFFF"
+                        HorizontalAlignment="Center"
+                        Text="{Binding EmptyStateText}"
+                        TextAlignment="Center" />
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

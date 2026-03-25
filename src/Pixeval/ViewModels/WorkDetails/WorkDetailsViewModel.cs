@@ -57,6 +57,9 @@ public partial class WorkDetailsViewModel : ObservableObject
     public partial string KindText { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial IReadOnlyList<WorkDetailsStatItemViewModel> Metrics { get; set; } = [];
+
+    [ObservableProperty]
     public partial Bitmap? MainImage { get; set; }
 
     [ObservableProperty]
@@ -172,6 +175,12 @@ public partial class WorkDetailsViewModel : ObservableObject
 
         var isManga = kind is WorkDetailsKind.Manga || illustration.PageCount > 1;
         KindText = isManga ? "漫画" : "插画";
+        Metrics =
+        [
+            new("收藏", $"{illustration.TotalFavorite:N0}"),
+            new("浏览", $"{illustration.TotalView:N0}"),
+            new("页数", $"{illustration.PageCount:N0}")
+        ];
         StatsText = $"收藏 {illustration.TotalFavorite:N0} · 浏览 {illustration.TotalView:N0} · 页数 {illustration.PageCount}";
         Tags = illustration.Tags.Select(t => string.IsNullOrWhiteSpace(t.TranslatedName)
             ? t.Name
@@ -217,6 +226,13 @@ public partial class WorkDetailsViewModel : ObservableObject
         AppUrl = novel.AppUri.OriginalString;
 
         KindText = "小说";
+        Metrics =
+        [
+            new("收藏", $"{novel.TotalFavorite:N0}"),
+            new("浏览", $"{novel.TotalView:N0}"),
+            new("评论", $"{novel.TotalComments:N0}"),
+            new("字数", $"{novel.TextLength:N0}")
+        ];
         StatsText = $"收藏 {novel.TotalFavorite:N0} · 浏览 {novel.TotalView:N0} · 评论 {novel.TotalComments:N0} · 字数 {novel.TextLength:N0}";
         Tags = novel.Tags.Select(t => string.IsNullOrWhiteSpace(t.TranslatedName)
             ? t.Name
@@ -379,6 +395,7 @@ public partial class WorkDetailsViewModel : ObservableObject
         CreateDateText = string.Empty;
         StatsText = string.Empty;
         KindText = string.Empty;
+        Metrics = [];
         MainImage = null;
         WebsiteUrl = string.Empty;
         AppUrl = string.Empty;

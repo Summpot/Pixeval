@@ -15,6 +15,8 @@ public sealed class WorkDetailsImageItemViewModel(string title, Bitmap image) : 
     }
 }
 
+public sealed record WorkDetailsStatItemViewModel(string Label, string Value);
+
 public sealed class RelatedWorkCardViewModel(
     long id,
     string title,

@@ -70,7 +70,7 @@ public static class AvaloniaHelper
         [typeof(SearchWorksPage)] = (Symbol.SearchSparkle, I18NManager.GetResource(MainPageResources.SearchWorksResult)),
         // [typeof(FeedsPage)] = (Symbol.Molecule, I18NManager.GetResource(MainPageResources.FeedTabContent)),
         // [typeof(BrowsingHistoryPage)] = (Symbol.History, I18NManager.GetResource(MainPageResources.HistoriesTabContent)),
-        // [typeof(DownloadPage)] = (Symbol.ArrowSquareDown, I18NManager.GetResource(MainPageResources.DownloadListTabContent))
+        [typeof(DownloadPage)] = (Symbol.ArrowSquareDown, I18NManager.GetResource(MainPageResources.DownloadListTabContent)),
         // [typeof(ExtensionsPage)] = (Symbol.PuzzlePiece, I18NManager.GetResource(MainPageResources.ExtensionsTabContent))
         // [typeof(HelpPage)] = (Symbol.ChatBubblesQuestion, I18NManager.GetResource(MainPageResources.HelpTabContent)),
         // [typeof(AboutPage)] = (Symbol.PersonStarburst, I18NManager.GetResource(MainPageResources.AboutTabContent)),
@@ -98,7 +98,7 @@ public static class AvaloniaHelper
     public static IReadOnlyList<NavigationInfo> FooterItems { get; } = new[]
         {
             // typeof(BrowsingHistoryPage),
-            // typeof(DownloadPage),
+            typeof(DownloadPage),
             // typeof(ExtensionsPage),
             // typeof(HelpPage),
             // typeof(AboutPage),
