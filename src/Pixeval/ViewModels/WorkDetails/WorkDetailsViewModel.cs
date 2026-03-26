@@ -8,8 +8,11 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Mako.Model;
+using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.AppManagement;
+using Pixeval.Models.Download;
+using Pixeval.Utilities;
 using Pixeval.Utilities.IO;
 using Pixeval.Utilities.IO.Caching;
 
@@ -31,6 +34,12 @@ public partial class WorkDetailsViewModel : ObservableObject
     private const int MaxRelatedWorks = 12;
 
     private CancellationTokenSource _loadCancellationTokenSource = new();
+
+    private IArtworkInfo? _currentArtwork;
+
+    private Novel? _currentNovel;
+
+    private NovelContent? _currentNovelContent;
 
     [ObservableProperty]
     public partial WorkDetailsKind Kind { get; set; }
@@ -94,6 +103,10 @@ public partial class WorkDetailsViewModel : ObservableObject
 
     public bool IsNovel => Kind is WorkDetailsKind.Novel;
 
+    public bool CanDownload => !IsLoading && string.IsNullOrWhiteSpace(ErrorMessage) && (_currentArtwork is not null || _currentNovel is not null);
+
+    public string DownloadButtonText => Kind is WorkDetailsKind.Novel ? "下载小说" : "下载作品";
+
     public bool HasPageImages => PageImages.Count > 0;
 
     public bool HasRelatedWorks => RelatedWorks.Count > 0;
@@ -102,6 +115,20 @@ public partial class WorkDetailsViewModel : ObservableObject
     {
         _ = value;
         OnPropertyChanged(nameof(IsNovel));
+        OnPropertyChanged(nameof(DownloadButtonText));
+        OnPropertyChanged(nameof(CanDownload));
+    }
+
+    partial void OnIsLoadingChanged(bool value)
+    {
+        _ = value;
+        OnPropertyChanged(nameof(CanDownload));
+    }
+
+    partial void OnErrorMessageChanged(string? value)
+    {
+        _ = value;
+        OnPropertyChanged(nameof(CanDownload));
     }
 
     partial void OnPageImagesChanged(IReadOnlyList<WorkDetailsImageItemViewModel> value)
@@ -164,6 +191,10 @@ public partial class WorkDetailsViewModel : ObservableObject
         var illustration = await App.AppViewModel.MakoClient.GetIllustrationFromIdAsync(id);
         cancellationToken.ThrowIfCancellationRequested();
 
+        _currentArtwork = illustration;
+        _currentNovel = null;
+        _currentNovelContent = null;
+
         Kind = kind;
         WorkId = illustration.Id;
         Title = illustration.Title;
@@ -208,6 +239,7 @@ public partial class WorkDetailsViewModel : ObservableObject
 
         RelatedSectionTitle = "相关作品";
         RelatedWorks = await LoadRelatedIllustrationsAsync(id, cancellationToken);
+        OnPropertyChanged(nameof(CanDownload));
     }
 
     private async Task LoadNovelAsync(long id, CancellationToken cancellationToken)
@@ -215,6 +247,10 @@ public partial class WorkDetailsViewModel : ObservableObject
         var novel = await App.AppViewModel.MakoClient.GetNovelFromIdAsync(id);
         var content = await App.AppViewModel.MakoClient.GetNovelContentAsync(id);
         cancellationToken.ThrowIfCancellationRequested();
+
+        _currentArtwork = null;
+        _currentNovel = novel;
+        _currentNovelContent = content;
 
         Kind = WorkDetailsKind.Novel;
         WorkId = novel.Id;
@@ -263,6 +299,40 @@ public partial class WorkDetailsViewModel : ObservableObject
         RelatedSectionTitle = RelatedWorks.Count > 0 && content.SeriesNavigation is not null
             ? "系列与推荐"
             : "推荐作品";
+        OnPropertyChanged(nameof(CanDownload));
+    }
+
+    public async Task<bool> QueueDownloadAsync(string path)
+    {
+        switch (Kind)
+        {
+            case WorkDetailsKind.Illustration:
+            case WorkDetailsKind.Manga:
+            {
+                if (_currentArtwork is not { } artwork)
+                    return false;
+
+                if (artwork is ISingleAnimatedImage { MultiImageUris: not null } animatedImage)
+                    await animatedImage.MultiImageUris.TryPreloadListAsync(animatedImage);
+
+                var factory = App.AppViewModel.AppServiceProvider.GetRequiredService<IllustrationDownloadTaskFactory>();
+                var task = factory.Create(artwork, path);
+                App.AppViewModel.DownloadManager.QueueTask(task);
+                return true;
+            }
+            case WorkDetailsKind.Novel:
+            {
+                if (_currentNovel is not { } novel || _currentNovelContent is not { } content)
+                    return false;
+
+                var factory = App.AppViewModel.AppServiceProvider.GetRequiredService<NovelDownloadTaskFactory>();
+                var task = factory.Create(novel, path, content);
+                App.AppViewModel.DownloadManager.QueueTask(task);
+                return true;
+            }
+            default:
+                return false;
+        }
     }
 
     private async Task<IReadOnlyList<RelatedWorkCardViewModel>> LoadRelatedIllustrationsAsync(long id, CancellationToken cancellationToken)
@@ -389,6 +459,10 @@ public partial class WorkDetailsViewModel : ObservableObject
         var oldPageImages = PageImages;
         var oldRelatedWorks = RelatedWorks;
 
+        _currentArtwork = null;
+        _currentNovel = null;
+        _currentNovelContent = null;
+
         Title = string.Empty;
         Author = string.Empty;
         Description = string.Empty;
@@ -406,6 +480,9 @@ public partial class WorkDetailsViewModel : ObservableObject
         RelatedSectionTitle = "相关作品";
         NovelText = string.Empty;
         WorkId = 0;
+
+        OnPropertyChanged(nameof(CanDownload));
+        OnPropertyChanged(nameof(DownloadButtonText));
 
         DisposeTransientAssetsLater(oldMainImage, oldPageImages, oldRelatedWorks);
     }

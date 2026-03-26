@@ -25,13 +25,67 @@
                     CornerRadius="24">
                     <Grid ColumnDefinitions="1.35*,420" MinHeight="430">
                         <Grid>
-                            <Border ClipToBounds="True" CornerRadius="24,0,0,24">
-                                <Image Source="{Binding MainImage}" Stretch="UniformToFill" />
+                            <Border
+                                x:Name="HeroImageViewport"
+                                ClipToBounds="True"
+                                CornerRadius="24,0,0,24"
+                                DoubleTapped="HeroImageViewport_OnDoubleTapped"
+                                PointerWheelChanged="HeroImageViewport_OnPointerWheelChanged">
+                                <Image
+                                    x:Name="HeroImage"
+                                    RenderTransformOrigin="0.5,0.5"
+                                    Source="{Binding MainImage}"
+                                    Stretch="UniformToFill">
+                                    <Image.RenderTransform>
+                                        <ScaleTransform
+                                            ScaleX="1"
+                                            ScaleY="1" />
+                                    </Image.RenderTransform>
+                                </Image>
                             </Border>
 
                             <Border
                                 Background="#40000000"
                                 CornerRadius="24,0,0,24" />
+
+                            <Border
+                                Margin="20"
+                                Padding="8"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Background="#AA101318"
+                                CornerRadius="999">
+                                <controls:ToolBar>
+                                    <Button
+                                        x:Name="HeroZoomOutButton"
+                                        Click="HeroZoomOutButton_OnClick"
+                                        ToolTip.Tip="缩小">
+                                        <fluent:SymbolIcon Symbol="ZoomOut" />
+                                    </Button>
+                                    <Border
+                                        Padding="10,0"
+                                        Background="#33FFFFFF"
+                                        CornerRadius="999">
+                                        <TextBlock
+                                            x:Name="HeroZoomText"
+                                            VerticalAlignment="Center"
+                                            Foreground="#FFFFFFFF"
+                                            Text="100%" />
+                                    </Border>
+                                    <Button
+                                        x:Name="HeroZoomResetButton"
+                                        Click="HeroZoomResetButton_OnClick"
+                                        ToolTip.Tip="重置缩放">
+                                        <fluent:SymbolIcon Symbol="ArrowReset" />
+                                    </Button>
+                                    <Button
+                                        x:Name="HeroZoomInButton"
+                                        Click="HeroZoomInButton_OnClick"
+                                        ToolTip.Tip="放大">
+                                        <fluent:SymbolIcon Symbol="ZoomIn" />
+                                    </Button>
+                                </controls:ToolBar>
+                            </Border>
 
                             <StackPanel Margin="20" VerticalAlignment="Bottom" Spacing="12">
                                 <WrapPanel ItemSpacing="8" LineSpacing="8">
@@ -48,26 +102,6 @@
                                         <TextBlock Foreground="White" Text="{Binding WorkId, StringFormat='ID {0}'}" />
                                     </Border>
                                 </WrapPanel>
-
-                                <Border
-                                    Padding="10"
-                                    Background="#AA101318"
-                                    CornerRadius="999">
-                                    <controls:ToolBar>
-                                        <Button Click="OpenInBrowserButton_OnClick">
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <fluent:SymbolIcon Foreground="#FFFFFFFF" Symbol="GlobeArrowUp" />
-                                                <TextBlock Foreground="#FFFFFFFF" Text="在浏览器中打开" />
-                                            </StackPanel>
-                                        </Button>
-                                        <Button Click="CopyAppLinkButton_OnClick">
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <fluent:SymbolIcon Foreground="#FFFFFFFF" Symbol="Link" />
-                                                <TextBlock Foreground="#FFFFFFFF" Text="复制 App 链接" />
-                                            </StackPanel>
-                                        </Button>
-                                    </controls:ToolBar>
-                                </Border>
                             </StackPanel>
                         </Grid>
 
@@ -90,6 +124,41 @@
                                 <TextBlock
                                     Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                     Text="{Binding CreateDateText}" />
+
+                                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                                    <Button
+                                        Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                        Click="DownloadButton_OnClick"
+                                        IsEnabled="{Binding CanDownload}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <fluent:SymbolIcon Foreground="#FFFFFFFF" Symbol="Save" />
+                                            <TextBlock Foreground="#FFFFFFFF" Text="{Binding DownloadButtonText}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="DownloadAsButton_OnClick" IsEnabled="{Binding CanDownload}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <fluent:SymbolIcon Symbol="FolderOpen" />
+                                            <TextBlock Text="另存到…" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="OpenInBrowserButton_OnClick">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <fluent:SymbolIcon Symbol="GlobeArrowUp" />
+                                            <TextBlock Text="在浏览器中打开" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="CopyAppLinkButton_OnClick">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <fluent:SymbolIcon Symbol="Link" />
+                                            <TextBlock Text="复制 App 链接" />
+                                        </StackPanel>
+                                    </Button>
+                                </WrapPanel>
+
+                                <TextBlock
+                                    FontSize="12"
+                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                    Text="提示：在大图区域滚轮缩放，双击可快速重置。" />
 
                                 <ItemsControl ItemsSource="{Binding Metrics}">
                                     <ItemsControl.ItemsPanel>
