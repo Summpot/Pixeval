@@ -1,10 +1,10 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Input;
-using Avalonia.Media;
 using Avalonia.Threading;
 using FluentAvalonia.UI.Controls;
 using FluentIcons.Avalonia;
@@ -27,11 +27,36 @@ public partial class WorkDetailsPage : UserControl
 
     private double _heroZoom = HeroMinZoom;
 
+    private bool _isPanningHeroImage;
+
+    private Point _lastHeroPanPoint;
+
     public WorkDetailsPage()
     {
         InitializeComponent();
         DataContext = _viewModel;
         DetachedFromVisualTree += (_, _) => _viewModel.ReleaseResources();
+        HeroImageViewport.PropertyChanged += HeroImageViewport_OnPropertyChanged;
+        HeroImageScrollViewer.AddHandler(
+            InputElement.PointerWheelChangedEvent,
+            HeroImageScrollViewer_OnPointerWheelChanged,
+            RoutingStrategies.Tunnel | RoutingStrategies.Bubble,
+            handledEventsToo: true);
+        HeroImageScrollViewer.AddHandler(
+            InputElement.PointerPressedEvent,
+            HeroImageScrollViewer_OnPointerPressed,
+            RoutingStrategies.Tunnel | RoutingStrategies.Bubble,
+            handledEventsToo: true);
+        HeroImageScrollViewer.AddHandler(
+            InputElement.PointerMovedEvent,
+            HeroImageScrollViewer_OnPointerMoved,
+            RoutingStrategies.Tunnel | RoutingStrategies.Bubble,
+            handledEventsToo: true);
+        HeroImageScrollViewer.AddHandler(
+            InputElement.PointerReleasedEvent,
+            HeroImageScrollViewer_OnPointerReleased,
+            RoutingStrategies.Tunnel | RoutingStrategies.Bubble,
+            handledEventsToo: true);
         UpdateHeroZoomUi();
 
         AddHandler(Frame.NavigatedToEvent, (sender, e) =>
@@ -136,14 +161,14 @@ public partial class WorkDetailsPage : UserControl
     {
         _ = sender;
         e.Handled = true;
-        SetHeroZoom(_heroZoom + HeroZoomStep);
+        SetHeroZoom(_heroZoom + HeroZoomStep, preserveCenter: true);
     }
 
     private void HeroZoomOutButton_OnClick(object? sender, RoutedEventArgs e)
     {
         _ = sender;
         e.Handled = true;
-        SetHeroZoom(_heroZoom - HeroZoomStep);
+        SetHeroZoom(_heroZoom - HeroZoomStep, preserveCenter: true);
     }
 
     private void HeroZoomResetButton_OnClick(object? sender, RoutedEventArgs e)
@@ -153,10 +178,10 @@ public partial class WorkDetailsPage : UserControl
         ResetHeroZoom();
     }
 
-    private void HeroImageViewport_OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    private void HeroImageScrollViewer_OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
         _ = sender;
-        SetHeroZoom(_heroZoom + (e.Delta.Y > 0 ? HeroZoomStep : -HeroZoomStep));
+        SetHeroZoom(_heroZoom + (e.Delta.Y > 0 ? HeroZoomStep : -HeroZoomStep), preserveCenter: true);
         e.Handled = true;
     }
 
@@ -172,19 +197,115 @@ public partial class WorkDetailsPage : UserControl
         SetHeroZoom(HeroMinZoom);
     }
 
-    private void SetHeroZoom(double zoom)
+    private void SetHeroZoom(double zoom, bool preserveCenter = false)
     {
+        var previousOffset = HeroImageScrollViewer.Offset;
+        var previousViewport = HeroImageScrollViewer.Viewport;
+        var previousExtent = HeroImageScrollViewer.Extent;
+
         _heroZoom = Math.Clamp(zoom, HeroMinZoom, HeroMaxZoom);
-
-        if (HeroImage.RenderTransform is not ScaleTransform transform)
-        {
-            transform = new ScaleTransform(1, 1);
-            HeroImage.RenderTransform = transform;
-        }
-
-        transform.ScaleX = _heroZoom;
-        transform.ScaleY = _heroZoom;
+        UpdateHeroImageLayout(preserveCenter, previousOffset, previousViewport, previousExtent);
         UpdateHeroZoomUi();
+    }
+
+    private void UpdateHeroImageLayout(bool preserveCenter = false, Vector previousOffset = default, Size previousViewport = default, Size previousExtent = default)
+    {
+        if (_viewModel.MainImage is not { } bitmap)
+            return;
+
+        var viewportWidth = HeroImageViewport.Bounds.Width;
+        var viewportHeight = HeroImageViewport.Bounds.Height;
+        if (viewportWidth <= 1 || viewportHeight <= 1)
+            return;
+
+        var imageWidth = Math.Max(1, bitmap.PixelSize.Width);
+        var imageHeight = Math.Max(1, bitmap.PixelSize.Height);
+        var fitScale = Math.Min(viewportWidth / imageWidth, viewportHeight / imageHeight);
+
+        var targetImageWidth = Math.Max(1, imageWidth * fitScale * _heroZoom);
+        var targetImageHeight = Math.Max(1, imageHeight * fitScale * _heroZoom);
+        var targetExtentWidth = Math.Max(targetImageWidth, viewportWidth);
+        var targetExtentHeight = Math.Max(targetImageHeight, viewportHeight);
+
+        HeroImage.Width = targetImageWidth;
+        HeroImage.Height = targetImageHeight;
+        HeroImageContentRoot.Width = targetExtentWidth;
+        HeroImageContentRoot.Height = targetExtentHeight;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (preserveCenter && previousExtent.Width > 0 && previousExtent.Height > 0)
+            {
+                var centerRatioX = (previousOffset.X + previousViewport.Width / 2) / previousExtent.Width;
+                var centerRatioY = (previousOffset.Y + previousViewport.Height / 2) / previousExtent.Height;
+
+                ApplyHeroImageOffset(new Vector(
+                    targetExtentWidth * centerRatioX - HeroImageScrollViewer.Viewport.Width / 2,
+                    targetExtentHeight * centerRatioY - HeroImageScrollViewer.Viewport.Height / 2));
+            }
+            else
+            {
+                ApplyHeroImageOffset(new Vector(
+                    Math.Max(0, (targetExtentWidth - HeroImageScrollViewer.Viewport.Width) / 2),
+                    Math.Max(0, (targetExtentHeight - HeroImageScrollViewer.Viewport.Height) / 2)));
+            }
+        }, DispatcherPriority.Background);
+    }
+
+    private void ApplyHeroImageOffset(Vector requestedOffset)
+    {
+        var maxOffsetX = Math.Max(0, HeroImageScrollViewer.Extent.Width - HeroImageScrollViewer.Viewport.Width);
+        var maxOffsetY = Math.Max(0, HeroImageScrollViewer.Extent.Height - HeroImageScrollViewer.Viewport.Height);
+
+        HeroImageScrollViewer.Offset = new Vector(
+            Math.Clamp(requestedOffset.X, 0, maxOffsetX),
+            Math.Clamp(requestedOffset.Y, 0, maxOffsetY));
+    }
+
+    private void HeroImageScrollViewer_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_heroZoom <= HeroMinZoom + 0.001 || !e.GetCurrentPoint(HeroImageScrollViewer).Properties.IsLeftButtonPressed)
+            return;
+
+        _ = sender;
+        _isPanningHeroImage = true;
+        _lastHeroPanPoint = e.GetPosition(HeroImageScrollViewer);
+        e.Pointer.Capture(HeroImageScrollViewer);
+        e.Handled = true;
+    }
+
+    private void HeroImageScrollViewer_OnPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_isPanningHeroImage)
+            return;
+
+        _ = sender;
+        var currentPoint = e.GetPosition(HeroImageScrollViewer);
+        var delta = currentPoint - _lastHeroPanPoint;
+        _lastHeroPanPoint = currentPoint;
+
+        ApplyHeroImageOffset(new Vector(
+            HeroImageScrollViewer.Offset.X - delta.X,
+            HeroImageScrollViewer.Offset.Y - delta.Y));
+        e.Handled = true;
+    }
+
+    private void HeroImageScrollViewer_OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        _ = sender;
+        if (!_isPanningHeroImage)
+            return;
+
+        _isPanningHeroImage = false;
+        e.Pointer.Capture(null);
+        e.Handled = true;
+    }
+
+    private void HeroImageViewport_OnPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        _ = sender;
+        if (e.Property == BoundsProperty)
+            UpdateHeroImageLayout();
     }
 
     private void UpdateHeroZoomUi()

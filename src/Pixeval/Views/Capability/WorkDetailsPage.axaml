@@ -29,24 +29,27 @@
                                 x:Name="HeroImageViewport"
                                 ClipToBounds="True"
                                 CornerRadius="24,0,0,24"
-                                DoubleTapped="HeroImageViewport_OnDoubleTapped"
-                                PointerWheelChanged="HeroImageViewport_OnPointerWheelChanged">
-                                <Image
-                                    x:Name="HeroImage"
-                                    RenderTransformOrigin="0.5,0.5"
-                                    Source="{Binding MainImage}"
-                                    Stretch="UniformToFill">
-                                    <Image.RenderTransform>
-                                        <ScaleTransform
-                                            ScaleX="1"
-                                            ScaleY="1" />
-                                    </Image.RenderTransform>
-                                </Image>
+                                DoubleTapped="HeroImageViewport_OnDoubleTapped">
+                                <ScrollViewer
+                                    x:Name="HeroImageScrollViewer"
+                                    AllowAutoHide="True"
+                                    HorizontalScrollBarVisibility="Auto"
+                                    VerticalScrollBarVisibility="Auto">
+                                    <Grid x:Name="HeroImageContentRoot">
+                                        <Image
+                                            x:Name="HeroImage"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Source="{Binding MainImage}"
+                                            Stretch="Fill" />
+                                    </Grid>
+                                </ScrollViewer>
                             </Border>
 
                             <Border
                                 Background="#40000000"
-                                CornerRadius="24,0,0,24" />
+                                CornerRadius="24,0,0,24"
+                                IsHitTestVisible="False" />
 
                             <Border
                                 Margin="20"
@@ -158,7 +161,7 @@
                                 <TextBlock
                                     FontSize="12"
                                     Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                    Text="提示：在大图区域滚轮缩放，双击可快速重置。" />
+                                    Text="提示：在大图区域滚轮缩放，拖动可平移，双击可快速重置。" />
 
                                 <ItemsControl ItemsSource="{Binding Metrics}">
                                     <ItemsControl.ItemsPanel>
