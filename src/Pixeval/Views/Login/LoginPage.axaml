@@ -54,7 +54,7 @@
             Content="{I18N {x:Static pixeval:LoginPageResources.RefreshTokenButtonContent}}" />
         <Button
             HorizontalAlignment="Stretch"
-            Click="OpenWebView_OnClick"
+            Click="OpenBrowserLogin_OnClick"
             Content="{I18N {x:Static pixeval:LoginPageResources.WebViewButtonContent}}" />
     </StackPanel>
 </ContentPage>

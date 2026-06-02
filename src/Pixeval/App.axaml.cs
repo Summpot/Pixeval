@@ -10,6 +10,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using Pixeval.AppManagement;
 using Pixeval.I18N;
 using Pixeval.Models.Options;
@@ -54,6 +55,8 @@ public class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        RegisterActivationHandler();
+
         ViewContainerBase? viewContainer = null;
 
         switch (ApplicationLifetime)
@@ -77,6 +80,7 @@ public class App : Application
                         450,
                         AppViewModel.AppSettings.IsMaximized).Show();
 
+                RegisterDesktopActivationHandler(desktop);
                 break;
             case ISingleViewApplicationLifetime singleViewPlatform:
                 singleViewPlatform.MainView = viewContainer = new SingleViewContainer
@@ -91,6 +95,52 @@ public class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private void RegisterActivationHandler()
+    {
+        if (this.TryGetFeature<IActivatableLifetime>() is not { } lifetime)
+            return;
+
+        lifetime.Activated += (_, args) =>
+        {
+            if (args is ProtocolActivatedEventArgs { Kind: ActivationKind.OpenUri } protocolArgs)
+                PixivLoginActivationHub.Submit(protocolArgs.Uri);
+        };
+    }
+
+    private static void RegisterDesktopActivationHandler(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        AppActivationHub.Activated += () => Dispatcher.UIThread.Post(() => ActivateDesktopWindow(desktop));
+
+        if (AppActivationHub.DrainPendingActivations() > 0)
+            Dispatcher.UIThread.Post(() => ActivateDesktopWindow(desktop));
+    }
+
+    private static void ActivateDesktopWindow(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        Window? target = null;
+        foreach (var window in desktop.Windows)
+        {
+            target ??= window;
+            if (window.IsActive)
+                return;
+
+            if (window.IsVisible)
+            {
+                target = window;
+                break;
+            }
+        }
+
+        if (target is null)
+            return;
+
+        if (target.WindowState is WindowState.Minimized)
+            target.WindowState = WindowState.Normal;
+
+        target.Show();
+        target.Activate();
     }
 
     private static async Task LoginAsync(ViewContainerBase viewContainer)

@@ -3,10 +3,11 @@
 
 using System;
 using System.Threading.Tasks;
-using System.Web;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
+using Pixeval.AppManagement;
 using Pixeval.I18N;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -16,9 +17,27 @@ namespace Pixeval.Views.Login;
 
 public partial class LoginPage : ContentPage
 {
+    private string? _codeVerifier;
+
+    private bool _isLoggingIn;
+
     public LoginPage()
     {
         InitializeComponent();
+    }
+
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+        PixivLoginActivationHub.Activated += PixivLoginActivationHubOnActivated;
+        foreach (var uri in PixivLoginActivationHub.DrainPendingUris())
+            _ = LoginWithCallbackUriAsync(uri);
+    }
+
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        PixivLoginActivationHub.Activated -= PixivLoginActivationHubOnActivated;
+        base.OnUnloaded(e);
     }
 
     private async void LoginButton_OnClick(object? sender, RoutedEventArgs e)
@@ -30,48 +49,83 @@ public partial class LoginPage : ContentPage
         if (string.IsNullOrWhiteSpace(token))
             return;
 
+        if (PixivLoginActivationHub.TryCreateCallbackUri(token, out var callbackUri))
+        {
+            await LoginWithCallbackUriAsync(callbackUri);
+            return;
+        }
+
+        if (_isLoggingIn)
+            return;
+        _isLoggingIn = true;
         App.AppViewModel.MakoClient.SetToken(token);
-        if (await App.AppViewModel.MakoClient.IdentifyTokenAsync())
-            LoginNavigate();
+        try
+        {
+            if (await App.AppViewModel.MakoClient.IdentifyTokenAsync())
+                LoginNavigate();
+        }
+        finally
+        {
+            _isLoggingIn = false;
+        }
     }
 
-    private async void OpenWebView_OnClick(object? sender, RoutedEventArgs e)
+    private async void OpenBrowserLogin_OnClick(object? sender, RoutedEventArgs e)
     {
         var verifier = PixivAuth.GetCodeVerify();
-        if (TopLevel.GetTopLevel(this) is not { ViewContainer: { } viewContainer } topLevel)
+        _codeVerifier = verifier;
+        if (TopLevel.GetTopLevel(this) is not { ViewContainer: { } viewContainer, Launcher: { } launcher })
             return;
         try
         {
-            var result = await WebAuthenticationBroker.AuthenticateAsync(
-                topLevel,
-                new(
-                    new(PixivAuth.GenerateWebPageUrl(verifier)),
-                    new("pixiv://account/login"))
-                {
-                    PreferNativeWebDialog = true,
-                    NonPersistent = true
-                });
+            var loginUri = new Uri(PixivAuth.GenerateWebPageUrl(verifier));
+            if (!await launcher.LaunchUriAsync(loginUri))
+                viewContainer.ShowWarning(
+                    I18NManager.GetResource(LoginPageResources.FetchingSessionFailedTitle),
+                    loginUri.OriginalString);
+        }
+        catch (Exception exception)
+        {
+            await ShowLoginFailedAsync(exception);
+        }
+    }
 
-            if (result.CallbackUri is not { } callbackUri)
-                return;
-            var code = HttpUtility.ParseQueryString(callbackUri.Query)["code"];
-            if (string.IsNullOrWhiteSpace(code))
-                return;
+    private void PixivLoginActivationHubOnActivated(Uri uri) =>
+        Dispatcher.UIThread.Post(() => _ = LoginWithCallbackUriAsync(uri));
+
+    private async Task LoginWithCallbackUriAsync(Uri callbackUri)
+    {
+        if (_isLoggingIn
+            || _codeVerifier is not { Length: > 0 } verifier
+            || !PixivLoginActivationHub.TryExtractCode(callbackUri.OriginalString, out var code))
+            return;
+
+        _isLoggingIn = true;
+        try
+        {
             App.AppViewModel.MakoClient.SetCode(code, verifier);
             if (await App.AppViewModel.MakoClient.IdentifyTokenAsync())
                 LoginNavigate();
         }
-        catch (TaskCanceledException)
-        {
-            // ignored
-        }
         catch (Exception exception)
         {
-            viewContainer.ShowError(exception.GetType().ToString(), exception.Message);
-            _ = await viewContainer.CreateAcknowledgementAsync(
-                I18NManager.GetResource(LoginPageResources.FetchingSessionFailedTitle),
-                I18NManager.GetResource(LoginPageResources.FetchingSessionFailedContent));
+            await ShowLoginFailedAsync(exception);
         }
+        finally
+        {
+            _isLoggingIn = false;
+        }
+    }
+
+    private async Task ShowLoginFailedAsync(Exception exception)
+    {
+        if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
+            return;
+
+        viewContainer.ShowError(exception.GetType().ToString(), exception.Message);
+        _ = await viewContainer.CreateAcknowledgementAsync(
+            I18NManager.GetResource(LoginPageResources.FetchingSessionFailedTitle),
+            I18NManager.GetResource(LoginPageResources.FetchingSessionFailedContent));
     }
 
     public void LoginNavigate()
