@@ -21,29 +21,31 @@ public abstract record NavigationMenuItem(
         return this switch
         {
             NavigationPageItem page => ToYamlPageItem(page),
-            NavigationFolderItem folder => new()
-            {
-                Folder = folder.HeaderSource ?? folder.Header,
-                Icon = folder.Icon.ToString(),
-                Children = folder.Children.Select(child => child.ToYamlItem()).ToArray()
-            },
+            NavigationFolderItem folder => new(
+                null,
+                folder.HeaderSource ?? folder.Header,
+                null,
+                folder.Icon.ToString(),
+                folder.Children.Select(child => child.ToYamlItem()).ToList()),
             _ => throw new InvalidOperationException("Unknown navigation menu item type")
         };
 
         static NavigationYamlItem ToYamlPageItem(NavigationPageItem item)
         {
-            var result = new NavigationYamlItem { Page = item.PageKey };
             if (!NavigationPageRegistry.TryGetPage(item.PageKey, out var definition))
-                return result;
+                return new(item.PageKey, null, null, null, null);
 
+            string? title = null;
             if (item.HeaderSource is { } headerSource)
-                result.Title = headerSource;
+                title = headerSource;
             else if (item.Header != definition.Header)
-                result.Title = item.Header;
-            if (item.Icon != definition.Icon)
-                result.Icon = item.Icon.ToString();
+                title = item.Header;
 
-            return result;
+            string? icon = null;
+            if (item.Icon != definition.Icon)
+                icon = item.Icon.ToString();
+
+            return new(item.PageKey, null, title, icon, null);
         }
     }
 }

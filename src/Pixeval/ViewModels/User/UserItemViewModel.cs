@@ -1,13 +1,12 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using System.Linq;
+using System;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Mako.Model;
 using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Models.Blocking;
-using Pixeval.Utilities;
+using Pixeval.Models.Pixiv;
+
+using Pixeval.Native.Mako;
 
 namespace Pixeval.ViewModels;
 
@@ -15,41 +14,31 @@ public partial class UserItemViewModel : EntryViewModel<User>, IFactory<User, Us
 {
     public static UserItemViewModel CreateInstance(User entry) => new(entry);
 
-    public UserItemViewModel(User user) : base(BlockedContentHelper.Replace(user))
+    public UserItemViewModel(User user) : base(user)
     {
         IsFollowedDisplay = IsFollowed ? HeartButtonState.Checked : HeartButtonState.Unchecked;
-
-        var workEntries = Entry.Illustrations.Concat<IWorkEntry>(Entry.Novels).ToArray();
-        if (workEntries.ElementAtOrDefault(0) is { } t0)
-        {
-            Banner0Url = t0.GetThumbnailUrl();
-            if (workEntries.ElementAtOrDefault(1) is { } t1)
-            {
-                Banner1Url = t1.GetThumbnailUrl();
-                if (workEntries.ElementAtOrDefault(2) is { } t2)
-                    Banner2Url = t2.GetThumbnailUrl();
-            }
-        }
     }
 
-    public bool IsFollowed => Entry.UserInfo.IsFollowed;
+    public bool IsFollowed => Entry.IsFollowedState;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsFollowed))]
     [NotifyPropertyChangedFor(nameof(FollowLabel))]
     public partial HeartButtonState IsFollowedDisplay { get; set; }
 
-    public string FollowLabel => I18NManager.GetResource(IsFollowed ? UserViewerPageResources.Unfollow : UserViewerPageResources.Follow);
+    public string Username => Entry.Name;
 
-    public string Username => Entry.UserInfo.Name;
+    public long UserId => Entry.RawId;
 
-    public long UserId => Entry.Id;
+    public string AvatarUrl => Entry.AvatarUrl;
 
-    public string AvatarUrl => Entry.UserInfo.ProfileImageUrls.Medium;
+    public override Uri AppUri => Entry.AppUri;
 
-    public string? Banner0Url { get; }
+    public override Uri WebsiteUri => Entry.WebsiteUri;
 
-    public string? Banner1Url { get; }
+    public string? Banner0Url => Entry.SampleWorkThumbnails.Count > 0 ? Entry.SampleWorkThumbnails[0] : null;
 
-    public string? Banner2Url { get; }
+    public string? Banner1Url => Entry.SampleWorkThumbnails.Count > 1 ? Entry.SampleWorkThumbnails[1] : null;
+
+    public string? Banner2Url => Entry.SampleWorkThumbnails.Count > 2 ? Entry.SampleWorkThumbnails[2] : null;
 }

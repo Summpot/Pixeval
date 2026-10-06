@@ -17,9 +17,7 @@ internal sealed class WorkR18FilterSyntax : FilterFlagSyntax<IArtworkInfo>
 
     public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
     [
-        new("+", ["r18"], Metadata: false, Description: I18NManager.GetResource(FilterResources.Completions.Include.R18)),
-        new("-", ["r18"], Metadata: true, Description: I18NManager.GetResource(FilterResources.Completions.Exclude.R18))
+        new("+", ["r18"], Metadata: "false", Description: I18NManager.GetResource(FilterResources.Completions.Include.R18)),
+        new("-", ["r18"], Metadata: "true", Description: I18NManager.GetResource(FilterResources.Completions.Exclude.R18))
     ];
-
-    public override bool Match(IArtworkInfo context, bool value) => value ^ (context.SafeRating.IsR18 || context.SafeRating.IsR18G);
 }

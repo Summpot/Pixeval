@@ -2,15 +2,15 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using Mako.Model;
 using Pixeval.Controls;
+using Pixeval.Native.Mako;
 
 namespace Pixeval.ViewModels;
 
-public class SpotlightItemViewModel(Spotlight spotlight) : ThumbnailEntryViewModel<Spotlight>(spotlight),
-    IFactory<Spotlight, SpotlightItemViewModel>
+public class SpotlightItemViewModel(SpotlightArticle spotlight) : ThumbnailEntryViewModel<SpotlightArticle>(spotlight),
+    IFactory<SpotlightArticle, SpotlightItemViewModel>
 {
-    public static SpotlightItemViewModel CreateInstance(Spotlight entry) => new(entry);
+    public static SpotlightItemViewModel CreateInstance(SpotlightArticle entry) => new(entry);
 
     public override string ThumbnailUrl => Entry.Thumbnail;
 

@@ -4,8 +4,7 @@
 using System.Collections.ObjectModel;
 using AutoSettingsPage;
 using FluentIcons.Common;
-using Mako;
-using Mako.Net;
+using Pixeval.Models.Pixiv;
 
 namespace Pixeval.AppManagement.Settings;
 

@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Mako.Engine;
 using Misaki;
 using Pixeval.Collections;
 using Pixeval.Utilities;
@@ -58,9 +57,6 @@ public class IncrementalSource<T, TViewModel> : IIncrementalSource<TViewModel>, 
         List<TViewModel>? result = null;
         try
         {
-            if (IsInterrupted && _asyncEnumerable is IFetchEngine<T> engine
-                && engine.MakoClient.AppApiRetryAt > DateTimeOffset.UtcNow)
-                return [];
             IsInterrupted = false;
             HasMoreItems = true;
             result = new List<TViewModel>(pageSize);
@@ -96,7 +92,7 @@ public class IncrementalSource<T, TViewModel> : IIncrementalSource<TViewModel>, 
                 }
                 else
                 {
-                    IsInterrupted = _asyncEnumerable is IEngineHandleSource
+                    IsInterrupted = _asyncEnumerable is IFetchEngine<T>
                     {
                         EngineHandle: { IsCompleted: false, IsCancelled: false }
                     };
@@ -139,7 +135,7 @@ public class IncrementalSource<T, TViewModel> : IIncrementalSource<TViewModel>, 
         }
 
         _lifetimeCts.Cancel();
-        if (_asyncEnumerable is IEngineHandleSource { EngineHandle: { } engineHandle })
+        if (_asyncEnumerable is IFetchEngine<T> { EngineHandle: { } engineHandle })
             engineHandle.Cancel();
 
         if (disposeResources)
@@ -174,11 +170,18 @@ public class IncrementalSource<T, TViewModel> : IIncrementalSource<TViewModel>, 
     {
         try
         {
-            _asyncEnumerator.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            var vt = _asyncEnumerator.DisposeAsync();
+            if (!vt.IsCompletedSuccessfully)
+            {
+                _ = vt.AsTask().ContinueWith(_ => { }, TaskScheduler.Default);
+            }
         }
         catch (OperationCanceledException)
         {
             // Cancellation is the expected result when a page is closed during loading.
+        }
+        catch
+        {
         }
         finally
         {

@@ -8,8 +8,9 @@
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
+    xmlns:mako="using:Pixeval.Native.Mako"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:model="using:Mako.Model"
+    xmlns:model="using:Pixeval.Models.Pixiv"
     xmlns:novel="using:Pixeval.ViewModels"
     xmlns:pixeval="using:Pixeval"
     xmlns:utilities="using:Pixeval.Utilities"
@@ -204,58 +205,44 @@
                     LineSpacing="4">
                     <controls:IconText
                         Symbol="Eye"
-                        Text="{Binding Entry.TotalView, Converter={x:Static converters:PixevalConverters.NumberEllipsis}}"
-                        ToolTip.Tip="{Binding Entry.TotalView}" />
-                    <controls:IconText
-                        Symbol="Heart"
-                        Text="{Binding Entry.TotalFavorite, Converter={x:Static converters:PixevalConverters.NumberEllipsis}}"
-                        ToolTip.Tip="{Binding Entry.TotalFavorite}" />
-                    <controls:IconText
-                        Symbol="TextAlignLeft"
-                        Text="{Binding Entry.TextLength, Converter={x:Static converters:PixevalConverters.NumberEllipsis}}"
-                        ToolTip.Tip="{Binding Entry.TextLength}" />
-                    <controls:PixevalBadge IsVisible="{Binding Entry.IsAiGenerated}" Mode="Ai" />
-                    <controls:PixevalBadge Mode="{Binding Entry.XRestrict, Converter={x:Static converters:PixevalConverters.RestrictBadgeModeConverter}}" />
-                </WrapPanel>
-
-                <ScrollViewer
-                    x:Name="TagsScrollViewer"
-                    Grid.Row="3"
-                    HorizontalScrollBarVisibility="Disabled"
-                    VerticalScrollBarVisibility="Auto">
-                    <ItemsControl x:Name="TagsList" ItemsSource="{Binding Entry.Tags}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel ItemSpacing="5" LineSpacing="5" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="{x:Type model:Tag}">
-                                <Button
-                                    MaxWidth="{Binding $parent[ItemsControl].Bounds.Width}"
-                                    Padding="2"
-                                    HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Left"
-                                    AutomationProperties.Name="{Binding ToolTip}"
-                                    Background="Transparent"
-                                    Click="TagButton_OnClicked"
-                                    CornerRadius="{StaticResource ControlCornerRadius}"
-                                    FocusAdorner="{StaticResource WorkCardFocusAdorner}"
-                                    Theme="{StaticResource TransparentButtonStyle}"
-                                    ToolTip.Tip="{Binding ToolTip}">
-                                    <TextBlock
-                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                        MaxLines="2"
-                                        Text="{Binding ToolTip, Mode=OneTime}"
-                                        TextTrimming="CharacterEllipsis"
-                                        TextWrapping="Wrap"
-                                        Theme="{StaticResource CaptionTextBlockStyle}" />
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-            </Grid>
+                        Text="{Binding Entry.TotalView, Converter={x:Static converters:PixevalConverters.NumberEllipsis}}" />
+                </DockPanel>
+                <DockPanel
+                    DockPanel.Dock="Bottom"
+                    HorizontalSpacing="3"
+                    LastChildFill="False">
+                    <controls:PixevalBadge
+                        DockPanel.Dock="Left"
+                        IsVisible="{Binding Entry.IsAiGenerated}"
+                        Mode="Ai" />
+                    <controls:PixevalBadge DockPanel.Dock="Left" Mode="{Binding Entry.XRestrict, Converter={x:Static converters:PixevalConverters.RestrictBadgeModeConverter}}" />
+                </DockPanel>
+                <ItemsControl
+                    x:Name="TagsList"
+                    DockPanel.Dock="Top"
+                    ItemsSource="{Binding Entry.Tags}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel ItemSpacing="5" LineSpacing="5" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="{x:Type mako:Tag}">
+                            <Button
+                                Padding="2"
+                                Click="TagButton_OnClicked"
+                                CornerRadius="{StaticResource ControlCornerRadius}"
+                                Theme="{StaticResource TransparentButtonStyle}">
+                                <TextBlock
+                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                    Text="{Binding ToolTip, Mode=OneTime}"
+                                    TextWrapping="NoWrap"
+                                    Theme="{StaticResource CaptionTextBlockStyle}" />
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </DockPanel>
         </Grid>
     </ContentControl>
 </work:WorkItem>

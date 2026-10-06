@@ -26,7 +26,7 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
 
         PageCount = Images.Count;
 
-        App.AppViewModel.HistoryPersistHelper.AddBrowseHistory(thumbnailViewModel.Entry);
+        App.AppViewModel.AddBrowseHistory(thumbnailViewModel.Entry);
     }
 
     public IllustrationItemViewModel ThumbnailViewModel { get; set; }

@@ -4,7 +4,6 @@
 using System.Text.Json.Serialization;
 using AutoSettingsPage;
 using FluentIcons.Common;
-using Mako.Global.Enum;
 
 namespace Pixeval.AppManagement.Settings;
 

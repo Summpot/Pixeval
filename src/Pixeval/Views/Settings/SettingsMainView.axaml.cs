@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.IO;
 using AutoSettingsPage.Models;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -17,7 +18,7 @@ using Pixeval.Utilities;
 using Pixeval.Utilities.IO.Caching;
 using Pixeval.ViewModels;
 using Pixeval.Views.Login;
-using SharpYaml;
+using System.Text.Json;
 
 namespace Pixeval.Views.Settings;
 
@@ -138,7 +139,7 @@ public partial class SettingsMainView : ContentPage
             }
 
             UpdateStatusInfoBar.Mode = InfoBarMode.Success;
-            var readyVersion = AppInfo.AppVersion.PendingUpdateVersion ?? release.Version;
+            var readyVersion = AppInfo.AppVersion.PendingUpdateVersion?.ToString() ?? release.Version;
             var readyMessage = I18NManager.GetResource(
                 SettingsMainViewResources.UpdateDownloadReadyFormatted,
                 readyVersion);
@@ -193,7 +194,10 @@ public partial class SettingsMainView : ContentPage
             }) is not { } file)
                 return;
             await using var stream = await file.OpenWriteAsync();
-            YamlSerializer.Serialize(stream, vm.AppSettings, SettingsSerializerContext.Default.AppSettings);
+            var json = JsonSerializer.Serialize(vm.AppSettings, SettingsSerializerContext.Default.AppSettings);
+            var yaml = new ConfigEngine().JsonToYaml(json);
+            await using var writer = new StreamWriter(stream);
+            await writer.WriteAsync(yaml);
 
             viewContainer.ShowSuccess(I18NManager.GetResource(SettingsMainViewResources.ExportSettingsSuccess));
         }
@@ -218,8 +222,13 @@ public partial class SettingsMainView : ContentPage
                 return;
 
             await using var stream = await file.OpenReadAsync();
+            using var reader = new StreamReader(stream);
+            var rawYaml = await reader.ReadToEndAsync();
+            var engine = new ConfigEngine();
+            var migratedYaml = engine.MigrateYaml(rawYaml);
+            var json = engine.YamlToJson(migratedYaml);
 
-            if (LegacyAppSettingsMigration.Deserialize(stream) is { } appSettings)
+            if (JsonSerializer.Deserialize(json, SettingsSerializerContext.Default.AppSettings) is { } appSettings)
             {
                 foreach (var localGroup in vm.LocalGroups)
                     foreach (var settingsEntry in localGroup)
@@ -241,19 +250,19 @@ public partial class SettingsMainView : ContentPage
 
     private void DeleteSearchHistoriesButton_OnClicked(object sender, RoutedEventArgs e)
     {
-        App.AppViewModel.HistoryPersistHelper.SearchHistoryEntries.Clear();
+        App.AppViewModel.ClearSearchHistory();
         ShowClearData(ClearDataKind.SearchHistory);
     }
 
     private void DeleteBrowseHistoriesButton_OnClicked(object sender, RoutedEventArgs e)
     {
-        App.AppViewModel.HistoryPersistHelper.ClearBrowseHistory();
+        App.AppViewModel.ClearBrowseHistory();
         ShowClearData(ClearDataKind.BrowseHistory);
     }
 
     private void DeleteDownloadHistoriesButton_OnClicked(object sender, RoutedEventArgs e)
     {
-        App.AppViewModel.HistoryPersistHelper.DownloadManager.ClearTasks();
+        App.AppViewModel.DownloadManager.ClearTasks();
         ShowClearData(ClearDataKind.DownloadHistory);
     }
 

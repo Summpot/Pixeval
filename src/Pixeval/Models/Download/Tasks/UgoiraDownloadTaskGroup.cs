@@ -11,9 +11,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.Download;
 using Pixeval.Extensions.Common.FormatProviders;
-using Pixeval.Models.Database;
 using Pixeval.Models.Extensions;
 using Pixeval.Models.Options;
+using Pixeval.Native.Media;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO;
 
@@ -24,7 +25,7 @@ namespace Pixeval.Models.Download.Tasks;
 /// </summary>
 public class UgoiraDownloadTaskGroup : DownloadTaskGroup
 {
-    public ISingleAnimatedImage Entry => (ISingleAnimatedImage) DatabaseEntry.Entry;
+    public ISingleAnimatedImage Entry => (ISingleAnimatedImage) DatabaseEntry.Entry!;
 
     /// <summary>
     /// 表示将每张图下载到的目标文件夹。
@@ -78,7 +79,7 @@ public class UgoiraDownloadTaskGroup : DownloadTaskGroup
         SetNotCreateFromEntry();
     }
 
-    public UgoiraDownloadTaskGroup(DownloadHistoryEntryBase entry) : base(entry)
+    public UgoiraDownloadTaskGroup(IDownloadHistoryEntry entry) : base(entry)
     {
         DestinationUgoiraFormat = GetFormatToken(entry);
 
@@ -131,9 +132,10 @@ public class UgoiraDownloadTaskGroup : DownloadTaskGroup
         if (SkipFinalOutput)
             return;
 
-        if (DestinationUgoiraFormat.ExtensionFormatExtension is { } extension)
+        var ext = DestinationUgoiraFormat.ExtensionFormatExtension ?? IoHelper.GetUgoiraExtension(DestinationUgoiraFormat);
+        if (ext is not null)
         {
-            await FormatByExtensionAsync(extension);
+            await FormatNativeOrExtensionAsync(ext);
             return;
         }
 
@@ -194,7 +196,7 @@ public class UgoiraDownloadTaskGroup : DownloadTaskGroup
         FileHelper.DeleteEmptyFolder(FolderPath);
     }
 
-    private async Task FormatByExtensionAsync(string extension)
+    private async Task FormatNativeOrExtensionAsync(string extension)
     {
         if (DownloadTaskFileHelper.ShouldSkipExistingFile(DestinationFile, OverwriteDownloadedFile))
         {
@@ -204,8 +206,36 @@ public class UgoiraDownloadTaskGroup : DownloadTaskGroup
             return;
         }
 
-        var provider = GetExtensionService().GetAnimatedImageFormatProvider(extension)
-                       ?? throw new NotSupportedException(extension);
+        var nativeFormat = extension.ToLowerInvariant() switch
+        {
+            "gif" => UgoiraFormat.Gif,
+            "png" or "apng" => UgoiraFormat.Apng,
+            "webp" => UgoiraFormat.Webp,
+            "mp4" => UgoiraFormat.Mp4,
+            _ => (UgoiraFormat?)null
+        };
+
+        if (nativeFormat is { } targetFormat)
+        {
+            var uDelays = MsDelays.Select(d => (uint)Math.Max(1, d)).ToList();
+            await MediaEngine.Shared.SynthesizeUgoiraAsync(FolderPath, DestinationFile, targetFormat, uDelays);
+        }
+        else if (GetExtensionService().GetAnimatedImageFormatProvider(extension) is { } provider)
+        {
+            await FormatByExtensionAsync(provider);
+        }
+        else
+        {
+            throw new NotSupportedException(extension);
+        }
+
+        foreach (var imageDownloadTask in TasksSet)
+            imageDownloadTask.Delete();
+        FileHelper.DeleteEmptyFolder(FolderPath);
+    }
+
+    private async Task FormatByExtensionAsync(IAnimatedImageFormatProviderExtension provider)
+    {
         var streams = new List<Stream>(TasksSet.Count);
         var temporaryFile = Path.Combine(FolderPath, Path.GetFileName(DestinationFile));
         if (File.Exists(temporaryFile))
@@ -230,13 +260,9 @@ public class UgoiraDownloadTaskGroup : DownloadTaskGroup
             if (File.Exists(temporaryFile))
                 File.Delete(temporaryFile);
         }
-
-        foreach (var imageDownloadTask in TasksSet)
-            imageDownloadTask.Delete();
-        FileHelper.DeleteEmptyFolder(FolderPath);
     }
 
-    private static UgoiraDownloadFormatToken GetFormatToken(DownloadHistoryEntryBase entry)
+    private static UgoiraDownloadFormatToken GetFormatToken(IDownloadHistoryEntry entry)
     {
         if (!string.IsNullOrWhiteSpace(entry.FormatToken))
             return IoHelper.GetAvailableUgoiraDownloadFormatToken(entry.FormatToken);

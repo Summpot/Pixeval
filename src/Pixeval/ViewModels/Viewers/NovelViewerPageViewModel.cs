@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.ComponentModel;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,12 +16,10 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Mako.Global.Enum;
-using Mako.Model;
 using Pixeval.AppManagement.Settings;
 using Pixeval.I18N;
 using Pixeval.Models.Blocking;
+using Pixeval.Models.Pixiv;
 using Pixeval.Models.Settings;
 using Pixeval.Utilities;
 using Pixeval.Views.Capability;
@@ -356,7 +354,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
                     return;
 
                 SeriesInfo = WorkSeriesInfoViewModel.Create(content, currentNovel.Entry.Series);
-                App.AppViewModel.HistoryPersistHelper.AddBrowseHistory(currentNovel.Entry);
+                App.AppViewModel.AddBrowseHistory(currentNovel.Entry);
                 var markdowns = await Task.Run(() => BuildPageMarkdowns(content), token);
                 token.ThrowIfCancellationRequested();
                 if (index != CurrentWorkIndex || _disposed)
@@ -390,22 +388,15 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
         static List<string> BuildPageMarkdowns(NovelContent content)
         {
-            var context = new NovelDisplayContext(content);
-            ((INovelContext<Bitmap>) context).InitImages();
+            var engine = new Pixeval.Native.Novel.NovelEngine();
+            var images = content.Images
+                .Select(x => new Pixeval.Native.Novel.NovelImageRenderDto(x.NovelImageId, x.ThumbnailUrl, ""))
+                .ToList();
+            var illusts = content.Illustrations
+                .Select(x => new Pixeval.Native.Novel.NovelIllustRenderDto(x.Id, x.Page, x.ThumbnailUrl, x.AppUri.OriginalString, x.WebsiteUri.OriginalString, ""))
+                .ToList();
 
-            var pages = new List<string>();
-            var text = content.Text;
-            var index = 0;
-            var pageIndex = 0;
-
-            while (index < text.Length)
-            {
-                var sb = new StringBuilder();
-                var parser = new PixivNovelMdDisplayParser(sb, pageIndex++);
-                _ = parser.Parse(text, ref index, context);
-                pages.Add(sb.ToString());
-            }
-
+            var pages = engine.RenderPagesMarkdown(content.Text, images, illusts);
             if (pages.Count is 0)
                 pages.Add("");
 
@@ -472,20 +463,6 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         }
     }
 
-    private sealed class NovelDisplayContext(NovelContent novelContent) : INovelContext<Bitmap>
-    {
-        public NovelContent NovelContent { get; } = novelContent;
-
-        public Dictionary<(long, int), NovelIllustration> IllustrationLookup { get; } = [];
-
-        public Dictionary<(long, int), Bitmap> IllustrationImages { get; } = [];
-
-        public Dictionary<long, NovelImage> ImageLookup { get; } = [];
-
-        public Dictionary<long, Bitmap> UploadedImages { get; } = [];
-
-        public CancellationTokenSource LoadingCts { get; } = new();
-    }
 
     #region Dispose
 

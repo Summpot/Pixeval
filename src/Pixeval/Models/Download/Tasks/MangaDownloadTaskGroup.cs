@@ -5,11 +5,13 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.Extensions.Common.FormatProviders;
-using Pixeval.Models.Database;
 using Pixeval.Models.Extensions;
+using Pixeval.Native.Media;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO;
 
@@ -17,9 +19,9 @@ namespace Pixeval.Models.Download.Tasks;
 
 public class MangaDownloadTaskGroup : DownloadTaskGroup
 {
-    public IImageSet Entry => (IImageSet) DatabaseEntry.Entry;
+    public IImageSet Entry => (IImageSet) DatabaseEntry.Entry!;
 
-    public MangaDownloadTaskGroup(DownloadHistoryEntryBase entry) : base(entry)
+    public MangaDownloadTaskGroup(IDownloadHistoryEntry entry) : base(entry)
     {
         DestinationIllustrationFormat = GetFormatToken(entry);
     }
@@ -57,6 +59,49 @@ public class MangaDownloadTaskGroup : DownloadTaskGroup
     {
         if (DestinationIllustrationFormat.ExtensionFormatExtension is not { } extension)
             return;
+
+        var lowerExt = extension.ToLowerInvariant();
+        if (lowerExt is "cbz" or "zip")
+        {
+            var archiveFormat = lowerExt is "cbz" ? MangaArchiveFormat.Cbz : MangaArchiveFormat.Zip;
+            var pagePaths = TasksSet.Select(t => t.Destination).ToList();
+            var archivePath = Path.Combine(Path.GetDirectoryName(TasksSet[0].Destination)!, $"manga.{lowerExt}");
+            await MediaEngine.Shared.PackMangaAsync(pagePaths, archivePath, archiveFormat);
+            return;
+        }
+
+        var codecFormat = lowerExt switch
+        {
+            "jpg" or "jpeg" => ImageCodecFormat.Jpeg,
+            "png" => ImageCodecFormat.Png,
+            "webp" => ImageCodecFormat.Webp,
+            "avif" => ImageCodecFormat.Avif,
+            _ => (ImageCodecFormat?)null
+        };
+
+        if (codecFormat is { } targetCodec)
+        {
+            foreach (var task in TasksSet)
+            {
+                if (task.WasDownloadSkipped)
+                    continue;
+
+                var tempPath = task.Destination + ".source";
+                if (File.Exists(tempPath))
+                    File.Delete(tempPath);
+                FileHelper.Move(task.Destination, tempPath);
+                try
+                {
+                    await MediaEngine.Shared.TranscodeFileAsync(tempPath, task.Destination, targetCodec);
+                }
+                finally
+                {
+                    if (File.Exists(tempPath))
+                        File.Delete(tempPath);
+                }
+            }
+            return;
+        }
 
         var provider = GetExtensionService().GetStaticImageFormatProvider(extension)
                        ?? throw new NotSupportedException(extension);
@@ -107,7 +152,7 @@ public class MangaDownloadTaskGroup : DownloadTaskGroup
         FileHelper.DeleteEmptyFolder(OpenLocalDestination);
     }
 
-    private static IllustrationDownloadFormatToken GetFormatToken(DownloadHistoryEntryBase entry)
+    private static IllustrationDownloadFormatToken GetFormatToken(IDownloadHistoryEntry entry)
     {
         if (!string.IsNullOrWhiteSpace(entry.FormatToken))
             return IoHelper.GetAvailableIllustrationDownloadFormatToken(entry.FormatToken);

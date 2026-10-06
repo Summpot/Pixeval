@@ -1,0 +1,16 @@
+[package]
+name = "pixeval_storage"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rusqlite.workspace = true
+parking_lot.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono = { workspace = true, features = ["serde"] }
+uniffi.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -1,44 +1,35 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using System.Diagnostics.CodeAnalysis;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Mako.Model;
 using Pixeval.AppManagement;
 using Pixeval.Controls;
-using Pixeval.Models.Database;
+using Pixeval.Native.Mako;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.ViewModels.Settings;
 
-public sealed partial class WorkSubscriptionItemViewModel(WorkSubscriptionEntry entry) : ViewModelBase
+public sealed partial class WorkSubscriptionItemViewModel(WorkSubscriptionRecord entry) : ViewModelBase
 {
-    public WorkSubscriptionEntry Entry { get; } = entry;
+    public WorkSubscriptionRecord Entry { get; private set; } = entry;
 
-    [ObservableProperty] public partial UserBasicInfo User { get; private set; } = new WorkSubscriptionShimmer(entry);
+    [ObservableProperty] public partial User User { get; private set; } = CreateUser(entry);
 
-    public string SubscriptionTypeText => SymbolComboBoxItem.GetResource(Entry.SubscriptionType);
+    public string SubscriptionTypeText => SymbolComboBoxItem.GetResource(Entry.Type);
 
-    public string WorkKindText => SymbolComboBoxItem.GetResource(Entry.WorkKind);
+    public string WorkKindText => SymbolComboBoxItem.GetResource(Entry.Kind);
 
-    internal void UpdateSubscription(WorkSubscriptionEntry subscription)
+    internal void UpdateSubscription(WorkSubscriptionRecord subscription)
     {
-        Entry.UpdateFrom(subscription);
-        User = new WorkSubscriptionShimmer(Entry);
+        Entry = subscription;
+        User = CreateUser(Entry);
     }
 
-    private sealed record WorkSubscriptionShimmer : UserBasicInfo
-    {
-        [SetsRequiredMembers]
-        public WorkSubscriptionShimmer(WorkSubscriptionEntry entry)
-        {
-            Id = entry.Id;
-            Name = entry.DisplayName;
-            Account = entry.Account;
-            AvatarUrl = string.IsNullOrWhiteSpace(entry.AvatarUrl)
-                ? AppInfo.ImageNotAvailablePath
-                : entry.AvatarUrl;
-        }
-
-        public override string AvatarUrl { get; }
-    }
+    private static User CreateUser(WorkSubscriptionRecord entry) => new(
+        entry.Id,
+        entry.DisplayName,
+        entry.Account,
+        new ProfileImageUrls(null, null, null, string.IsNullOrWhiteSpace(entry.AvatarUrl) ? AppInfo.ImageNotAvailablePath : entry.AvatarUrl),
+        false,
+        null);
 }

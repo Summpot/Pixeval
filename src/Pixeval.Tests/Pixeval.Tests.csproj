@@ -4,8 +4,8 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
-		<!-- Storage picker fixtures implement Avalonia platform interfaces; product does not opt in. -->
-		<AvaloniaAccessUnstablePrivateApis>true</AvaloniaAccessUnstablePrivateApis>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<UseAppHost>false</UseAppHost>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -7,28 +7,36 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Models.Database;
-using Pixeval.Models.Database.Managers;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.ViewModels;
 
 public partial class LoginPageViewModel : ViewModelBase
 {
     private readonly SemaphoreSlim _loadUsersLock = new(1, 1);
+    private readonly int _currentUserKey;
+    private readonly StorageEngine _storageEngine;
     private bool _areUsersLoaded;
 
-    public LoginPageViewModel()
+    public LoginPageViewModel() : this(
+        App.AppViewModel.StorageEngine,
+        App.AppViewModel.LoginContext.CurrentKey)
     {
+    }
+
+    internal LoginPageViewModel(StorageEngine storageEngine, int currentUserKey)
+    {
+        _storageEngine = storageEngine;
+        _currentUserKey = currentUserKey;
         Users = [];
         RefreshToken = "";
     }
 
-    public ObservableCollection<LoginUserEntry> Users { get; }
+    public ObservableCollection<LoginUserRecord> Users { get; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedUser))]
-    public partial LoginUserEntry? SelectedUser { get; set; }
+    public partial LoginUserRecord? SelectedUser { get; set; }
 
     [ObservableProperty]
     public partial string RefreshToken { get; set; }
@@ -46,15 +54,14 @@ public partial class LoginPageViewModel : ViewModelBase
             if (_areUsersLoaded)
                 return;
 
-            // Opening the login page must not depend on the database being available.
-            var appViewModel = App.AppViewModel;
-            var manager = appViewModel.AppServiceProvider.GetRequiredService<LoginUserPersistentManager>();
-            var currentUserKey = appViewModel.LoginContext.CurrentKey;
             Users.Clear();
-            await foreach (var user in manager.StreamEntriesAsync(token: token))
+            foreach (var user in _storageEngine.GetAllLoginUsers())
+            {
+                token.ThrowIfCancellationRequested();
                 Users.Add(user);
+            }
             _areUsersLoaded = true;
-            SelectedUser = Users.FirstOrDefault(user => user.HistoryEntryId == currentUserKey);
+            SelectedUser = Users.FirstOrDefault(user => user.HistoryEntryId == _currentUserKey);
         }
         finally
         {
@@ -62,12 +69,12 @@ public partial class LoginPageViewModel : ViewModelBase
         }
     }
 
-    public static AutoCompleteFilterPredicate<object> LoginUserFilter { get; } = static (_, item) => item is LoginUserEntry;
+    public static AutoCompleteFilterPredicate<object> LoginUserFilter { get; } = static (_, item) => item is LoginUserRecord;
 
     public static AutoCompleteSelector<object> LoginUserTextSelector { get; } = static (_, item) =>
-        item is LoginUserEntry user ? user.RefreshToken : item?.ToString() ?? "";
+        item is LoginUserRecord user ? user.RefreshToken : item?.ToString() ?? "";
 
-    partial void OnSelectedUserChanged(LoginUserEntry? value)
+    partial void OnSelectedUserChanged(LoginUserRecord? value)
     {
         if (value is not null && RefreshToken != value.RefreshToken)
             RefreshToken = value.RefreshToken;

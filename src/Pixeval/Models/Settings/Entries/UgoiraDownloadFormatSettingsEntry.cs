@@ -15,6 +15,7 @@ using Pixeval.I18N;
 using Pixeval.Models.Download;
 using Pixeval.Models.Extensions;
 using Pixeval.Models.Options;
+using Pixeval.Native.Media;
 
 namespace Pixeval.Models.Settings.Entries;
 
@@ -35,7 +36,7 @@ public class UgoiraDownloadFormatSettingsEntry(DownloadFormatsSettings settings)
     private static IReadOnlyList<IReadOnlyStringPair<object>> CreateEnumItems()
     {
         var builtIns = SymbolComboBoxItem.GetValues<UgoiraDownloadFormat>()
-            .Where(static t => (UgoiraDownloadFormat) t.Value is UgoiraDownloadFormat.Original)
+            .Where(static t => (UgoiraDownloadFormat) t.Value != UgoiraDownloadFormat.Mp4 || MediaEngine.IsMp4Available)
             .Select(t => new SymbolComboBoxItem(UgoiraDownloadFormatToken.BuiltIn((UgoiraDownloadFormat) t.Value), t.Description, t.Symbol));
 
         var extensions = App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>()

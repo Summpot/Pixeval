@@ -4,19 +4,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Mako.Global.Enum;
-using Mako.Model;
-using Mako.Net.Responses;
 using Misaki;
 using Pixeval.AppManagement;
+using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
-
 namespace Pixeval.Utilities;
 
 public static class DesignHelper
 {
-    public static UserViewerPageViewModel DesignUserViewerPageViewModel => field ??= new(DesignSingleUserResponse);
+    public static UserViewerPageViewModel DesignUserViewerPageViewModel => field ??= new(123456);
 
     public static UserItemViewModel DesignUserViewModel => field ??= new(DesignUser);
 
@@ -26,182 +24,41 @@ public static class DesignHelper
 
     public static SeriesItemViewModel DesignSeriesViewModel => field ??= new(DesignSeries, SimpleWorkType.Illustration);
 
-    public static WorkSeriesInfoViewModel DesignWorkSeriesInfoViewModel => field ??= new(SimpleWorkType.Illustration, 123456, "Title", new(12345,"PrevTitle"), new(1234567, "NextTitle"), "2/3");
+    public static WorkSeriesInfoViewModel DesignWorkSeriesInfoViewModel => field ??= new(SimpleWorkType.Illustration, 123456, "Title", new(12345, "PrevTitle"), new(1234567, "NextTitle"), "2/3");
 
-    public static SingleUserResponse DesignSingleUserResponse => field ??= new()
-    {
-        UserEntity = DesignUserInfo,
-        UserProfilePublicity = new()
-        {
-            Gender = "Gender",
-            Region = "Region",
-            BirthDay = "BirthDay",
-            BirthYear = "BirthYear",
-            Job = "Job",
-            Pawoo = false
-        },
-        UserProfile = new()
-        {
-            Webpage = "Webpage",
-            Gender = "Gender",
-            Birth = "Birth",
-            BirthDay = "BirthDay",
-            BirthYear = 0,
-            Region = "Region",
-            AddressId = 0,
-            CountryCode = "CountryCode",
-            Job = "Job",
-            JobId = 0,
-            TotalFollowUsers = 0,
-            TotalMyPixivUsers = 0,
-            TotalIllustrations = 0,
-            TotalManga = 0,
-            TotalNovels = 0,
-            TotalIllustrationBookmarksPublic = 0,
-            TotalIllustrationSeries = 0,
-            TotalNovelSeries = 0,
-            BackgroundImageUrl = AppInfo.ImageNotAvailablePath,
-            TwitterAccount = "TwitterAccount",
-            TwitterUrl = "TwitterUrl",
-            IsPremium = false,
-            IsUsingCustomProfileImage = false
-        }, UserWorkspace = new()
-        {
-            Pc = "Pc",
-            Monitor = "Monitor",
-            Tool = "Tool",
-            Scanner = "Scanner",
-            Tablet = "Tablet",
-            Mouse = "Mouse",
-            Printer = "Printer",
-            Desktop = "Desktop",
-            Music = "Music",
-            Desk = "Desk",
-            Chair = "Chair",
-            Comment = "Comment"
-        }
-    };
+    public static SingleUserResponse DesignSingleUserResponse => field ??= new(DesignUser, new UserProfile(
+        "WebPage", "Gender", "Birth", "BirthDay", 1990, "Region", 0, "CountryCode", "Job", 0,
+        100, 10, 50, 5, 10, 1000, 2, 1, AppInfo.ImageNotAvailablePath, "TwitterAccount", "TwitterUrl", true));
 
-    public static User DesignUser => field ??= new()
-    {
-        UserInfo = DesignUserInfo,
-        Illustrations = [DesignIllustration, DesignIllustration, DesignIllustration],
-        Novels = [DesignNovel, DesignNovel, DesignNovel],
-        IsMuted = false
-    };
+    public static User DesignUser => field ??= new(
+        123456, "Username", "Account", new ProfileImageUrls(null, null, null, AppInfo.ImageNotAvailablePath), true, "Comment");
 
-    public static Novel DesignNovel => field ??= new()
-    {
-        Id = 123456,
-        Title = "Title",
-        Description = "Description",
-        IsPrivate = false,
-        XRestrict = XRestrict.R18,
-        User = DesignUserInfo,
-        CreateDate = DateTimeOffset.UtcNow,
-        ThumbnailUrls = new()
-        {
-            Large = AppInfo.ImageNotAvailablePath,
-            SquareMedium = AppInfo.ImageNotAvailablePath,
-            Medium = AppInfo.ImageNotAvailablePath
-        },
-        IsFavorite = false,
-        TotalFavorite = 123,
-        TotalView = 456,
-        Visible = true,
-        IsMuted = false,
-        IsOriginal = false,
-        PageCount = 3,
-        TextLength = 50,
-        IsMypixivOnly = false,
-        IsXRestricted = true,
-        TotalComments = 3,
-        AiType = AiType.NotSpecified,
-        Series = new()
-        {
-            Id = 123,
-            Title = "SeriesTitle",
-        },
-        Tags =
-        [
-            new() { Name = "Tag A", TranslatedName = null },
-            new() { Name = "Tag B", TranslatedName = null },
-            new() { Name = "Tag C", TranslatedName = null }
-        ]
-    };
+    public static Novel DesignNovel => field ??= new(
+        123456, "Title", "Caption", 0, 0, false,
+        new ImageUrls(AppInfo.ImageNotAvailablePath, AppInfo.ImageNotAvailablePath, AppInfo.ImageNotAvailablePath, AppInfo.ImageNotAvailablePath),
+        DateTimeOffset.UtcNow.ToString("o"),
+        [new Tag("Tag A", null), new Tag("Tag B", null)],
+        3, 50, DesignUser, new Series(123, "SeriesTitle", null, null, null, null, null, null), false, 123, 456, 3, false, 0);
 
-    public static Illustration DesignIllustration => field ??= new()
-    {
-        Type = IllustrationType.Illustration,
-        Tools = [],
-        PageCount = 3,
-        Width = 800,
-        Height = 600,
-        SanityLevel = 0,
-        MetaSinglePage = new()
-        {
-            OriginalImageUrl = AppInfo.ImageNotAvailablePath
-        },
-        MetaPages = [],
-        AiType = AiType.AiGenerated,
-        IllustrationBookStyle = 0,
-        Id = 123456,
-        Title = "Title",
-        Description = "Description",
-        IsPrivate = false,
-        XRestrict = XRestrict.R18,
-        User = DesignUserInfo,
-        CreateDate = DateTimeOffset.UtcNow,
-        ThumbnailUrls = new()
-        {
-            Large = AppInfo.ImageNotAvailablePath,
-            SquareMedium = AppInfo.ImageNotAvailablePath,
-            Medium = AppInfo.ImageNotAvailablePath
-        },
-        IsFavorite = true,
-        TotalFavorite = 123,
-        TotalView = 456,
-        Visible = true,
-        IsMuted = false,
-        Series = new()
-        {
-            Id = 123,
-            Title = "SeriesTitle",
-        },
-        Tags =
-        [
-            new() { Name = "Tag A", TranslatedName = null },
-            new() { Name = "Tag B", TranslatedName = null },
-            new() { Name = "Tag C", TranslatedName = null }
-        ]
-    };
+    public static Illustration DesignIllustration => field ??= new(
+        123456, "Title", "illust",
+        new ImageUrls(AppInfo.ImageNotAvailablePath, AppInfo.ImageNotAvailablePath, AppInfo.ImageNotAvailablePath, AppInfo.ImageNotAvailablePath),
+        "Caption", 0, DesignUser,
+        [new Tag("Tag A", null), new Tag("Tag B", null)],
+        [], DateTimeOffset.UtcNow.ToString("o"), 3, 800, 600, 0, 0,
+        new Series(123, "SeriesTitle", null, null, null, null, null, null),
+        new MetaSinglePage(AppInfo.ImageNotAvailablePath),
+        [], 456, 123, true, true, false, 3, 0, 0, null);
 
-    public static Series DesignSeries => field ??= new()
-    {
-        Id = 123456,
-        Title = "Title",
-        User = DesignUserInfo,
-        MaskText = null,
-        CoverUrl = AppInfo.ImageNotAvailablePath,
-        PublishedContentCount = 233,
-        LatestContentId = 0,
-        LastPublishedContentDatetime = DateTimeOffset.UtcNow
-    };
-
-    public static SingleUserInfo DesignUserInfo => field ??= new()
-    {
-        Id = 123456,
-        Name = "Username",
-        Account = "Account",
-        IsFollowed = true,
-        ProfileImageUrls = new()
-        {
-            Medium = AppInfo.ImageNotAvailablePath
-        },
-        IsAcceptRequest = false,
-        Description = "Description",
-        IsAccessBlockingUser = false
-    };
+    public static Series DesignSeries => field ??= new(
+        123456,
+        "Title",
+        DesignUser,
+        null,
+        AppInfo.ImageNotAvailablePath,
+        233,
+        0,
+        DateTimeOffset.UtcNow.ToString("o"));
 
     public static ISingleImage DownloadParserSampleWork(ImageType imageType) => new DownloadParserSampleWork(imageType);
 }
@@ -218,7 +75,7 @@ file record DownloadParserSampleWork(ImageType ImageType) : ISingleImage, IImage
 
     public int PageCount => 0;
 
-    public SingleAnimatedImageType PreferredAnimatedImageType => SingleAnimatedImageType.SingleZipFile;
+    public SingleAnimatedImageType PreferredAnimatedImageType => SingleAnimatedImageType.MultiFiles;
 
     public Uri? SingleImageUri => null;
 
@@ -246,18 +103,7 @@ file record DownloadParserSampleWork(ImageType ImageType) : ISingleImage, IImage
 
     public DateTimeOffset CreateDate => new(2020, 10, 12, 0, 0, 0, TimeSpan.Zero);
 
-    public IPreloadableList<IUser> Authors { get; } =
-    [
-        new UserInfo
-        {
-            Id = 7654321,
-            Name = nameof(UserInfo.Name),
-            Account = "",
-            ProfileImageUrls = null!,
-            IsAcceptRequest = false,
-            IsFollowed = true
-        }
-    ];
+    public IPreloadableList<IUser> Authors { get; } = [];
 
     public IPreloadableList<IUser> Uploaders => null!;
 

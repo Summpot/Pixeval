@@ -6,10 +6,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
-using Avalonia.Input;
-using Avalonia.VisualTree;
-using Mako.Global.Enum;
+using Pixeval.Models.Pixiv;
 
 namespace Pixeval.Views.Work;
 

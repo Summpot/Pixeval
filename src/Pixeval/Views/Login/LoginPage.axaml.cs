@@ -2,18 +2,21 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Platform;
 using Microsoft.Extensions.DependencyInjection;
+using Pixeval.AppManagement;
 using Pixeval.I18N;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Home;
-using Pixeval.Views.ViewContainers;
 
 namespace Pixeval.Views.Login;
 
@@ -28,7 +31,10 @@ public partial class LoginPage : IconContentPage
 
     internal Task LoginCompletion { get; private set; } = Task.CompletedTask;
 
-    public LoginPage() => InitializeComponent();
+    public LoginPage()
+    {
+        InitializeComponent();
+    }
 
     private async void LoginButton_OnClick(object? sender, RoutedEventArgs e)
     {
@@ -41,18 +47,41 @@ public partial class LoginPage : IconContentPage
         var cancellationToken = attempt.Cancellation.Token;
         try
         {
-            var token = attempt.ViewModel.RefreshToken;
-            await App.AppViewModel.MakoClient.SetTokenAsync(token, cancellationToken);
-            await App.AppViewModel.MakoClient.ValidateTokenAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            LoginNavigate();
+            if (DataContext is not LoginPageViewModel viewModel)
+                return;
+
+            var token = viewModel.RefreshToken;
+            if (string.IsNullOrWhiteSpace(token))
+                return;
+
+            App.AppViewModel.MakoClient.SetRefreshToken(token);
+            var result = await App.AppViewModel.MakoClient.IdentifyTokenAsync();
+            if (result.Success)
+            {
+                var tokenResponse = App.AppViewModel.MakoClient.GetTokenResponse()
+                    ?? (App.AppViewModel.MakoClient.GetUser() is { } user
+                        ? new TokenResponse("", 0, "Bearer", token, user)
+                        : null);
+                App.AppViewModel.OnTokenRefreshed(tokenResponse);
+                LoginNavigate();
+            }
+            else if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
+                viewContainer.ShowError(I18NManager.GetResource(MainPageResources.LoggingIn.Failed));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
         catch (Exception exception)
         {
-            ShowAttemptError(attempt, exception);
+            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+                .LogError(nameof(LoginButton_OnClick), exception);
+            if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
+            {
+                viewContainer.ShowError(exception.GetType().ToString(), exception.Message);
+                _ = await viewContainer.CreateAcknowledgementAsync(
+                    I18NManager.GetResource(LoginPageResources.FetchingSessionFailed.Title),
+                    I18NManager.GetResource(LoginPageResources.FetchingSessionFailed.Content));
+            }
         }
         finally
         {
@@ -72,41 +101,71 @@ public partial class LoginPage : IconContentPage
             if (TopLevel.GetTopLevel(this) is not { ViewContainer: { } viewContainer } topLevel)
                 return;
 
-            Uri? callbackUri;
-            try
-            {
-                var result = await WebAuthenticationBroker.AuthenticateAsync(
-                    topLevel,
-                    new(
-                        new(PixivAuth.GenerateWebPageUrl(verifier)),
-                        new("pixiv://account/login"))
+            var result = await WebAuthenticationBroker.AuthenticateAsync(
+                topLevel,
+                new(
+                    new(PixivAuth.GenerateWebPageUrl(verifier)),
+                    new("pixiv://account/login"))
+                {
+                    Mode = WebAuthenticatorMode.NativeWebDialog,
+                    NonPersistent = true,
+                    NativeWebDialogFactory = () =>
                     {
-                        Mode = WebAuthenticatorMode.NativeWebDialog,
-                        NonPersistent = true
-                    });
-                callbackUri = result.CallbackUri;
-            }
-            catch (TaskCanceledException)
-            {
-                // Closing the authentication dialog is not a login failure.
-                return;
-            }
+                        var dialog = new NativeWebDialog
+                        {
+                            Title = "Pixiv",
+                            CanUserResize = true
+                        };
+                        dialog.Resize(600, 700);
+                        dialog.EnvironmentRequested += (_, args) =>
+                        {
+                            if (args is WindowsWebView2EnvironmentRequestedEventArgs winArgs)
+                            {
+                                var userDataFolder = Path.Combine(AppInfo.CacheFolder, "WebView2");
+                                Directory.CreateDirectory(userDataFolder);
+                                winArgs.UserDataFolder = userDataFolder;
+                                // For System proxy, WebView2 natively uses Windows system proxy.
+                                // For Custom proxy, format host:port without trailing slash or internal quotes.
+                                if (App.AppViewModel?.AppSettings?.NetworkSettings?.ProxySettings is { ProxyType: Models.Options.ProxyType.Custom } proxySettings
+                                    && !string.IsNullOrWhiteSpace(proxySettings.Proxy))
+                                {
+                                    var normalized = MakoHelper.NormalizeProxyUri(proxySettings.Proxy);
+                                    if (normalized is not null && Uri.TryCreate(normalized, UriKind.Absolute, out var uri))
+                                    {
+                                        var cleanProxy = $"{uri.Scheme}://{uri.Authority}";
+                                        winArgs.AdditionalBrowserArguments = $"--proxy-server={cleanProxy}";
+                                    }
+                                }
+                            }
+                        };
+                        return dialog;
+                    }
+                });
 
-            cancellationToken.ThrowIfCancellationRequested();
+            if (result.CallbackUri is not { } callbackUri)
+                return;
             var code = HttpUtility.ParseQueryString(callbackUri.Query)["code"];
             if (string.IsNullOrWhiteSpace(code))
                 return;
-            await App.AppViewModel.MakoClient.SetCodeAsync(code, verifier, cancellationToken);
-            await App.AppViewModel.MakoClient.ValidateTokenAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
+            var tokenResponse = await App.AppViewModel.MakoClient.ExchangeCodeAsync(code, verifier);
+            App.AppViewModel.OnTokenRefreshed(tokenResponse);
             LoginNavigate();
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (TaskCanceledException)
         {
+            // ignored
         }
         catch (Exception exception)
         {
-            ShowAttemptError(attempt, exception);
+            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+                .LogError(nameof(OpenWebView_OnClick), exception);
+            if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
+            {
+                viewContainer.ShowError(exception.GetType().ToString(), exception.Message);
+                _ = await viewContainer.CreateAcknowledgementAsync(
+                    I18NManager.GetResource(LoginPageResources.FetchingSessionFailed.Title),
+                    I18NManager.GetResource(LoginPageResources.FetchingSessionFailed.Content));
+            }
         }
         finally
         {
@@ -135,22 +194,12 @@ public partial class LoginPage : IconContentPage
         }
         catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
         {
-            return;
         }
         catch (Exception exception)
         {
-            if (!cancellationTokenSource.IsCancellationRequested)
-                ShowLoginError(exception);
+            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+                .LogError(nameof(LoginPageViewModel.LoadUsersAsync), exception);
         }
-    }
-
-    public void ShowLoginError(Exception exception)
-    {
-        _logger.LogError(nameof(LoginPage), exception);
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
-            viewContainer.ShowError(
-                I18NManager.GetResource(MainPageResources.LoggingIn.Failed),
-                LoginErrorHelper.GetMessage(exception));
     }
 
     protected override void OnUnloaded(RoutedEventArgs e)

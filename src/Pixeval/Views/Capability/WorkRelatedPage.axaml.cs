@@ -1,11 +1,12 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Interactivity;
-using Mako.Global.Enum;
-using Mako.Model;
+using Misaki;
+using Pixeval.Utilities;
 using Pixeval.ViewModels;
 
 namespace Pixeval.Views.Capability;
@@ -48,11 +49,9 @@ public partial class WorkRelatedPage : IconContentPage
 
     private void ChangeSource()
     {
-        if (_id is not 0)
-            WorkContainer.ResetEngine(App.AppViewModel.MakoClient.WorkRelated(_id, _simpleWorkType));
-        else if (_simpleWorkType is SimpleWorkType.Novel)
-            WorkContainer.ResetEngine(App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<Novel>()));
-        else
-            WorkContainer.ResetEngine(App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<Illustration>()));
+        var engine = _id is 0
+            ? (IAsyncEnumerable<IArtworkInfo>) AsyncEnumerable.Empty<IArtworkInfo>()
+            : App.AppViewModel.MakoClient.WorkRelated(_id, _simpleWorkType);
+        WorkContainer.ResetEngine(engine);
     }
 }

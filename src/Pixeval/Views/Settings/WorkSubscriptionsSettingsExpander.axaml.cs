@@ -13,15 +13,14 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using CommunityToolkit.Avalonia.Controls;
-using Mako.Global.Enum;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
+using Pixeval.Models.Pixiv;
 using Pixeval.I18N;
-using Pixeval.Models.Database;
-using Pixeval.Models.Database.Managers;
 using Pixeval.Models.Options;
 using Pixeval.Models.Settings.Entries;
 using Pixeval.Models.Subscriptions;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Settings;
 
@@ -61,9 +60,6 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         UpdateWorkKindItems();
     }
 
-    private static WorkSubscriptionPersistentManager SubscriptionManager =>
-        App.AppViewModel.AppServiceProvider.GetRequiredService<WorkSubscriptionPersistentManager>();
-
     private static IWorkSubscriptionService SubscriptionService =>
         App.AppViewModel.AppServiceProvider.GetRequiredService<IWorkSubscriptionService>();
 
@@ -84,7 +80,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         Subscriptions.Clear();
         try
         {
-            await foreach (var entry in SubscriptionManager.StreamEntriesAsync(token: token))
+            foreach (var entry in App.AppViewModel.StorageEngine.GetAllSubscriptions())
             {
                 token.ThrowIfCancellationRequested();
                 Subscriptions.Add(new(entry));
@@ -163,20 +159,8 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
-        }
-        catch (Exception)
-        {
-            if (IsCurrent())
-                ShowError(I18NManager.GetResource(WorkSubscriptionsSettingsExpanderResources.AddFailed));
-        }
-        finally
-        {
-            if (ReferenceEquals(_addCancellationTokenSource, source))
-            {
-                _addCancellationTokenSource = null;
-                IsAdding = false;
-            }
-            source.Dispose();
+            var user = (await App.AppViewModel.MakoClient.GetUserFromIdAsync(targetId)).User;
+            _ = WorkSubscriptionHelper.TryAddOrUpdateUser(user, subscriptionType, workKind);
         }
 
         bool IsCurrent() => _isLoaded && !token.IsCancellationRequested
@@ -236,7 +220,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
             App.AppViewModel.QueueWorkSubscriptionSync(item.Entry);
     }
 
-    private void SubscriptionServiceOnSubscriptionUpdated(object? sender, WorkSubscriptionEntry subscription)
+    private void SubscriptionServiceOnSubscriptionUpdated(object? sender, WorkSubscriptionRecord subscription)
     {
         if (!_isLoaded)
             return;
@@ -254,7 +238,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         });
     }
 
-    private void ApplySubscriptionUpdate(WorkSubscriptionEntry subscription) =>
+    private void ApplySubscriptionUpdate(WorkSubscriptionRecord subscription) =>
         Subscriptions.FirstOrDefault(item =>
                 item.Entry.HistoryEntryId == subscription.HistoryEntryId)
             ?.UpdateSubscription(subscription);

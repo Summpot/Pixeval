@@ -9,15 +9,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Mako.Engine;
-using Mako.Engine.Implements;
-using Mako.Global.Enum;
-using Mako.Model;
-using Mako.Net.Responses;
 using Misaki;
+using Pixeval.AppManagement;
 using Pixeval.Controls;
 using Pixeval.Models.Home;
 using Pixeval.Models.Options;
+using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Home;
@@ -114,24 +112,24 @@ public static class HomeCardDefinitions
                 HomeCardParameterKinds.SimpleWorkType | HomeCardParameterKinds.SearchText,
                 CreateWorkPreviewSourceFactory(card => card.SimpleWorkType is SimpleWorkType.Novel
                     ? string.IsNullOrWhiteSpace(card.SearchText)
-                        ? App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<Novel>())
-                        : App.AppViewModel.MakoClient.NovelSearch(new NovelSearchArguments(card.SearchText))
+                        ? App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<IArtworkInfo>())
+                        : App.AppViewModel.MakoClient.NovelSearch(new NovelSearchArguments(card.SearchText)).ToFetchEngine()
                     : string.IsNullOrWhiteSpace(card.SearchText)
                         ? App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<IArtworkInfo>())
-                        : App.AppViewModel.MakoClient.IllustrationSearch(new IllustrationSearchArguments(card.SearchText))),
+                        : App.AppViewModel.MakoClient.IllustrationSearch(new IllustrationSearchArguments(card.SearchText)).ToFetchEngine()),
                 OpenWorkSearchPage,
                 card => [GetDescription(card.SimpleWorkType), card.SearchText ?? ""]),
             new(
                 HomePageCardSourceKind.UserRecommended,
                 HomeCardParameterKinds.None,
-                CreateUserPreviewSourceFactory(_ => App.AppViewModel.MakoClient.UserRecommended()),
+                CreateUserPreviewSourceFactory(_ => App.AppViewModel.MakoClient.UserRecommended().ToFetchEngine()),
                 OpenUserRecommendedPage),
             new(
                 HomePageCardSourceKind.UserSearch,
                 HomeCardParameterKinds.SearchText,
                 CreateUserPreviewSourceFactory(card => string.IsNullOrWhiteSpace(card.SearchText)
                     ? App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<User>())
-                    : App.AppViewModel.MakoClient.UserSearch(card.SearchText)),
+                    : App.AppViewModel.MakoClient.UserSearch(card.SearchText).ToFetchEngine()),
                 OpenUserSearchPage,
                 card => [card.SearchText ?? ""]),
             new(
@@ -221,7 +219,7 @@ public static class HomeCardDefinitions
 
     private static Task<HomeCardPreviewSource> CreateSpotlightViewModelAsync(HomePageCardLayout card, CancellationToken token)
     {
-        var engine = App.AppViewModel.MakoClient.Spotlight();
+        var engine = App.AppViewModel.MakoClient.Spotlight().ToFetchEngine();
         return Task.FromResult(new HomeCardPreviewSource(CreateSpotlightViewModel(engine)));
     }
 
@@ -261,11 +259,8 @@ public static class HomeCardDefinitions
 
     private static async Task<HomeCardPreviewSource> CreateSingleUserViewModelAsync(HomePageCardLayout card, CancellationToken token)
     {
-        var userDetail = await App.AppViewModel.MakoClient.GetUserFromIdAsync(card.UserId, token);
-        token.ThrowIfCancellationRequested();
-        if (userDetail.UserEntity.Id != card.UserId)
-            throw new InvalidOperationException("The user detail source returned no matching user.");
-        var engine = App.AppViewModel.MakoClient.Computed(Single(CreateUser(userDetail.UserEntity)));
+        var userDetail = await App.AppViewModel.MakoClient.GetUserFromIdAsync(card.UserId);
+        var engine = App.AppViewModel.MakoClient.Computed(Single(userDetail.User));
         return new(CreateUserViewModel(engine), new SingleUserOpeningContext(userDetail));
     }
 
@@ -298,7 +293,7 @@ public static class HomeCardDefinitions
         return viewModel;
     }
 
-    private static SpotlightViewViewModel CreateSpotlightViewModel(IFetchEngine<Spotlight> engine)
+    private static SpotlightViewViewModel CreateSpotlightViewModel(IFetchEngine<SpotlightArticle> engine)
     {
         var viewModel = new SpotlightViewViewModel();
         viewModel.ResetEngine(engine, static (spotlight, _) => new(spotlight));
@@ -421,24 +416,22 @@ public static class HomeCardDefinitions
     private static void OpenSingleUser(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel) =>
         topLevel.ViewContainer?.CreateUserPage(source.GetOpeningContext<SingleUserOpeningContext>().UserDetail);
 
-    private static UserBasicInfo CreateUserBasicInfo(HomePageCardLayout card) =>
-        PixevalSettings.Me is { Id: var meId } me && card.UserId == meId
+    private static User CreateUserBasicInfo(HomePageCardLayout card) =>
+        PixevalSettings.MyUser is { } me && card.UserId == PixevalSettings.MyId
             ? me
-            : new HomeCardUserBasicInfo(card.UserId, BuildTitle(card));
+            : new User(
+                card.UserId,
+                BuildTitle(card),
+                "",
+                new ProfileImageUrls(null, null, null, AppInfo.ImageNotAvailablePath),
+                false,
+                null);
 
     private sealed record SingleSeriesOpeningContext(
-        SeriesDetailBase SeriesDetail,
+        Series SeriesDetail,
         IWorkEntry FirstWork);
 
     private sealed record SingleUserOpeningContext(SingleUserResponse UserDetail);
-
-    private static User CreateUser(UserInfo userInfo) => new()
-    {
-        UserInfo = userInfo,
-        Illustrations = [],
-        Novels = [],
-        IsMuted = false
-    };
 
     private static async IAsyncEnumerable<T> Single<T>(T item)
     {

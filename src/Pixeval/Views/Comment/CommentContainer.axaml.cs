@@ -5,8 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Mako.Model;
-using Pixeval.I18N;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 

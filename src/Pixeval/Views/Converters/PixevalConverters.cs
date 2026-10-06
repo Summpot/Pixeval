@@ -12,9 +12,9 @@ using Avalonia.Data.Converters;
 using Avalonia.Media;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
-using Mako.Model;
 using Misaki;
 using Pixeval.Controls;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 
 namespace Pixeval.Views.Converters;

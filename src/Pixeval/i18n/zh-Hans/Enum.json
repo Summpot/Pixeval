@@ -75,7 +75,11 @@
     "Original": "图片原始格式"
   },
   "UgoiraDownloadFormat": {
-    "Original": "动图原始格式"
+    "Original": "动图原始格式",
+    "Gif": "GIF 动图",
+    "Apng": "APNG 动图",
+    "Webp": "WebP 动图",
+    "Mp4": "MP4 视频"
   },
   "NovelDownloadFormat": {
     "OriginalTxt": "TXT外挂插图（Pixiv小说原生标签）",

@@ -1,11 +1,9 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using Mako.Engine;
-using Mako.Global.Enum;
-using Mako.Model;
+using Series = Pixeval.Native.Mako.Series;
 using SeriesViewDataProvider = Pixeval.ViewModels.SharableViewDataProvider<
-    Mako.Model.Series,
+    Pixeval.Native.Mako.Series,
     Pixeval.ViewModels.SeriesItemViewModel>;
 
 namespace Pixeval.ViewModels;

@@ -2,14 +2,14 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using SharpYaml;
+using Pixeval.Native.Config;
 
 namespace Pixeval.Models.Navigation;
 
 public static class NavigationYamlFormatter
 {
+    private static readonly ConfigEngine Engine = new();
+
     public static string Format(NavigationConfiguration configuration) =>
-        YamlSerializer
-            .Serialize(configuration.ToYamlSettings(), NavigationYamlSerializerContext.Default.NavigationYamlSettings)
-            .TrimEnd() + Environment.NewLine;
+        Engine.FormatNavigationYaml(configuration.ToYamlSettings()).ReplaceLineEndings(Environment.NewLine);
 }

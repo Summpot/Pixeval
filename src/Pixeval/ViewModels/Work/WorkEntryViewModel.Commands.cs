@@ -37,17 +37,17 @@ public partial class WorkEntryViewModel<T>
     [RelayCommand(CanExecute = nameof(CanManageWatchLater))]
     private void AddToWatchLater(Control? parameter)
     {
-        if (IsBlocked || GetHistoryPersistHelper() is not { } helper)
+        if (IsBlocked || App.AppViewModel is not { } app)
             return;
 
         var target = !IsInWatchLater;
 
         if (target)
         {
-            if (!helper.AddWatchLater(Entry))
+            if (!app.AddWatchLater(Entry))
                 return;
         }
-        else if (!helper.RemoveWatchLater(Entry))
+        else if (!app.RemoveWatchLater(Entry))
             return;
 
         IsInWatchLater = target;

@@ -3,8 +3,9 @@
 
 using System;
 using Avalonia.Interactivity;
-using Mako.Global.Enum;
 using Pixeval.Controls;
+using Pixeval.Models.Pixiv;
+using Pixeval.Utilities;
 using Pixeval.ViewModels;
 
 namespace Pixeval.Views.Capability;
@@ -37,7 +38,8 @@ public partial class WorkMyPixivPage : IconContentPage
 
     private void ChangeSource()
     {
-        WorkContainer.ResetEngine(App.AppViewModel.MakoClient.WorkMyPixiv(
-            SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>()));
+        var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
+        var engine = App.AppViewModel.MakoClient.WorkMyPixiv(workType);
+        WorkContainer.ResetEngine(engine);
     }
 }

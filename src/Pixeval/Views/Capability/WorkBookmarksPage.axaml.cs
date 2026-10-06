@@ -8,13 +8,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Mako.Global.Enum;
-using Mako.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.I18N;
 using Pixeval.Models.Options;
 using Pixeval.Models.Subscriptions;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Work;
@@ -23,8 +22,8 @@ namespace Pixeval.Views.Capability;
 
 public partial class WorkBookmarksPage : IconContentPage
 {
-    private readonly UserBasicInfo _user;
-    private CancellationTokenSource? _tagLoadCancellation;
+    private readonly User _user;
+    private readonly string? _initialTag;
     private bool _suppressChangeSource;
 
     public static IReadOnlyList<BookmarkTag> DefaultTags { get; } = [AllBookmarkTag.Instance, UncategorizedBookmarkTag.Instance];
@@ -32,26 +31,30 @@ public partial class WorkBookmarksPage : IconContentPage
     private static IWorkSubscriptionService SubscriptionService =>
         App.AppViewModel.AppServiceProvider.GetRequiredService<IWorkSubscriptionService>();
 
-    public WorkBookmarksPage() : this(PixevalSettings.Me)
+    public WorkBookmarksPage() : this(PixevalSettings.MyUser ?? new User(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []))
     {
     }
 
-    public WorkBookmarksPage(UserBasicInfo user, SimpleWorkType simpleWorkType = SimpleWorkType.Illustration, PrivacyPolicy privacyPolicy = PrivacyPolicy.Public, string? tag = null, IWorkViewViewModel? viewModel = null)
+    public WorkBookmarksPage(User user, SimpleWorkType simpleWorkType = SimpleWorkType.Illustration, PrivacyPolicy privacyPolicy = PrivacyPolicy.Public, string? tag = null, IWorkViewViewModel? viewModel = null)
     {
         InitializeComponent();
 
         _user = user;
         SimpleWorkTypeComboBox.SelectedValue = simpleWorkType;
         PrivacyPolicyComboBox.SelectedValue = privacyPolicy;
-        if (_user.Id != PixevalSettings.MyId)
+        if (_user.Id <= 0 || _user.Id != PixevalSettings.MyId)
             PrivacyPolicyComboBox.IsEnabled = PrivacyPolicyComboBox.IsVisible = false;
 
-        if (tag is not null)
+        if (_user.Id > 0)
+            FetchTags();
+        else
         {
-            var selected = DefaultTags.FirstOrDefault(item => item.Name == tag) ?? new BookmarkTag { Name = tag, Count = 0 };
-            TagComboBox.ItemsSource = DefaultTags.Contains(selected) ? DefaultTags : [.. DefaultTags, selected];
-            TagComboBox.SelectedItem = selected;
+            _suppressChangeSource = true;
+            TagComboBox.ItemsSource = DefaultTags;
+            TagComboBox.SelectedItem = AllBookmarkTag.Instance;
+            _suppressChangeSource = false;
         }
+
         if (viewModel is not null)
         {
             WorkContainer.SetViewModel(viewModel);
@@ -103,49 +106,35 @@ public partial class WorkBookmarksPage : IconContentPage
 
     public async void FetchTags()
     {
-        if (!IsLoaded)
+        if (_user.Id <= 0)
+        {
+            _suppressChangeSource = true;
+            TagComboBox.ItemsSource = DefaultTags;
+            TagComboBox.SelectedItem = AllBookmarkTag.Instance;
+            _suppressChangeSource = false;
             return;
-        CancelTagLoad();
-        var cancellation = _tagLoadCancellation = new CancellationTokenSource();
-        var token = cancellation.Token;
+        }
+
         try
         {
             var tags = await MakoHelper.GetBookmarkTagsAsync(
                 _user.Id,
                 SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>(),
-                PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>(), token);
-            if (!IsLoaded || token.IsCancellationRequested || !ReferenceEquals(_tagLoadCancellation, cancellation))
-                return;
+                PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>());
 
-            // Preserve the filter, but never carry a previous source's count into
-            // a completed tag list that does not contain it.
-            var selected = TagComboBox.SelectedItem as BookmarkTag ?? AllBookmarkTag.Instance;
-            if (!tags.Any(tag => tag.Name == selected.Name))
-                tags.Add(new BookmarkTag { Name = selected.Name, Count = 0 });
             _suppressChangeSource = true;
-            try
-            {
-                TagComboBox.ItemsSource = tags;
-                TagComboBox.SelectedItem = tags.First(tag => tag.Name == selected.Name);
-            }
-            finally { _suppressChangeSource = false; }
+            TagComboBox.ItemsSource = tags;
+            TagComboBox.SelectedItem = tags.FirstOrDefault(tag => tag.Name == _initialTag) ?? AllBookmarkTag.Instance;
+            _suppressChangeSource = false;
         }
-        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        catch (Exception ex)
         {
-        }
-        catch (Exception exception)
-        {
-            if (IsLoaded && !token.IsCancellationRequested && ReferenceEquals(_tagLoadCancellation, cancellation))
-            {
-                App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>().LogError(nameof(FetchTags), exception);
-                TopLevel.GetTopLevel(this)?.ViewContainer?.ShowError(I18NManager.GetResource(EntryViewerPageResources.LoadFailed), exception.Message);
-            }
-        }
-        finally
-        {
-            if (ReferenceEquals(_tagLoadCancellation, cancellation))
-                _tagLoadCancellation = null;
-            cancellation.Dispose();
+            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+                .LogError(nameof(FetchTags), ex);
+            _suppressChangeSource = true;
+            TagComboBox.ItemsSource = new List<BookmarkTag> { AllBookmarkTag.Instance, UncategorizedBookmarkTag.Instance };
+            TagComboBox.SelectedItem = AllBookmarkTag.Instance;
+            _suppressChangeSource = false;
         }
     }
 
@@ -153,11 +142,10 @@ public partial class WorkBookmarksPage : IconContentPage
     {
         var tag = (TagComboBox.SelectedItem as BookmarkTag)?.Name;
         var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
-        var engine = App.AppViewModel.MakoClient.WorkBookmarks(
-            workType,
-            _user.Id,
-            PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>(),
-            tag);
+        var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>() is PrivacyPolicy.Private ? "private" : "public";
+        var engine = (workType is SimpleWorkType.Novel
+            ? (IAsyncEnumerable<IWorkEntry>) App.AppViewModel.MakoClient.NovelBookmarks(_user.Id, privacy, tag)
+            : App.AppViewModel.MakoClient.WorkBookmarks(_user.Id, privacy, tag)).ToFetchEngine();
         WorkContainer.ResetEngine(engine);
         App.AppViewModel.QueueWorkSubscriptionSyncCurrentSource(
             _user.Id,
@@ -187,11 +175,20 @@ public partial class WorkBookmarksPage : IconContentPage
             UpdateSubscriptionButtons);
     }
 
-    private void UpdateSubscriptionButtons() =>
+    private void UpdateSubscriptionButtons()
+    {
+        if (_user.Id <= 0)
+        {
+            AddSubscriptionButton.IsVisible = false;
+            RemoveSubscriptionButton.IsVisible = false;
+            return;
+        }
+
         WorkSubscriptionButtonHelper.UpdateVisibility(
             AddSubscriptionButton,
             RemoveSubscriptionButton,
             SubscriptionService.TryGetSubscription(_user.Id, WorkSubscriptionType.Bookmarks, GetSubscriptionWorkKind()) is not null);
+    }
 
     private async Task<bool> RemoveCurrentSubscriptionAsync()
     {

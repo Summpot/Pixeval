@@ -2,22 +2,22 @@
 // Licensed under the GPL-3.0 License.
 
 using CommunityToolkit.Mvvm.ComponentModel;
-using Mako.Model;
-using Pixeval.Models.Database;
+using Pixeval.Native.Mako;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 
 namespace Pixeval.ViewModels.Settings;
 
-public sealed partial class BlockedUserItemViewModel(BlockedUserEntry entry) : ViewModelBase
+public sealed partial class BlockedUserItemViewModel(BlockedUserRecord entry) : ViewModelBase
 {
-    public BlockedUserEntry Entry { get; } = entry;
+    public BlockedUserRecord Entry { get; private set; } = entry;
 
     [ObservableProperty]
-    public partial UserBasicInfo User { get; private set; } = BlockedContentModelHelper.CreateBlockedUserPreview(entry);
+    public partial User User { get; private set; } = BlockedContentModelHelper.CreateBlockedUserPreview(entry);
 
-    internal void UpdateUser(BlockedUserEntry entry)
+    internal void UpdateUser(BlockedUserRecord entry)
     {
-        Entry.UpdateFrom(entry);
+        Entry = entry;
         User = BlockedContentModelHelper.CreateBlockedUserPreview(Entry);
     }
 }

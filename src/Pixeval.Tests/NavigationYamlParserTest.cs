@@ -52,7 +52,7 @@ public sealed class NavigationYamlParserTest
     }
 
     [TestMethod]
-    public void FormatterShouldUseSharpYamlSerializableShape()
+    public void FormatterShouldEmitValidCanonicalYaml()
     {
         var result = NavigationYamlParser.Parse(
             """

@@ -3,8 +3,8 @@
 
 using System.Threading;
 using System.Threading.Tasks;
-using Mako.Global.Enum;
-using Mako.Model;
+using Pixeval.Models.Pixiv;
+using Pixeval.Utilities;
 
 namespace Pixeval.ViewModels.Viewers;
 

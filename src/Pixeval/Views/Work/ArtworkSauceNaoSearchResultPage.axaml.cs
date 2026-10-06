@@ -1,17 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Misaki;
 using Pixeval.I18N;
-using Pixeval.Models.SauceNao;
+using Pixeval.Native.SauceNao;
 using Pixeval.Utilities;
 using Pixeval.Views.Viewers;
 
@@ -56,95 +51,33 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage, IDisposable
     public async IAsyncEnumerable<IArtworkInfo> GetResults(string apiKey, ReadOnlyMemory<byte> file,
         [EnumeratorCancellation] CancellationToken token = default)
     {
-        token.ThrowIfCancellationRequested();
-        var version = _requestVersion;
-        _isSearching = true;
+        var viewContainer = TopLevel.GetTopLevel(this)?.ViewContainer;
+
+        List<SauceNaoItem>? sauceNaoResults = null;
         try
         {
-            IReadOnlyList<SauceNaoResult>? sauceNaoResults = null;
-            string? error = null;
-            try
-            {
-                using var form = new MultipartFormDataContent();
-                using var fileContent = new ReadOnlyMemoryContent(file);
-                fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-                form.Add(fileContent, "file", "img");
-                using var response = await _httpClient.PostAsync(new SauceNaoRequest(apiKey).ToQueryString(), form, token);
-                response.EnsureSuccessStatusCode();
-                var result = await response.Content.ReadFromJsonAsync(SauceNaoResponseSerializerContext.Default.SauceNaoResponse, token);
-                token.ThrowIfCancellationRequested();
-                if (result is { Header.Status: 0, Results: { } results })
-                    sauceNaoResults = results;
-                else
-                    error = string.IsNullOrWhiteSpace(result?.Header.Message)
-                        ? I18NManager.GetResource(SearchResources.Validation.SearchFailed.Title)
-                        : result.Header.Message;
-            }
-            catch (OperationCanceledException) when (token.IsCancellationRequested)
-            {
-                yield break;
-            }
-            catch (Exception)
-            {
-                // Do not display an exception URI: the SauceNao query contains the API key.
-                error = I18NManager.GetResource(SearchResources.SauceNAO.RequestFailed);
-            }
-
-            if (error is not null)
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    if (token.IsCancellationRequested || _isDisposed || version != _requestVersion)
-                        return;
-                    SearchError.Text = error;
-                    FailurePanel.IsVisible = true;
-                    WorkContainer.IsVisible = false;
-                });
-
-            if (sauceNaoResults is not null)
-                foreach (var result in sauceNaoResults)
-                {
-                    token.ThrowIfCancellationRequested();
-                    if (result?.Data?.ToIdentityInfo() is not { } identityInfo)
-                        continue;
-                    var artwork = await identityInfo.TryGetArtworkInfoAsync(token);
-                    token.ThrowIfCancellationRequested();
-                    if (artwork is not null)
-                        yield return artwork;
-                }
+            using var client = new SauceNaoClient(apiKey, null);
+            sauceNaoResults = await client.SearchAsync(file.ToArray());
         }
-        finally
+        catch (Exception e)
         {
-            if (version == _requestVersion)
-                _isSearching = false;
+            viewContainer?.ShowError(I18NManager.GetResource(MiscResources.ExceptionEncountered), e.Message);
         }
-    }
 
-    private void RetryButton_OnClick(object? sender, RoutedEventArgs e) => _ = PostAsync(_apiKey, _file);
-
-    protected override void OnLoaded(RoutedEventArgs e)
-    {
-        base.OnLoaded(e);
-        RaiseEvent(new ViewModelDisposalEventArgs(ViewModelDisposal.ViewModelDisposalEvent, this));
-        if (_reloadOnAttach && !_isDisposed)
-            _ = PostAsync(_apiKey, _file);
-    }
-
-    protected override void OnUnloaded(RoutedEventArgs e)
-    {
-        _reloadOnAttach = _isSearching;
-        _requestCancellation?.Cancel();
-        base.OnUnloaded(e);
-    }
-
-    public void Dispose()
-    {
-        if (_isDisposed)
-            return;
-        _isDisposed = true;
-        _requestCancellation?.Cancel();
-        _requestCancellation?.Dispose();
-        _requestCancellation = null;
-        _file = ReadOnlyMemory<byte>.Empty;
-        _apiKey = "";
+        if (sauceNaoResults is not null)
+        {
+            foreach (var result in sauceNaoResults)
+            {
+                if (result.ToIdentityInfo() is { } identityInfo
+                    && await identityInfo.TryGetArtworkInfoAsync() is { } artwork)
+                {
+                    yield return artwork;
+                }
+                else
+                {
+                    yield return result;
+                }
+            }
+        }
     }
 }

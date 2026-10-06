@@ -2,7 +2,6 @@
 // Licensed under the GPL-3.0 License.
 
 using System.Collections.Generic;
-using Pixeval.Filters;
 using Pixeval.Filters.Analysis;
 using Pixeval.Filters.Syntax;
 using Pixeval.I18N;

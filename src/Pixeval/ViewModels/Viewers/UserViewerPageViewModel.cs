@@ -8,10 +8,10 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Mako.Global.Enum;
-using Mako.Net.Responses;
-using Pixeval.I18N;
 using Pixeval.Models.Blocking;
+using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
+using Pixeval.Utilities;
 using Pixeval.Views;
 using Pixeval.Views.Capability;
 
@@ -41,15 +41,15 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(TabPages))]
     public partial SingleUserResponse? UserDetail { get; private set; }
 
-    public string Header => UserDetail?.UserEntity.Name ?? Id.ToString();
+    public string Header => UserDetail?.User.Name ?? Id.ToString();
 
-    public long Id => UserDetail?.UserEntity.Id ?? field;
+    public long Id => UserDetail?.User.Id ?? field;
 
-    public string? AvatarUrl => UserDetail?.UserEntity.ProfileImageUrls.Medium;
+    public string? AvatarUrl => UserDetail?.User.AvatarUrl;
 
-    public string? BackgroundUrl => UserDetail?.UserProfile.BackgroundImageUrl ?? AvatarUrl;
+    public string? BackgroundUrl => UserDetail?.Profile.BackgroundImageUrl ?? AvatarUrl;
 
-    public IReadOnlyList<ContentPage> TabPages => UserDetail is { UserEntity: var user }
+    public IReadOnlyList<ContentPage> TabPages => UserDetail is { User: var user }
         ?
         [
             new WorkPostsPage(user),
@@ -62,8 +62,8 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
 
     public UserViewerPageViewModel(SingleUserResponse userDetail)
     {
-        Id = userDetail.UserEntity.Id;
-        UserDetail = BlockedContentHelper.Replace(userDetail);
+        Id = userDetail.User.Id;
+        UserDetail = userDetail;
     }
 
     public UserViewerPageViewModel(long userId)
@@ -75,7 +75,7 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     partial void OnUserDetailChanged(SingleUserResponse? value)
     {
         if (value is not null)
-            IsFollowed = value.UserEntity.IsFollowed;
+            IsFollowed = value.User.IsFollowed;
 
         NotifyActionCommands();
     }
@@ -145,42 +145,40 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand(CanExecute = nameof(CanFollow))]
-    private Task FollowAsync() => SetFollowAsync(PrivacyPolicy.Public);
+    private async Task FollowAsync()
+    {
+        var result = await MakoHelper.SetFollowAsync(Id, true, false);
+        if (result)
+        {
+            if (UserDetail?.User is { } user)
+                user.IsFollowedState = true;
+            IsFollowed = true;
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(CanFollow))]
-    private Task FollowPrivatelyAsync() => SetFollowAsync(PrivacyPolicy.Private);
+    private async Task FollowPrivatelyAsync()
+    {
+        var result = await MakoHelper.SetFollowAsync(Id, true, true);
+        if (result)
+        {
+            if (UserDetail?.User is { } user)
+                user.IsFollowedState = true;
+            IsFollowed = true;
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private Task UnfollowAsync() => SetFollowAsync(null);
 
     private async Task SetFollowAsync(PrivacyPolicy? privacy)
     {
-        if (!CanFollow || UserDetail is not { } detail)
-            return;
-
-        var client = App.AppViewModel.MakoClient;
-        var accountId = client.Me?.Id;
-        var token = _loadingCts.Token;
-        IsChangingFollow = true;
-        try
+        var result = await MakoHelper.SetFollowAsync(Id, false);
+        if (result)
         {
-            var result = privacy is { } policy
-                ? await client.PostFollowUserAsync(Id, policy, token)
-                : await client.RemoveFollowUserAsync(Id, token);
-            if (result && !_disposed && !token.IsCancellationRequested && client.Me?.Id == accountId
-                && ReferenceEquals(UserDetail, detail))
-            {
-                detail.UserEntity.IsFollowed = privacy is not null;
-                IsFollowed = privacy is not null;
-            }
-        }
-        catch (OperationCanceledException) when (token.IsCancellationRequested)
-        {
-        }
-        finally
-        {
-            if (!_disposed)
-                IsChangingFollow = false;
+            if (UserDetail?.User is { } user)
+                user.IsFollowedState = false;
+            IsFollowed = false;
         }
     }
 

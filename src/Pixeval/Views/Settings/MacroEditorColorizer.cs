@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using Avalonia.Media;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
-using Pixeval.Download.MacroParser;
+using Pixeval.Native.Download;
 
 namespace Pixeval.Controls.Settings;
 
@@ -25,7 +25,7 @@ public sealed class MacroEditorColorizer : DocumentColorizingTransformer
     private IReadOnlyList<MacroDiagnostic> _diagnostics = [];
     private int _documentLength;
 
-    public void Update(MacroParseResult analysis, int documentLength)
+    public void Update(MacroAnalysisResult analysis, int documentLength)
     {
         _highlights = analysis.Highlights;
         _diagnostics = analysis.Diagnostics;
@@ -59,14 +59,15 @@ public sealed class MacroEditorColorizer : DocumentColorizingTransformer
             return new MacroTextSpan(0, 0);
 
         var safeStart = int.Clamp(span.Start, 0, documentLength - 1);
-        var safeEnd = int.Clamp(int.Max(span.End, safeStart + 1), safeStart + 1, documentLength);
+        var spanEnd = span.Start + span.Length;
+        var safeEnd = int.Clamp(int.Max(spanEnd, safeStart + 1), safeStart + 1, documentLength);
         return new MacroTextSpan(safeStart, safeEnd - safeStart);
     }
 
     private static bool TryIntersect(MacroTextSpan span, DocumentLine line, out int start, out int end)
     {
         start = int.Max(span.Start, line.Offset);
-        end = int.Min(span.End, line.EndOffset);
+        end = int.Min(span.Start + span.Length, line.EndOffset);
         return start < end;
     }
 }
