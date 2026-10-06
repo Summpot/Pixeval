@@ -107,12 +107,12 @@ public partial record Novel : IArtworkInfo, IWorkEntry, INovelEntry, ISerializab
     {
         get
         {
-            var med = ImageUrls.Medium ?? ImageUrls.SquareMedium ?? "";
-            var large = ImageUrls.Large ?? med;
+            var med = ImageUrls?.Medium ?? ImageUrls?.SquareMedium;
+            var large = ImageUrls?.Large ?? med;
             return
             [
-                new ImageFrame(IImageSize.Uniform(this, 540, 540)) { ImageUri = new(med) },
-                new ImageFrame(IImageSize.Uniform(this, 600, 1200)) { ImageUri = new(large) },
+                new ImageFrame(IImageSize.Uniform(this, 540, 540)) { ImageUri = string.IsNullOrWhiteSpace(med) ? new("about:blank") : new(med) },
+                new ImageFrame(IImageSize.Uniform(this, 600, 1200)) { ImageUri = string.IsNullOrWhiteSpace(large) ? new("about:blank") : new(large) },
             ];
         }
     }

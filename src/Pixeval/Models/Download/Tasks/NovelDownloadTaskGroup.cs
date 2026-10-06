@@ -117,15 +117,12 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
     {
         if (NovelContent == null!)
         {
-            var text = await App.AppViewModel.MakoClient.GetNovelContentAsync(Entry.RawId);
-            SetNovelContent(NovelContent.CreateDefault() with
+            var content = await App.AppViewModel.MakoClient.GetNovelContentStructuredAsync(Entry.RawId);
+            SetNovelContent(content with
             {
-                Id = Entry.RawId,
-                Title = Entry.Title,
-                Text = text,
-                Date = Entry.CreateDateOffset,
-                UserId = Entry.Author.Id,
-                CoverUrl = Entry.Thumbnails.FirstOrDefault()?.ImageUri.OriginalString ?? ""
+                Title = string.IsNullOrWhiteSpace(content.Title) ? Entry.Title : content.Title,
+                CoverUrl = string.IsNullOrWhiteSpace(content.CoverUrl) ? (Entry.Thumbnails.FirstOrDefault()?.ImageUri.OriginalString ?? "") : content.CoverUrl,
+                UserId = content.UserId == 0 ? Entry.Author.Id : content.UserId
             });
         }
         else

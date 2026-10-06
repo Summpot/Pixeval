@@ -67,42 +67,28 @@ public sealed class NovelContext(NovelContent novelContent) : INovelContext<Stre
 
     public StringBuilder LoadMdContent()
     {
-        var index = 0;
-        var length = NovelContent.Text.Length;
-
-        var sb = new StringBuilder();
-        if (CoverFileName is { } coverFileName)
-            _ = sb.AppendLine($"![cover]({coverFileName})").AppendLine();
-
-        for (var i = 0; index < length; ++i)
-        {
-            var parser = new PixivNovelMdParser<Stream>(sb, i);
-            _ = parser.Parse(NovelContent.Text, ref index, this);
-            if (LoadingCts.IsCancellationRequested)
-                break;
-        }
-
-        return sb;
+        var engine = new Pixeval.Native.Novel.NovelEngine();
+        var images = NovelContent.Images
+            .Select(x => new Pixeval.Native.Novel.NovelImageRenderDto(x.NovelImageId, x.ThumbnailUrl, GetLocalImageFileName(x)))
+            .ToList();
+        var illusts = NovelContent.Illustrations
+            .Select(x => new Pixeval.Native.Novel.NovelIllustRenderDto(x.Id, x.Page, x.ThumbnailUrl, x.AppUri.OriginalString, x.WebsiteUri.OriginalString, GetLocalImageFileName(x)))
+            .ToList();
+        var md = engine.RenderExportMarkdownFromText(NovelContent.Text, CoverFileName, images, illusts);
+        return new StringBuilder(md);
     }
 
     public StringBuilder LoadHtmlContent()
     {
-        var index = 0;
-        var length = NovelContent.Text.Length;
-
-        var sb = new StringBuilder();
-        if (CoverFileName is { } coverFileName)
-            _ = sb.AppendLine($"<img src=\"{coverFileName}\" alt=\"cover\" />").AppendLine();
-
-        for (var i = 0; index < length; ++i)
-        {
-            var parser = new PixivNovelHtmlParser<Stream>(sb, i);
-            _ = parser.Parse(NovelContent.Text, ref index, this);
-            if (LoadingCts.IsCancellationRequested)
-                break;
-        }
-
-        return sb;
+        var engine = new Pixeval.Native.Novel.NovelEngine();
+        var images = NovelContent.Images
+            .Select(x => new Pixeval.Native.Novel.NovelImageRenderDto(x.NovelImageId, x.ThumbnailUrl, GetLocalImageFileName(x)))
+            .ToList();
+        var illusts = NovelContent.Illustrations
+            .Select(x => new Pixeval.Native.Novel.NovelIllustRenderDto(x.Id, x.Page, x.ThumbnailUrl, x.AppUri.OriginalString, x.WebsiteUri.OriginalString, GetLocalImageFileName(x)))
+            .ToList();
+        var html = engine.RenderExportHtmlFromText(NovelContent.Text, NovelContent.Title, CoverFileName, images, illusts);
+        return new StringBuilder(html);
     }
 
     public Stream? TryGetStream(int index)

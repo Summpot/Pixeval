@@ -11,5 +11,6 @@ members = [
     "crates/pixeval_config",
     "crates/pixeval_plugin",
     "crates/pixeval_mcp",
+    "crates/pixeval_novel",
 ]
 resolver = "2"

@@ -179,6 +179,25 @@ mod tests {
                     ),
                 ],
             ),
+            FilterSyntaxDefinition::new(
+                "Ratio",
+                FilterValueKind::DoubleRange,
+                Some("1.5..2.0".to_string()),
+                vec![
+                    FilterSyntaxPattern::keyword(
+                        "ratio",
+                        ":",
+                        Some("1.5..2.0".to_string()),
+                        Some("长宽比范围".to_string()),
+                    ),
+                    FilterSyntaxPattern::keyword(
+                        "r",
+                        ":",
+                        Some("1.5..2.0".to_string()),
+                        Some("长宽比范围".to_string()),
+                    ),
+                ],
+            ),
         ];
 
         FilterLanguage::new(syntaxes, None, None, None)
@@ -273,5 +292,14 @@ mod tests {
         let q_r18g = lang.analyze("+r18g", -1, None).query.unwrap();
         assert!(!matches_artwork(&q_r18g, &r18_art));
         assert!(matches_artwork(&q_r18g, &r18g_art));
+
+        // Test ratio filter does not exclude novels (height == 0)
+        let q_ratio = lang.analyze("ratio:1.5-2.0", -1, None).query.unwrap();
+        let novel_art = ArtworkMetadata {
+            width: 0,
+            height: 0,
+            ..artwork.clone()
+        };
+        assert!(matches_artwork(&q_ratio, &novel_art));
     }
 }

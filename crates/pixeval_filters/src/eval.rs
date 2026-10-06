@@ -85,7 +85,7 @@ fn eval_predicate(predicate: &FilterPredicateNode, artwork: &ArtworkMetadata) ->
                     let ratio = artwork.width as f64 / artwork.height as f64;
                     (ratio - *dv).abs() < f64::EPSILON
                 } else {
-                    false
+                    true
                 }
             }
             _ => true,
@@ -100,7 +100,7 @@ fn eval_predicate(predicate: &FilterPredicateNode, artwork: &ArtworkMetadata) ->
                     let ratio = artwork.width as f64 / artwork.height as f64;
                     range.contains(ratio)
                 } else {
-                    false
+                    true
                 }
             }
             _ => true,

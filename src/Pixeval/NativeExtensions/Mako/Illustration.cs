@@ -138,19 +138,26 @@ public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISi
     {
         get
         {
-            var med = ImageUrls.Medium ?? ImageUrls.SquareMedium ?? "";
-            var large = ImageUrls.Large ?? med;
+            var med = ImageUrls?.Medium ?? ImageUrls?.SquareMedium;
+            var large = ImageUrls?.Large ?? med;
             return
             [
-                new ImageFrame(IImageSize.Uniform(this, 540, 540)) { ImageUri = new(med) },
-                new ImageFrame(IImageSize.Uniform(this, 600, 1200)) { ImageUri = new(large) },
+                new ImageFrame(IImageSize.Uniform(this, 540, 540)) { ImageUri = string.IsNullOrWhiteSpace(med) ? new("about:blank") : new(med) },
+                new ImageFrame(IImageSize.Uniform(this, 600, 1200)) { ImageUri = string.IsNullOrWhiteSpace(large) ? new("about:blank") : new(large) },
             ];
         }
     }
 
     ulong IImageFrame.ByteSize => 0;
 
-    Uri IImageFrame.ImageUri => new(OriginalSingleUrl ?? ImageUrls.Original ?? ImageUrls.Large ?? ImageUrls.Medium ?? "");
+    Uri IImageFrame.ImageUri
+    {
+        get
+        {
+            var url = OriginalSingleUrl ?? ImageUrls?.Original ?? ImageUrls?.Large ?? ImageUrls?.Medium;
+            return string.IsNullOrWhiteSpace(url) ? new("about:blank") : new(url);
+        }
+    }
 
     [JsonIgnore]
     public SingleAnimatedImageType PreferredAnimatedImageType => SingleAnimatedImageType.MultiFiles;

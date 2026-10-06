@@ -28,15 +28,12 @@ public partial class NovelItemViewModel(Novel novel)
             if (BlockedContentHelper.IsBlockedPlaceholder(novel))
                 return BlockedContentModelHelper.CreateBlockedNovelContent(BlockedContentHelper.Replace(novel));
 
-            var text = await App.AppViewModel.MakoClient.GetNovelContentAsync(novel.RawId);
-            return NovelContent.CreateDefault() with
+            var content = await App.AppViewModel.MakoClient.GetNovelContentStructuredAsync(novel.RawId);
+            return content with
             {
-                Id = novel.RawId,
-                Title = novel.Title,
-                Text = text,
-                Date = novel.CreateDateOffset,
-                UserId = novel.Author.Id,
-                CoverUrl = novel.Thumbnails.FirstOrDefault()?.ImageUri.OriginalString ?? ""
+                Title = string.IsNullOrWhiteSpace(content.Title) ? novel.Title : content.Title,
+                CoverUrl = string.IsNullOrWhiteSpace(content.CoverUrl) ? (novel.Thumbnails.FirstOrDefault()?.ImageUri.OriginalString ?? "") : content.CoverUrl,
+                UserId = content.UserId == 0 ? novel.Author.Id : content.UserId
             };
         });
 }

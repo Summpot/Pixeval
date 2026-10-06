@@ -75,17 +75,17 @@ public partial class SearchPageViewModel : ViewModelBase
         IllustrationForm.ToolItems =
         [
             .. IllustrationForm.ToolItems,
-            .. options.IllustrationOptions.Tools.Options
+            .. options.Illust.Tools
         ];
         NovelForm.LanguageItems =
         [
             .. NovelForm.LanguageItems,
-            .. options.NovelOptions.Languages.Options
+            .. options.Novel.Languages
         ];
         NovelForm.GenreItems =
         [
             .. NovelForm.GenreItems,
-            .. options.NovelOptions.Genres.Options
+            .. options.Novel.Genres
         ];
     }
 }

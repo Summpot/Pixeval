@@ -382,26 +382,144 @@ impl MakoClient {
         ))))
     }
 
+    pub fn illustration_search_advanced(
+        &self,
+        params: IllustrationSearchParams,
+    ) -> Arc<IllustrationFetchEngine> {
+        let filter = self.target_filter.read().clone();
+        let target = params
+            .search_target
+            .unwrap_or_else(|| "partial_match_for_tags".to_string());
+        let sort_order = params.sort.unwrap_or_else(|| "date_desc".to_string());
+        let mut initial_url = format!(
+            "{APP_API_BASE_URL}/v1/search/illust?filter={filter}&word={}&search_target={}&sort={}",
+            url_encode(&params.word),
+            url_encode(&target),
+            url_encode(&sort_order)
+        );
+        if let Some(ai) = params.search_ai_type {
+            initial_url.push_str(&format!("&search_ai_type={ai}"));
+        }
+        if let Some(ct) = params.content_type {
+            initial_url.push_str(&format!("&content_type={}", url_encode(&ct)));
+        }
+        if let Some(rp) = params.ratio_pattern {
+            initial_url.push_str(&format!("&ratio_pattern={}", url_encode(&rp)));
+        }
+        if let Some(v) = params.merge_plain_keyword_results {
+            initial_url.push_str(&format!("&merge_plain_keyword_results={v}"));
+        }
+        if let Some(v) = params.include_translated_tag_results {
+            initial_url.push_str(&format!("&include_translated_tag_results={v}"));
+        }
+        if let Some(v) = params.include_potential_violation_works {
+            initial_url.push_str(&format!("&include_potential_violation_works={v}"));
+        }
+        if let Some(sd) = params.start_date {
+            initial_url.push_str(&format!("&start_date={}", url_encode(&sd)));
+        }
+        if let Some(ed) = params.end_date {
+            initial_url.push_str(&format!("&end_date={}", url_encode(&ed)));
+        }
+        if let Some(w_min) = params.width_min {
+            initial_url.push_str(&format!("&width_min={w_min}"));
+        }
+        if let Some(w_max) = params.width_max {
+            initial_url.push_str(&format!("&width_max={w_max}"));
+        }
+        if let Some(h_min) = params.height_min {
+            initial_url.push_str(&format!("&height_min={h_min}"));
+        }
+        if let Some(h_max) = params.height_max {
+            initial_url.push_str(&format!("&height_max={h_max}"));
+        }
+        if let Some(tool) = params.tool {
+            initial_url.push_str(&format!("&tool={}", url_encode(&tool)));
+        }
+
+        let fetcher = Arc::new(IllustrationPageFetcher {
+            client: self.clone(),
+            initial_url: initial_url.clone(),
+        });
+        Arc::new(IllustrationFetchEngine::new(Arc::new(MakoFetchEngine::new(
+            fetcher,
+            Some(initial_url),
+        ))))
+    }
+
     pub fn illustration_search(
         &self,
         word: String,
         search_target: Option<String>,
         sort: Option<String>,
     ) -> Arc<IllustrationFetchEngine> {
+        self.illustration_search_advanced(IllustrationSearchParams {
+            word,
+            search_target,
+            sort,
+            ..Default::default()
+        })
+    }
+
+    pub fn novel_search_advanced(
+        &self,
+        params: NovelSearchParams,
+    ) -> Arc<NovelFetchEngine> {
         let filter = self.target_filter.read().clone();
-        let target = search_target.unwrap_or_else(|| "partial_match_for_tags".to_string());
-        let sort_order = sort.unwrap_or_else(|| "date_desc".to_string());
-        let initial_url = format!(
-            "{APP_API_BASE_URL}/v1/search/illust?filter={filter}&word={}&search_target={}&sort={}",
-            url_encode(&word),
+        let target = params
+            .search_target
+            .unwrap_or_else(|| "partial_match_for_tags".to_string());
+        let sort_order = params.sort.unwrap_or_else(|| "date_desc".to_string());
+        let mut initial_url = format!(
+            "{APP_API_BASE_URL}/v1/search/novel?filter={filter}&word={}&search_target={}&sort={}",
+            url_encode(&params.word),
             url_encode(&target),
             url_encode(&sort_order)
         );
-        let fetcher = Arc::new(IllustrationPageFetcher {
+        if let Some(ai) = params.search_ai_type {
+            initial_url.push_str(&format!("&search_ai_type={ai}"));
+        }
+        if let Some(lang) = params.lang {
+            initial_url.push_str(&format!("&lang={}", url_encode(&lang)));
+        }
+        if let Some(opt) = params.content_length_option {
+            if let Some(c_min) = params.content_length_min {
+                initial_url.push_str(&format!("&{opt}_min={c_min}"));
+            }
+            if let Some(c_max) = params.content_length_max {
+                initial_url.push_str(&format!("&{opt}_max={c_max}"));
+            }
+        }
+        if let Some(orig) = params.is_original_only {
+            initial_url.push_str(&format!("&is_original_only={orig}"));
+        }
+        if let Some(genre) = params.genre {
+            initial_url.push_str(&format!("&genre={genre}"));
+        }
+        if let Some(rep) = params.is_replaceable_only {
+            initial_url.push_str(&format!("&is_replaceable_only={rep}"));
+        }
+        if let Some(v) = params.merge_plain_keyword_results {
+            initial_url.push_str(&format!("&merge_plain_keyword_results={v}"));
+        }
+        if let Some(v) = params.include_translated_tag_results {
+            initial_url.push_str(&format!("&include_translated_tag_results={v}"));
+        }
+        if let Some(v) = params.include_potential_violation_works {
+            initial_url.push_str(&format!("&include_potential_violation_works={v}"));
+        }
+        if let Some(sd) = params.start_date {
+            initial_url.push_str(&format!("&start_date={}", url_encode(&sd)));
+        }
+        if let Some(ed) = params.end_date {
+            initial_url.push_str(&format!("&end_date={}", url_encode(&ed)));
+        }
+
+        let fetcher = Arc::new(NovelPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(NovelFetchEngine::new(Arc::new(MakoFetchEngine::new(
             fetcher,
             Some(initial_url),
         ))))
@@ -413,23 +531,12 @@ impl MakoClient {
         search_target: Option<String>,
         sort: Option<String>,
     ) -> Arc<NovelFetchEngine> {
-        let filter = self.target_filter.read().clone();
-        let target = search_target.unwrap_or_else(|| "partial_match_for_tags".to_string());
-        let sort_order = sort.unwrap_or_else(|| "date_desc".to_string());
-        let initial_url = format!(
-            "{APP_API_BASE_URL}/v1/search/novel?filter={filter}&word={}&search_target={}&sort={}",
-            url_encode(&word),
-            url_encode(&target),
-            url_encode(&sort_order)
-        );
-        let fetcher = Arc::new(NovelPageFetcher {
-            client: self.clone(),
-            initial_url: initial_url.clone(),
-        });
-        Arc::new(NovelFetchEngine::new(Arc::new(MakoFetchEngine::new(
-            fetcher,
-            Some(initial_url),
-        ))))
+        self.novel_search_advanced(NovelSearchParams {
+            word,
+            search_target,
+            sort,
+            ..Default::default()
+        })
     }
 
     pub fn work_search(
@@ -612,6 +719,20 @@ impl MakoClient {
         ))))
     }
 
+    pub fn novel_related(&self, novel_id: i64) -> Arc<NovelFetchEngine> {
+        let filter = self.target_filter.read().clone();
+        let initial_url =
+            format!("{APP_API_BASE_URL}/v1/novel/related?novel_id={novel_id}&filter={filter}");
+        let fetcher = Arc::new(NovelPageFetcher {
+            client: self.clone(),
+            initial_url: initial_url.clone(),
+        });
+        Arc::new(NovelFetchEngine::new(Arc::new(MakoFetchEngine::new(
+            fetcher,
+            Some(initial_url),
+        ))))
+    }
+
     pub fn work_posted(&self, user_id: i64, work_type: String) -> Arc<IllustrationFetchEngine> {
         let filter = self.target_filter.read().clone();
         let initial_url = format!(
@@ -773,10 +894,31 @@ impl MakoClient {
     }
 
     pub async fn get_novel_content(&self, id: i64) -> Result<String, MakoError> {
-        let url = format!("{APP_API_BASE_URL}/v1/novel/text?novel_id={id}");
-        let resp = self.request_get(&url).await?;
-        let text = resp.text().await.unwrap_or_default();
-        Ok(text)
+        let content = self.get_novel_content_structured(id).await?;
+        Ok(content.text)
+    }
+
+    pub async fn get_novel_content_structured(&self, id: i64) -> Result<NovelContent, MakoError> {
+        let webview_url = format!("{APP_API_BASE_URL}/webview/v2/novel?id={id}&viewer_version=20221031_ai");
+        if let Ok(resp) = self.request_get(&webview_url).await {
+            if let Ok(html) = resp.text().await {
+                if let Some(json_str) = extract_novel_json_from_html(&html) {
+                    if let Ok(content) = serde_json::from_str::<NovelContent>(&json_str) {
+                        return Ok(content);
+                    }
+                }
+            }
+        }
+
+        // Fallback to text endpoint if webview fails
+        let text_url = format!("{APP_API_BASE_URL}/v1/novel/text?novel_id={id}");
+        let text_resp = self.request_get(&text_url).await?;
+        let text = text_resp.text().await.unwrap_or_default();
+        Ok(NovelContent {
+            id,
+            text,
+            ..Default::default()
+        })
     }
 
     pub async fn get_work_comments(
@@ -801,19 +943,43 @@ impl MakoClient {
 
     pub async fn get_work_comment_replies(
         &self,
+        is_novel: bool,
         comment_id: i64,
         offset: Option<i64>,
     ) -> Result<CommentsResponse, MakoError> {
         let filter = self.target_filter.read().clone();
-        let mut url = format!(
-            "{APP_API_BASE_URL}/v1/illust/comment/replies?comment_id={comment_id}&filter={filter}"
-        );
+        let mut url = if is_novel {
+            format!("{APP_API_BASE_URL}/v2/novel/comment/replies?comment_id={comment_id}&filter={filter}")
+        } else {
+            format!("{APP_API_BASE_URL}/v1/illust/comment/replies?comment_id={comment_id}&filter={filter}")
+        };
         if let Some(off) = offset {
             url.push_str(&format!("&offset={off}"));
         }
         let resp = self.request_get(&url).await?;
         let res: CommentsResponse = resp.json().await?;
         Ok(res)
+    }
+
+    pub async fn get_search_options(&self) -> Result<SearchOptions, MakoError> {
+        let url = format!("{APP_API_BASE_URL}/v1/search/options");
+        let resp = self.request_get(&url).await?;
+        let raw: SearchOptionsRaw = resp.json().await?;
+        Ok(SearchOptions {
+            illust: IllustrationSearchOptions {
+                bookmark_ranges: raw.illust.bookmark_ranges,
+                show_ai_condition: raw.illust.show_ai_condition,
+                languages: raw.illust.lang.options,
+                tools: raw.illust.tool.options,
+            },
+            novel: NovelSearchOptions {
+                bookmark_ranges: raw.novel.bookmark_ranges,
+                show_ai_condition: raw.novel.show_ai_condition,
+                languages: raw.novel.lang.options,
+                genres: raw.novel.genre.options,
+                word_count_supported_languages: raw.novel.word_count_supported_languages,
+            },
+        })
     }
 
     pub async fn add_work_comment(
@@ -1368,4 +1534,46 @@ impl PageFetcher<SpotlightArticle> for SpotlightPageFetcher {
         })
     }
 }
+
+pub fn extract_novel_json_from_html(html: &str) -> Option<String> {
+    let patterns = ["\"novel\":", "novel:", "{\"id\":", "\"seriesNavigation\":"];
+    for pattern in patterns {
+        if let Some(pos) = html.find(pattern) {
+            let slice = &html[pos..];
+            if let Some(brace_rel) = slice.find('{') {
+                let start_idx = pos + brace_rel;
+                let mut depth = 0;
+                let mut in_str = false;
+                let mut escape = false;
+                for (i, ch) in html[start_idx..].char_indices() {
+                    if escape {
+                        escape = false;
+                        continue;
+                    }
+                    if ch == '\\' && in_str {
+                        escape = true;
+                        continue;
+                    }
+                    if ch == '"' {
+                        in_str = !in_str;
+                        continue;
+                    }
+                    if !in_str {
+                        if ch == '{' {
+                            depth += 1;
+                        } else if ch == '}' {
+                            depth -= 1;
+                            if depth == 0 {
+                                let end_idx = start_idx + i + 1;
+                                return Some(html[start_idx..end_idx].to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 

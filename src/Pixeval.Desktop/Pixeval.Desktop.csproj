@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
 		<!--If you are willing to use Windows/MacOS native APIs you will need to create 3 projects.
@@ -7,6 +7,7 @@
 		<Nullable>enable</Nullable>
 		<EnableMcp>true</EnableMcp>
         <PublishAot Condition="'$(Configuration)' != 'Debug'">true</PublishAot>
+		<UseAppHost Condition="'$(Configuration)' == 'Debug'">false</UseAppHost>
 	</PropertyGroup>
 
 	<PropertyGroup>

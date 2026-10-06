@@ -231,4 +231,156 @@ mod tests {
             .update_configuration(updated_config)
             .expect("update configuration should succeed");
     }
+
+    #[test]
+    fn test_novel_content_serde() {
+        let json = r#"{
+            "id": "12345678",
+            "title": "测试小说",
+            "seriesId": "999",
+            "seriesTitle": "测试系列",
+            "seriesIsWatched": true,
+            "userId": "1001",
+            "coverUrl": "https://i.pximg.net/cover.jpg",
+            "tags": ["东方Project", "博丽灵梦"],
+            "caption": "小说简介",
+            "cdate": "2026-10-06T12:00:00+09:00",
+            "rating": { "like": 10, "bookmark": 20, "view": 30 },
+            "text": "正文内容第一页[newpage]第二页[chapter:终章]",
+            "illusts": {
+                "555": {
+                    "visible": true,
+                    "id": "555",
+                    "page": "1",
+                    "illust": {
+                        "title": "插图",
+                        "description": "",
+                        "restrict": 0,
+                        "xRestrict": 0,
+                        "sl": "0",
+                        "tags": [],
+                        "images": { "medium": "https://i.pximg.net/illust_med.jpg" }
+                    },
+                    "user": {
+                        "id": "1001",
+                        "name": "Artist",
+                        "image": "https://i.pximg.net/user.jpg"
+                    }
+                }
+            },
+            "images": {
+                "777": {
+                    "novelImageId": "777",
+                    "sl": "1",
+                    "urls": {
+                        "240mw": "https://i.pximg.net/240.jpg",
+                        "480mw": "https://i.pximg.net/480.jpg",
+                        "1200x1200": "https://i.pximg.net/1200.jpg",
+                        "128x128": "https://i.pximg.net/128.jpg",
+                        "original": "https://i.pximg.net/orig.jpg"
+                    }
+                }
+            },
+            "seriesNavigation": {
+                "nextNovel": {
+                    "id": "12345679",
+                    "viewable": true,
+                    "contentOrder": "2",
+                    "title": "下篇",
+                    "coverUrl": "https://i.pximg.net/cover2.jpg"
+                },
+                "prevNovel": {
+                    "id": "12345677",
+                    "viewable": true,
+                    "contentOrder": "1",
+                    "title": "上篇",
+                    "coverUrl": "https://i.pximg.net/cover0.jpg"
+                }
+            },
+            "aiType": 0,
+            "isOriginal": true,
+            "language": "zh"
+        }"#;
+
+        let novel_content: NovelContent = serde_json::from_str(json).unwrap();
+        assert_eq!(novel_content.id, 12345678);
+        assert_eq!(novel_content.title, "测试小说");
+        assert_eq!(novel_content.series_id, Some(999));
+        assert_eq!(novel_content.series_title.as_deref(), Some("测试系列"));
+        assert_eq!(novel_content.illusts.len(), 1);
+        assert_eq!(novel_content.illusts[0].id, 555);
+        assert_eq!(novel_content.images.len(), 1);
+        assert_eq!(novel_content.images[0].novel_image_id, 777);
+
+        let nav = novel_content.series_navigation.unwrap();
+        let next = nav.next_novel.unwrap();
+        assert_eq!(next.id, 12345679);
+        assert_eq!(next.title, "下篇");
+        let prev = nav.prev_novel.unwrap();
+        assert_eq!(prev.id, 12345677);
+        assert_eq!(prev.title, "上篇");
+    }
+
+    #[test]
+    fn test_extract_novel_json_from_html() {
+        let html = r#"
+            <!DOCTYPE html>
+            <html>
+            <head><title>Pixiv Novel</title></head>
+            <body>
+            <script>
+            window.__INITIAL_DATA__ = {
+                "novel": {
+                    "id": 88888,
+                    "title": "Embedded Novel",
+                    "userId": 123,
+                    "coverUrl": "https://i.pximg.net/cover.jpg",
+                    "tags": ["tag1"],
+                    "caption": "test",
+                    "cdate": "2026-10-06T00:00:00+09:00",
+                    "text": "Hello novel [newpage] world!",
+                    "illusts": [],
+                    "images": [],
+                    "aiType": 0,
+                    "isOriginal": false,
+                    "language": "ja"
+                }
+            };
+            </script>
+            </body>
+            </html>
+        "#;
+
+        let json_str = extract_novel_json_from_html(html).expect("should extract json");
+        let novel: NovelContent = serde_json::from_str(&json_str).expect("should parse json");
+        assert_eq!(novel.id, 88888);
+        assert_eq!(novel.title, "Embedded Novel");
+        assert_eq!(novel.text, "Hello novel [newpage] world!");
+    }
+
+    #[test]
+    fn test_search_options_serde() {
+        let json = r#"{
+            "illust": {
+                "bookmark_ranges": [
+                    { "bookmark_num_min": "*", "bookmark_num_max": "100" }
+                ],
+                "show_ai_condition": true,
+                "lang": { "options": [{ "code": "zh", "name": "中文" }] },
+                "tool": { "options": ["Photoshop", "SAI"] }
+            },
+            "novel": {
+                "bookmark_ranges": [],
+                "show_ai_condition": true,
+                "lang": { "options": [] },
+                "genre": { "options": [{ "id": 1, "label": "Romance" }] },
+                "word_count_supported_languages": "ja,en"
+            }
+        }"#;
+
+        let raw: SearchOptionsRaw = serde_json::from_str(json).unwrap();
+        assert_eq!(raw.illust.tool.options.len(), 2);
+        assert_eq!(raw.novel.genre.options.len(), 1);
+        assert_eq!(raw.novel.genre.options[0].label, "Romance");
+    }
 }

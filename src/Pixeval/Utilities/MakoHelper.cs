@@ -217,49 +217,88 @@ public static class MakoHelper
     public static Task<List<TrendingTag>> GetWorkTrendingTagsAsync(this MakoClient client, SimpleWorkType type) =>
         client.WorkTrendingTagsAsync(type is SimpleWorkType.Novel);
 
-    public static Task<SearchOptions> GetSearchOptionsAsync(this MakoClient client, CancellationToken token = default)
-    {
-        return Task.FromResult(new SearchOptions
-        {
-            IllustrationOptions = new IllustrationSearchOptions
-            {
-                Tools = new SearchOptionsStructure<string>(["Photoshop", "SAI", "CLIP STUDIO PAINT"])
-            },
-            NovelOptions = new NovelSearchOptions
-            {
-                Genres = new SearchOptionsStructure<SearchOptionsGenre>([]),
-                Languages = new SearchOptionsStructure<SearchOptionsLanguage>([])
-            }
-        });
-    }
+    public static async Task<SearchOptions> GetSearchOptionsAsync(this MakoClient client, CancellationToken token = default) =>
+        await client.GetSearchOptionsAsync();
 
     public static IAsyncEnumerable<Illustration> IllustrationSearch(this MakoClient client, IllustrationSearchArguments args) =>
-        client.IllustrationSearch(args.SearchText, args.MatchOption switch
-        {
-            SearchIllustrationTagMatchOption.ExactMatchForTags => "exact_match_for_tags",
-            SearchIllustrationTagMatchOption.TitleAndCaption => "title_and_caption",
-            SearchIllustrationTagMatchOption.Keyword => "keyword",
-            _ => "partial_match_for_tags"
-        }, args.SortOption switch
-        {
-            WorkSortOption.PublishDateAscending => "date_asc",
-            WorkSortOption.PopularityDescending => "popular_desc",
-            _ => "date_desc"
-        });
+        client.IllustrationSearchAdvanced(new IllustrationSearchParams(
+            args.SearchText,
+            args.MatchOption switch
+            {
+                SearchIllustrationTagMatchOption.ExactMatchForTags => "exact_match_for_tags",
+                SearchIllustrationTagMatchOption.TitleAndCaption => "title_and_caption",
+                SearchIllustrationTagMatchOption.Keyword => "keyword",
+                _ => "partial_match_for_tags"
+            },
+            args.SortOption switch
+            {
+                WorkSortOption.PublishDateAscending => "date_asc",
+                WorkSortOption.PopularityDescending => "popular_desc",
+                _ => "date_desc"
+            },
+            args.AiType ? 1 : 0,
+            args.ContentType switch
+            {
+                SearchIllustrationContentType.Illustration => "illust",
+                SearchIllustrationContentType.Manga => "manga",
+                SearchIllustrationContentType.Ugoira => "ugoira",
+                _ => null
+            },
+            args.RatioPattern switch
+            {
+                SearchIllustrationRatioPattern.Landscape => "horizontal",
+                SearchIllustrationRatioPattern.Portrait => "vertical",
+                SearchIllustrationRatioPattern.Square => "square",
+                _ => null
+            },
+            args.MergePlainKeywordResults,
+            args.IncludeTranslatedTagResults,
+            args.IncludePotentialViolationWorks,
+            args.StartDate?.ToString("yyyy-MM-dd"),
+            args.EndDate?.ToString("yyyy-MM-dd"),
+            args.WidthMin,
+            args.WidthMax,
+            args.HeightMin,
+            args.HeightMax,
+            string.IsNullOrWhiteSpace(args.Tool) ? null : args.Tool
+        ));
 
     public static IAsyncEnumerable<Novel> NovelSearch(this MakoClient client, NovelSearchArguments args) =>
-        client.NovelSearch(args.SearchText, args.MatchOption switch
-        {
-            SearchNovelTagMatchOption.ExactMatchForTags => "exact_match_for_tags",
-            SearchNovelTagMatchOption.Text => "text",
-            SearchNovelTagMatchOption.Keyword => "keyword",
-            _ => "partial_match_for_tags"
-        }, args.SortOption switch
-        {
-            WorkSortOption.PublishDateAscending => "date_asc",
-            WorkSortOption.PopularityDescending => "popular_desc",
-            _ => "date_desc"
-        });
+        client.NovelSearchAdvanced(new NovelSearchParams(
+            args.SearchText,
+            args.MatchOption switch
+            {
+                SearchNovelTagMatchOption.ExactMatchForTags => "exact_match_for_tags",
+                SearchNovelTagMatchOption.Text => "text",
+                SearchNovelTagMatchOption.Keyword => "keyword",
+                _ => "partial_match_for_tags"
+            },
+            args.SortOption switch
+            {
+                WorkSortOption.PublishDateAscending => "date_asc",
+                WorkSortOption.PopularityDescending => "popular_desc",
+                _ => "date_desc"
+            },
+            args.AiType ? 1 : 0,
+            string.IsNullOrWhiteSpace(args.LangCode) ? null : args.LangCode,
+            args.Option switch
+            {
+                SearchNovelContentLengthOption.TextLength => "text_length",
+                SearchNovelContentLengthOption.WordCount => "word_count",
+                SearchNovelContentLengthOption.ReadingTime => "reading_time",
+                _ => null
+            },
+            args.ContentLengthMin,
+            args.ContentLengthMax,
+            args.IsOriginalOnly ? true : null,
+            args.GenreId is not null and not 0 ? args.GenreId : null,
+            args.IsReplaceableOnly ? true : null,
+            args.MergePlainKeywordResults,
+            args.IncludeTranslatedTagResults,
+            args.IncludePotentialViolationWorks,
+            args.StartDate?.ToString("yyyy-MM-dd"),
+            args.EndDate?.ToString("yyyy-MM-dd")
+        ));
 
     public static async Task<(Series Detail, IWorkEntry First, IFetchEngine<IWorkEntry> Engine)> GetWorkSeriesAsync(
         this MakoClient client,
@@ -391,9 +430,9 @@ public static class MakoHelper
             : client.WorkMypixiv()).ToFetchEngine();
 
     public static IFetchEngine<IArtworkInfo> WorkRelated(this MakoClient client, long id, SimpleWorkType type) =>
-        type is SimpleWorkType.Novel
-            ? AsyncEnumerable.Empty<IArtworkInfo>().ToFetchEngine()
-            : client.WorkRelated(id).ToFetchEngine();
+        (type is SimpleWorkType.Novel
+            ? (IAsyncEnumerable<IArtworkInfo>) client.NovelRelated(id)
+            : client.WorkRelated(id)).ToFetchEngine();
 
     public static IFetchEngine<User> UserFollowing(this MakoClient client, long userId, PrivacyPolicy privacy)
     {
@@ -459,14 +498,14 @@ public static class MakoHelper
     }
 
     public static IAsyncEnumerable<Comment> WorkCommentReplies(this MakoClient client, SimpleWorkType type, long id) =>
-        client.FetchWorkCommentRepliesAsync(id);
+        client.FetchWorkCommentRepliesAsync(type is SimpleWorkType.Novel, id);
 
-    private static async IAsyncEnumerable<Comment> FetchWorkCommentRepliesAsync(this MakoClient client, long commentId)
+    private static async IAsyncEnumerable<Comment> FetchWorkCommentRepliesAsync(this MakoClient client, bool isNovel, long commentId)
     {
         long? offset = null;
         while (true)
         {
-            var res = await client.GetWorkCommentRepliesAsync(commentId, offset);
+            var res = await client.GetWorkCommentRepliesAsync(isNovel, commentId, offset);
             foreach (var item in res.Comments)
             {
                 yield return new Comment

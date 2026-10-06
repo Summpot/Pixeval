@@ -65,34 +65,6 @@ public enum SpotlightCategory
     Inspiration
 }
 
-public record SearchOptionsStructure<T>(IReadOnlyList<T> Options);
-public record SearchOptionsLanguage(string Code, string Name);
-public record SearchOptionsGenre(int Id, string Label);
-public record BookmarkRanges(string BookmarkNumMin, string BookmarkNumMax);
-
-public abstract record WorkSearchOptions
-{
-    public IReadOnlyList<BookmarkRanges> BookmarkRanges { get; set; } = [];
-    public bool ShowAiCondition { get; set; }
-    public SearchOptionsStructure<SearchOptionsLanguage> Languages { get; set; } = new([]);
-}
-
-public record IllustrationSearchOptions : WorkSearchOptions
-{
-    public SearchOptionsStructure<string> Tools { get; set; } = new([]);
-}
-
-public record NovelSearchOptions : WorkSearchOptions
-{
-    public SearchOptionsStructure<SearchOptionsGenre> Genres { get; set; } = new([]);
-    public string WordCountSupportedLanguages { get; set; } = "";
-}
-
-public record SearchOptions
-{
-    public required IllustrationSearchOptions IllustrationOptions { get; set; }
-    public required NovelSearchOptions NovelOptions { get; set; }
-}
 
 public class SearchArgumentsBase(string searchText)
 {
