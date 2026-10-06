@@ -4,7 +4,7 @@
 
 ---
 
-## 1. 架构现状与演进目标
+## 1. 架构现状与核心工程原则
 
 ### 1.1 Phase 1 成果小结 (已完成)
 Phase 1 成功构建了跨语言基础底座并下沉了底层密集型子系统：
@@ -37,6 +37,52 @@ Phase 1 成功构建了跨语言基础底座并下沉了底层密集型子系统
 - **Rust Core 角色**：承担 **100% 领域计算、文本解析、媒体编解码、网络协议、业务仓储状态机与文件 I/O**。
 - **实施准则**：**新功能下沉与存量缺陷修复深度捆绑**。属于阶段二领域的问题，必须在对应小阶段落地时一并修复并补齐测试；无法归入阶段二的问题，单独设立专项节点严格收敛。
 
+### 1.4 架构铁律：UniFFISharp `partial` 原生类型扩展与“零包装原则” (Zero-Wrapper Rule)
+
+> [!CAUTION]
+> **执行智能体与开发者强制遵循：严禁手写任何形式的包装类型（Wrapper / Adapter / Shim / Proxy / DTO）！**
+> UniFFISharp 代码生成器导出的所有领域模型（Record）和引擎句柄（Class）均为 `public partial`。表现层若需扩充功能，**必须且只能**通过在 `src/Pixeval/NativeExtensions/<SubNamespace>/` 下使用 `public partial record/class` 原地扩展，业务层 100% 直连消费原生类型！
+
+#### 1.4.1 为什么要 Partial 化？
+在早期开发中，部分模块手写了冗余胶水层（例如 `CacheTable` 包装 `CacheEngine`、`CoreDownloadManager` 包装 `DownloadManager`、手写中间 DTO 与模型映射），导致：
+1. **多重内存分配与跨语言对象损耗**：同一份数据在 Rust 实体、FFI 生成实体、C# 包装实体之间反复复制，失去零拷贝优势。
+2. **代码膨胀与状态不同步**：两套模型字段不同步、事件穿透断裂，带来严重的隐蔽 Bug。
+3. **维护地狱**：每次 Rust 修改结构体，都需要同步修改 C# DTO 和手写转换器。
+
+自 UniFFISharp 0.2.7 / 0.2.9 起，生成的 C# 类型天然带有 `partial` 关键字。整个项目已经通过重构（如提交 `600f6b42`、`d09cb60b`）彻底消除了过渡包装层，建立了统一的 **NativeExtensions 原生扩展模式**。后续迁移必须严格继承该模式。
+
+#### 1.4.2 Partial 化的标准工程范式
+所有新下沉的 Rust 领域实体和核心引擎，在 C# 表现层的对接**统一遵循以下四条铁律**：
+
+1. **命名空间严格对齐**：
+   在 `src/Pixeval/NativeExtensions/<SubNamespace>/` 下创建扩展文件，命名空间严格与 UniFFI 生成的代码保持一致（例如 `namespace Pixeval.Native.Novel;`、`namespace Pixeval.Native.Media;`、`namespace Pixeval.Native.Storage;`）。
+2. **声明 Partial 类型并就地实现接口**：
+   若领域实体需要对齐 Avalonia / Misaki 表现层接口（如 `IArtworkInfo`、`ISerializable`、`ISingleImage`、`IImageSize`），或者需要追加只读计算属性（如 `DateTimeOffset` 解析、标签投影），**直接在 partial 类型中就地实现**：
+   ```csharp
+   // 规范示例：src/Pixeval/NativeExtensions/Novel/NovelArticle.cs
+   namespace Pixeval.Native.Novel;
+
+   // 语法严律：直接 partial 声明 UniFFI 生成的 Record 或 Class
+   public partial record NovelArticle : IArtworkInfo, ISerializable
+   {
+       // 仅追加接口实现所需的投影属性，不持有重复字段！
+       [JsonIgnore]
+       public long RawId => Id;
+
+       string IIdentityInfo.Id => Id.ToString();
+       string IPlatformInfo.Platform => IPlatformInfo.Pixiv;
+
+       // 严禁在此类中嵌套 private NovelArticle _inner 字段！
+       // 严禁为此类编写多重包装构造函数！
+   }
+   ```
+3. **零胶水 DTO，消除类型互转**：
+   - 严禁手写 `ToEntity()`、`FromNative()`、`ToDto()`、`MapTo()` 等映射算法。
+   - 严禁命名 `Core*`、`*Wrapper`、`*Adapter`、`*Model` 的双轨制并行类型。
+4. **表现层全面直连原始强类型**：
+   - Views、ViewModels、Services 必须直接以 `Pixeval.Native.*` 中的原始强类型作为数据源与参数。
+   - 集合直接绑定 `ObservableCollection<Illustration>` 或通过 `IncrementalLoadingCollection` 流式驱动原生实体。
+
 ---
 
 ## 2. 深度迁移演进路线图
@@ -44,14 +90,14 @@ Phase 1 成功构建了跨语言基础底座并下沉了底层密集型子系统
 ```mermaid
 flowchart TD
     subgraph Phase2 ["Phase 2: 内容计算与媒体管线原生化 (高收益/零 UI 耦合)"]
-        P2_1["2.1 小说解析与排版引擎 (pixeval_novel)<br/>【附带修复】H6(正文插图/前后篇), H7(小说端点), 2.4(ratio谓词误判), 高级搜索参数丢失"]
-        P2_2["2.2 媒体后处理与动图转码 (pixeval_media)<br/>【附带修复】H2(任务组入队), H5(系列宏与R18G), 2.1(订阅下载探错与孤儿行), 2.2(下载并发缩容/多IP/取消感知)"]
-        P2_3["2.3 零拷贝图片抓取与流式预览管线<br/>【附带修复】H9(缓存重启清空与持久索引), 2.3(Mako全面接驳Maho抗审查/超时), 2.4(缓存实时限额/内存对齐)"]
+        P2_1["2.1 小说解析与排版引擎 (pixeval_novel)<br/>【附带修复】H6(正文插图/前后篇), H7(小说端点), 2.4(ratio谓词误判), 高级搜索参数丢失<br/>【Partial规范】NovelArticle/NovelContent 在 NativeExtensions/Novel 原地实现接口"]
+        P2_2["2.2 媒体后处理与动图转码 (pixeval_media)<br/>【附带修复】H2(任务组入队), H5(系列宏与R18G), 2.1(订阅下载探错与孤儿行), 2.2(下载并发缩容/多IP/取消感知)<br/>【Partial规范】DownloadManager 原地扩展，严禁手写任务包装类"]
+        P2_3["2.3 零拷贝图片抓取与流式预览管线<br/>【附带修复】H9(缓存重启清空与持久索引), 2.3(Mako全面接驳Maho抗审查/超时), 2.4(缓存实时限额/内存对齐)<br/>【Partial规范】维持 CacheEngine 在 NativeExtensions/Cache 原地扩展"]
     end
 
     subgraph Phase3 ["Phase 3: 业务仓储闭环与辅助服务下沉 (去胶水/去依赖)"]
-        P3_1["3.1 领域仓储与状态机闭环<br/>【吸收修复】H1(JSON大小写与老数据水合兼容), 2.5(存储枚举错位/稳定ID/唯一索引)"]
-        P3_2["3.2 多图站聚合与 SauceNao 搜图 (清退 Imouto.BooruParser)"]
+        P3_1["3.1 领域仓储与状态机闭环<br/>【吸收修复】H1(JSON大小写与老数据水合兼容), 2.5(存储枚举错位/稳定ID/唯一索引)<br/>【Partial规范】仓储实体在 NativeExtensions/Storage 原地扩展，清退 26 个 Manager"]
+        P3_2["3.2 多图站聚合与 SauceNao 搜图 (清退 Imouto.BooruParser)<br/>【Partial规范】Booru/SauceNao 模型在 NativeExtensions 原地实现 IArtworkInfo"]
         P3_3["3.3 导航 YAML 诊断与主页网格算法 (清退 SharpYaml)"]
         P3_4["3.4 原生应用更新与 GitHub 代理引擎 (pixeval_update)"]
         P3_5["3.5 [专项] MCP 协议服务器全量恢复与插件宿主激活<br/>【吸收修复】H3(补齐49工具与游标分页), H4(生产激活插件宿主), 2.6(信号量释放)"]
@@ -78,6 +124,9 @@ flowchart TD
   - 新建 `crates/pixeval_novel`，基于 Rust 高性能零拷贝 Tokenizer 实现解析。
   - 支持完整的 Pixiv 标记语法：`[newpage]`、`[[rb:汉字 > 注音]]`、`[jumpuri:文本 > 链接]`、`[jump:页面]`、`[chapter:章节名]`、`[uploadimage:id]`、`[pixivimage:id-page]`。
   - 原生提供多目标输出能力：分页 AST / 富文本流（供 Avalonia UI 分页渲染）、标准 Markdown 格式化、语义化 HTML 生成、EPUB 电子书一键打包。
+- **Partial 化工程规范**：
+  - Rust 导出的 `NovelArticle`、`NovelChapter`、`NovelContent` 等强类型对象，统一在 `src/Pixeval/NativeExtensions/Novel/` 下声明 `public partial record` 补齐 `IArtworkInfo`、`ISerializable` 接口与只读投影属性。
+  - **严禁新建 `NovelWrapper` 或 C# 侧中间 DTO！ViewModels 直接消费原生 Record！**
 - **附带修复审查缺陷**：
   - **【修复 H6】小说正文结构化数据与前后篇导航失效**：
     - 在 `pixeval_mako` 中补充抓取 Pixiv Web 端点（`/webview/v2/novel`），原生解析内嵌 JSON 结构体 `NovelContent`。
@@ -99,6 +148,9 @@ flowchart TD
     1. **Ugoira 动图合成**：原生流式解压 zip 帧包，结合帧延迟数组，直接调用原生编解码库生成高质量 GIF、APNG、WebP 或 MP4 视频。
     2. **漫画归档打包**：原生整合多页作品为 CBZ / ZIP 归档，无需落地零散临时文件。
     3. **格式转码**：基于 `image` crate 原生支持 JPEG、PNG、WebP、AVIF 无损/有损转码。
+- **Partial 化工程规范**：
+  - 下载任务管理直接在 `src/Pixeval/NativeExtensions/Download/DownloadManager.cs` 中 partial 声明，使用已建立的 `ProgressCallbackAdapter` 桥接 UI 事件。
+  - 媒体转码引擎接口直接在 `src/Pixeval/NativeExtensions/Media/` 下 partial 扩展，严禁编写双轨制的 `DownloadTaskAdapter`！
 - **附带修复审查缺陷**：
   - **【修复 H2】多页插画与小说的订阅下载任务组从不入队**：
     - 统一 UniFFI `DownloadState` 枚举编码（1起），在 `SubscriptionDownloadHistoryEntry` 构造时显式初始化为 `Queued = 1`。
@@ -126,6 +178,8 @@ flowchart TD
 - **功能目标**：
   - 将图片网络抓取直接交由 Rust 原生网络栈（Tokio/Maho），命中直接返回 MMF 内存切片；未命中后台抓取并原子写入 MMF 缓存。
   - 在 Rust 端实现流式首帧与渐进式预览嗅探，清退 C# 端的二值嗅探代码。
+- **Partial 化工程规范**：
+  - 维持当前在 `src/Pixeval/NativeExtensions/Cache/CacheEngine.cs` 中的 `public partial class CacheEngine` 模式，严禁复活 `CacheTable` 包装类！
 - **附带修复审查缺陷**：
   - **【修复 H9】文件缓存每次重启后被清空**：
     - 移除 `crates/pixeval_cache/src/mmap_chunk.rs` 中打开文件时的无条件 `.truncate(true)`。
@@ -150,6 +204,8 @@ flowchart TD
   - 在 `pixeval_storage` 内部封装高阶业务仓储（Repository Pattern）：`HistoryRepository`、`WatchLaterRepository`、`DownloadRepository`。
   - 实体在 Rust 端以强类型结构（`WorkMetadata`）直接读写 SQLite，无需在 C# 端中转 JSON。
   - 通过 UniFFI 导出高阶仓储接口与变更通知回调（`IStorageObserver`）。
+- **Partial 化工程规范**：
+  - 历史记录和仓储实体直接在 `src/Pixeval/NativeExtensions/Storage/` 下声明 `public partial record`，消除目前在 C# 维护的 26 个 `*PersistentManager` 包装类！
 - **吸收修复审查缺陷**：
   - **【修复 H1】订阅触发的下载 JSON 命名风格不匹配与历史水合兼容性**：
     - Rust 实体序列化为 payload 时统一对齐驼峰命名，或在 C# 反序列化选项中统一启用 `PropertyNameCaseInsensitive = true`。
@@ -166,6 +222,8 @@ flowchart TD
 - **功能目标**：
   - 新建 `crates/pixeval_saucenao`：原生承揽 SauceNao 搜图请求、错误重试与结果类型映射。
   - 新建 `crates/pixeval_booru`：统一主流 Booru 图站（Danbooru/Gelbooru/Yandere/Sankaku/Rule34）的 API 抓取与模型解析。
+- **Partial 化工程规范**：
+  - Booru 与 SauceNao 原生模型在 `src/Pixeval/NativeExtensions/Booru/` 和 `SauceNao/` 下 partial 实现 `IArtworkInfo` / `IWorkEntry`，严禁再写 C# 适配层！
 - **验收标准**：
   - 彻底移除 `src/lib/Imouto` C# 项目及相关引用。
   - C# 搜图页面直接调用原生 `SauceNaoClient.search(file_bytes)`。
@@ -184,6 +242,8 @@ flowchart TD
   - C# 仅暴露轻量 UI 进度通知，版本检测与资产下载全部由 Rust 驱动。
 
 #### 3.5 [专项] MCP 协议服务器全量恢复与插件宿主激活 (`crates/pixeval_mcp` / `crates/pixeval_plugin`)
+- **Partial 化工程规范**：
+  - 直接消费原生 `McpServer` 与 `PluginHostEngine`，通过 partial 或静态方法扩展，严禁在 C# 建立二次代理类！
 - **吸收修复审查缺陷**：
   - **【修复 H3】补齐缺失工具、已公布未实现工具与游标分页**：
     - 补齐已公布但未实现的 6 个核心工具（`search_illustrations`、`recommended_works`、`rankings`、`work_detail`、`add_subscription`、`queue_download`），恢复通过 Mako/Download 访问 Pixiv 的能力。
@@ -241,6 +301,7 @@ flowchart TD
 1. **第一优先级（立即启动）：小说解析与排版引擎 (`crates/pixeval_novel`)**
    - **理由**：输入为纯文本小说字符串，输出为结构化 AST 与 Markdown/HTML/EPUB，**完全没有 UI 依赖，测试边界极其清晰**。
    - **顺带修复**：小说结构化正文插图与前后篇导航失效（**H6**）、小说评论回复与相关作品端点（**H7**）、DSL 比例过滤对小说的误排除（**2.4**）、高级搜索参数透传（**2.3**）。
+   - **严守铁律**：`NovelArticle` / `NovelChapter` / `NovelContent` 必须在 `src/Pixeval/NativeExtensions/Novel/` 中直接通过 `public partial record` 补齐接口，严禁创建包装类！
 2. **第二优先级：动图后处理与媒体管线 (`crates/pixeval_media`)**
    - **理由**：彻底解决 Ugoira 动图合成与格式转换的跨语言性能损耗，关闭下载模块的最后一段 C# 尾巴。
    - **顺带修复**：多页插画与小说任务组未入队阻塞（**H2**）、订阅路径宏丢失系列与 R18G 语义（**H5**）、下载引擎静态多 IP 覆盖与并发缩容缺陷（**2.2**）、订阅下载探错与孤儿行（**2.1**）。
