@@ -6,21 +6,23 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Mako.Model;
 using Misaki;
 using Pixeval.Models.Download.Tasks;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
-using SQLite;
 
 namespace Pixeval.Models.Database.Managers;
 
 public abstract class DownloadHistoryPersistentManagerBase<
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
-    TEntry>(
-    SQLiteConnection db,
-    FileLogger logger) : ArtworkHistoryPersistentManager<TEntry>(db, logger)
+    TEntry> : ArtworkHistoryPersistentManager<TEntry>
     where TEntry : DownloadHistoryEntryBase, new()
 {
+    protected DownloadHistoryPersistentManagerBase(StorageEngine storage, FileLogger logger)
+        : base(storage, logger)
+    {
+    }
+
     public async IAsyncEnumerable<IDownloadTaskGroup> StreamTaskGroupsAsync(
         int skip = 0,
         [EnumeratorCancellation] CancellationToken token = default)

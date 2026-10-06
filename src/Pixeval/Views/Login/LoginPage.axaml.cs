@@ -10,6 +10,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Home;
@@ -39,9 +40,31 @@ public partial class LoginPage : IconContentPage
             if (string.IsNullOrWhiteSpace(token))
                 return;
 
-            await App.AppViewModel.MakoClient.SetTokenAsync(token);
-            if (await App.AppViewModel.MakoClient.IdentifyTokenAsync())
+            App.AppViewModel.MakoClient.SetRefreshToken(token);
+            var result = await App.AppViewModel.MakoClient.IdentifyTokenAsync();
+            if (result.Success)
+            {
+                var tokenResponse = App.AppViewModel.MakoClient.GetTokenResponse()
+                    ?? (App.AppViewModel.MakoClient.GetUser() is { } user
+                        ? new TokenResponse("", 0, "Bearer", token, user)
+                        : null);
+                App.AppViewModel.OnTokenRefreshed(tokenResponse);
                 LoginNavigate();
+            }
+            else if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
+                viewContainer.ShowError(I18NManager.GetResource(MainPageResources.LoggingIn.Failed));
+        }
+        catch (Exception exception)
+        {
+            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+                .LogError(nameof(LoginButton_OnClick), exception);
+            if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
+            {
+                viewContainer.ShowError(exception.GetType().ToString(), exception.Message);
+                _ = await viewContainer.CreateAcknowledgementAsync(
+                    I18NManager.GetResource(LoginPageResources.FetchingSessionFailed.Title),
+                    I18NManager.GetResource(LoginPageResources.FetchingSessionFailed.Content));
+            }
         }
         finally
         {
@@ -75,9 +98,9 @@ public partial class LoginPage : IconContentPage
             var code = HttpUtility.ParseQueryString(callbackUri.Query)["code"];
             if (string.IsNullOrWhiteSpace(code))
                 return;
-            await App.AppViewModel.MakoClient.SetCodeAsync(code, verifier);
-            if (await App.AppViewModel.MakoClient.IdentifyTokenAsync())
-                LoginNavigate();
+            var tokenResponse = await App.AppViewModel.MakoClient.ExchangeCodeAsync(code, verifier);
+            App.AppViewModel.OnTokenRefreshed(tokenResponse);
+            LoginNavigate();
         }
         catch (TaskCanceledException)
         {
@@ -85,6 +108,8 @@ public partial class LoginPage : IconContentPage
         }
         catch (Exception exception)
         {
+            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+                .LogError(nameof(OpenWebView_OnClick), exception);
             if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
             {
                 viewContainer.ShowError(exception.GetType().ToString(), exception.Message);

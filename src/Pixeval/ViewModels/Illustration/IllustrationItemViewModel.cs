@@ -6,11 +6,12 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Mako.Model;
 using Misaki;
 using Pixeval.Controls;
 using Pixeval.I18N;
 using Pixeval.Models.Blocking;
+using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.Views.Work;
 
@@ -23,6 +24,9 @@ namespace Pixeval.ViewModels;
 public partial class IllustrationItemViewModel(IArtworkInfo entry)
     : WorkEntryViewModel<IArtworkInfo>(BlockedContentHelper.Replace(entry)), IFactory<IArtworkInfo, IllustrationItemViewModel>
 {
+    public IllustrationItemViewModel(Illustration illustration) : this((IArtworkInfo) illustration)
+    {
+    }
     /// <summary>
     /// 在<see cref="IImageSet.Pages"/>中，此属性会被赋值为当前<see cref="IllustrationItemViewModel"/>在Manga中的索引
     /// </summary>
@@ -68,5 +72,5 @@ public partial class IllustrationItemViewModel(IArtworkInfo entry)
     public static IllustrationItemViewModel CreateInstance(IArtworkInfo entry) => new(entry);
 
     protected override Task<bool> SetBookmarkAsync(bool favorite, bool privately = false, IReadOnlyCollection<string>? tags = null)
-        => MakoHelper.SetWorkBookmarkAsync((Illustration) Entry, favorite, privately, tags);
+        => MakoHelper.SetWorkBookmarkAsync((IWorkEntry) Entry, favorite, privately, tags);
 }

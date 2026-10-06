@@ -72,8 +72,8 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
 
         try
         {
-            var user = (await App.AppViewModel.MakoClient.GetUserFromIdAsync(userId)).UserEntity;
-            UserManager.Upsert(BlockedContentModelHelper.CreateBlockedUserEntry(user));
+            var user = (await App.AppViewModel.MakoClient.GetUserFromIdAsync(userId)).User;
+            UserManager.Upsert(BlockedContentModelHelper.CreateBlockedUserRecord(user));
             TargetIdTextBox.Text = "";
             await ReloadAsync();
         }
@@ -100,8 +100,8 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
     {
         try
         {
-            var user = (await App.AppViewModel.MakoClient.GetUserFromIdAsync(item.Entry.Id)).UserEntity;
-            var entry = UserManager.Upsert(BlockedContentModelHelper.CreateBlockedUserEntry(user));
+            var user = (await App.AppViewModel.MakoClient.GetUserFromIdAsync(item.Entry.Id)).User;
+            var entry = UserManager.Upsert(BlockedContentModelHelper.CreateBlockedUserRecord(user));
             item.UpdateUser(entry);
         }
         catch (Exception exception)

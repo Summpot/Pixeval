@@ -3,13 +3,13 @@
 
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Mako.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.Controls;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Database;
 using Pixeval.Models.Database.Managers;
+using Pixeval.Models.Pixiv;
 
 namespace Pixeval.ViewModels;
 
@@ -25,7 +25,7 @@ public abstract partial class WorkEntryViewModel<T> : ThumbnailEntryViewModel<T>
 
     public bool IsBookmarkSupported => !IsBlocked && Entry.Platform is IPlatformInfo.Pixiv;
 
-    public SimpleSeries? Series => Entry is WorkBase work ? work.Series : null;
+    public Pixeval.Native.Mako.Series? Series => (Entry as IWorkEntry)?.Series;
 
     public bool HasSeries => Series is not null;
 

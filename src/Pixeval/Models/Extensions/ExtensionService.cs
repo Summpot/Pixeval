@@ -17,6 +17,7 @@ using Pixeval.Extensions.Common.Commands.Transformers;
 using Pixeval.Extensions.Common.Downloaders;
 using Pixeval.Extensions.Common.FormatProviders;
 using Pixeval.Extensions.Common.Settings;
+using Pixeval.Native.Plugin;
 using Pixeval.Utilities;
 
 namespace Pixeval.Models.Extensions;
@@ -40,6 +41,8 @@ public sealed class ExtensionService : IDisposable
     public readonly record struct LocalExtensionHost(string LibraryPath, string UninstallTargetRelativePath);
 
     public static string CurrentVersion { get; } = ExtensionsHostStatics.CurrentSdkVersion.ToString();
+
+    public PluginHostEngine PluginEngine { get; } = new(CurrentVersion);
 
     public static string? NativeLibraryExtension
     {
@@ -156,16 +159,13 @@ public sealed class ExtensionService : IDisposable
 
     public static IEnumerable<LocalExtensionHost> EnumerateLocalExtensionHosts(string directory)
     {
-        if (!Directory.Exists(directory) || NativeLibraryExtension is not { } extension)
+        if (!Directory.Exists(directory))
             yield break;
 
-        var pattern = "*" + extension;
-
-        var rootLibraries = FileHelper.EnumerateFiles(directory, pattern);
-        var childLibraries = FileHelper.EnumerateDirectories(directory)
-            .SelectMany(t => FileHelper.EnumerateFiles(t, pattern));
-
-        var libraries = rootLibraries.Concat(childLibraries)
+        var engine = new PluginHostEngine(CurrentVersion);
+        var plugins = engine.EnumeratePlugins(directory);
+        var libraries = plugins
+            .Select(p => p.LibraryPath)
             .Where(IsExtensionHostNativeLibrary)
             .Order(StringComparer.OrdinalIgnoreCase);
 

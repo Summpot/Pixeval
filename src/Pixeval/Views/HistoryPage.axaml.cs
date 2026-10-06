@@ -4,9 +4,9 @@
 using System;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
-using Mako.Global.Enum;
 using Pixeval.Controls;
 using Pixeval.Models.Database.Managers;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 
 namespace Pixeval.Views;

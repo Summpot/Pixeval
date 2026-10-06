@@ -4,7 +4,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using Misaki;
 using Pixeval.Download;
@@ -80,22 +79,11 @@ public abstract class SingleImageDownloadTaskGroupBase : ImageDownloadTask, IDow
 
     private bool IsCreateFromEntry { get; set; } = true;
 
-    public DownloadToken GetToken() => new(this, CancellationTokenSource.Token);
-
     public int ActiveCount => CurrentState is DownloadState.Queued or DownloadState.Running or DownloadState.Pending or DownloadState.Paused or DownloadState.Cancelled ? 1 : 0;
 
     public int CompletedCount => CurrentState is DownloadState.Completed ? 1 : 0;
 
     public int ErrorCount => CurrentState is DownloadState.Error ? 1 : 0;
-
-    public void SubscribeProgress(ChannelWriter<DownloadToken> writer)
-    {
-        DownloadTryResume += OnDownloadWrite;
-        DownloadTryReset += OnDownloadWrite;
-
-        return;
-        void OnDownloadWrite(ImageDownloadTask o) => writer.TryWrite(((SingleImageDownloadTaskGroupBase) o).GetToken());
-    }
 
     public int Count => 1;
 

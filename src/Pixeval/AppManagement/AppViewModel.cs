@@ -2,15 +2,12 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Imouto.BooruParser;
-using Mako;
-using Mako.Engine;
-using Mako.Model;
-using Mako.Net;
 using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.AppManagement.Settings;
@@ -24,12 +21,15 @@ using Pixeval.Models.McpServer;
 #endif
 using Pixeval.Models.Navigation;
 using Pixeval.Models.Options;
+using Pixeval.Models.Pixiv;
 using Pixeval.Models.Subscriptions;
+using Pixeval.Native.Storage;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.Utilities.GitHub;
 using Pixeval.Utilities.IO.Caching;
+using Pixeval.Utilities.Network;
 using Pixeval.Views;
-using SQLite;
 
 namespace Pixeval.AppManagement;
 
@@ -43,7 +43,9 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
 
     public HistoryPersistHelper HistoryPersistHelper => AppServiceProvider.GetRequiredService<HistoryPersistHelper>();
 
-    public MakoClient MakoClient => (MakoClient) GetRequiredPlatformService<IGetArtworkService>(IPlatformInfo.Pixiv);
+    public MakoClient MakoClient { get; private set; } = null!;
+
+    public MahoTransport MahoTransport { get; } = new();
 
     public AppSettings AppSettings { get; } = AppInfo.LoadAppSettings(logger) ?? new AppSettings();
 
@@ -66,6 +68,11 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         AppSettings.Initialize();
         AppServiceProvider = CreateServiceProvider();
         SetNameResolvers();
+        if (GetCurrentLoginUser() is { } currentUser)
+        {
+            MakoClient.SetRefreshToken(currentUser.RefreshToken);
+            MakoClient.SetUser(currentUser.TokenUser);
+        }
         // 触发卸载插件
         _ = AppServiceProvider.GetRequiredService<ExtensionService>();
         _ = CacheHelper.EnforceCacheSizeLimitAsync();
@@ -73,62 +80,82 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
 
     private ServiceProvider CreateServiceProvider()
     {
-        var makoClient = new MakoClient(App.AppViewModel.AppSettings.ToMakoConfiguration(), logger);
-        makoClient.TokenRefreshed += MakoClientOnTokenRefreshed;
+        var makoConfig = AppSettings.ToMakoConfiguration();
+        MakoClient = new MakoClient(makoConfig);
+        var pixivService = new PixivArtworkService(MakoClient, MahoTransport, AppSettings.NetworkSettings);
 
         return new ServiceCollection()
             .AddSingleton(_ => logger)
             .AddBooruParsers()
-            .AddKeyedSingleton<IGetArtworkService, MakoClient>(IPlatformInfo.Pixiv, (provider, key) => makoClient)
-            .AddKeyedSingleton<IDownloadHttpClientService, MakoClient>(IPlatformInfo.Pixiv,
-                (provider, key) => makoClient)
+            .AddKeyedSingleton<IGetArtworkService>(IPlatformInfo.Pixiv, (provider, key) => pixivService)
+            .AddKeyedSingleton<IDownloadHttpClientService>(IPlatformInfo.Pixiv, (provider, key) => pixivService)
+            .AddKeyedSingleton<IPostFavoriteService>(IPlatformInfo.Pixiv, (provider, key) => pixivService)
             .AddKeyedSingleton<GitHubHttpClientProvider>(
                 GitHubHttpClientProvider.PlatformKey,
                 (_, _) => new GitHubHttpClientProvider(AppSettings.NetworkSettings))
             .AddKeyedSingleton<IDownloadHttpClientService>(
                 GitHubHttpClientProvider.PlatformKey,
                 (provider, key) => provider.GetRequiredKeyedService<GitHubHttpClientProvider>(key))
+            .AddSingleton(_ => MakoClient)
             .AddSingleton<WorkSubscriptionDownloadService>()
             .AddSingleton<IWorkSubscriptionService>(provider =>
                 provider.GetRequiredService<WorkSubscriptionDownloadService>())
             .AddSingleton<IllustrationDownloadTaskFactory>()
             .AddSingleton<NovelDownloadTaskFactory>()
             .AddSingleton(provider => new ExtensionService(provider.GetRequiredService<FileLogger>(), AppSettings))
-            .AddSingleton(_ => new SQLiteConnection(AppInfo.DatabaseFilePath,
-                SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.Create | SQLiteOpenFlags.FullMutex))
-            .AddSingleton<DownloadHistoryPersistentManager>()
-            .AddSingleton<SubscriptionDownloadHistoryPersistentManager>()
-            .AddSingleton<WorkSubscriptionPersistentManager>()
-            .AddSingleton<BlockedUserPersistentManager>()
-            .AddSingleton<SearchHistoryPersistentManager>()
-            .AddSingleton<BrowseHistoryPersistentManager>()
-            .AddSingleton<WatchLaterPersistentManager>()
-            .AddSingleton<LoginUserPersistentManager>()
+            .AddSingleton(_ => new StorageEngine(AppInfo.DatabaseFilePath))
+            .AddSingleton(provider => new DownloadHistoryPersistentManager(provider.GetRequiredService<StorageEngine>(), provider.GetRequiredService<FileLogger>()))
+            .AddSingleton(provider => new SubscriptionDownloadHistoryPersistentManager(provider.GetRequiredService<StorageEngine>(), provider.GetRequiredService<FileLogger>()))
+            .AddSingleton(provider => new WorkSubscriptionPersistentManager(provider.GetRequiredService<StorageEngine>()))
+            .AddSingleton(provider => new BlockedUserPersistentManager(provider.GetRequiredService<StorageEngine>()))
+            .AddSingleton(provider => new SearchHistoryPersistentManager(provider.GetRequiredService<StorageEngine>()))
+            .AddSingleton(provider => new BrowseHistoryPersistentManager(provider.GetRequiredService<StorageEngine>(), provider.GetRequiredService<FileLogger>()))
+            .AddSingleton(provider => new WatchLaterPersistentManager(provider.GetRequiredService<StorageEngine>(), provider.GetRequiredService<FileLogger>()))
+            .AddSingleton(provider => new LoginUserPersistentManager(provider.GetRequiredService<StorageEngine>()))
             .AddSingleton<HistoryPersistHelper>()
 #if PIXEVAL_MCP
             .AddSingleton<IPixevalMcpService>(t =>
                 new PixevalMcpService(this, t.GetRequiredService<FileLogger>()))
 #endif
             .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
-
-        void MakoClientOnTokenRefreshed(MakoClient sender, TokenResponse? tokenResponse)
-        {
-            if (tokenResponse is null)
-                LoginContext.CurrentKey = 0;
-            else
-            {
-                var manager = AppServiceProvider.GetRequiredService<LoginUserPersistentManager>();
-                var entry = manager.Upsert(LoginUserEntry.FromTokenUser(tokenResponse.RefreshToken,
-                    tokenResponse.User));
-                LoginContext.CurrentKey = entry.HistoryEntryId;
-            }
-
-            PixevalSettings.Instance.OnIsLoggedInChanged();
-            AppInfo.SaveLoginContext(LoginContext);
-        }
     }
 
-    public LoginUserEntry? GetCurrentLoginUser()
+    public void OnTokenRefreshed(TokenResponse? tokenResponse)
+    {
+        TokenUser? user = null;
+        if (tokenResponse is null)
+        {
+            LoginContext.CurrentKey = 0;
+            MakoClient.ClearToken();
+        }
+        else
+        {
+            user = tokenResponse.User ?? MakoClient.GetUser();
+            if (user is not null)
+            {
+                var manager = AppServiceProvider.GetRequiredService<LoginUserPersistentManager>();
+                var entry = manager.Upsert(LoginUserRecord.FromTokenUser(tokenResponse.RefreshToken, user));
+                LoginContext.CurrentKey = (int)entry.HistoryEntryId;
+            }
+        }
+
+        void Notify()
+        {
+            PixevalSettings.Instance.OnIsLoggedInChanged();
+            UserRefreshed?.Invoke(user);
+        }
+
+        if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+            Notify();
+        else
+            Avalonia.Threading.Dispatcher.UIThread.Post(Notify);
+
+        AppInfo.SaveLoginContext(LoginContext);
+    }
+
+    public event Action<TokenUser?>? UserRefreshed;
+
+    public LoginUserRecord? GetCurrentLoginUser()
     {
         return AppServiceProvider.GetRequiredService<LoginUserPersistentManager>()
             .GetByKey(LoginContext.CurrentKey);
@@ -139,14 +166,14 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().QueueSyncAll();
     }
 
-    public void QueueWorkSubscriptionSync(WorkSubscriptionEntry subscription)
+    public void QueueWorkSubscriptionSync(WorkSubscriptionRecord subscription)
     {
         AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>()
             .QueueSyncSubscription(subscription);
     }
 
     public void QueueWorkSubscriptionInitialSync(
-        WorkSubscriptionEntry subscription,
+        WorkSubscriptionRecord subscription,
         IFetchEngine<IWorkEntry>? sourceEngine = null)
     {
         AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>()
@@ -163,30 +190,29 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
     public void SetNameResolvers()
     {
         var networkSettings = AppSettings.NetworkSettings;
-        SetNameResolver(MakoHttpOptions.AppApiHost, networkSettings.PixivDomainFronting.PixivAppApiNameResolver);
-        SetNameResolver(MakoHttpOptions.ImageHost, networkSettings.PixivDomainFronting.PixivImageNameResolver);
-        SetNameResolver(MakoHttpOptions.ImageHost2, networkSettings.PixivDomainFronting.PixivImageNameResolver2);
-        SetNameResolver(MakoHttpOptions.OAuthHost, networkSettings.PixivDomainFronting.PixivOAuthNameResolver);
-        SetNameResolver(MakoHttpOptions.AccountHost, networkSettings.PixivDomainFronting.PixivAccountNameResolver);
-        SetNameResolver(MakoHttpOptions.WebApiHost, networkSettings.PixivDomainFronting.PixivWebApiNameResolver);
-
-        SetNameResolver(GitHubHttpOptions.Host, networkSettings.GitHubDomainFronting.GitHubNameResolver);
-        SetNameResolver(GitHubHttpOptions.ApiHost, networkSettings.GitHubDomainFronting.GitHubApiNameResolver);
-        SetNameResolver(GitHubHttpOptions.AvatarHost, networkSettings.GitHubDomainFronting.GitHubAvatarNameResolver);
-        SetNameResolver(GitHubHttpOptions.UserContentHost, networkSettings.GitHubDomainFronting.GitHubUserContentNameResolver);
-        SetNameResolver(GitHubHttpOptions.AssetsHost, networkSettings.GitHubDomainFronting.GitHubAssetsNameResolver);
-        SetNameResolver(GitHubHttpOptions.CodeloadHost, networkSettings.GitHubDomainFronting.GitHubCodeloadNameResolver);
+        SetMahoResolver(MakoHelper.AppApiHost, networkSettings.PixivDomainFronting.PixivAppApiNameResolver);
+        SetMahoResolver(MakoHelper.ImageHost, networkSettings.PixivDomainFronting.PixivImageNameResolver);
+        SetMahoResolver(MakoHelper.ImageHost2, networkSettings.PixivDomainFronting.PixivImageNameResolver2);
+        SetMahoResolver(MakoHelper.OAuthHost, networkSettings.PixivDomainFronting.PixivOAuthNameResolver);
+        SetMahoResolver(MakoHelper.AccountHost, networkSettings.PixivDomainFronting.PixivAccountNameResolver);
+        SetMahoResolver(MakoHelper.WebApiHost, networkSettings.PixivDomainFronting.PixivWebApiNameResolver);
         return;
 
-        static void SetNameResolver(string host, ObservableCollection<string> ips)
+        void SetMahoResolver(string host, ObservableCollection<string> ips)
         {
-            App.AppViewModel.MakoClient.Configuration.NameResolvers[host] = [.. ips.SelectNotNull(static ip => IPAddress.TryParse(ip, out var address) ? address : null)];
-            ips.CollectionChanged += static (sender, e) =>
+            MahoTransport.SetHostIps(host, ips);
+            ips.CollectionChanged += (sender, e) =>
             {
-                if (sender is ObservableCollection<string> ips)
-                    SetNameResolver(MakoHttpOptions.WebApiHost, ips);
+                if (sender is ObservableCollection<string> updatedIps)
+                    MahoTransport.SetHostIps(host, updatedIps);
             };
         }
+    }
+
+    public void UpdateMakoNetworkOptions()
+    {
+        MakoClient.UpdateConfiguration(AppSettings.ToMakoConfiguration());
+        (AppServiceProvider.GetKeyedService<IDownloadHttpClientService>(IPlatformInfo.Pixiv) as PixivArtworkService)?.Reset();
     }
 
     public T? GetPlatformService<T>(string platformKey) where T : IMisakiService
@@ -228,6 +254,8 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
                 await subscriptionService.CancelAndWaitAsync();
             // 有些服务只能 DisposeAsync
             await AppServiceProvider.DisposeAsync();
+            MahoTransport.Dispose();
+            MakoClient.Dispose();
         }
         catch
         {

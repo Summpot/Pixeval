@@ -14,16 +14,17 @@ using Pixeval.I18N;
 using Pixeval.Models.Database;
 using Pixeval.Models.Options;
 using Pixeval.Models.Subscriptions;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.ViewModels;
 
-public sealed partial class DownloadFolderViewModel(WorkSubscriptionEntry subscription)
+public sealed partial class DownloadFolderViewModel(WorkSubscriptionRecord subscription)
     : ViewModelBase, IDownloadListEntryViewModel, IDisposable
 {
     private bool _isDisposed;
     private DispatcherTimer? _rateLimitTimer;
 
-    public WorkSubscriptionEntry Subscription { get; } = subscription;
+    public WorkSubscriptionRecord Subscription { get; private set; } = subscription;
 
     public ObservableCollection<DownloadItemViewModel> Items { get; } = [];
 
@@ -37,10 +38,10 @@ public sealed partial class DownloadFolderViewModel(WorkSubscriptionEntry subscr
 
     public string Title => GetDisplayName(Subscription);
 
-    public static string GetDisplayName(WorkSubscriptionEntry subscription) =>
+    public static string GetDisplayName(WorkSubscriptionRecord subscription) =>
         $"{subscription.DisplayName} · " +
-        $"{SymbolComboBoxItem.GetResource(subscription.SubscriptionType)} · " +
-        $"{SymbolComboBoxItem.GetResource(subscription.WorkKind)}";
+        $"{SymbolComboBoxItem.GetResource(subscription.Type)} · " +
+        $"{SymbolComboBoxItem.GetResource(subscription.Kind)}";
 
     public string Subtitle => IsFetching
         ? RetryAt is { } retryAt && retryAt > DateTimeOffset.UtcNow
@@ -116,7 +117,7 @@ public sealed partial class DownloadFolderViewModel(WorkSubscriptionEntry subscr
         OnPropertyChanged(nameof(Subtitle));
     }
 
-    internal void UpdateFetchState(WorkSubscriptionFetchState? state)
+    internal void UpdateFetchState(SubscriptionFetchState? state)
     {
         if (state is not
             {
@@ -135,9 +136,9 @@ public sealed partial class DownloadFolderViewModel(WorkSubscriptionEntry subscr
         IsFetching = true;
     }
 
-    internal void UpdateSubscription(WorkSubscriptionEntry subscription)
+    internal void UpdateSubscription(WorkSubscriptionRecord subscription)
     {
-        Subscription.UpdateFrom(subscription);
+        Subscription = subscription;
         OnPropertyChanged(nameof(Subscription));
         OnPropertyChanged(nameof(Title));
     }

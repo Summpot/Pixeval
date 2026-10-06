@@ -201,8 +201,14 @@ public partial class TabViewContainer : ViewContainerBase
 
     private static bool TryOpenNavigationItem(Control? control, bool openNew)
     {
-        if (control is not { DataContext: NavigationPageItem { PageType: { } type } }
-            || TopLevel.GetTopLevel(control) is not { ViewContainer: { } viewContainer })
+        if (control is not { DataContext: NavigationPageItem { PageType: { } type } })
+            return false;
+
+        var viewContainer = (control is not null ? TopLevel.GetTopLevel(control)?.ViewContainer : null)
+            ?? (Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows.FirstOrDefault(static w => w.IsActive)?.Content as ViewContainerBase
+            ?? (Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.MainWindow?.Content as ViewContainerBase;
+
+        if (viewContainer is null)
             return false;
 
         if (!openNew

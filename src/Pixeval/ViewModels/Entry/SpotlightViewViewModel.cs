@@ -1,15 +1,14 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using Mako.Model;
 using SpotlightViewDataProvider = Pixeval.ViewModels.SharableViewDataProvider<
-    Mako.Model.Spotlight,
+    Pixeval.Native.Mako.SpotlightArticle,
     Pixeval.ViewModels.SpotlightItemViewModel>;
 
 namespace Pixeval.ViewModels;
 
 public sealed class SpotlightViewViewModel
-    : EntryViewViewModel<Spotlight, SpotlightItemViewModel>, IRefCloneable<SpotlightViewViewModel>
+    : EntryViewViewModel<Pixeval.Native.Mako.SpotlightArticle, SpotlightItemViewModel>, IRefCloneable<SpotlightViewViewModel>
 {
     public SpotlightViewViewModel() : this(new SpotlightViewDataProvider())
     {

@@ -7,8 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using Mako;
-using Mako.Model;
 using Pixeval.AppManagement;
 
 namespace Pixeval.ViewModels;
@@ -61,7 +59,7 @@ public sealed class NovelContext(NovelContent novelContent) : INovelContext<Stre
             && !string.IsNullOrEmpty(Path.GetExtension(coverUri.AbsolutePath)))
             return coverUri;
 
-        return new(DefaultImageUrls.ImageNotAvailable);
+        return new(AppInfo.ImageNotAvailablePath);
     }
 
     private static string GetLocalImageFileName(string stem, string url) =>

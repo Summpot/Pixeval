@@ -5,12 +5,13 @@ using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Download;
-using Pixeval.Download.MacroParser;
 using Pixeval.Models.Database;
 using Pixeval.Models.Download;
 using Pixeval.Models.Options;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO;
+using Pixeval.Native.Download;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.Tests;
 
@@ -23,7 +24,6 @@ public sealed class MetaPathParserTest
         var result = DownloadPathMacroParser.Analyze("@{id}");
 
         Assert.IsTrue(result.IsSuccess);
-        Assert.IsNotNull(result.Root);
         Assert.HasCount(4, result.Highlights);
         Assert.AreSequenceEqual(
         [
@@ -40,7 +40,6 @@ public sealed class MetaPathParserTest
         var result = DownloadPathMacroParser.Analyze("@{ext:u}");
 
         Assert.IsTrue(result.IsSuccess);
-        Assert.IsNotNull(result.Root);
         Assert.HasCount(6, result.Highlights);
         Assert.AreSequenceEqual(
         [
@@ -158,23 +157,6 @@ public sealed class MetaPathParserTest
     }
 
     [TestMethod]
-    public void ContextRestrictionDelegateShouldSupportMixedConditions()
-    {
-        var analyzer = new MetaPathAnalyzer<EmptyParserContext>(
-        [
-            new TestPredicateMacro("a"),
-            new TestPredicateMacro("b"),
-            new TestPredicateMacro("c"),
-            new TestContextRestrictedMacro()
-        ]);
-
-        Assert.IsTrue(analyzer.Analyze("@{a?@{b?@{restricted}:}:}").IsSuccess);
-        Assert.IsTrue(analyzer.Analyze("@{a?@{c?@{restricted}:}:}").IsSuccess);
-        Assert.IsFalse(analyzer.Analyze("@{a?@{restricted}:}").IsSuccess);
-        Assert.IsFalse(analyzer.Analyze("@{b?@{restricted}:}").IsSuccess);
-    }
-
-    [TestMethod]
     public void LastSegmentMacroShouldStayInLastSegment()
     {
         var result = DownloadPathMacroParser.Analyze("@{ext}\\name");
@@ -243,28 +225,24 @@ public sealed class MetaPathParserTest
             "group-bookmark-not-post-not-series",
             DownloadPathMacroParser.Reduce(
                 "@{is_group?group:not-group}-@{is_bookmark_group?bookmark:not-bookmark}-@{is_post_group?post:not-post}-@{is_series_group?series:not-series}",
-                new ParserContext(sample, new() { SubscriptionType = WorkSubscriptionType.Bookmarks })));
+                new ParserContext(sample, new(0, WorkSubscriptionType.Bookmarks))));
         Assert.AreEqual(
             "group-not-bookmark-post-not-series",
             DownloadPathMacroParser.Reduce(
                 "@{is_group?group:not-group}-@{is_bookmark_group?bookmark:not-bookmark}-@{is_post_group?post:not-post}-@{is_series_group?series:not-series}",
-                new ParserContext(sample, new() { SubscriptionType = WorkSubscriptionType.Posts })));
+                new ParserContext(sample, new(0, WorkSubscriptionType.Posts))));
         Assert.AreEqual(
             "group-not-bookmark-not-post-series",
             DownloadPathMacroParser.Reduce(
                 "@{is_group?group:not-group}-@{is_bookmark_group?bookmark:not-bookmark}-@{is_post_group?post:not-post}-@{is_series_group?series:not-series}",
-                new ParserContext(sample, new() { SubscriptionType = WorkSubscriptionType.Series })));
+                new ParserContext(sample, new(0, WorkSubscriptionType.Series))));
     }
 
     [TestMethod]
     public void GroupIdShouldUseIntegerFormatter()
     {
         var sample = DesignHelper.DownloadParserSampleWork(ImageType.SingleImage);
-        var subscription = new WorkSubscriptionEntry
-        {
-            Id = 42,
-            SubscriptionType = WorkSubscriptionType.Posts
-        };
+        var subscription = new WorkSubscriptionRecord(42, WorkSubscriptionType.Posts);
 
         var path = DownloadPathMacroParser.Reduce(
             "@{is_post_group?@{group_id:000}:}",
@@ -295,57 +273,8 @@ public sealed class MetaPathParserTest
                 new ParserContext(DesignHelper.DownloadParserSampleWork(ImageType.SingleImage)));
             Assert.Fail("Expected macro reduction to throw.");
         }
-        catch (MacroParseException exception)
+        catch (MetaPathError.Evaluation)
         {
-            Assert.AreEqual(MacroParseException.ErrorType.NonParameterizedMacroBearingParameter, exception.Type);
-            Assert.AreEqual("id", exception.Parameter[0]);
-        }
-    }
-
-    [TestMethod]
-    public void ReduceShouldThrowWhenParserContextCannotProvideMacroContext()
-    {
-        try
-        {
-            var parser = new MetaPathParser<EmptyParserContext>(DownloadPathMacroParser.MacroProvider);
-            _ = parser.Reduce("@{id}", new EmptyParserContext());
-            Assert.Fail("Expected incomplete macro reduction to throw.");
-        }
-        catch (MacroParseException exception)
-        {
-            Assert.AreEqual(MacroParseException.ErrorType.ReductionNotCompleted, exception.Type);
-            Assert.AreEqual("id", exception.Parameter[0]);
-        }
-    }
-
-    private sealed record EmptyParserContext;
-
-    private sealed class TestPredicateMacro(string name) : IPredicate<EmptyParserContext>
-    {
-        public string Name { get; } = name;
-
-        public string Description => "";
-
-        public bool Match(EmptyParserContext context) => true;
-    }
-
-    private sealed class TestContextRestrictedMacro : ITransducer<EmptyParserContext>, IContextRestrictedMacro
-    {
-        public string Name => "restricted";
-
-        public string Description => "";
-
-        public MacroContextPredicate ContextPredicate => static context =>
-            context.TryGetValue("a", out var a) && a
-            && (context.TryGetValue("b", out var b) && b
-                || context.TryGetValue("c", out var c) && c);
-
-        public bool IsFormatterValid(string? formatter) => true;
-
-        public string Substitute(EmptyParserContext context, string? formatter, out bool includeToken)
-        {
-            includeToken = false;
-            return "restricted";
         }
     }
 }

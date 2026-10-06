@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -43,17 +44,40 @@ public static class AvaloniaHelper
         {
             get
             {
-                while (true)
+                var current = topLevel;
+                while (current is not null)
                 {
-                    if (topLevel.Content is ViewContainerBase vc)
+                    if (current.Content is ViewContainerBase vc)
                         return vc;
-                    var parent = topLevel.Parent;
-                    if (parent is Popup)
-                        parent = parent.Parent;
-                    if (parent is not Visual visual || TopLevel.GetTopLevel(visual) is not { } t)
-                        return null;
-                    topLevel = t;
+
+                    if (current is PopupRoot popupRoot)
+                    {
+                        var target = (popupRoot.Parent as Popup)?.PlacementTarget ?? popupRoot.Parent;
+                        if (target is Visual v && TopLevel.GetTopLevel(v) is { } targetTopLevel && targetTopLevel != current)
+                        {
+                            current = targetTopLevel;
+                            continue;
+                        }
+                    }
+
+                    var parent = current.Parent;
+                    if (parent is Popup popup)
+                        parent = popup.PlacementTarget ?? popup.Parent;
+
+                    if (parent is not Visual visual || TopLevel.GetTopLevel(visual) is not { } nextTopLevel || nextTopLevel == current)
+                        break;
+
+                    current = nextTopLevel;
                 }
+
+                if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
+                {
+                    var activeWindow = desktop.Windows.FirstOrDefault(static w => w.IsActive) ?? desktop.MainWindow;
+                    if (activeWindow?.Content is ViewContainerBase windowVc)
+                        return windowVc;
+                }
+
+                return null;
             }
         }
     }

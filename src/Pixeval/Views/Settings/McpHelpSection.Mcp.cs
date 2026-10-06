@@ -12,7 +12,6 @@ using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement;
 using Pixeval.I18N;
-using Pixeval.Mcp;
 using Pixeval.Models.McpServer;
 
 namespace Pixeval.Views.Settings;
@@ -62,7 +61,7 @@ public partial class McpHelpSection
             return;
         }
 
-        var configuredEndpoint = new Uri($"http://127.0.0.1:{settings.Port}{PixevalMcpHttpServer.DefaultPath}");
+        var configuredEndpoint = new Uri($"http://127.0.0.1:{settings.Port}{PixevalMcpService.DefaultPath}");
         _isLoadingMcpTools = true;
         RefreshMcpToolsButton.IsEnabled = false;
         McpToolsStatus = I18NManager.GetResource(HelpPageResources.McpToolsStatus.Loading, configuredEndpoint);

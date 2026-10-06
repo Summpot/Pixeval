@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
-using Mako.Net;
 using Misaki;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Options;

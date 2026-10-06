@@ -22,16 +22,13 @@ public partial class UserItemViewModel
         IsFollowedDisplay = result ? HeartButtonState.Checked : HeartButtonState.Unchecked;
     }
 
-    private bool CanBlockUser => !BlockedContentHelper.IsBlocked(Entry.UserInfo);
+    private bool CanBlockUser => !BlockedContentHelper.IsBlocked(Entry);
 
     [RelayCommand(CanExecute = nameof(CanBlockUser))]
     private void BlockUser()
     {
-        if (BlockedContentHelper.TryAddOrUpdateBlockedUser(Entry.UserInfo))
+        if (BlockedContentHelper.TryAddOrUpdateBlockedUser(Entry))
             BlockUserCommand.NotifyCanExecuteChanged();
     }
-
-    public override Uri AppUri => Entry.UserInfo.AppUri;
-
-    public override Uri WebsiteUri => Entry.UserInfo.WebsiteUri;
 }
+

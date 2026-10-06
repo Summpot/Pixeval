@@ -1,62 +1,44 @@
-// Copyright (c) Pixeval.
-// Licensed under the GPL-3.0 License.
-
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Mako;
-using Mako.Global.Enum;
-using Mako.Model;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
-using Pixeval.Download;
-using Pixeval.Mcp;
-using Pixeval.Mcp.Dtos;
-using Pixeval.Models.Download;
-using Pixeval.Models.Download.Tasks;
+using Pixeval.Models.Extensions;
+using Pixeval.Models.Subscriptions;
+using Pixeval.Native.Mcp;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
+using Pixeval.Utilities.IO.Caching;
+using NativeMcpServer = Pixeval.Native.Mcp.McpServer;
 
 namespace Pixeval.Models.McpServer;
 
-public sealed partial class PixevalMcpService(AppViewModel appViewModel, FileLogger logger)
-    : IPixevalMcpService, IPixevalMcpRuntime
+public sealed class PixevalMcpService : IPixevalMcpService, IMcpSessionBridge
 {
-    private static readonly TimeSpan _StopTimeout = TimeSpan.FromSeconds(2);
+    public const string DefaultPath = "/mcp";
 
+    private readonly AppViewModel _appViewModel;
+    private readonly FileLogger _logger;
     private readonly SemaphoreSlim _lifetimeLock = new(1, 1);
-    private PixevalMcpHttpServer? _server;
+    private NativeMcpServer? _server;
     private ushort? _serverPort;
     private bool _disposed;
 
-    private AppViewModel ViewModel => appViewModel;
+    public PixevalMcpService(AppViewModel appViewModel, FileLogger logger)
+    {
+        _appViewModel = appViewModel;
+        _logger = logger;
+    }
 
-    private FileLogger Logger => logger;
-
-    private McpSettingsGroup Settings => appViewModel.AppSettings.McpSettings;
+    private McpSettingsGroup Settings => _appViewModel.AppSettings.McpSettings;
 
     public string AppVersion => AppInfo.AppVersion.CurrentVersionShortText;
 
-    public string TargetFilter => appViewModel.AppSettings.BrowsingExperienceSettings.TargetFilter.ToString();
-
-    public TokenUser? CurrentUser => MakoClient.Me ?? appViewModel.GetCurrentLoginUser()?.TokenUser;
-
-    public MakoClient MakoClient => appViewModel.MakoClient;
-
-    public HttpClient ImageHttpClient => MakoClient.GetImageDownloadClient();
-
     public ushort Port => Settings.Port;
 
-    public bool EnableWriteTools => Settings.EnableWriteTools;
-
-    public int MaxBinaryResourceMegabytes =>
-        int.Clamp(Settings.MaxBinaryResourceMegabytes, 1, McpSettingsGroup.MaxBinaryResourceMegabytesLimit);
-
-    public Uri? Endpoint => _server?.Endpoint;
+    public Uri? Endpoint => _server is not null ? new Uri(_server.Endpoint()) : null;
 
     public Task StartAsync(CancellationToken token = default) =>
         ApplySettingsAsync(token);
@@ -86,7 +68,7 @@ public sealed partial class PixevalMcpService(AppViewModel appViewModel, FileLog
             return;
         }
 
-        if (_server is not null && _serverPort == port)
+        if (_server is not null && _serverPort == port && _server.IsRunning())
             return;
 
         if (_server is not null)
@@ -97,108 +79,60 @@ public sealed partial class PixevalMcpService(AppViewModel appViewModel, FileLog
 
     private async Task StartCoreAsync(ushort port, CancellationToken token)
     {
-        var server = new PixevalMcpHttpServer(this, port);
+        var config = new McpServerConfig(
+            port,
+            Settings.EnableWriteTools,
+            Math.Clamp(Settings.MaxBinaryResourceMegabytes, 1, McpSettingsGroup.MaxBinaryResourceMegabytesLimit),
+            AppVersion,
+            _appViewModel.AppSettings.BrowsingExperienceSettings.TargetFilter.ToString()
+        );
+
         try
         {
-            await server.StartAsync(token).ConfigureAwait(false);
+            var storageEngine = _appViewModel.AppServiceProvider.GetRequiredService<StorageEngine>();
+            var downloadManager = _appViewModel.HistoryPersistHelper.DownloadManager;
+            var syncEngine = _appViewModel.AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().SyncEngine;
+            var pluginEngine = _appViewModel.AppServiceProvider.GetService<ExtensionService>()?.PluginEngine;
+
+            var server = new NativeMcpServer(
+                config,
+                this,
+                _appViewModel.MakoClient,
+                storageEngine,
+                downloadManager,
+                CacheHelper.CacheEngine,
+                syncEngine,
+                pluginEngine
+            );
+
+            await server.StartAsync().ConfigureAwait(false);
             _server = server;
             _serverPort = port;
-            logger.LogInformation($"Pixeval MCP server started at {server.Endpoint}", null);
+            _logger.LogInformation($"Pixeval native MCP server started at {_server.Endpoint()}", null);
         }
         catch (Exception e)
         {
-            logger.LogError("Failed to start Pixeval MCP server", e);
-            await server.DisposeAsync().ConfigureAwait(false);
-        }
-    }
-
-    public async Task StopAsync()
-    {
-        await _lifetimeLock.WaitAsync().ConfigureAwait(false);
-        try
-        {
-            if (_disposed)
-                return;
-
-            await StopCoreAsync().ConfigureAwait(false);
-        }
-        finally
-        {
-            _lifetimeLock.Release();
+            _logger.LogError("Failed to start Pixeval native MCP server", e);
         }
     }
 
     private async Task StopCoreAsync()
     {
-        if (_server is not { } server)
+        if (_server is { } server)
         {
+            _server = null;
             _serverPort = null;
-            return;
-        }
-
-        _server = null;
-        _serverPort = null;
-        try
-        {
-            await server.StopAsync(_StopTimeout).ConfigureAwait(false);
-            logger.LogInformation("Pixeval MCP server stopped", null);
-        }
-        catch (OperationCanceledException e)
-        {
-            logger.LogError("Timed out while stopping Pixeval MCP server", e);
-        }
-        catch (Exception e)
-        {
-            logger.LogError("Failed to stop Pixeval MCP server", e);
-        }
-        finally
-        {
-            await server.DisposeAsync().ConfigureAwait(false);
+            try
+            {
+                await server.StopAsync().ConfigureAwait(false);
+                server.Dispose();
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning("Error while stopping native MCP server", e);
+            }
         }
     }
-
-    public void EnsureLoggedIn()
-    {
-        if (appViewModel.GetCurrentLoginUser() is not { RefreshToken.Length: > 0 })
-            throw new PixevalMcpException(
-                "Pixeval has no active Pixiv account. Log in with the Pixeval desktop app first.");
-    }
-
-    public void EnsureWriteToolsEnabled()
-    {
-        if (!Settings.EnableWriteTools)
-            throw new PixevalMcpException("Pixeval MCP write tools are disabled in settings.");
-    }
-
-    public async Task<PixevalMcpDownloadTaskDto> QueueDownloadAsync(
-        SimpleWorkType workType,
-        long id,
-        CancellationToken token)
-    {
-        EnsureWriteToolsEnabled();
-        EnsureLoggedIn();
-
-        var destination = appViewModel.AppSettings.DownloadSettings.DownloadPathMacro;
-        var task = workType is SimpleWorkType.Novel
-            ? await CreateNovelDownloadTaskAsync(id, destination, token).ConfigureAwait(false)
-            : await CreateIllustrationDownloadTaskAsync(id, destination, token).ConfigureAwait(false);
-
-        var manager = appViewModel.HistoryPersistHelper.DownloadManager;
-        return RunOnUiThread(() =>
-        {
-            manager.QueueTask(task);
-            return ToDownloadTaskDto(task, manager.QueuedTasks.IndexOf(task));
-        });
-    }
-
-    public IReadOnlyList<PixevalMcpDownloadTaskDto> DownloadTasks() =>
-    [
-        .. appViewModel.HistoryPersistHelper.DownloadManager.QueuedTasks.Select(static (task, index) =>
-            ToDownloadTaskDto(task, index))
-    ];
-
-    public void LogToolException(string toolName, Exception exception) =>
-        logger.LogError($"MCP tool failed: {toolName}", exception);
 
     public async ValueTask DisposeAsync()
     {
@@ -210,54 +144,63 @@ public sealed partial class PixevalMcpService(AppViewModel appViewModel, FileLog
 
             _disposed = true;
             await StopCoreAsync().ConfigureAwait(false);
+            _lifetimeLock.Dispose();
         }
         finally
         {
-            _lifetimeLock.Release();
+            // Lock released
         }
     }
 
-    private async Task<IDownloadTaskGroup> CreateIllustrationDownloadTaskAsync(
-        long id,
-        string destination,
-        CancellationToken token)
-    {
-        var illustration = await GetIllustrationAsync(id, token).ConfigureAwait(false);
-        if (illustration.IsPicGif && illustration is ISingleAnimatedImage { MultiImageUris: not null } animatedImage)
-            await animatedImage.MultiImageUris.TryPreloadListAsync(animatedImage, token: token).ConfigureAwait(false);
+    #region IMcpSessionBridge Implementation
 
-        var factory = appViewModel.AppServiceProvider.GetRequiredService<IllustrationDownloadTaskFactory>();
-        return factory.Create(illustration, destination);
+    public McpSessionUserInfo? GetCurrentUser()
+    {
+        if (_appViewModel.GetCurrentLoginUser() is { } user)
+            return new McpSessionUserInfo(user.Id.ToString(), user.Name, user.Account);
+        return null;
     }
 
-    private async Task<IDownloadTaskGroup> CreateNovelDownloadTaskAsync(
-        long id,
-        string destination,
-        CancellationToken token)
+    public string GetHelpDocument(string? topic)
     {
-        var novel = await GetNovelAsync(id, token).ConfigureAwait(false);
-        var content = await MakoClient.GetNovelContentAsync(id, token).ConfigureAwait(false);
-        var factory = appViewModel.AppServiceProvider.GetRequiredService<NovelDownloadTaskFactory>();
-        return factory.Create(novel, destination, content);
+        try
+        {
+            var helpFileName = topic switch
+            {
+                _ => "McpHelp.md"
+            };
+
+            var culture = System.Globalization.CultureInfo.CurrentUICulture.Name;
+            var path = Path.Combine(AppContext.BaseDirectory, "i18n", culture, helpFileName);
+            if (!File.Exists(path))
+                path = Path.Combine(AppContext.BaseDirectory, "i18n", "zh-Hans", helpFileName);
+            if (!File.Exists(path))
+                path = Path.Combine(AppContext.BaseDirectory, "i18n", "en-US", helpFileName);
+
+            if (File.Exists(path))
+                return File.ReadAllText(path);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Failed to read help markdown", ex);
+        }
+
+        return "# Pixeval MCP Help\n\nRefer to Pixeval documentation for available tools and resources.";
     }
 
-    private static PixevalMcpDownloadTaskDto ToDownloadTaskDto(IDownloadTaskGroupBase task, int queueIndex)
+    public void OnDownloadMacroChanged(string macroText)
     {
-        var entry = task is IDownloadTaskGroup group ? group.DatabaseEntry.Entry : null;
-        return new(
-            queueIndex,
-            entry?.Id,
-            entry?.Title,
-            task.Destination,
-            task.OpenLocalDestination,
-            task.CurrentState.ToString(),
-            task.ProgressPercentage,
-            task.ActiveCount,
-            task.CompletedCount,
-            task.ErrorCount,
-            task.ErrorMessage);
+        _appViewModel.AppSettings.DownloadSettings.DownloadPathMacro = macroText;
+        AppInfo.SaveAppSettings(_appViewModel.AppSettings);
     }
 
-    private static PixevalMcpDownloadTaskDto ToDownloadTaskDto(IDownloadTaskGroupBase task) =>
-        ToDownloadTaskDto(task, -1);
+    public void LogEvent(string level, string message)
+    {
+        if (string.Equals(level, "error", StringComparison.OrdinalIgnoreCase))
+            _logger.LogError($"[MCP] {message}", null);
+        else
+            _logger.LogInformation($"[MCP] {message}", null);
+    }
+
+    #endregion
 }

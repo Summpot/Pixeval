@@ -4,11 +4,11 @@
 using System;
 using System.Collections.Frozen;
 using System.Linq;
-using Mako.Model;
-using Mako.Net.Responses;
 using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.Models.Database.Managers;
+using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 
 namespace Pixeval.Models.Blocking;
@@ -36,15 +36,18 @@ public static class BlockedContentHelper
         || entry.Tags.Any(group => group.Any(tag => snapshot.BlockedTags.Contains(tag.Name)))
         || entry.Authors.Concat(entry.Uploaders).Any(user => IsBlocked(user, snapshot));
 
-    public static bool IsBlocked(UserBasicInfo user) => IsBlocked(user, CaptureSnapshot());
-
-    public static bool IsBlocked(UserBasicInfo user, BlockedContentSnapshot snapshot) =>
-        snapshot.BlockedUsers.Contains(user.Id);
+    public static bool IsBlocked(long userId, BlockedContentSnapshot snapshot) =>
+        snapshot.BlockedUsers.Contains(userId);
 
     public static bool IsBlocked(IUser user) => IsBlocked(user, CaptureSnapshot());
 
-    public static bool IsBlocked(IUser user, BlockedContentSnapshot snapshot) =>
-        long.TryParse(user.Id, out var id) && snapshot.BlockedUsers.Contains(id);
+    public static bool IsBlocked(IUser user, BlockedContentSnapshot snapshot)
+    {
+        var id = user is IIdEntry idEntry && idEntry.Id != 0
+            ? idEntry.Id
+            : long.TryParse(user.Id, out var parsed) ? parsed : 0;
+        return id > 0 && snapshot.BlockedUsers.Contains(id);
+    }
 
     public static bool IsBlocked(Comment comment) => IsBlocked(comment, CaptureSnapshot());
 
@@ -78,19 +81,19 @@ public static class BlockedContentHelper
         _ => entry
     };
 
-    public static bool TryAddOrUpdateBlockedUser(UserBasicInfo user)
+    public static bool TryAddOrUpdateBlockedUser(IUser user)
     {
-        if (user.Id <= 0 || App.AppViewModel?.AppServiceProvider is not { } serviceProvider)
+        var id = user is IIdEntry idEntry && idEntry.Id != 0
+            ? idEntry.Id
+            : long.TryParse(user.Id, out var parsed) ? parsed : 0;
+        if (id <= 0 || App.AppViewModel?.AppServiceProvider is not { } serviceProvider)
             return false;
 
         var manager = serviceProvider.GetRequiredService<BlockedUserPersistentManager>();
-        if (manager.GetBlockedUserIds().Contains(user.Id))
+        if (manager.GetBlockedUserIds().Contains(id))
             return false;
 
-        manager.Upsert(BlockedContentModelHelper.CreateBlockedUserEntry(user));
+        manager.Upsert(BlockedContentModelHelper.CreateBlockedUserRecord(user));
         return true;
     }
-
-    public static bool TryAddOrUpdateBlockedUser(IUser user) =>
-        user is UserBasicInfo userInfo && TryAddOrUpdateBlockedUser(userInfo);
 }

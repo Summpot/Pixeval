@@ -14,12 +14,12 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
-using Mako;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement;
 using Pixeval.I18N;
 using Pixeval.Models.Options;
 using Pixeval.Models.Subscriptions;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.Views.Home;
 using Pixeval.Views.Login;
@@ -48,7 +48,7 @@ public class App : Application
         CultureInfo.CurrentUICulture = CultureInfo.CurrentCulture = LanguageHelper.FindClosest(AppViewModel.AppSettings.ApplicationSettings.CultureName);
         I18NManager.Initialize();
         AppViewModel.InitializeProvider();
-        AppViewModel.MakoClient.RateLimitEncountered += MakoClient_OnRateLimitEncountered;
+        // Throttling is managed internally by native Mako client
 
         AvaloniaXamlLoader.Load(this);
         ApplyAppFontFamily(AppViewModel.AppSettings.ApplicationSettings.AppFontFamily);
@@ -162,14 +162,21 @@ public class App : Application
             if (AppViewModel.GetCurrentLoginUser() is { RefreshToken: { } refreshToken }
                 && !string.IsNullOrWhiteSpace(refreshToken))
             {
-                await AppViewModel.MakoClient.SetTokenAsync(refreshToken);
-                if (await AppViewModel.MakoClient.IdentifyTokenAsync())
+                AppViewModel.MakoClient.SetRefreshToken(refreshToken);
+                var identifyResult = await AppViewModel.MakoClient.IdentifyTokenAsync();
+                if (identifyResult.Success)
                 {
+                    var tokenResponse = AppViewModel.MakoClient.GetTokenResponse()
+                        ?? (AppViewModel.MakoClient.GetUser() is { } user
+                            ? new TokenResponse("", 0, "Bearer", refreshToken, user)
+                            : null);
+                    AppViewModel.OnTokenRefreshed(tokenResponse);
                     viewContainer.NavigateTo(new HomePage());
                     AppViewModel.QueueWorkSubscriptionSyncAll();
                     return;
                 }
 
+                AppViewModel.OnTokenRefreshed(null);
                 viewContainer.ShowError(I18NManager.GetResource(MainPageResources.LoggingIn.Failed));
             }
         }
@@ -177,6 +184,7 @@ public class App : Application
         {
             AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
                 .LogError(nameof(LoginAsync), e);
+            AppViewModel.OnTokenRefreshed(null);
             viewContainer.ShowError(I18NManager.GetResource(MainPageResources.LoggingIn.Failed));
         }
 

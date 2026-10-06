@@ -9,8 +9,6 @@ using AutoSettingsPage;
 using AutoSettingsPage.Models;
 using Avalonia;
 using Avalonia.Styling;
-using Mako;
-using Mako.Global.Enum;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
@@ -73,18 +71,24 @@ public class SettingsPageViewModel : ViewModelBase
                     .Bool(t => t.HideHomePageToolbar)
                     .Bool(t => t.HideHomePageCardTitle)))
             .NewGroup(t => t.NetworkSettings, group => group
-                .Int(t => t.ApiRequestCooldown, 0, 5000, 100,
-                    entry => entry.ValueChanged += value => App.AppViewModel.MakoClient.Configuration.ApiRequestCooldown = value)
+                .Int(t => t.ApiRequestCooldown, 0, 5000, 100, entry => entry.ValueChanged += _ =>
+                {
+                    App.AppViewModel.UpdateMakoNetworkOptions();
+                })
                 .DomainFronting(t => t.PixivDomainFronting, t => t.EnablePixivDomainFronting, entry =>
-                        entry.Enum(t => t.PixivDomainFrontingType,
-                                e => e.ValueChanged += t => App.AppViewModel.MakoClient.Configuration.DomainFrontingType = (DomainFrontingType) t)
+                        entry.Enum(t => t.PixivDomainFrontingType)
                             .IPSet(t => t.PixivAppApiNameResolver)
                             .IPSet(t => t.PixivImageNameResolver)
                             .IPSet(t => t.PixivImageNameResolver2)
                             .IPSet(t => t.PixivOAuthNameResolver)
                             .IPSet(t => t.PixivAccountNameResolver)
                             .IPSet(t => t.PixivWebApiNameResolver),
-                    entry => entry.MainValue.ValueChanged += t => App.AppViewModel.MakoClient.Configuration.DomainFronting = t)
+                    entry => entry.MainValue.ValueChanged += t =>
+                    {
+                        App.AppViewModel.SetNameResolvers();
+                        App.AppViewModel.HistoryPersistHelper.DownloadManager.UpdateNetworkOptions();
+                        App.AppViewModel.UpdateMakoNetworkOptions();
+                    })
                 .DomainFronting(t => t.GitHubDomainFronting, t => t.EnableGitHubDomainFronting, entry => entry
                     .IPSet(t => t.GitHubNameResolver)
                     .IPSet(t => t.GitHubApiNameResolver)
@@ -92,11 +96,13 @@ public class SettingsPageViewModel : ViewModelBase
                     .IPSet(t => t.GitHubUserContentNameResolver)
                     .IPSet(t => t.GitHubAssetsNameResolver)
                     .IPSet(t => t.GitHubCodeloadNameResolver))
-                .Proxy(entry => entry.ProxyChanged += t => App.AppViewModel.MakoClient.Configuration.Proxy = t)
-                .String(t => t.MirrorHost,
-                    entry => entry.ValueChanged += t => App.AppViewModel.MakoClient.Configuration.MirrorHost = t)
-                .String(t => t.WebCookie,
-                    entry => entry.ValueChanged += t => App.AppViewModel.MakoClient.Configuration.Cookie = t))
+                .Proxy(entry => entry.ProxyChanged += t =>
+                {
+                    App.AppViewModel.HistoryPersistHelper.DownloadManager.UpdateNetworkOptions();
+                    App.AppViewModel.UpdateMakoNetworkOptions();
+                })
+                .String(t => t.MirrorHost)
+                .String(t => t.WebCookie))
             .NewGroup(t => t.BrowsingExperienceSettings, group => group
                 .MultiValuesWithMainValue(t => t.ThumbnailLayout, t => t.ThumbnailLayoutType, entries => entries
                     .Int(t => t.IllustrationLinedFlowItemHeight, 50, 1000, 10)

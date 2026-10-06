@@ -2,33 +2,48 @@
 // Licensed under the GPL-3.0 License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Runtime.CompilerServices;
-using Mako.Model;
-using Mako.Net.Responses;
 using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.I18N;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Database;
+using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.Utilities;
 
 public static class BlockedContentModelHelper
 {
-    // Mako entries do not expose extension state, so keep the placeholder marker outside the model.
+    // Native entries do not expose extension state, so keep the placeholder marker outside the model.
     private static readonly ConditionalWeakTable<IArtworkInfo, object> _BlockedArtworkMarkers = new();
 
     private static readonly object _BlockedArtworkMarker = new();
 
-    public static BlockedUserEntry CreateBlockedUserEntry(UserBasicInfo user) => new()
+    public static BlockedUserRecord CreateBlockedUserRecord(IUser user)
     {
-        Id = user.Id,
-        Name = user.Name,
-        Account = user.Account,
-        AvatarUrl = user.AvatarUrl
-    };
+        var id = user is IIdEntry idEntry && idEntry.Id != 0
+            ? idEntry.Id
+            : long.TryParse(user.Id, out var parsed) ? parsed : 0;
+        var avatarUrl = (user as User)?.AvatarUrl
+            ?? (user as TokenUser)?.AvatarUrl
+            ?? user?.Avatar.FirstOrDefault()?.ImageUri.OriginalString
+            ?? "";
+        var account = (user as User)?.Account
+            ?? (user as TokenUser)?.Account
+            ?? "";
+        return new BlockedUserRecord(0, id, user.Name, avatarUrl, account);
+    }
 
-    public static UserBasicInfo CreateBlockedUserPreview(BlockedUserEntry entry) => new BlockedUserPreview(entry);
+    public static User CreateBlockedUserPreview(BlockedUserRecord entry) => new(
+        entry.Id,
+        entry.UserName,
+        entry.Account ?? "",
+        new ProfileImageUrls(null, null, null, string.IsNullOrWhiteSpace(entry.AvatarUrl) ? AppInfo.BlockedContentPath : entry.AvatarUrl),
+        false,
+        null);
 
     public static NovelContent CreateBlockedNovelContent(Novel entry) => NovelContent.CreateDefault() with
     {
@@ -36,7 +51,6 @@ public static class BlockedContentModelHelper
         Title = entry.Title,
         UserId = entry.User.Id,
         CoverUrl = AppInfo.BlockedContentPath,
-        Date = entry.CreateDate,
         Text = I18NManager.GetResource(BlockedContentResources.Work)
     };
 
@@ -55,102 +69,62 @@ public static class BlockedContentModelHelper
             : entry;
 
         static Illustration ReplaceIllustration(Illustration entry, BlockedContentSnapshot snapshot) =>
-            MarkBlocked(Illustration.CreateDefault() with
+            MarkBlocked(entry with
             {
-                Id = entry.Id,
                 Title = I18NManager.GetResource(BlockedContentResources.Work),
-                User = Replace(entry.User, snapshot),
-                CreateDate = entry.CreateDate,
-                ThumbnailUrls = CreatePlaceholderImageUrls(),
-                MetaSinglePage = new() { OriginalImageUrl = AppInfo.BlockedContentPath },
+                ImageUrls = CreatePlaceholderImageUrls(),
+                MetaSinglePage = new(AppInfo.BlockedContentPath),
+                MetaPages = [],
                 PageCount = 1,
                 Width = 1,
                 Height = 1
             });
 
         static Novel ReplaceNovel(Novel entry, BlockedContentSnapshot snapshot) =>
-            MarkBlocked(Novel.CreateDefault() with
+            MarkBlocked(entry with
             {
-                Id = entry.Id,
                 Title = I18NManager.GetResource(BlockedContentResources.Work),
-                User = Replace(entry.User, snapshot),
-                CreateDate = entry.CreateDate,
-                ThumbnailUrls = CreatePlaceholderImageUrls(),
+                ImageUrls = CreatePlaceholderImageUrls(),
                 PageCount = 1
             });
 
-        static ImageUrls CreatePlaceholderImageUrls() => new()
-        {
-            SquareMedium = AppInfo.BlockedContentPath,
-            Medium = AppInfo.BlockedContentPath,
-            Large = AppInfo.BlockedContentPath
-        };
+        static ImageUrls CreatePlaceholderImageUrls() => new(
+            AppInfo.BlockedContentPath,
+            AppInfo.BlockedContentPath,
+            AppInfo.BlockedContentPath,
+            AppInfo.BlockedContentPath);
     }
 
     internal static User Replace(User entry, BlockedContentSnapshot snapshot) =>
-        BlockedContentHelper.IsBlocked(entry.UserInfo, snapshot)
-            ? User.CreateDefault() with
+        BlockedContentHelper.IsBlocked(entry.Id, snapshot)
+            ? entry with
             {
-                UserInfo = Replace(entry.UserInfo, snapshot),
-                IsMuted = true
+                Name = I18NManager.GetResource(BlockedContentResources.User),
+                ProfileImageUrls = new ProfileImageUrls(
+                    AppInfo.BlockedContentPath,
+                    AppInfo.BlockedContentPath,
+                    AppInfo.BlockedContentPath,
+                    AppInfo.BlockedContentPath)
             }
             : entry;
 
     internal static SingleUserResponse Replace(SingleUserResponse entry, BlockedContentSnapshot snapshot) =>
-        BlockedContentHelper.IsBlocked(entry.UserEntity, snapshot)
-            ? SingleUserResponse.CreateDefault() with
+        BlockedContentHelper.IsBlocked(entry.User.Id, snapshot)
+            ? entry with
             {
-                UserEntity = Replace(entry.UserEntity, snapshot),
-                UserProfile = Profile.CreateDefault() with { BackgroundImageUrl = AppInfo.BlockedContentPath }
+                User = Replace(entry.User, snapshot),
+                Profile = entry.Profile with { BackgroundImageUrl = AppInfo.BlockedContentPath }
             }
             : entry;
 
     internal static Comment Replace(Comment entry, BlockedContentSnapshot snapshot) =>
         BlockedContentHelper.IsBlocked(entry, snapshot)
-            ? Comment.CreateDefault() with
+            ? entry with
             {
-                Id = entry.Id,
                 Content = I18NManager.GetResource(BlockedContentResources.Comment),
-                Date = entry.Date,
                 User = Replace(entry.User, snapshot)
             }
             : entry;
-
-    private static UserInfo Replace(UserInfo user, BlockedContentSnapshot snapshot) =>
-        BlockedContentHelper.IsBlocked(user, snapshot)
-            ? UserInfo.CreateDefault() with
-            {
-                Id = user.Id,
-                Name = I18NManager.GetResource(BlockedContentResources.User),
-                Account = user.Account,
-                ProfileImageUrls = CreatePlaceholderAvatarUrl()
-            }
-            : user;
-
-    private static SingleUserInfo Replace(SingleUserInfo user, BlockedContentSnapshot snapshot) =>
-        BlockedContentHelper.IsBlocked(user, snapshot)
-            ? SingleUserInfo.CreateDefault() with
-            {
-                Id = user.Id,
-                Name = I18NManager.GetResource(BlockedContentResources.User),
-                Account = user.Account,
-                ProfileImageUrls = CreatePlaceholderAvatarUrl(),
-                Description = I18NManager.GetResource(BlockedContentResources.User)
-            }
-            : user;
-
-    private static AvatarUser Replace(AvatarUser user, BlockedContentSnapshot snapshot) =>
-        BlockedContentHelper.IsBlocked(user, snapshot)
-            ? AvatarUser.CreateDefault() with
-            {
-                Id = user.Id,
-                Name = I18NManager.GetResource(BlockedContentResources.User),
-                Account = user.Account,
-                ProfileImageUrls = CreatePlaceholderAvatarUrl()
-            }
-            : user;
-
-    private static MediumOnlyImageUrl CreatePlaceholderAvatarUrl() => new() { Medium = AppInfo.BlockedContentPath };
 
     private static T MarkBlocked<T>(T entry)
         where T : class, IArtworkInfo
@@ -158,21 +132,5 @@ public static class BlockedContentModelHelper
         if (!_BlockedArtworkMarkers.TryGetValue(entry, out _))
             _BlockedArtworkMarkers.Add(entry, _BlockedArtworkMarker);
         return entry;
-    }
-
-    private sealed record BlockedUserPreview : UserBasicInfo
-    {
-        [SetsRequiredMembers]
-        public BlockedUserPreview(BlockedUserEntry entry)
-        {
-            Id = entry.Id;
-            Name = entry.DisplayName;
-            Account = entry.Account;
-            AvatarUrl = string.IsNullOrWhiteSpace(entry.AvatarUrl)
-                ? AppInfo.BlockedContentPath
-                : entry.AvatarUrl;
-        }
-
-        public override string AvatarUrl { get; }
     }
 }

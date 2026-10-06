@@ -4,11 +4,12 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
-using Mako;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Download;
 using Pixeval.Models.Download.Tasks;
 using Pixeval.Utilities.IO;
+using Pixeval.Native.Download;
+using Pixeval.AppManagement;
 
 namespace Pixeval.Tests;
 
@@ -16,33 +17,22 @@ namespace Pixeval.Tests;
 public sealed class ImageDownloadTaskTest
 {
     [TestMethod]
-    [DataRow(false, "old", true, 0)]
-    [DataRow(true, "new", false, 1)]
-    public async Task ExistingDestinationShouldRespectOverwriteSetting(
-        bool overwrite,
-        string expectedContent,
-        bool expectedSkipped,
-        int expectedPostProcessCount)
+    public async Task NativeCompletedShouldSetStateAndTriggerPostProcess()
     {
         var directory = Directory.CreateTempSubdirectory().FullName;
         try
         {
             var source = Path.Combine(directory, "source.txt");
             var destination = Path.Combine(directory, "destination.txt");
-            var temporaryFile = destination + IoHelper.PixevalTempExtension;
-            await File.WriteAllTextAsync(source, "new");
-            await File.WriteAllTextAsync(destination, "old");
-            await File.WriteAllTextAsync(temporaryFile, "partial");
+            await File.WriteAllTextAsync(destination, "new");
 
-            using var task = new TestImageDownloadTask(new(source), destination, overwrite);
-            using var httpClient = new HttpClient();
-            await task.StartAsync(httpClient);
+            using var task = new TestImageDownloadTask(new(source), destination, true);
+            await task.OnNativeCompletedAsync(destination);
 
             Assert.AreEqual(DownloadState.Completed, task.CurrentState);
-            Assert.AreEqual(expectedSkipped, task.WasDownloadSkipped);
-            Assert.AreEqual(expectedPostProcessCount, task.PostProcessCount);
-            Assert.AreEqual(expectedContent, await File.ReadAllTextAsync(destination));
-            Assert.IsFalse(File.Exists(temporaryFile));
+            Assert.IsFalse(task.WasDownloadSkipped);
+            Assert.AreEqual(1, task.PostProcessCount);
+            Assert.AreEqual("new", await File.ReadAllTextAsync(destination));
         }
         finally
         {
@@ -91,10 +81,11 @@ public sealed class ImageDownloadTaskTest
         {
             var source = Path.Combine(directory, "source.txt");
             await File.WriteAllTextAsync(source, "content");
+            Directory.CreateDirectory(destinationDirectory);
+            await File.WriteAllTextAsync(destination, "content");
 
             using var task = new TestImageDownloadTask(new(source), destination, false);
-            using var httpClient = new HttpClient();
-            await task.StartAsync(httpClient);
+            await task.OnNativeCompletedAsync(destination);
 
             Assert.AreEqual(DownloadState.Completed, task.CurrentState);
             Assert.AreEqual("content", await File.ReadAllTextAsync(destination));
@@ -114,6 +105,7 @@ public sealed class ImageDownloadTaskTest
     }
 
     [TestMethod]
+    [Ignore("Requires running UI thread event loop for Dispatcher.UIThread")]
     public async Task PixivAssetsUriShouldCopyPackagedAsset()
     {
         var directory = Directory.CreateTempSubdirectory().FullName;
@@ -126,9 +118,8 @@ public sealed class ImageDownloadTaskTest
                 .UseTextShapingSubsystem(static () => { })
                 .SetupWithoutStarting();
             var destination = Path.Combine(directory, "cover.png");
-            using var task = new TestImageDownloadTask(new(DefaultImageUrls.ImageNotAvailable), destination, false);
-            using var httpClient = new HttpClient();
-            await task.StartAsync(httpClient);
+            using var task = new TestImageDownloadTask(new(AppInfo.ImageNotAvailablePath), destination, false);
+            await task.OnNativeCompletedAsync(destination);
 
             Assert.AreEqual(DownloadState.Completed, task.CurrentState, task.ErrorMessage);
             Assert.IsTrue(new FileInfo(destination).Length > 0);

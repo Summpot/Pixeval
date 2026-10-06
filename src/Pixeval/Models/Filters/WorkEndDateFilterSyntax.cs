@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Misaki;
 using Pixeval.Filters.Syntax;
@@ -23,6 +22,4 @@ internal sealed class WorkEndDateFilterSyntax : FilterDateSyntax<IArtworkInfo>
         FilterSyntaxPattern.Keyword("e", exampleValue: "2024-1-1", description: I18NManager.GetResource(FilterResources.Completions.EndDate)),
         FilterSyntaxPattern.Keyword("end", exampleValue: "2024-1-1", description: I18NManager.GetResource(FilterResources.Completions.EndDate)),
     ];
-
-    public override bool Match(IArtworkInfo context, DateTimeOffset value) => context.CreateDate < value;
 }

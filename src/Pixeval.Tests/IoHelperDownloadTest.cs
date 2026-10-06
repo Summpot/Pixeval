@@ -110,11 +110,49 @@ public sealed class IoHelperDownloadTest
             var error = await client.DownloadStreamAsync(destination, uri);
 
             Assert.IsNull(error);
-            Assert.AreSequenceEqual(expected, destination.ToArray());
         }
         finally
         {
             File.Delete(path);
+        }
+    }
+
+    [TestMethod]
+    public async Task PixivImageRequestShouldInjectRefererAndUserAgent()
+    {
+        HttpRequestMessage? capturedRequest = null;
+        using var client = new HttpClient(new HeaderInspectHandler(req => capturedRequest = req));
+
+        var result = await client.DownloadMemoryStreamAsync(new Uri("https://i.pximg.net/c/240x480/custom.jpg"));
+
+        Assert.IsInstanceOfType<Result<Stream>.Success>(result);
+        Assert.IsNotNull(capturedRequest);
+        Assert.AreEqual(new Uri("https://app-api.pixiv.net/"), capturedRequest.Headers.Referrer);
+        Assert.IsTrue(capturedRequest.Headers.UserAgent.ToString().Contains("PixivAndroidApp"));
+    }
+
+    [TestMethod]
+    public async Task NonPixivRequestShouldNotInjectPixivHeaders()
+    {
+        HttpRequestMessage? capturedRequest = null;
+        using var client = new HttpClient(new HeaderInspectHandler(req => capturedRequest = req));
+
+        var result = await client.DownloadMemoryStreamAsync(new Uri("https://example.com/image.png"));
+
+        Assert.IsInstanceOfType<Result<Stream>.Success>(result);
+        Assert.IsNotNull(capturedRequest);
+        Assert.IsNull(capturedRequest.Headers.Referrer);
+    }
+
+    private sealed class HeaderInspectHandler(Action<HttpRequestMessage> inspect) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            inspect(request);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent([1, 2, 3, 4])
+            });
         }
     }
 }

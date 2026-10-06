@@ -13,7 +13,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using WebApiClientCore.Exceptions;
 
 namespace Pixeval.Utilities;
 
@@ -68,14 +67,16 @@ internal static partial class NetworkExceptionFormatter
                 case AuthenticationException value:
                     authenticationException ??= value;
                     break;
-                case ApiResponseStatusException value:
-                    response ??= value.ResponseMessage;
-                    request ??= value.ResponseMessage.RequestMessage;
-                    break;
-                case ApiReturnNotSupportedExteption value:
-                    response ??= value.Context.HttpContext.ResponseMessage;
-                    request ??= value.Context.HttpContext.RequestMessage;
-                    break;
+            }
+
+            if (response is null)
+            {
+                var respProp = current.GetType().GetProperty("ResponseMessage") ?? current.GetType().GetProperty("Response");
+                if (respProp?.GetValue(current) is HttpResponseMessage resp)
+                {
+                    response = resp;
+                    request ??= resp.RequestMessage;
+                }
             }
         }
 

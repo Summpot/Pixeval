@@ -131,9 +131,9 @@ public static class AppInfo
 
         return TryLoad(() =>
         {
-            // TODO: 5.0.12 到 5.0.13 迁移设置使用，在 5.0.13 之后可以删除
-            using var stream = File.OpenRead(AppSettingsPath);
-            return LegacyAppSettingsMigration.Deserialize(stream);
+            var rawYaml = File.ReadAllText(AppSettingsPath);
+            var migratedYaml = new ConfigEngine().MigrateYaml(rawYaml);
+            return YamlSerializer.Deserialize(migratedYaml, SettingsSerializerContext.Default.AppSettings);
         }, logger);
     }
 
@@ -174,7 +174,10 @@ public static class AppInfo
             return;
 
         _ = TrySave(() =>
-            YamlSerializer.SerializeToFile(AppSettingsPath, appSettings, SettingsSerializerContext.Default.AppSettings));
+        {
+            var yaml = YamlSerializer.Serialize(appSettings, SettingsSerializerContext.Default.AppSettings);
+            new ConfigEngine().SaveToFile(AppSettingsPath, yaml);
+        });
     }
 
     public static void SaveLoginContext(LoginContext? loginContext)

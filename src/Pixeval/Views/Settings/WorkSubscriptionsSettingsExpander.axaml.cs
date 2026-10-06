@@ -12,15 +12,16 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using CommunityToolkit.Avalonia.Controls;
-using Mako.Global.Enum;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
+using Pixeval.Models.Pixiv;
 using Pixeval.I18N;
 using Pixeval.Models.Database;
 using Pixeval.Models.Database.Managers;
 using Pixeval.Models.Options;
 using Pixeval.Models.Settings.Entries;
 using Pixeval.Models.Subscriptions;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Settings;
 
@@ -114,7 +115,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         }
         else
         {
-            var user = (await App.AppViewModel.MakoClient.GetUserFromIdAsync(targetId)).UserEntity;
+            var user = (await App.AppViewModel.MakoClient.GetUserFromIdAsync(targetId)).User;
             _ = WorkSubscriptionHelper.TryAddOrUpdateUser(user, subscriptionType, workKind);
         }
 
@@ -142,7 +143,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
             App.AppViewModel.QueueWorkSubscriptionSync(item.Entry);
     }
 
-    private void SubscriptionServiceOnSubscriptionUpdated(object? sender, WorkSubscriptionEntry subscription)
+    private void SubscriptionServiceOnSubscriptionUpdated(object? sender, WorkSubscriptionRecord subscription)
     {
         if (!_isLoaded)
             return;
@@ -160,7 +161,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         });
     }
 
-    private void ApplySubscriptionUpdate(WorkSubscriptionEntry subscription) =>
+    private void ApplySubscriptionUpdate(WorkSubscriptionRecord subscription) =>
         Subscriptions.FirstOrDefault(item =>
                 item.Entry.HistoryEntryId == subscription.HistoryEntryId)
             ?.UpdateSubscription(subscription);

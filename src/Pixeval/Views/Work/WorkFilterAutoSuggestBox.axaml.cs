@@ -10,8 +10,8 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Pixeval.Filters;
 using Pixeval.Filters.Analysis;
-using Pixeval.Filters.Text;
 
 namespace Pixeval.Views.Work;
 
@@ -61,7 +61,7 @@ public partial class WorkFilterAutoSuggestBox : UserControl
 
         var textLength = Text?.Length ?? 0;
         var start = int.Clamp(span.Start, 0, textLength);
-        var end = int.Clamp(span.End, start, textLength);
+        var end = int.Clamp(span.End(), start, textLength);
         if (start == end && start < textLength)
             ++end;
 
@@ -269,7 +269,7 @@ public partial class WorkFilterAutoSuggestBox : UserControl
     private static string ApplyCompletion(string source, FilterCompletionItem completion)
     {
         var start = int.Clamp(completion.ReplacementSpan.Start, 0, source.Length);
-        var end = int.Clamp(completion.ReplacementSpan.End, start, source.Length);
+        var end = int.Clamp(completion.ReplacementSpan.End(), start, source.Length);
         return string.Concat(source.AsSpan(0, start), completion.InsertText, source.AsSpan(end));
     }
 

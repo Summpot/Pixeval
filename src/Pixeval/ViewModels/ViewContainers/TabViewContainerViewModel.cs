@@ -7,8 +7,6 @@ using System.Threading.Tasks;
 using AnimatedControls.Avalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Mako;
-using Mako.Model;
 using Misaki;
 using Pixeval.Utilities.IO.Caching;
 
@@ -21,13 +19,8 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
 
     public TabViewContainerViewModel()
     {
-        OnUserRefreshed(App.AppViewModel.MakoClient.Me);
-        App.AppViewModel.MakoClient.TokenRefreshed += OnTokenRefreshed;
-    }
-
-    private void OnTokenRefreshed(MakoClient sender, TokenResponse? e)
-    {
-        OnUserRefreshed(e?.User);
+        OnUserRefreshed(App.AppViewModel.MakoClient.GetUser());
+        App.AppViewModel.UserRefreshed += OnUserRefreshed;
     }
 
     private async void OnUserRefreshed(TokenUser? user)
@@ -40,19 +33,25 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
         var cancellationTokenSource = new CancellationTokenSource();
         _avatarLoadCancellationTokenSource = cancellationTokenSource;
         User = user;
-        IAnimatedBitmap? avatar;
+        IAnimatedBitmap? avatar = null;
         try
         {
-            avatar = user is null
-                ? null
-                : await CacheHelper.GetAnimatedBitmapAsync(
+            var avatarUrl = user?.ProfileImageUrls.Px50x50 ?? user?.ProfileImageUrls.Medium;
+            if (!string.IsNullOrWhiteSpace(avatarUrl))
+            {
+                avatar = await CacheHelper.GetAnimatedBitmapAsync(
                     IPlatformInfo.Pixiv,
-                    user.ProfileImageUrls.Px50X50,
+                    avatarUrl,
                     token: cancellationTokenSource.Token);
+            }
         }
-        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
+        catch (OperationCanceledException)
         {
             return;
+        }
+        catch (Exception)
+        {
+            avatar = null;
         }
 
         if (_isDisposed || cancellationTokenSource.IsCancellationRequested)
@@ -85,7 +84,7 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
             return;
 
         _isDisposed = true;
-        App.AppViewModel.MakoClient.TokenRefreshed -= OnTokenRefreshed;
+        App.AppViewModel.UserRefreshed -= OnUserRefreshed;
         _avatarLoadCancellationTokenSource?.Cancel();
         _avatarLoadCancellationTokenSource?.Dispose();
         _avatarLoadCancellationTokenSource = null;
@@ -101,9 +100,9 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty] public partial IAnimatedBitmap? Avatar { get; private set; }
 
-    public string? IdText => User?.Id.ToString();
+    public string? IdText => User?.Id;
 
-    public Uri? Url => User?.WebsiteUri;
+    public Uri? Url => User is not null ? new Uri($"https://www.pixiv.net/users/{User.Id}") : null;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ToggleRestrictedModeCommand))]
@@ -132,8 +131,8 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
         try
         {
             RestrictedCache = skipPost
-                ? await App.AppViewModel.MakoClient.GetRestrictedModeSettingsAsync()
-                : await App.AppViewModel.MakoClient.PostRestrictedModeSettingsAsync(!RestrictedCache);
+                ? (await App.AppViewModel.MakoClient.GetRestrictedModeSettingsAsync()).IsRestrictedModeEnabled
+                : (await App.AppViewModel.MakoClient.PostRestrictedModeSettingsAsync(!RestrictedCache)).IsRestrictedModeEnabled;
         }
         finally
         {
@@ -149,8 +148,8 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
         try
         {
             AiShowCache = skipPost
-                ? await App.AppViewModel.MakoClient.GetAiShowSettingsAsync()
-                : await App.AppViewModel.MakoClient.PostAiShowSettingsAsync(!AiShowCache);
+                ? (await App.AppViewModel.MakoClient.GetAiShowSettingsAsync()).ShowAi
+                : (await App.AppViewModel.MakoClient.PostAiShowSettingsAsync(!AiShowCache)).ShowAi;
         }
         finally
         {
@@ -168,7 +167,7 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
         {
             var aiShow = await App.AppViewModel.MakoClient.GetAiShowSettingsAsync();
             if (IsCurrentGeneration(generation))
-                AiShowCache = aiShow;
+                AiShowCache = aiShow.ShowAi;
         }
         finally
         {

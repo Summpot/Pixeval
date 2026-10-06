@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Mako.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
 using Pixeval.Models.Blocking;

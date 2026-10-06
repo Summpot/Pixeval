@@ -1,0 +1,28 @@
+[package]
+name = "pixeval_mcp"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum = { version = "0.8", default-features = false, features = ["tokio", "http1", "json"] }
+tokio = { version = "1", features = ["sync", "time", "rt", "rt-multi-thread", "macros", "net"] }
+tokio-util = { version = "0.7" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+parking_lot = "0.12"
+thiserror = "2"
+uniffi = { version = "0.32", features = ["tokio"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+pixeval_mako = { path = "../pixeval_mako" }
+pixeval_storage = { path = "../pixeval_storage" }
+pixeval_filters = { path = "../pixeval_filters" }
+pixeval_download = { path = "../pixeval_download" }
+pixeval_cache = { path = "../pixeval_cache" }
+pixeval_subscription = { path = "../pixeval_subscription" }
+pixeval_config = { path = "../pixeval_config" }
+pixeval_plugin = { path = "../pixeval_plugin" }
+
+[dev-dependencies]
+reqwest = { version = "0.12", features = ["json"] }
+tempfile = "3"

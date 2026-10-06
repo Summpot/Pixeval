@@ -15,6 +15,7 @@ using Pixeval.Models.Database;
 using Pixeval.Models.Database.Managers;
 using Pixeval.Models.Download.Tasks;
 using Pixeval.Models.Subscriptions;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.ViewModels;
 
@@ -24,7 +25,7 @@ public sealed class DownloadPageViewModel : ViewModelBase, IDisposable
 
     private readonly Dictionary<DownloadTaskKey, DownloadItemViewModel> _lookup = [];
 
-    private readonly Dictionary<int, DownloadFolderViewModel> _subscriptionFolderLookup = [];
+    private readonly Dictionary<long, DownloadFolderViewModel> _subscriptionFolderLookup = [];
 
     private readonly WorkSubscriptionPersistentManager _workSubscriptionPersistentManager;
 
@@ -119,7 +120,7 @@ public sealed class DownloadPageViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private DownloadFolderViewModel? GetOrCreateFolder(int subscriptionEntryId)
+    private DownloadFolderViewModel? GetOrCreateFolder(long subscriptionEntryId)
     {
         if (subscriptionEntryId <= 0)
             return null;
@@ -133,7 +134,7 @@ public sealed class DownloadPageViewModel : ViewModelBase, IDisposable
         return AddSubscriptionFolder(subscription);
     }
 
-    private DownloadFolderViewModel AddSubscriptionFolder(WorkSubscriptionEntry subscription)
+    private DownloadFolderViewModel AddSubscriptionFolder(WorkSubscriptionRecord subscription)
     {
         if (_subscriptionFolderLookup.TryGetValue(subscription.HistoryEntryId, out var existing))
             return existing;
@@ -190,12 +191,12 @@ public sealed class DownloadPageViewModel : ViewModelBase, IDisposable
             OrdinaryItems.Move(viewIndex, 0);
     }
 
-    private DownloadFolderViewModel? GetFolder(int subscriptionEntryId) =>
+    private DownloadFolderViewModel? GetFolder(long subscriptionEntryId) =>
         _subscriptionFolderLookup.GetValueOrDefault(subscriptionEntryId);
 
     private void WorkSubscriptionServiceOnFetchStateChanged(
         object? sender,
-        WorkSubscriptionFetchState state)
+        SubscriptionFetchState state)
     {
         if (_isDisposed)
             return;
@@ -213,13 +214,13 @@ public sealed class DownloadPageViewModel : ViewModelBase, IDisposable
         });
     }
 
-    private void ApplyFetchState(WorkSubscriptionFetchState state) =>
+    private void ApplyFetchState(SubscriptionFetchState state) =>
         (state.IsFetching
             ? GetOrCreateFolder(state.WorkSubscriptionId)
             : GetFolder(state.WorkSubscriptionId))
         ?.UpdateFetchState(state);
 
-    private void WorkSubscriptionServiceOnSubscriptionRemoved(object? sender, int workSubscriptionId)
+    private void WorkSubscriptionServiceOnSubscriptionRemoved(object? sender, long workSubscriptionId)
     {
         if (_isDisposed)
             return;
@@ -239,7 +240,7 @@ public sealed class DownloadPageViewModel : ViewModelBase, IDisposable
 
     private void WorkSubscriptionServiceOnSubscriptionUpdated(
         object? sender,
-        WorkSubscriptionEntry subscription)
+        WorkSubscriptionRecord subscription)
     {
         if (_isDisposed)
             return;
@@ -257,7 +258,7 @@ public sealed class DownloadPageViewModel : ViewModelBase, IDisposable
         });
     }
 
-    private void RemoveSubscriptionFolder(int workSubscriptionId)
+    private void RemoveSubscriptionFolder(long workSubscriptionId)
     {
         if (!_subscriptionFolderLookup.Remove(workSubscriptionId, out var folder))
             return;
@@ -352,7 +353,7 @@ public sealed class DownloadPageViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private async Task AddSubscriptionFolderAsync(WorkSubscriptionEntry subscription, CancellationToken token)
+    private async Task AddSubscriptionFolderAsync(WorkSubscriptionRecord subscription, CancellationToken token)
     {
         if (!_createdOnUiThread || Dispatcher.UIThread.CheckAccess())
         {

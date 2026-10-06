@@ -3,17 +3,19 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Mako.Model;
 using Microsoft.Extensions.DependencyInjection;
+using Misaki;
 using Pixeval.Download;
 using Pixeval.Extensions.Common.FormatProviders;
 using Pixeval.Models.Database;
 using Pixeval.Models.Extensions;
 using Pixeval.Models.Options;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO;
 using Pixeval.ViewModels;
@@ -22,7 +24,7 @@ namespace Pixeval.Models.Download.Tasks;
 
 public class NovelDownloadTaskGroup : DownloadTaskGroup
 {
-    public Novel Entry => (Novel) DatabaseEntry.Entry;
+    public Pixeval.Native.Mako.Novel Entry => (Pixeval.Native.Mako.Novel) DatabaseEntry.Entry;
 
     private NovelContent NovelContent { get; set; } = null!;
 
@@ -82,7 +84,7 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
     }
 
     public NovelDownloadTaskGroup(
-        Novel entry,
+        IArtworkInfo entry,
         string destination,
         NovelContent? novelContent,
         int? workSubscriptionId = null) : base(entry, destination, workSubscriptionId)
@@ -114,7 +116,18 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
     public override async ValueTask InitializeTaskGroupAsync()
     {
         if (NovelContent == null!)
-            SetNovelContent(await App.AppViewModel.MakoClient.GetNovelContentAsync(Entry.Id));
+        {
+            var text = await App.AppViewModel.MakoClient.GetNovelContentAsync(Entry.RawId);
+            SetNovelContent(NovelContent.CreateDefault() with
+            {
+                Id = Entry.RawId,
+                Title = Entry.Title,
+                Text = text,
+                Date = Entry.CreateDateOffset,
+                UserId = Entry.Author.Id,
+                CoverUrl = Entry.Thumbnails.FirstOrDefault()?.ImageUri.OriginalString ?? ""
+            });
+        }
         else
             SetTasksSet();
 

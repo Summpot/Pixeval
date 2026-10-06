@@ -1,15 +1,11 @@
-// Copyright (c) Pixeval.
-// Licensed under the GPL-3.0 License.
-
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Mako;
-using Mako.Engine;
-using Mako.Global.Exception;
-using Mako.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Pixeval.Models.Pixiv;
+using Pixeval.Utilities;
 
 namespace Pixeval.Tests;
 
@@ -51,7 +47,7 @@ public sealed class FetchEngineRetryHelperTest
         });
 
         Assert.IsFalse(engine.EngineHandle.IsCancelled);
-        Assert.AreEqual(1, engine.EnumeratorCount);
+        Assert.AreEqual(0, engine.EnumeratorCount);
         Assert.AreEqual(0, engine.MoveNextCount);
     }
 
@@ -62,7 +58,7 @@ public sealed class FetchEngineRetryHelperTest
 
         var result = await FetchEngineRetryHelper.ExecuteAsync(
             _ => ++attemptCount is 1
-                ? Task.FromException<int>(new MakoNetworkException("test", false, null, 429))
+                ? Task.FromException<int>(new HttpRequestException("test"))
                 : Task.FromResult(42),
             static _ => TimeSpan.Zero);
 
@@ -72,11 +68,7 @@ public sealed class FetchEngineRetryHelperTest
 
     private sealed class InterruptingFetchEngine : IFetchEngine<int>
     {
-        public MakoClient MakoClient => null!;
-
-        public EngineHandle EngineHandle { get; } = new(Guid.NewGuid());
-
-        public int RequestedPages { get; set; }
+        public IFetchEngineHandle EngineHandle { get; } = new DummyEngineHandle();
 
         public int EnumeratorCount { get; private set; }
 
@@ -103,12 +95,12 @@ public sealed class FetchEngineRetryHelperTest
                         Current = 1;
                         return ValueTask.FromResult(true);
                     case 2:
-                        return ValueTask.FromResult(false);
+                        throw new HttpRequestException("interrupted");
                     case 3:
                         Current = 2;
                         return ValueTask.FromResult(true);
                     default:
-                        engine.EngineHandle.Complete();
+                        engine.EngineHandle.IsCompleted = true;
                         return ValueTask.FromResult(false);
                 }
             }

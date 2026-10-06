@@ -8,11 +8,10 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Data.Converters;
 using CommunityToolkit.Mvvm.Input;
-using Mako.Global.Enum;
-using Mako.Model;
 using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.Models.Blocking;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.Views.Search;
 
@@ -69,8 +68,12 @@ public class WorkInfoPane : TemplatedControl
             || user is null)
             return;
 
-        if (user is UserInfo info)
-            viewContainer.CreateUserPage(info.Id);
+        var id = user is IIdEntry { Id: > 0 } info
+            ? info.Id
+            : long.TryParse(user.Id, out var parsed) ? parsed : 0;
+
+        if (id > 0)
+            viewContainer.CreateUserPage(id);
         else
             await launcher.LaunchUriAsync(user.WebsiteUri);
     }

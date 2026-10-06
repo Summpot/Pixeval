@@ -14,7 +14,11 @@
 		<AssemblyVersion>$(Version)</AssemblyVersion>
 		<FileVersion>$(Version)</FileVersion>
 		<InformationalVersion>$(Version)</InformationalVersion>
+		<UniFFICrateName>pixeval_native</UniFFICrateName>
+		<UniFFINamespace>Pixeval.Native;pixeval_filters=Filters;pixeval_cache=Cache;pixeval_maho=Maho;pixeval_mako=Mako;pixeval_download=Download;pixeval_storage=Storage;pixeval_subscription=Subscription;pixeval_config=Config;pixeval_mcp=Mcp;pixeval_plugin=Plugin</UniFFINamespace>
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 	</PropertyGroup>
+
 
 	<!-- GUI-only global properties must not be propagated to library and source-generator projects. -->
 	<ItemDefinitionGroup>
@@ -44,7 +48,6 @@
 		<PackageReference Include="Markdown.Avalonia" Version="12.0.0-a3" />
 		<PackageReference Include="SharpYaml" Version="3.14.0" />
 		<!--<PackageReference Include="SmoothScroll.Avalonia" Version="12.0.0.12" />-->
-		<PackageReference Include="sqlite-net-pcl" Version="1.11.285" />
 		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.17" />
 		<PackageReference Include="TabView.Avalonia" Version="1.0.0" />
 		<PackageReference Include="Velopack" Version="1.2.158" />
@@ -52,7 +55,10 @@
         <PackageReference Include="SkiaSharp" Version="4.152.1" />
 		<PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.152.1" />
 		<PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" Version="4.152.1" />
+		<PackageReference Include="UniFFISharp" Version="0.2.9" />
+		<PackageReference Include="Misaki" Version="1.0.0.6" />
 	</ItemGroup>
+
 
 	<ItemGroup>
 		<ProjectReference Include="..\lib\AutoSettingsPage\AutoSettingsPage.Avalonia\AutoSettingsPage.Avalonia.csproj" />
@@ -60,23 +66,22 @@
 		<ProjectReference Include="..\lib\AnimatedControls.Avalonia\AnimatedControls.Avalonia\AnimatedControls.Avalonia.csproj" />
 		<ProjectReference Include="..\lib\FluentAvalonia\FluentAvalonia.csproj" />
 		<ProjectReference Include="..\lib\Imouto\Imouto.BooruParser\Imouto.BooruParser.csproj" />
-		<ProjectReference Include="..\lib\Mako\Mako\Mako.csproj" />
 		<ProjectReference Include="..\lib\SmoothScroll.Avalonia\src\SmoothScroll.Avalonia.Controls\SmoothScroll.Avalonia.Controls.csproj" />
-		<ProjectReference Include="..\Pixeval.Mcp\Pixeval.Mcp.csproj" Condition="'$(EnableMcp)' == 'true'" />
 		<ProjectReference Include="..\Pixeval.I18N\Pixeval.I18N.csproj" />
-		<!--<ProjectReference Include="..\Pixeval.Caching\Pixeval.Caching.csproj" />-->
-		<ProjectReference Include="..\Pixeval.Download\Pixeval.Download.csproj" />
-		<ProjectReference Include="..\Pixeval.Filters\Pixeval.Filters.csproj" />
+		<ProjectReference Include="..\Pixeval.Utilities\Pixeval.Utilities.csproj" />
 		<ProjectReference Include="..\Pixeval.SourceGen\Pixeval.SourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="False" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(EnableMcp)' != 'true'">
 		<AvaloniaXaml Remove="Views\Settings\McpHelpSection.axaml" />
 		<Compile Remove="AppManagement\IPixevalMcpService.cs" />
-		<Compile Remove="AppManagement\McpSettingsGroup.cs" />
 		<Compile Remove="Models\McpServer\**\*.cs" />
 		<Compile Remove="Views\Settings\McpHelpSection.Mcp.cs" />
 		<Compile Remove="Views\Settings\McpHelpSection.McpTools.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Remove="AppManagement\Settings\LegacyAppSettingsMigration.cs" />
 	</ItemGroup>
 
 	<ItemGroup>

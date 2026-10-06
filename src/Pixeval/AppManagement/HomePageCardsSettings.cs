@@ -2,7 +2,6 @@
 // Licensed under the GPL-3.0 License.
 
 using System.Collections.ObjectModel;
-using Mako.Global.Enum;
 using Pixeval.Models.Home;
 using Pixeval.Models.Options;
 

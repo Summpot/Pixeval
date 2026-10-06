@@ -19,7 +19,10 @@ public static class CacheHelper
 {
     public static string CachePath { get; } = Path.Combine(AppInfo.CacheFolder, "FileCache");
 
-    private static readonly FileCache _FileCache = new(CachePath);
+    private static readonly Lazy<CacheEngine> _CacheEngine =
+        new(() => new CacheEngine(CachePath, initialFileSize: 16 * 1024 * 1024, maxFiles: 128));
+
+    public static CacheEngine CacheEngine => _CacheEngine.Value;
 
     /// <summary>
     /// Dispose无效果，可以反复用
@@ -33,7 +36,8 @@ public static class CacheHelper
     public static readonly Lazy<IAnimatedBitmap> AnimatedImageNotAvailable =
         new(() => IAnimatedBitmap.Load([WrappedImageNotAvailable.Value], [100]));
 
-    public static Task PurgeCacheAsync(CancellationToken token = default) => _FileCache.PurgeAsync(token);
+    public static Task PurgeCacheAsync(CancellationToken token = default) =>
+        Task.Run(() => _CacheEngine.Value.Clear(), token);
 
     public static Task EnforceCacheSizeLimitAsync(CancellationToken token = default)
     {
@@ -41,7 +45,8 @@ public static class CacheHelper
         if (!settings.FileCache.LimitFileCacheSize)
             return Task.CompletedTask;
 
-        return _FileCache.EnforceSizeLimitAsync(GetCacheSizeLimitInBytes(), token);
+        var limit = (ulong)GetCacheSizeLimitInBytes();
+        return Task.Run(() => _CacheEngine.Value.PurgeToSize(limit), token);
     }
 
     private static long GetCacheSizeLimitInBytes()
@@ -130,8 +135,8 @@ public static class CacheHelper
 
             var client = App.AppViewModel.GetRequiredPlatformService<IDownloadHttpClientService>(platform)
                 .GetImageDownloadClient();
-            if (await client.DownloadMemoryStreamAsync(frameUri, progress, token: token, onDataAvailable: onDataAvailable) is
-                Result<Stream>.Success(var s))
+            var downloadResult = await client.DownloadMemoryStreamAsync(frameUri, progress, token: token, onDataAvailable: onDataAvailable);
+            if (downloadResult is Result<Stream>.Success(var s))
             {
                 if (useFileCache)
                 {
@@ -140,6 +145,12 @@ public static class CacheHelper
                 }
 
                 return IAnimatedBitmap.Load(s, true);
+            }
+
+            if (downloadResult is Result<Stream>.Failure(var err))
+            {
+                App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+                    .LogError(nameof(GetSingleImageAsync), err);
             }
 
             token.ThrowIfCancellationRequested();
@@ -327,9 +338,10 @@ public static class CacheHelper
             return stream;
         var useFileCache = App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache;
 
-        if (await App.AppViewModel.AppServiceProvider.GetRequiredKeyedService<IDownloadHttpClientService>(platform)
+        var downloadResult = await App.AppViewModel.AppServiceProvider.GetRequiredKeyedService<IDownloadHttpClientService>(platform)
                 .GetImageDownloadClient()
-                .DownloadMemoryStreamAsync(new Uri(key), progress, token: token, onDataAvailable: onDataAvailable) is Result<Stream>.Success(var s))
+                .DownloadMemoryStreamAsync(new Uri(key), progress, token: token, onDataAvailable: onDataAvailable);
+        if (downloadResult is Result<Stream>.Success(var s))
         {
             if (useFileCache)
             {
@@ -338,6 +350,12 @@ public static class CacheHelper
             }
 
             return s;
+        }
+
+        if (downloadResult is Result<Stream>.Failure(var err))
+        {
+            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+                .LogError(nameof(GetStreamAsync), err);
         }
 
         token.ThrowIfCancellationRequested();
@@ -353,9 +371,10 @@ public static class CacheHelper
     {
         try
         {
-            return App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache
-                ? _FileCache.TryOpen(key)
-                : null;
+            if (!App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache)
+                return null;
+
+            return _CacheEngine.Value.TryReadCache(key, out var stream) ? stream : null;
         }
         catch (Exception e)
         {
@@ -367,17 +386,13 @@ public static class CacheHelper
     }
 
     /// <exception cref="InvalidOperationException"/>
-    internal static FileCacheWriteResult TryCacheStream(string key, Stream stream)
+    internal static bool TryCacheStream(string key, Stream stream)
     {
         if (!App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache)
             throw new InvalidOperationException(
                 $"Check {nameof(App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache)} before {nameof(TryCacheStream)}");
 
-        var sizeLimitBytes = App.AppViewModel.AppSettings.ApplicationSettings.FileCache.LimitFileCacheSize
-            ? GetCacheSizeLimitInBytes()
-            : (long?) null;
-
-        return _FileCache.TryCache(key, stream, sizeLimitBytes);
+        return _CacheEngine.Value.TryCache(key, stream);
     }
 }
 

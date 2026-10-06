@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
+using Pixeval.Native.Config;
 using Pixeval.Models.Options;
 using SharpYaml;
 using SharpYaml.Model;
@@ -74,8 +75,8 @@ public sealed class LegacyAppSettingsMigrationTest
         Assert.AreEqual(222, settings.BrowsingExperienceSettings.ThumbnailLayout.IllustrationGridItemSize);
         Assert.AreEqual(333, settings.BrowsingExperienceSettings.ThumbnailLayout.IllustrationGridLineSize);
         Assert.AreEqual(444, settings.BrowsingExperienceSettings.ThumbnailLayout.IllustrationMasonryColumnWidth);
-        Assert.AreEqual(Mako.Global.Enum.RankOption.Month, settings.SearchSettings.RankOptions.IllustrationRankOption);
-        Assert.AreEqual(Mako.Global.Enum.RankOption.Week, settings.SearchSettings.RankOptions.NovelRankOption);
+        Assert.AreEqual(Pixeval.Models.Pixiv.RankOption.Month, settings.SearchSettings.RankOptions.IllustrationRankOption);
+        Assert.AreEqual(Pixeval.Models.Pixiv.RankOption.Week, settings.SearchSettings.RankOptions.NovelRankOption);
         Assert.AreEqual("custom-image", settings.DownloadSettings.DownloadFormats.IllustrationDownloadFormat);
         Assert.AreEqual("custom-animation", settings.DownloadSettings.DownloadFormats.UgoiraDownloadFormat);
         Assert.AreEqual("custom-novel", settings.DownloadSettings.DownloadFormats.NovelDownloadFormat);
@@ -139,7 +140,7 @@ public sealed class LegacyAppSettingsMigrationTest
 
     private static AppSettings Read(string yaml)
     {
-        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(yaml));
-        return LegacyAppSettingsMigration.Deserialize(stream)!;
+        var migratedYaml = new ConfigEngine().MigrateYaml(yaml);
+        return YamlSerializer.Deserialize(migratedYaml, SettingsSerializerContext.Default.AppSettings)!;
     }
 }

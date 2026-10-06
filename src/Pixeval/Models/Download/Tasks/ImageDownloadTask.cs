@@ -123,87 +123,30 @@ public partial class ImageDownloadTask : ViewModelBase, ISingleDownloadTaskBase,
         await DownloadErrorAsync.Invoke(this);
     }
 
-    public virtual async Task StartAsync(HttpClient httpClient)
+    internal void UpdateProgress(double percentage)
     {
-        if (CurrentState is not DownloadState.Queued)
-            return;
-        try
-        {
-            CurrentState = DownloadState.Running;
-            await SetRunningAsync(true);
-            WasDownloadSkipped = false;
-            _hasCommittedDestination = false;
-            var overwrite = OverwriteDownloadedFile;
-
-            // Partial downloads are never resumed; a new run always starts from a known empty file.
-            if (File.Exists(DownloadTempDestination))
-                File.Delete(DownloadTempDestination);
-            if (DownloadTaskFileHelper.ShouldSkipExistingFile(Destination, overwrite))
-            {
-                WasDownloadSkipped = true;
-                await PendingCompleteAsync();
-                return;
-            }
-
-            if (Uri.Scheme is "http" or "https")
-            {
-                if (CacheHelper.TryGetStream(Uri.OriginalString) is { } stream)
-                {
-                    await using (var fs = FileHelper.OpenAsyncWriteCreateParent(DownloadTempDestination))
-                        await stream.CopyToAsync(fs, CancellationTokenSource.Token);
-                    await CommitDownloadedFileAsync(overwrite);
-                    return;
-                }
-
-                if (GetExtensionService().ActiveDownloaders.FirstOrDefault() is { } downloader)
-                {
-                    var notifier = new ProgressNotifier(this);
-                    FileHelper.CreateParentDirectory(DownloadTempDestination);
-                    downloader.Download(notifier, Uri.OriginalString, DownloadTempDestination);
-                    while (!notifier.Finished)
-                        await Task.Delay(1000, CancellationTokenSource.Token);
-                    if (notifier.Exception is null)
-                        await CommitDownloadedFileAsync(overwrite);
-                    else
-                        await SetErrorAsync(notifier.Exception);
-                    return;
-                }
-            }
-
-            await DownloadDirectlyAsync(httpClient, overwrite);
-        }
-        catch (TaskCanceledException)
-        {
-            // ignored
-        }
-        catch (Exception ex)
-        {
-            await SetErrorAsync(ex);
-        }
-        finally
-        {
-            await SetRunningAsync(false);
-        }
+        ProgressPercentage = percentage;
     }
 
-    private async Task DownloadDirectlyAsync(HttpClient httpClient, bool overwrite)
+    internal void SetNativeState(DownloadState state)
     {
-        Exception? ex;
-        await using (var fileStream = FileHelper.OpenAsyncWriteCreateParent(DownloadTempDestination))
-        {
-            ex = await httpClient.DownloadStreamAsync(fileStream, Uri, this, fileStream.Length,
-                token: CancellationTokenSource.Token);
-        }
-
-        switch (ex)
-        {
-            case null:
-                await CommitDownloadedFileAsync(overwrite);
-                break;
-            case TaskCanceledException: break;
-            default: await SetErrorAsync(ex); break;
-        }
+        CurrentState = state;
     }
+
+    internal void SetNativeError(string message)
+    {
+        ErrorMessage = message;
+        CurrentState = DownloadState.Error;
+        _ = DownloadErrorAsync?.Invoke(this);
+    }
+
+    internal async Task OnNativeCompletedAsync(string destination)
+    {
+        _hasCommittedDestination = true;
+        WasDownloadSkipped = false;
+        await PendingCompleteAsync();
+    }
+
 
     public void Reset()
     {

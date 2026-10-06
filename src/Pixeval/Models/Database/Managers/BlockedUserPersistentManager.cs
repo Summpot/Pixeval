@@ -4,72 +4,83 @@
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
-using SQLite;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.Models.Database.Managers;
 
-public sealed class BlockedUserPersistentManager : SimplePersistentManager<BlockedUserEntry>
+public sealed class BlockedUserPersistentManager : SqlitePersistentManager
 {
     private readonly HashSet<long> _blockedUserIds;
 
-    public BlockedUserPersistentManager(SQLiteConnection db) : base(db)
+    public BlockedUserPersistentManager(StorageEngine storage) : base(storage)
     {
-        _blockedUserIds = AccessDatabase(connection => connection.Table<BlockedUserEntry>()
+        _blockedUserIds = storage.GetAllBlockedUsers()
             .Select(static entry => entry.Id)
-            .ToHashSet());
+            .ToHashSet();
     }
 
-    public FrozenSet<long> GetBlockedUserIds() => AccessDatabase(_ => _blockedUserIds.ToFrozenSet());
+    public int Count => (int)Storage.CountBlockedUsers();
 
-    public BlockedUserEntry? GetByUserId(long userId) =>
-        userId <= 0
-            ? null
-            : AccessDatabase(connection => connection.Table<BlockedUserEntry>()
-                .FirstOrDefault(entry => entry.Id == userId));
-
-    public override void AddOrUpdate(BlockedUserEntry entry)
+    public FrozenSet<long> GetBlockedUserIds()
     {
-        AccessDatabase(connection =>
-        {
-            var actual = AddOrUpdateCore(connection, entry);
-            _ = _blockedUserIds.Add(actual.Id);
-        });
+        lock (_blockedUserIds)
+            return _blockedUserIds.ToFrozenSet();
     }
 
-    public override BlockedUserEntry Upsert(BlockedUserEntry entry) =>
-        AccessDatabase(connection =>
-        {
-            var actual = AddOrUpdateCore(connection, entry);
-            _ = _blockedUserIds.Add(actual.Id);
-            return actual;
-        });
+    public BlockedUserRecord? GetByUserId(long userId)
+    {
+        if (userId <= 0)
+            return null;
+
+        return Storage.GetAllBlockedUsers().FirstOrDefault(u => u.Id == userId);
+    }
+
+    public void Insert(BlockedUserRecord entry) => Upsert(entry);
+
+    public void AddOrUpdate(BlockedUserRecord entry) => Upsert(entry);
+
+    public BlockedUserRecord Upsert(BlockedUserRecord entry)
+    {
+        var r = Storage.AddOrUpdateBlockedUser(entry.Id, entry.UserName, entry.AvatarUrl, entry.Account);
+        lock (_blockedUserIds)
+            _blockedUserIds.Add(entry.Id);
+        return r;
+    }
 
     public bool TryDeleteByUserId(long userId)
     {
         if (userId <= 0)
             return false;
 
-        return AccessDatabase(connection =>
+        var ok = Storage.TryDeleteBlockedUser(userId);
+        if (ok)
         {
-            if (connection.Table<BlockedUserEntry>().FirstOrDefault(e => e.Id == userId) is not { } entry
-                || connection.Delete<BlockedUserEntry>(entry.HistoryEntryId) is 0)
-                return false;
-
-            _ = _blockedUserIds.Remove(userId);
-            return true;
-        });
+            lock (_blockedUserIds)
+                _blockedUserIds.Remove(userId);
+        }
+        return ok;
     }
 
-    private static BlockedUserEntry AddOrUpdateCore(SQLiteConnection connection, BlockedUserEntry entry)
-    {
-        if (connection.Table<BlockedUserEntry>().FirstOrDefault(e => e.Id == entry.Id) is not { } existing)
-        {
-            _ = connection.Insert(entry, typeof(BlockedUserEntry));
-            return entry;
-        }
+    public bool TryDelete(BlockedUserRecord item) => TryDeleteByUserId(item.Id);
 
-        existing.UpdateFrom(entry);
-        _ = connection.Update(existing, typeof(BlockedUserEntry));
-        return existing;
+    public void Clear()
+    {
+        Storage.ClearBlockedUsers();
+        lock (_blockedUserIds)
+            _blockedUserIds.Clear();
+    }
+
+    public async IAsyncEnumerable<BlockedUserRecord> StreamEntriesAsync(
+        int skip = 0,
+        [EnumeratorCancellation] CancellationToken token = default)
+    {
+        var records = Storage.GetAllBlockedUsers();
+        foreach (var r in records.Skip(skip))
+        {
+            token.ThrowIfCancellationRequested();
+            yield return r;
+        }
     }
 }

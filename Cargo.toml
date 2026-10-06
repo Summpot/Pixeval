@@ -1,0 +1,15 @@
+[workspace]
+members = [
+    "crates/pixeval_native",
+    "crates/pixeval_filters",
+    "crates/pixeval_cache",
+    "crates/pixeval_maho",
+    "crates/pixeval_mako",
+    "crates/pixeval_download",
+    "crates/pixeval_storage",
+    "crates/pixeval_subscription",
+    "crates/pixeval_config",
+    "crates/pixeval_plugin",
+    "crates/pixeval_mcp",
+]
+resolver = "2"

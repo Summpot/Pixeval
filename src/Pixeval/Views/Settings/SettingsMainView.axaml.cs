@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.IO;
 using AutoSettingsPage.Models;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -218,8 +219,11 @@ public partial class SettingsMainView : ContentPage
                 return;
 
             await using var stream = await file.OpenReadAsync();
+            using var reader = new StreamReader(stream);
+            var rawYaml = await reader.ReadToEndAsync();
+            var migratedYaml = new ConfigEngine().MigrateYaml(rawYaml);
 
-            if (LegacyAppSettingsMigration.Deserialize(stream) is { } appSettings)
+            if (YamlSerializer.Deserialize(migratedYaml, SettingsSerializerContext.Default.AppSettings) is { } appSettings)
             {
                 foreach (var localGroup in vm.LocalGroups)
                     foreach (var settingsEntry in localGroup)

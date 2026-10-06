@@ -7,13 +7,17 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Utilities;
-using WebApiClientCore.Exceptions;
 
 namespace Pixeval.Tests;
 
 [TestClass]
 public sealed class FileLoggerTest
 {
+    private sealed class HttpResponseException(HttpResponseMessage response) : Exception
+    {
+        public HttpResponseMessage ResponseMessage => response;
+    }
+
     [TestMethod]
     public async Task UnavailableLogDirectoryShouldNotThrow()
     {
@@ -58,7 +62,7 @@ public sealed class FileLoggerTest
 
         var exception = new HttpRequestException(
             "Request failed",
-            new ApiResponseStatusException(response),
+            new HttpResponseException(response),
             HttpStatusCode.OK);
         var logger = new FileLogger(Path.Combine(Path.GetTempPath(), nameof(Pixeval), nameof(FileLoggerTest)));
         var completionSource = new TaskCompletionSource<LogModel>(TaskCreationOptions.RunContinuationsAsynchronously);

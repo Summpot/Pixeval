@@ -1,9 +1,10 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using Mako.Model;
+using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
 using UserViewDataProvider = Pixeval.ViewModels.SharableViewDataProvider<
-    Mako.Model.User,
+    Pixeval.Native.Mako.User,
     Pixeval.ViewModels.UserItemViewModel>;
 
 namespace Pixeval.ViewModels;

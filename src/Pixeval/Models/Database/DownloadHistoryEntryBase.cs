@@ -4,7 +4,6 @@
 using System;
 using Misaki;
 using Pixeval.Download;
-using SQLite;
 
 namespace Pixeval.Models.Database;
 
@@ -45,11 +44,10 @@ public abstract class DownloadHistoryEntryBase : ArtworkHistoryEntry
             _ => throw new ArgumentOutOfRangeException(nameof(workSubscriptionId))
         };
 
-    [Ignore]
     public DownloadTaskKey DownloadTaskKey => this switch
     {
-        DownloadHistoryEntry entry => DownloadTaskKey.CreateOrdinary(entry.Destination),
-        SubscriptionDownloadHistoryEntry entry => DownloadTaskKey.CreateSubscription(
+        DownloadHistoryEntry entry => new DownloadTaskKey(entry.Destination, 0, null),
+        SubscriptionDownloadHistoryEntry entry => new DownloadTaskKey(
             entry.Destination,
             entry.WorkSubscriptionId,
             entry.ArtworkId),

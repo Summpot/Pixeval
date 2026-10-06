@@ -16,8 +16,9 @@ public class DateTimeShortDateConverter : IValueConverter
         {
             DateTime v => v.ToString(culture.DateTimeFormat.ShortDatePattern),
             DateTimeOffset v => v.ToString(culture.DateTimeFormat.ShortDatePattern),
+            string s when DateTimeOffset.TryParse(s, culture, DateTimeStyles.None, out var dt) => dt.ToString(culture.DateTimeFormat.ShortDatePattern),
             _ => throw new ArgumentException(
-                $"{nameof(value)} should be a {nameof(DateTime)} or {nameof(DateTimeOffset)}", nameof(value))
+                $"{nameof(value)} should be a {nameof(DateTime)} or {nameof(DateTimeOffset)} or string representation", nameof(value))
         };
     }
 

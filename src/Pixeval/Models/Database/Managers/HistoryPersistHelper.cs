@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.Download;
 using Pixeval.Models.Download.Tasks;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 
 namespace Pixeval.Models.Database.Managers;
@@ -80,7 +81,7 @@ public sealed class HistoryPersistHelper : IDisposable
 
     public DownloadManager DownloadManager { get; }
 
-    public ObservableCollection<SearchHistoryEntry> SearchHistoryEntries { get; }
+    public ObservableCollection<SearchHistoryRecord> SearchHistoryEntries { get; }
 
     public Task RestoreTask { get; }
 
@@ -92,12 +93,7 @@ public sealed class HistoryPersistHelper : IDisposable
     {
         if (string.IsNullOrWhiteSpace(text))
             return;
-        var searchHistoryEntry = new SearchHistoryEntry
-        {
-            Value = text,
-            TranslatedName = translatedName,
-            Time = DateTime.UtcNow
-        };
+        var searchHistoryEntry = new SearchHistoryRecord(text, translatedName);
         _ = _removedSearchHistoryValues.Remove(text);
         _searchHistoryPersistentManager.AddOrUpdate(searchHistoryEntry);
         _isUpdatingSearchHistory = true;
@@ -260,7 +256,7 @@ public sealed class HistoryPersistHelper : IDisposable
         {
             case NotifyCollectionChangedAction.Add:
                 if (args.NewItems is { } newItems)
-                    foreach (var newItem in newItems.OfType<SearchHistoryEntry>())
+                    foreach (var newItem in newItems.OfType<SearchHistoryRecord>())
                     {
                         _ = _removedSearchHistoryValues.Remove(newItem.Value);
                         _searchHistoryPersistentManager.AddOrUpdate(newItem);
@@ -269,7 +265,7 @@ public sealed class HistoryPersistHelper : IDisposable
                 break;
             case NotifyCollectionChangedAction.Remove:
                 if (args.OldItems is { } oldItems)
-                    foreach (var oldItem in oldItems.OfType<SearchHistoryEntry>())
+                    foreach (var oldItem in oldItems.OfType<SearchHistoryRecord>())
                     {
                         if (!_isSearchHistoryRestoreCompleted)
                             _ = _removedSearchHistoryValues.Add(oldItem.Value);
@@ -279,8 +275,8 @@ public sealed class HistoryPersistHelper : IDisposable
                 break;
             case NotifyCollectionChangedAction.Replace:
                 if (args.OldItems is { } replacedItems)
-                    foreach (var oldItem in replacedItems.OfType<SearchHistoryEntry>())
-                        if (args.NewItems?.OfType<SearchHistoryEntry>().Any(newItem =>
+                    foreach (var oldItem in replacedItems.OfType<SearchHistoryRecord>())
+                        if (args.NewItems?.OfType<SearchHistoryRecord>().Any(newItem =>
                                 newItem.Value == oldItem.Value) is not true)
                         {
                             if (!_isSearchHistoryRestoreCompleted)
@@ -289,7 +285,7 @@ public sealed class HistoryPersistHelper : IDisposable
                         }
 
                 if (args.NewItems is { } replacementItems)
-                    foreach (var newItem in replacementItems.OfType<SearchHistoryEntry>())
+                    foreach (var newItem in replacementItems.OfType<SearchHistoryRecord>())
                     {
                         _ = _removedSearchHistoryValues.Remove(newItem.Value);
                         _searchHistoryPersistentManager.AddOrUpdate(newItem);

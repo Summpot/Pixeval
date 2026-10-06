@@ -2,17 +2,16 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Mako;
-using Mako.Engine;
-using Mako.Global.Enum;
-using Mako.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.Models.Options;
+using Pixeval.Models.Pixiv;
 using Pixeval.Models.Subscriptions;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Work;
@@ -51,9 +50,9 @@ public abstract partial class WorkTypeWorksPage : IconContentPage
         OnSourceChanged(engine, workType);
     }
 
-    protected abstract IFetchEngine<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType);
+    protected abstract IAsyncEnumerable<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType);
 
-    protected virtual void OnSourceChanged(IFetchEngine<IWorkEntry> engine, WorkType workType)
+    protected virtual void OnSourceChanged(IAsyncEnumerable<IWorkEntry> engine, WorkType workType)
     {
     }
 
@@ -100,9 +99,13 @@ public class WorkRecommendedPage : WorkTypeWorksPage
         InitializeSource(workType, viewModel);
     }
 
-    protected override IFetchEngine<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType)
+    protected override IAsyncEnumerable<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType)
     {
-        return makoClient.WorkRecommended(workType);
+        return workType switch
+        {
+            WorkType.Novel => makoClient.NovelRecommended(true, true),
+            _ => makoClient.WorkRecommended(true, true)
+        };
     }
 }
 
@@ -117,25 +120,27 @@ public class WorkNewPage : WorkTypeWorksPage
         InitializeSource(workType, viewModel);
     }
 
-    protected override IFetchEngine<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType)
+    protected override IAsyncEnumerable<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType)
     {
-        return makoClient.WorkNew(workType);
+        return workType is WorkType.Novel
+            ? makoClient.NovelNew(null)
+            : makoClient.WorkNew(workType is WorkType.Manga ? "manga" : "illust", null);
     }
 }
 
 public class WorkPostsPage : WorkTypeWorksPage
 {
-    private readonly UserBasicInfo _user;
+    private readonly User _user;
 
-    public WorkPostsPage() : this(PixevalSettings.Me)
+    public WorkPostsPage() : this(PixevalSettings.MyUser!)
     {
     }
 
-    public WorkPostsPage(UserBasicInfo user) : this(user, PixevalSettings.WorkType)
+    public WorkPostsPage(User user) : this(user, PixevalSettings.WorkType)
     {
     }
 
-    public WorkPostsPage(UserBasicInfo user, WorkType workType, IWorkViewViewModel? viewModel = null)
+    public WorkPostsPage(User user, WorkType workType, IWorkViewViewModel? viewModel = null)
     {
         _user = user;
         EnableAddSubscriptionButton();
@@ -144,19 +149,24 @@ public class WorkPostsPage : WorkTypeWorksPage
             UpdateSubscriptionButtons(_user.Id, WorkSubscriptionType.Posts, GetSubscriptionWorkKind(workType));
     }
 
-    protected override IFetchEngine<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType)
+    protected override IAsyncEnumerable<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType)
     {
-        return makoClient.WorkPosted(workType, _user.Id);
+        return workType switch
+        {
+            WorkType.Novel => makoClient.NovelPosted(_user.Id),
+            WorkType.Manga => makoClient.WorkPosted(_user.Id, "manga"),
+            _ => makoClient.WorkPosted(_user.Id, "illust")
+        };
     }
 
-    protected override void OnSourceChanged(IFetchEngine<IWorkEntry> engine, WorkType workType)
+    protected override void OnSourceChanged(IAsyncEnumerable<IWorkEntry> engine, WorkType workType)
     {
         var workKind = GetSubscriptionWorkKind(workType);
         App.AppViewModel.QueueWorkSubscriptionSyncCurrentSource(
             _user.Id,
             WorkSubscriptionType.Posts,
             workKind,
-            engine);
+            engine.ToFetchEngine());
         UpdateSubscriptionButtons(_user.Id, WorkSubscriptionType.Posts, workKind);
     }
 
@@ -186,7 +196,7 @@ public class WorkPostsPage : WorkTypeWorksPage
         return true;
     }
 
-    private int? GetCurrentSubscriptionId() =>
+    private long? GetCurrentSubscriptionId() =>
         SubscriptionService.TryGetSubscription(
             _user.Id,
             WorkSubscriptionType.Posts,

@@ -1,48 +1,74 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using SQLite;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.Models.Database.Managers;
 
-public class LoginUserPersistentManager(SQLiteConnection db) : SimplePersistentManager<LoginUserEntry>(db)
+public class LoginUserPersistentManager : SqlitePersistentManager
 {
-    public LoginUserEntry? GetByKey(int key) =>
-        key <= 0 ? null : AccessDatabase(connection => connection.Find<LoginUserEntry>(key));
-
-    public LoginUserEntry? GetByRefreshToken(string refreshToken) =>
-        string.IsNullOrWhiteSpace(refreshToken)
-            ? null
-            : AccessDatabase(connection => connection.Table<LoginUserEntry>()
-                .FirstOrDefault(entry => entry.RefreshToken == refreshToken));
-
-    public LoginUserEntry? GetByUserId(long userId) =>
-        userId <= 0
-            ? null
-            : AccessDatabase(connection => connection.Table<LoginUserEntry>()
-                .FirstOrDefault(entry => entry.UserId == userId));
-
-    public override void AddOrUpdate(LoginUserEntry entry)
+    public LoginUserPersistentManager(StorageEngine storage) : base(storage)
     {
-        AccessDatabase(connection => _ = AddOrUpdateCore(connection, entry));
     }
 
-    public override LoginUserEntry Upsert(LoginUserEntry entry) =>
-        AccessDatabase(connection => AddOrUpdateCore(connection, entry));
+    public int Count => Storage.GetAllLoginUsers().Count;
 
-    private static LoginUserEntry AddOrUpdateCore(SQLiteConnection connection, LoginUserEntry entry)
+    public LoginUserRecord? GetByKey(int key)
     {
-        var table = connection.Table<LoginUserEntry>();
-        var existing = table.FirstOrDefault(item => item.UserId == entry.UserId)
-                       ?? table.FirstOrDefault(item => item.RefreshToken == entry.RefreshToken);
-        if (existing is null)
-        {
-            _ = connection.Insert(entry, typeof(LoginUserEntry));
-            return entry;
-        }
+        if (key <= 0)
+            return null;
 
-        existing.UpdateFrom(entry);
-        _ = connection.Update(existing, typeof(LoginUserEntry));
-        return existing;
+        return Storage.GetLoginUserByKey(key);
+    }
+
+    public LoginUserRecord? GetByRefreshToken(string refreshToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+            return null;
+
+        var all = Storage.GetAllLoginUsers();
+        return all.FirstOrDefault(u => u.RefreshToken == refreshToken);
+    }
+
+    public LoginUserRecord? GetByUserId(long userId)
+    {
+        if (userId <= 0)
+            return null;
+
+        var all = Storage.GetAllLoginUsers();
+        return all.FirstOrDefault(u => u.UserId == userId);
+    }
+
+    public void AddOrUpdate(LoginUserRecord entry) => Upsert(entry);
+
+    public LoginUserRecord Upsert(LoginUserRecord entry)
+    {
+        return Storage.UpsertLoginUser(entry);
+    }
+
+    public bool TryDelete(LoginUserRecord item)
+    {
+        return Storage.DeleteLoginUser(item.HistoryEntryId);
+    }
+
+    public void Clear()
+    {
+        Storage.ClearLoginUsers();
+    }
+
+    public async IAsyncEnumerable<LoginUserRecord> StreamEntriesAsync(
+        int skip = 0,
+        [EnumeratorCancellation] CancellationToken token = default)
+    {
+        var users = Storage.GetAllLoginUsers().Skip(skip);
+        foreach (var u in users)
+        {
+            token.ThrowIfCancellationRequested();
+            yield return u;
+        }
     }
 }

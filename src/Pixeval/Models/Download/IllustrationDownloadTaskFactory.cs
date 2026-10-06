@@ -18,7 +18,7 @@ public class IllustrationDownloadTaskFactory : IDownloadTaskFactory<IArtworkInfo
         parserContext = SelectPage(parserContext, setIndex);
         var context = parserContext.ArtworkInfo;
         var path = IoHelper.NormalizePath(DownloadPathMacroParser.Reduce(rawPath, parserContext));
-        var workSubscriptionId = parserContext.WorkSubscription?.HistoryEntryId;
+        var workSubscriptionId = (int?)parserContext.WorkSubscription?.HistoryEntryId;
 
         IDownloadTaskGroup task = context switch
         {

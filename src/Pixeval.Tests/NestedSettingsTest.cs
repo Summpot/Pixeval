@@ -88,8 +88,8 @@ public sealed class NestedSettingsTest
                 .SingleValue(t => t.NovelRankOption))
             .Build();
         var imported = new AppSettings();
-        imported.SearchSettings.RankOptions.IllustrationRankOption = Mako.Global.Enum.RankOption.Month;
-        imported.SearchSettings.RankOptions.NovelRankOption = Mako.Global.Enum.RankOption.Week;
+        imported.SearchSettings.RankOptions.IllustrationRankOption = Pixeval.Models.Pixiv.RankOption.Month;
+        imported.SearchSettings.RankOptions.NovelRankOption = Pixeval.Models.Pixiv.RankOption.Week;
 
         entries[0].LocalValueReset(imported);
 
@@ -155,7 +155,7 @@ public sealed class NestedSettingsTest
         settings.ApplicationSettings.FileCache.LimitFileCacheSize = true;
         settings.ApplicationSettings.FileCache.FileCacheSizeLimitInMegabytes = 1234;
         settings.BrowsingExperienceSettings.ThumbnailLayout.IllustrationGridItemSize = 321;
-        settings.SearchSettings.RankOptions.NovelRankOption = Mako.Global.Enum.RankOption.Week;
+        settings.SearchSettings.RankOptions.NovelRankOption = Pixeval.Models.Pixiv.RankOption.Week;
         settings.DownloadSettings.DownloadFormats.NovelDownloadFormat = "test-format";
         settings.NetworkSettings.PixivDomainFronting.EnablePixivDomainFronting = false;
         settings.NetworkSettings.GitHubDomainFronting.GitHubNameResolver = ["127.0.0.1"];

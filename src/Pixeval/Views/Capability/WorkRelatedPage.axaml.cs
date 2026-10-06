@@ -4,8 +4,6 @@
 using System.Linq;
 using Avalonia;
 using Avalonia.Interactivity;
-using Mako.Global.Enum;
-using Mako.Model;
 using Pixeval.ViewModels;
 
 namespace Pixeval.Views.Capability;
@@ -49,8 +47,8 @@ public partial class WorkRelatedPage : IconContentPage
     private void ChangeSource()
     {
         var engine = _id is 0
-            ? App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<IWorkEntry>())
-            : App.AppViewModel.MakoClient.WorkRelated(_id, _simpleWorkType);
+            ? AsyncEnumerable.Empty<IWorkEntry>()
+            : App.AppViewModel.MakoClient.WorkRelated(_id);
         WorkContainer.ResetEngine(engine);
     }
 }

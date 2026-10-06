@@ -4,7 +4,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Misaki;
-using SQLite;
 
 namespace Pixeval.Models.Database;
 
@@ -25,16 +24,12 @@ public abstract class ArtworkHistoryEntry : HistoryEntry
     }
 
     // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Global
-    [Indexed]
     public string SerializeKey { get; init; } = null!;
 
-    [Indexed(Unique = true)]
     public int ArtworkPayloadEntryId { get; set; }
 
-    [Ignore]
     internal ArtworkPayloadEntry Payload { get; private set; } = null!;
 
-    [Ignore]
     [field: AllowNull, MaybeNull]
     public IArtworkInfo Entry { get; private set; } = null!;
 

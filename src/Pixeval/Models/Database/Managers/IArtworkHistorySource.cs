@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Mako.Global.Enum;
 using Misaki;
 
 namespace Pixeval.Models.Database.Managers;

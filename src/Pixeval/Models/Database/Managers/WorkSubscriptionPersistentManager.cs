@@ -3,61 +3,98 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using Pixeval.Models.Options;
-using SQLite;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.Models.Database.Managers;
 
-public class WorkSubscriptionPersistentManager(SQLiteConnection db)
-    : SimplePersistentManager<WorkSubscriptionEntry>(db)
+public sealed class WorkSubscriptionPersistentManager : SqlitePersistentManager
 {
-    public WorkSubscriptionEntry? GetBySubscriptionKey(
-        long targetId,
-        WorkSubscriptionType subscriptionType,
-        WorkSubscriptionWorkKind workKind) =>
-        AccessDatabase(connection => connection.Table<WorkSubscriptionEntry>()
-            .FirstOrDefault(entry =>
-                entry.Id == targetId
-                && entry.SubscriptionType == subscriptionType
-                && entry.WorkKind == workKind));
-
-    public override void AddOrUpdate(WorkSubscriptionEntry entry)
+    public WorkSubscriptionPersistentManager(StorageEngine storage) : base(storage)
     {
-        AccessDatabase(connection => _ = AddOrUpdateCore(connection, entry));
     }
 
-    public override WorkSubscriptionEntry Upsert(WorkSubscriptionEntry entry) =>
-        AccessDatabase(connection => AddOrUpdateCore(connection, entry));
+    public int Count => (int)Storage.CountSubscriptions();
 
-    public WorkSubscriptionEntry? GetByKey(int key) =>
-        key <= 0 ? null : AccessDatabase(connection => connection.Find<WorkSubscriptionEntry>(key));
-
-    internal IReadOnlySet<int> GetHistoryEntryIds() =>
-        AccessDatabase(connection => connection.Table<WorkSubscriptionEntry>()
-            .Select(static entry => entry.HistoryEntryId)
-            .ToHashSet());
-
-    private static WorkSubscriptionEntry AddOrUpdateCore(SQLiteConnection connection, WorkSubscriptionEntry entry)
+    public WorkSubscriptionRecord? GetBySubscriptionKey(
+        long targetId,
+        WorkSubscriptionType subscriptionType,
+        WorkSubscriptionWorkKind workKind)
     {
-        if (FindBySubscriptionKey(connection, entry.Id, entry.SubscriptionType, entry.WorkKind) is not { } existing)
+        return Storage.GetSubscriptionByKey(targetId, (uint)subscriptionType, (uint)workKind);
+    }
+
+    public WorkSubscriptionRecord? GetByKey(long key)
+    {
+        if (key <= 0)
+            return null;
+
+        return Storage.GetSubscriptionByHistoryId(key);
+    }
+
+    public void Insert(WorkSubscriptionRecord entry) => Upsert(entry);
+
+    public void AddOrUpdate(WorkSubscriptionRecord entry) => Upsert(entry);
+
+    public void Update(WorkSubscriptionRecord entry) => Upsert(entry);
+
+    public WorkSubscriptionRecord Upsert(WorkSubscriptionRecord entry)
+    {
+        return Storage.UpsertSubscription(
+            entry.Id,
+            entry.SubscriptionType,
+            entry.WorkKind,
+            entry.Title,
+            entry.Author,
+            entry.Avatar,
+            entry.LastCheckTime,
+            entry.LastWorkId);
+    }
+
+    public bool TryDelete(WorkSubscriptionRecord item)
+    {
+        return Storage.DeleteSubscription(item.HistoryEntryId);
+    }
+
+    public bool TryDeleteByHistoryEntryId(long historyEntryId)
+    {
+        return Storage.DeleteSubscription(historyEntryId);
+    }
+
+    internal IReadOnlySet<int> GetHistoryEntryIds()
+    {
+        return Storage.GetAllSubscriptionHistoryIds().Select(static id => (int)id).ToHashSet();
+    }
+
+    public void Clear()
+    {
+        Storage.ClearSubscriptions();
+    }
+
+    public async IAsyncEnumerable<WorkSubscriptionRecord> StreamEntriesAsync(
+        int skip = 0,
+        [EnumeratorCancellation] CancellationToken token = default)
+    {
+        var currentSkip = (uint)skip;
+        const uint pageSize = 100;
+        while (!token.IsCancellationRequested)
         {
-            _ = connection.Insert(entry, typeof(WorkSubscriptionEntry));
-            return entry;
+            var records = Storage.StreamSubscriptions(currentSkip, pageSize);
+            if (records.Count == 0)
+                yield break;
+
+            foreach (var r in records)
+            {
+                token.ThrowIfCancellationRequested();
+                yield return r;
+            }
+
+            if (records.Count < pageSize)
+                yield break;
+
+            currentSkip += (uint)records.Count;
         }
-
-        existing.UpdateFrom(entry);
-        _ = connection.Update(existing, typeof(WorkSubscriptionEntry));
-        return existing;
     }
-
-    private static WorkSubscriptionEntry? FindBySubscriptionKey(
-        SQLiteConnection connection,
-        long targetId,
-        WorkSubscriptionType subscriptionType,
-        WorkSubscriptionWorkKind workKind) =>
-        connection.Table<WorkSubscriptionEntry>()
-            .FirstOrDefault(entry =>
-                entry.Id == targetId
-                && entry.SubscriptionType == subscriptionType
-                && entry.WorkKind == workKind);
 }

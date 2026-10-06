@@ -13,11 +13,11 @@ using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
 using Misaki;
 using Pixeval.I18N;
 using Pixeval.Models.Database;
+using Pixeval.Models.Pixiv;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Search;
@@ -50,7 +50,7 @@ public partial class SearchPage : IconContentPage
     {
         var value = sender switch
         {
-            Control { DataContext: SearchHistoryEntry entry } => entry.Value,
+            Control { DataContext: SearchHistoryRecord entry } => entry.Value,
             Control { DataContext: string tag } => tag,
             _ => null
         };
@@ -64,7 +64,7 @@ public partial class SearchPage : IconContentPage
 
     private static void AddPinnedTagButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Control { DataContext: SearchHistoryEntry entry })
+        if (sender is not Control { DataContext: SearchHistoryRecord entry })
             return;
 
         var pinnedTags = App.AppViewModel.AppSettings.BrowsingExperienceSettings.PinnedTags;
@@ -84,7 +84,7 @@ public partial class SearchPage : IconContentPage
 
     private void DeleteButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Control { DataContext: SearchHistoryEntry entry })
+        if (sender is not Control { DataContext: SearchHistoryRecord entry })
             return;
         _ = App.AppViewModel.HistoryPersistHelper.SearchHistoryEntries.Remove(entry);
     }
@@ -330,7 +330,7 @@ public partial class SearchPage : IconContentPage
 
     private void SearchHistoryButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Control { DataContext: SearchHistoryEntry entry })
+        if (sender is not Control { DataContext: SearchHistoryRecord entry })
             return;
 
         if (DataContext is SearchPageViewModel viewModel)

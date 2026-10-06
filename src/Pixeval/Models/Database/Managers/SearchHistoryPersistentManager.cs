@@ -1,37 +1,76 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using SQLite;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.Models.Database.Managers;
 
-public class SearchHistoryPersistentManager(SQLiteConnection db)
-    : SimplePersistentManager<SearchHistoryEntry>(db)
+public class SearchHistoryPersistentManager : SqlitePersistentManager
 {
-    public SearchHistoryEntry? GetByValue(string value) =>
-        string.IsNullOrWhiteSpace(value)
-            ? null
-            : AccessDatabase(connection => connection.Table<SearchHistoryEntry>()
-                .FirstOrDefault(entry => entry.Value == value));
-
-    public bool TryDeleteByValue(string value) =>
-        !string.IsNullOrWhiteSpace(value)
-        && AccessDatabase(connection => connection.Table<SearchHistoryEntry>()
-            .Delete(entry => entry.Value == value) is not 0);
-
-    public override void AddOrUpdate(SearchHistoryEntry entry) =>
-        AccessDatabase(connection => AddOrUpdateCore(connection, entry));
-
-    public override SearchHistoryEntry Upsert(SearchHistoryEntry entry)
+    public SearchHistoryPersistentManager(StorageEngine storage) : base(storage)
     {
-        AccessDatabase(connection => AddOrUpdateCore(connection, entry));
-        return entry;
     }
 
-    private static void AddOrUpdateCore(SQLiteConnection connection, SearchHistoryEntry entry) =>
-        connection.RunInTransaction(() =>
+    public int Count => (int)Storage.CountSearchHistory();
+
+    public SearchHistoryRecord? GetByValue(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        return Storage.GetSearchHistoryByValue(value);
+    }
+
+    public bool TryDeleteByValue(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        return Storage.TryDeleteSearchHistoryByValue(value);
+    }
+
+    public void Insert(SearchHistoryRecord entry) => Upsert(entry);
+
+    public void AddOrUpdate(SearchHistoryRecord entry) => Upsert(entry);
+
+    public SearchHistoryRecord Upsert(SearchHistoryRecord entry)
+    {
+        return Storage.UpsertSearchHistory(
+            entry.Value,
+            entry.TranslatedName,
+            entry.Time);
+    }
+
+    public void Clear()
+    {
+        Storage.ClearSearchHistory();
+    }
+
+    public async IAsyncEnumerable<SearchHistoryRecord> StreamEntriesAsync(
+        int skip = 0,
+        [EnumeratorCancellation] CancellationToken token = default)
+    {
+        var currentSkip = (uint)skip;
+        const uint pageSize = 100;
+        while (!token.IsCancellationRequested)
         {
-            _ = connection.Table<SearchHistoryEntry>().Delete(item => item.Value == entry.Value);
-            _ = connection.Insert(entry, typeof(SearchHistoryEntry));
-        });
+            var records = Storage.StreamSearchHistories(currentSkip, pageSize);
+            if (records.Count == 0)
+                yield break;
+
+            foreach (var r in records)
+            {
+                token.ThrowIfCancellationRequested();
+                yield return r;
+            }
+
+            if (records.Count < pageSize)
+                yield break;
+
+            currentSkip += (uint)records.Count;
+        }
+    }
 }

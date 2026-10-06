@@ -153,6 +153,11 @@ coverage*.info
 *.coverage
 *.coveragexml
 
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock
+
 # NCrunch
 _NCrunch_*
 .*crunch*.local.xml

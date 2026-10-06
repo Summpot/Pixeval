@@ -41,6 +41,15 @@ public static partial class IoHelper
             if (startPosition is not 0)
                 request.Headers.Range = new(startPosition, null);
 
+            if (Network.MahoSocketsHttpHandlerFactory.IsPixivHost(uri.Host))
+            {
+                request.Headers.Referrer ??= new Uri("https://app-api.pixiv.net/");
+                if (request.Headers.UserAgent.Count == 0)
+                {
+                    request.Headers.TryAddWithoutValidation("User-Agent", "PixivAndroidApp/6.140.2 (Android 15.0)");
+                }
+            }
+
             using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
 
             var responseLength = null as long?;

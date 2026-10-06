@@ -5,11 +5,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Mako;
-using Mako.Global.Enum;
-using Mako.Model;
 using Pixeval.Collections;
 using Pixeval.Models.Database;
+using Pixeval.Native.Storage;
+using Pixeval.Utilities;
 using Pixeval.ViewModels.Search;
 
 namespace Pixeval.ViewModels;
@@ -64,7 +63,7 @@ public partial class SearchPageViewModel : ViewModelBase
 
     public NovelSearchFormViewModel NovelForm { get; } = new NovelSearchFormViewModel();
 
-    private static ObservableCollection<SearchHistoryEntry> SearchHistories => App.AppViewModel.HistoryPersistHelper.SearchHistoryEntries;
+    private static ObservableCollection<SearchHistoryRecord> SearchHistories => App.AppViewModel.HistoryPersistHelper.SearchHistoryEntries;
 
     private static ObservableCollection<string> PinnedTags => App.AppViewModel.AppSettings.BrowsingExperienceSettings.PinnedTags;
 

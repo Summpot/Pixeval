@@ -6,11 +6,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Mako.Model;
 using Misaki;
 using Pixeval.Download;
 using Pixeval.Models.Database;
@@ -161,7 +159,6 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
             CancellationTokenSource = new();
         }
 
-        DownloadTryReset?.Invoke(this);
         IsProcessing = false;
     }
 
@@ -192,7 +189,6 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
         else
             TasksSet.ForEach(t => t.Resume());
 
-        DownloadTryResume?.Invoke(this);
         IsProcessing = false;
     }
 
@@ -213,8 +209,6 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
     }
 
     public abstract void Delete();
-
-    public DownloadToken GetToken() => new(this, CancellationTokenSource.Token);
 
     private CancellationTokenSource CancellationTokenSource { get; set; } = new();
 
@@ -292,9 +286,6 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
 
     public event Func<DownloadTaskGroup, CancellationToken, Task>? AfterAllDownloadAsync;
 
-    private event Action<DownloadTaskGroup>? DownloadTryResume;
-
-    private event Action<DownloadTaskGroup>? DownloadTryReset;
 
     protected void AddToTasksSet(ImageDownloadTask task)
     {
@@ -340,14 +331,6 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
         OnPropertyChanged(nameof(ErrorCount));
     }
 
-    public void SubscribeProgress(ChannelWriter<DownloadToken> writer)
-    {
-        DownloadTryResume += OnDownloadWrite;
-        DownloadTryReset += OnDownloadWrite;
-
-        return;
-        void OnDownloadWrite(DownloadTaskGroup o) => writer.TryWrite(o.GetToken());
-    }
 
     public string? ErrorMessage => _errorMessage ?? TasksSet.FirstOrDefault(t => t.ErrorMessage is not null)?.ErrorMessage ?? DatabaseEntry.ErrorMessage;
 

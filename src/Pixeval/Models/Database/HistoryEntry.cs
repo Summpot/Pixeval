@@ -2,14 +2,12 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using SQLite;
 
 namespace Pixeval.Models.Database;
 
 public abstract class HistoryEntry : IEquatable<HistoryEntry>
 {
-    [PrimaryKey, AutoIncrement]
-    public int HistoryEntryId { get; init; }
+    public int HistoryEntryId { get; set; }
 
     public bool Equals(HistoryEntry? other)
     {

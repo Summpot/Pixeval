@@ -1,0 +1,26 @@
+[package]
+name = "pixeval_native"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+uniffi = { version = "0.32", features = ["tokio"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
+thiserror = "2"
+pixeval_filters = { path = "../pixeval_filters" }
+pixeval_cache = { path = "../pixeval_cache" }
+pixeval_maho = { path = "../pixeval_maho" }
+pixeval_mako = { path = "../pixeval_mako" }
+pixeval_download = { path = "../pixeval_download" }
+pixeval_storage = { path = "../pixeval_storage" }
+pixeval_subscription = { path = "../pixeval_subscription" }
+pixeval_config = { path = "../pixeval_config" }
+pixeval_plugin = { path = "../pixeval_plugin" }
+pixeval_mcp = { path = "../pixeval_mcp" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+

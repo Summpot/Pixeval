@@ -2,7 +2,6 @@
 // Licensed under the GPL-3.0 License.
 
 using Misaki;
-using SQLite;
 
 namespace Pixeval.Models.Database;
 
@@ -19,7 +18,6 @@ public class BrowseHistoryEntry : ArtworkHistoryEntry
     }
 
     // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Global
-    [Indexed(Unique = true)]
     public string WorkKey { get; init; } = null!;
 
     // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Global

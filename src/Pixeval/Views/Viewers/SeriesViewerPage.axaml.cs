@@ -3,8 +3,7 @@
 
 using System.ComponentModel;
 using Avalonia.Interactivity;
-using Mako.Engine;
-using Mako.Model;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Entry;

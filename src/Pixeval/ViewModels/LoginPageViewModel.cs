@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Models.Database;
 using Pixeval.Models.Database.Managers;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.ViewModels;
 
@@ -34,11 +34,11 @@ public partial class LoginPageViewModel : ViewModelBase
         RefreshToken = "";
     }
 
-    public ObservableCollection<LoginUserEntry> Users { get; }
+    public ObservableCollection<LoginUserRecord> Users { get; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedUser))]
-    public partial LoginUserEntry? SelectedUser { get; set; }
+    public partial LoginUserRecord? SelectedUser { get; set; }
 
     [ObservableProperty]
     public partial string RefreshToken { get; set; }
@@ -68,12 +68,12 @@ public partial class LoginPageViewModel : ViewModelBase
         }
     }
 
-    public static AutoCompleteFilterPredicate<object> LoginUserFilter { get; } = static (_, item) => item is LoginUserEntry;
+    public static AutoCompleteFilterPredicate<object> LoginUserFilter { get; } = static (_, item) => item is LoginUserRecord;
 
     public static AutoCompleteSelector<object> LoginUserTextSelector { get; } = static (_, item) =>
-        item is LoginUserEntry user ? user.RefreshToken : item?.ToString() ?? "";
+        item is LoginUserRecord user ? user.RefreshToken : item?.ToString() ?? "";
 
-    partial void OnSelectedUserChanged(LoginUserEntry? value)
+    partial void OnSelectedUserChanged(LoginUserRecord? value)
     {
         if (value is not null && RefreshToken != value.RefreshToken)
             RefreshToken = value.RefreshToken;

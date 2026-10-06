@@ -1,8 +1,6 @@
 using System.Collections.Generic;
-using System.Linq;
 using Misaki;
 using Pixeval.Filters.Syntax;
-using Pixeval.Filters.Values;
 using Pixeval.I18N;
 
 namespace Pixeval.Models.Filters;
@@ -25,7 +23,4 @@ internal sealed class WorkAuthorFilterSyntax : FilterTextSyntax<IArtworkInfo>
         FilterSyntaxPattern.Keyword("a", exampleValue: "artist", description: I18NManager.GetResource(FilterResources.Completions.Author)),
         FilterSyntaxPattern.Keyword("artist", exampleValue: "artist", description: I18NManager.GetResource(FilterResources.Completions.Author))
     ];
-
-    public override bool Match(IArtworkInfo context, FilterTextValue value) =>
-        context.Authors.Any(author => value.Matches(author.Name));
 }

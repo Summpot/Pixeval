@@ -3,25 +3,26 @@
 
 using System;
 using System.Threading.Tasks;
-using Pixeval.Models.Database;
 using Pixeval.Models.Options;
+using Pixeval.Native.Storage;
+using Pixeval.Native.Subscription;
 
 namespace Pixeval.Models.Subscriptions;
 
 public interface IWorkSubscriptionService
 {
-    WorkSubscriptionFetchState? CurrentFetchState { get; }
+    SubscriptionFetchState? CurrentFetchState { get; }
 
-    event EventHandler<WorkSubscriptionFetchState>? FetchStateChanged;
+    event EventHandler<SubscriptionFetchState>? FetchStateChanged;
 
-    event EventHandler<WorkSubscriptionEntry>? SubscriptionUpdated;
+    event EventHandler<WorkSubscriptionRecord>? SubscriptionUpdated;
 
-    event EventHandler<int>? SubscriptionRemoved;
+    event EventHandler<long>? SubscriptionRemoved;
 
-    WorkSubscriptionEntry? TryGetSubscription(
+    WorkSubscriptionRecord? TryGetSubscription(
         long targetId,
         WorkSubscriptionType subscriptionType,
         WorkSubscriptionWorkKind workKind);
 
-    Task<WorkSubscriptionEntry?> TryRemoveAsync(int historyEntryId);
+    Task<WorkSubscriptionRecord?> TryRemoveAsync(long historyEntryId);
 }

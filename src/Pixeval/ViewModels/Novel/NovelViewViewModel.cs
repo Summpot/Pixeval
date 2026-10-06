@@ -2,9 +2,10 @@
 // Licensed under the GPL-3.0 License.
 
 using System.Collections.Frozen;
-using Mako.Model;
+using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
 using NovelViewDataProvider = Pixeval.ViewModels.SharableViewDataProvider<
-    Mako.Model.Novel,
+    Pixeval.Native.Mako.Novel,
     Pixeval.ViewModels.NovelItemViewModel>;
 
 namespace Pixeval.ViewModels;
