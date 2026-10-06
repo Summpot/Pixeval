@@ -1,16 +1,11 @@
-// Copyright (c) Pixeval.
-// Licensed under the GPL-3.0 License.
-
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Mako;
-using Mako.Engine;
-using Mako.Model;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Misaki;
 using Pixeval.Collections;
+using Pixeval.Models.Pixiv;
 using Pixeval.ViewModels;
 
 namespace Pixeval.Tests;
@@ -18,14 +13,17 @@ namespace Pixeval.Tests;
 [TestClass]
 public sealed class IncrementalSourceRetryTest
 {
+    private sealed record TestItem(string Id) : IIdentityInfo
+    {
+        public string Platform => "pixiv";
+    }
+
     [TestMethod]
     public async Task InterruptedPageStopsAndResumesTheSameEnumerator()
     {
-        using var client = new MakoClient(new(), NullLogger.Instance);
-        using var provider = client.Provider;
-        var engine = new InterruptedEngine(client);
-        using var source = new IncrementalSource<Illustration, Illustration>(engine, static (entry, _) => entry);
-        using var collection = new IncrementalLoadingCollection<Illustration>(source);
+        var engine = new InterruptedEngine();
+        using var source = new IncrementalSource<TestItem, TestItem>(engine, static (entry, _) => entry);
+        using var collection = new IncrementalLoadingCollection<TestItem>(source);
 
         Assert.AreEqual(1, await collection.LoadMoreItemsAsync(0));
         Assert.AreEqual(2, engine.MoveNextCount);
@@ -35,43 +33,41 @@ public sealed class IncrementalSourceRetryTest
         Assert.AreEqual(1, await collection.LoadMoreItemsAsync(0));
         Assert.AreEqual(4, engine.MoveNextCount);
         Assert.AreEqual(1, engine.EnumeratorCount);
-        Assert.AreSequenceEqual(new long[] { 1, 2 }, new long[] { collection[0].Id, collection[1].Id });
+        Assert.AreSequenceEqual(new[] { "1", "2" }, new[] { collection[0].Id, collection[1].Id });
         Assert.IsFalse(collection.IsInterrupted);
         Assert.IsFalse(collection.HasMoreItems);
     }
 
-    private sealed class InterruptedEngine(MakoClient client) : IFetchEngine<Illustration>
+    private sealed class InterruptedEngine : IFetchEngine<TestItem>
     {
-        public MakoClient MakoClient => client;
-        public EngineHandle EngineHandle { get; } = new(Guid.NewGuid());
-        public int RequestedPages { get; set; }
+        public IFetchEngineHandle EngineHandle { get; } = new DummyEngineHandle();
         public int EnumeratorCount { get; private set; }
         public int MoveNextCount { get; private set; }
 
-        public IAsyncEnumerator<Illustration> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+        public IAsyncEnumerator<TestItem> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
             EnumeratorCount++;
             return new Enumerator(this);
         }
 
-        private sealed class Enumerator(InterruptedEngine engine) : IAsyncEnumerator<Illustration>
+        private sealed class Enumerator(InterruptedEngine engine) : IAsyncEnumerator<TestItem>
         {
-            public Illustration Current { get; private set; } = null!;
+            public TestItem Current { get; private set; } = null!;
             public ValueTask DisposeAsync() => ValueTask.CompletedTask;
             public ValueTask<bool> MoveNextAsync()
             {
                 switch (++engine.MoveNextCount)
                 {
                     case 1:
-                        Current = Illustration.CreateDefault() with { Id = 1 };
+                        Current = new TestItem("1");
                         return ValueTask.FromResult(true);
                     case 2:
                         return ValueTask.FromResult(false);
                     case 3:
-                        Current = Illustration.CreateDefault() with { Id = 2 };
+                        Current = new TestItem("2");
                         return ValueTask.FromResult(true);
                     default:
-                        engine.EngineHandle.Complete();
+                        engine.EngineHandle.IsCompleted = true;
                         return ValueTask.FromResult(false);
                 }
             }

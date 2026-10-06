@@ -4,16 +4,16 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:database="using:Pixeval.Models.Database"
-    xmlns:enum="using:Mako.Global.Enum"
+    xmlns:enum="using:Pixeval.Models.Pixiv"
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:model="using:Mako.Model"
+    xmlns:model="using:Pixeval.Native.Mako"
     xmlns:pixeval="using:Pixeval"
     xmlns:search="using:Pixeval.Views.Search"
+    xmlns:storage="using:Pixeval.Native.Storage"
     xmlns:viewModels="using:Pixeval.ViewModels"
     xmlns:views="using:Pixeval.Views"
     x:DataType="{x:Type viewModels:SearchPageViewModel}"
@@ -103,7 +103,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                     <ItemsControl.DataTemplates>
-                        <DataTemplate DataType="{x:Type database:SearchHistoryEntry}">
+                        <DataTemplate DataType="{x:Type storage:SearchHistoryRecord}">
                             <m3:SuggestionChip Click="SearchHistoryButton_OnClick">
                                 <m3:SuggestionChip.Content>
                                     <StackPanel Orientation="Horizontal" Spacing="5">
@@ -188,7 +188,7 @@
                                             TextTrimming="CharacterEllipsis"
                                             TextWrapping="Wrap" />
                                         <Border ClipToBounds="True" CornerRadius="{StaticResource ControlCornerRadius}">
-                                            <Image controls:Source.Cache="{Binding Illustration.ThumbnailUrls.Medium}" Stretch="UniformToFill" />
+                                            <Image controls:Source.Cache="{Binding Illust.ImageUrls.Medium}" Stretch="UniformToFill" />
                                         </Border>
                                     </DockPanel>
                                 </m3:Card.Content>

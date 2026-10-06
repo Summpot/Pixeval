@@ -6,8 +6,8 @@ using AutoSettingsPage.Avalonia;
 using CommunityToolkit.Avalonia.Controls;
 using Misaki;
 using Pixeval.Controls.Settings;
-using Pixeval.Download.MacroParser;
 using Pixeval.I18N;
+using Pixeval.Native.Download;
 using Pixeval.Models.Download;
 using Pixeval.Models.Settings.Entries;
 using Pixeval.Utilities;
@@ -75,7 +75,7 @@ public partial class DownloadMacroSettingsExpander : SettingsExpander, IEntryCon
             return;
         }
 
-        if (analysis.Root is null)
+        if (string.IsNullOrWhiteSpace(normalized))
         {
             DownloadMacroInvalidInfoBar.Text = SettingsMainViewResources.DownloadMacroInvalidInfoBarInputCannotBeBlank;
             DownloadMacroInvalidInfoBar.IsVisible = true;

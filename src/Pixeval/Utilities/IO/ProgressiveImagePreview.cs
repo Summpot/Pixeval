@@ -19,22 +19,20 @@ namespace Pixeval.Utilities.IO;
 internal sealed class ProgressiveImagePreview(Func<Bitmap, Task> publish, Func<bool> isVisible) : IDisposable
 {
     private readonly ProgressiveImageDecoder _decoder = new();
-    private readonly ZipImagePreviewReader _zipReader = new();
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private TimeSpan _nextUpdate;
     private bool _failed;
 
-    public Task UpdateAsync(Stream source, CancellationToken token) => UpdateAsync(source, false, token);
+    public Task UpdateAsync(Stream source, CancellationToken token) => UpdateCoreAsync(source, token);
 
-    public Task UpdateZipAsync(Stream source, CancellationToken token) => UpdateAsync(source, true, token);
+    public Task UpdateZipAsync(Stream source, CancellationToken token) => UpdateCoreAsync(source, token);
 
-    private async Task UpdateAsync(Stream source, bool zip, CancellationToken token)
+    private async Task UpdateCoreAsync(Stream source, CancellationToken token)
     {
         // Neighboring pages are prefetched too; do not decode previews with no attached viewer.
         if (!isVisible())
         {
             _decoder.Dispose();
-            _zipReader.Dispose();
             return;
         }
         if (_failed || _clock.Elapsed < _nextUpdate)
@@ -44,9 +42,7 @@ internal sealed class ProgressiveImagePreview(Func<Bitmap, Task> publish, Func<b
         Bitmap? preview = null;
         try
         {
-            preview = await Task.Run(() => zip
-                ? _zipReader.ReadLatestFrame(source) is { } frame ? Decode(frame) : null
-                : Decode(source), token).ConfigureAwait(false);
+            preview = await Task.Run(() => Decode(source), token).ConfigureAwait(false);
             token.ThrowIfCancellationRequested();
             if (preview is not null)
             {
@@ -90,6 +86,5 @@ internal sealed class ProgressiveImagePreview(Func<Bitmap, Task> publish, Func<b
     public void Dispose()
     {
         _decoder.Dispose();
-        _zipReader.Dispose();
     }
 }

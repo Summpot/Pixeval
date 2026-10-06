@@ -6,33 +6,31 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Mako.Model;
 using Misaki;
 using Pixeval.Download;
-using Pixeval.Models.Database;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 
 namespace Pixeval.Models.Download.Tasks;
 
-public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) : ViewModelBase, IDownloadTaskGroup
+public abstract partial class DownloadTaskGroup(IDownloadHistoryEntry entry) : ViewModelBase, IDownloadTaskGroup
 {
     private readonly SemaphoreSlim _afterAllDownloadLock = new(1, 1);
 
-    public DownloadHistoryEntryBase DatabaseEntry { get; } = entry;
+    public IDownloadHistoryEntry DatabaseEntry { get; } = entry;
 
     public abstract ValueTask InitializeTaskGroupAsync();
 
-    public string Id => DatabaseEntry.Entry.Id;
+    public string Id => DatabaseEntry.Entry?.Id ?? "";
 
     protected DownloadTaskGroup(
         IArtworkInfo entry,
         string destination,
-        int? workSubscriptionId = null) : this(DownloadHistoryEntryBase.Create(destination, entry, workSubscriptionId)) =>
+        int? workSubscriptionId = null) : this(IDownloadHistoryEntry.Create(destination, entry, workSubscriptionId)) =>
         SetNotCreateFromEntry();
 
     /// <summary>
@@ -60,7 +58,7 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
             g.DatabaseEntry.ErrorMessage = g.DatabaseEntry.State is DownloadState.Error
                 ? g.ErrorMessage
                 : null;
-            App.AppViewModel.HistoryPersistHelper.UpdateDownloadHistory(g.DatabaseEntry);
+            App.AppViewModel.UpdateDownloadHistory(g.DatabaseEntry);
         };
         // 外部包裹了Task.Run
         AfterItemDownloadAsync += (_, _) => AllTasksDownloadedAsync();
@@ -161,7 +159,6 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
             CancellationTokenSource = new();
         }
 
-        DownloadTryReset?.Invoke(this);
         IsProcessing = false;
     }
 
@@ -192,7 +189,6 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
         else
             TasksSet.ForEach(t => t.Resume());
 
-        DownloadTryResume?.Invoke(this);
         IsProcessing = false;
     }
 
@@ -213,8 +209,6 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
     }
 
     public abstract void Delete();
-
-    public DownloadToken GetToken() => new(this, CancellationTokenSource.Token);
 
     private CancellationTokenSource CancellationTokenSource { get; set; } = new();
 
@@ -292,9 +286,6 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
 
     public event Func<DownloadTaskGroup, CancellationToken, Task>? AfterAllDownloadAsync;
 
-    private event Action<DownloadTaskGroup>? DownloadTryResume;
-
-    private event Action<DownloadTaskGroup>? DownloadTryReset;
 
     protected void AddToTasksSet(ImageDownloadTask task)
     {
@@ -325,7 +316,7 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
         }
 
         DatabaseEntry.State = state;
-        App.AppViewModel.HistoryPersistHelper.UpdateDownloadHistory(DatabaseEntry);
+        App.AppViewModel.UpdateDownloadHistory(DatabaseEntry);
         OnPropertyChanged(nameof(CurrentState));
     }
 
@@ -334,20 +325,12 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
         _errorMessage = exception.ToString();
         DatabaseEntry.State = DownloadState.Error;
         DatabaseEntry.ErrorMessage = _errorMessage;
-        App.AppViewModel.HistoryPersistHelper.UpdateDownloadHistory(DatabaseEntry);
+        App.AppViewModel.UpdateDownloadHistory(DatabaseEntry);
         OnPropertyChanged(nameof(ErrorMessage));
         OnPropertyChanged(nameof(CurrentState));
         OnPropertyChanged(nameof(ErrorCount));
     }
 
-    public void SubscribeProgress(ChannelWriter<DownloadToken> writer)
-    {
-        DownloadTryResume += OnDownloadWrite;
-        DownloadTryReset += OnDownloadWrite;
-
-        return;
-        void OnDownloadWrite(DownloadTaskGroup o) => writer.TryWrite(o.GetToken());
-    }
 
     public string? ErrorMessage => _errorMessage ?? TasksSet.FirstOrDefault(t => t.ErrorMessage is not null)?.ErrorMessage ?? DatabaseEntry.ErrorMessage;
 

@@ -6,7 +6,6 @@ using System.Text.Json.Serialization;
 using AutoSettingsPage;
 using Avalonia.Layout;
 using FluentIcons.Common;
-using Mako.Global.Enum;
 using Pixeval.Models.Options;
 
 namespace Pixeval.AppManagement.Settings;

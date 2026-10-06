@@ -20,7 +20,48 @@ public static class CacheHelper
 {
     public static string CachePath { get; } = Path.Combine(AppInfo.CacheFolder, "FileCache");
 
-    private static readonly FileCache _FileCache = new(CachePath);
+    private static readonly Lazy<CacheEngine> _CacheEngine =
+        new(() =>
+        {
+            var capacity = (ulong)GetCacheSizeLimitInBytes();
+            var engine = new CacheEngine(CachePath, capacity);
+            try
+            {
+                if (App.AppViewModel?.AppSettings is { } settings)
+                {
+                    var cfg = settings.ToMakoConfiguration();
+                    engine.UpdateNetworkOptions(
+                        cfg.DomainFrontingEnabled,
+                        cfg.SplitDelayMs,
+                        cfg.HostIps,
+                        cfg.ProxyUrl);
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+            return engine;
+        });
+
+    public static CacheEngine CacheEngine => _CacheEngine.Value;
+
+    public static void UpdateNetworkOptions(MakoConfigurationDto config)
+    {
+        try
+        {
+            _CacheEngine.Value.UpdateNetworkOptions(
+                config.DomainFrontingEnabled,
+                config.SplitDelayMs,
+                config.HostIps,
+                config.ProxyUrl);
+        }
+        catch (Exception e)
+        {
+            App.AppViewModel?.AppServiceProvider?.GetService<FileLogger>()?
+                .LogError(nameof(UpdateNetworkOptions), e);
+        }
+    }
 
     /// <summary>
     /// Dispose无效果，可以反复用
@@ -34,16 +75,10 @@ public static class CacheHelper
     public static readonly Lazy<IAnimatedBitmap> AnimatedImageNotAvailable =
         new(() => IAnimatedBitmap.Load([WrappedImageNotAvailable.Value], [100]));
 
-    public static Task PurgeCacheAsync(CancellationToken token = default) => _FileCache.PurgeAsync(token);
+    public static Task PurgeCacheAsync(CancellationToken token = default) =>
+        Task.Run(() => _CacheEngine.Value.Clear(), token);
 
-    public static Task EnforceCacheSizeLimitAsync(CancellationToken token = default)
-    {
-        var settings = App.AppViewModel.AppSettings.ApplicationSettings;
-        if (!settings.FileCache.LimitFileCacheSize)
-            return Task.CompletedTask;
-
-        return _FileCache.EnforceSizeLimitAsync(GetCacheSizeLimitInBytes(), token);
-    }
+    public static Task EnforceCacheSizeLimitAsync(CancellationToken token = default) => Task.CompletedTask;
 
     private static long GetCacheSizeLimitInBytes()
     {
@@ -125,22 +160,10 @@ public static class CacheHelper
         try
         {
             var key = frameUri.OriginalString;
-            if (TryGetStream(key) is { } stream)
-                return IAnimatedBitmap.Load(stream, true);
-            var useFileCache = App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache;
-
-            var client = App.AppViewModel.GetRequiredPlatformService<IDownloadHttpClientService>(platform)
-                .GetImageDownloadClient();
-            if (await client.DownloadMemoryStreamAsync(frameUri, progress, token: token, onDataAvailable: onDataAvailable) is
-                Result<Stream>.Success(var s))
+            var stream = await GetStreamAsync(platform, key, progress, onDataAvailable, token);
+            if (stream is not null)
             {
-                if (useFileCache)
-                {
-                    _ = TryCacheStream(key, s);
-                    s.Position = 0;
-                }
-
-                return IAnimatedBitmap.Load(s, true);
+                return IAnimatedBitmap.Load(stream, true);
             }
 
             token.ThrowIfCancellationRequested();
@@ -190,23 +213,21 @@ public static class CacheHelper
                         stream = s;
                     else
                     {
-                        var useFileCache = App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache;
                         var sp = startProgress;
-                        if (await client.DownloadMemoryStreamAsync(
-                                uri,
-                                progress?.Let(t => new Progress<double>(d => t.Report(sp + (ratio * d)))),
-                                token: token, onDataAvailable: onDataAvailable) is Result<Stream>.Success(var s2))
+                        var s2 = await GetStreamAsync(
+                            platform,
+                            key,
+                            progress?.Let(t => new Progress<double>(d => t.Report(sp + (ratio * d)))),
+                            onDataAvailable,
+                            token);
+                        if (s2 is not null)
                         {
-                            if (useFileCache)
-                            {
-                                _ = TryCacheStream(key, s2);
-                                s2.Position = 0;
-                            }
-
                             stream = s2;
                         }
                         else
+                        {
                             stream = WrappedImageNotAvailable.Value;
+                        }
                     }
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -298,9 +319,33 @@ public static class CacheHelper
     {
         try
         {
-            return await GetStreamAsync(platform, key, progress, token: token).ConfigureAwait(false) is { } stream
-                ? await stream.DecodeBitmapImageAsync(true, desiredWidth, desiredSize, decodeToken).ConfigureAwait(false)
-                : WrappedImageNotAvailable.Value;
+            if (desiredWidth is null && desiredSize is null)
+            {
+                if (_CacheEngine.Value.TryReadPlanarBitmap(key) is { } planarBmp)
+                    return planarBmp;
+            }
+
+            if (await GetStreamAsync(platform, key, progress, token: token).ConfigureAwait(false) is not { } stream)
+                return WrappedImageNotAvailable.Value;
+
+            if (desiredWidth is null && desiredSize is null && stream is MemoryStream ms)
+            {
+                var bytes = ms.ToArray();
+                _ = Task.Run(() =>
+                {
+                    try
+                    {
+                        _ = _CacheEngine.Value.DecodeAndCachePlanar(key, bytes);
+                    }
+                    catch
+                    {
+                        // ignore background planar caching error
+                    }
+                }, CancellationToken.None);
+                ms.Position = 0;
+            }
+
+            return await stream.DecodeBitmapImageAsync(true, desiredWidth, desiredSize, decodeToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested || decodeToken.IsCancellationRequested)
         {
@@ -316,7 +361,7 @@ public static class CacheHelper
     }
 
     /// <summary>
-    /// 本方法会根据<see cref="ApplicationSettingsGroup.UseFileCache"/>判断是否使用文件缓存
+    /// 获取图片流，优先从文件缓存读取，未命中则请求网络并自动写入缓存
     /// </summary>
     /// <returns><see langword="null"/>表示下载失败</returns>
     private static async ValueTask<Stream?> GetStreamAsync(
@@ -326,25 +371,65 @@ public static class CacheHelper
         Func<Stream, CancellationToken, Task>? onDataAvailable = null,
         CancellationToken token = default)
     {
-        if (TryGetStream(key) is { } stream)
-            return stream;
-        var useFileCache = App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache;
-
-        if (await App.AppViewModel.AppServiceProvider.GetRequiredKeyedService<IDownloadHttpClientService>(platform)
-                .GetImageDownloadClient()
-                .DownloadMemoryStreamAsync(new Uri(key), progress, token: token, onDataAvailable: onDataAvailable) is Result<Stream>.Success(var s))
+        try
         {
-            if (useFileCache)
+            if (string.IsNullOrWhiteSpace(key))
+                return null;
+
+            if (TryGetStream(key) is { } cachedStream)
+                return cachedStream;
+
+            Action<byte[]>? previewAction = onDataAvailable is null ? null : bytes =>
             {
-                _ = TryCacheStream(key, s);
-                s.Position = 0;
+                using var ms = new MemoryStream(bytes, writable: false);
+                _ = onDataAvailable(ms, token);
+            };
+
+            var stream = await _CacheEngine.Value.GetOrFetchStreamAsync(
+                key,
+                referer: null,
+                progress: progress,
+                onPreview: previewAction,
+                cancellationToken: token);
+
+            if (stream is not null)
+                return stream;
+
+            token.ThrowIfCancellationRequested();
+
+            if (App.AppViewModel?.AppServiceProvider?.GetKeyedService<IDownloadHttpClientService>(platform) is { } clientService)
+            {
+                var client = clientService.GetImageDownloadClient();
+                var ms = new MemoryStream();
+                var error = await client.DownloadStreamAsync(
+                    ms,
+                    new Uri(key),
+                    progress: progress,
+                    onDataAvailable: onDataAvailable,
+                    token: token);
+                if (error is null && ms.Length > 0)
+                {
+                    ms.Position = 0;
+                    TryCacheStream(key, ms);
+                    ms.Position = 0;
+                    return ms;
+                }
+                await ms.DisposeAsync();
             }
 
-            return s;
+            return null;
         }
-
-        token.ThrowIfCancellationRequested();
-        return null;
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception e)
+        {
+            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+                .LogError(nameof(GetStreamAsync), e);
+            token.ThrowIfCancellationRequested();
+            return null;
+        }
     }
 
     /// <summary>
@@ -356,13 +441,11 @@ public static class CacheHelper
     {
         try
         {
-            return App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache
-                ? _FileCache.TryOpen(key)
-                : null;
+            return _CacheEngine.Value.TryReadCache(key, out var stream) ? stream : null;
         }
         catch (Exception e)
         {
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+            App.AppViewModel?.AppServiceProvider?.GetService<FileLogger>()?
                 .LogError(nameof(TryGetStream), e);
         }
 
@@ -370,17 +453,9 @@ public static class CacheHelper
     }
 
     /// <exception cref="InvalidOperationException"/>
-    internal static FileCacheWriteResult TryCacheStream(string key, Stream stream)
+    internal static bool TryCacheStream(string key, Stream stream)
     {
-        if (!App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache)
-            throw new InvalidOperationException(
-                $"Check {nameof(App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache)} before {nameof(TryCacheStream)}");
-
-        var sizeLimitBytes = App.AppViewModel.AppSettings.ApplicationSettings.FileCache.LimitFileCacheSize
-            ? GetCacheSizeLimitInBytes()
-            : (long?) null;
-
-        return _FileCache.TryCache(key, stream, sizeLimitBytes);
+        return _CacheEngine.Value.TryCache(key, stream);
     }
 }
 

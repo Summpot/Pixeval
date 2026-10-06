@@ -4,11 +4,9 @@
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Mako.Engine;
-using Mako.Global.Enum;
-using Mako.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Models.Options;
+using Pixeval.Models.Pixiv;
 using Pixeval.Models.Subscriptions;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -20,7 +18,7 @@ public partial class SeriesContainer : UserControl
 {
     private readonly SimpleWorkType _workType;
     private readonly long _seriesId;
-    private readonly SeriesDetailBase? _seriesDetail;
+    private readonly Series? _seriesDetail;
     private readonly IWorkEntry? _firstWork;
 
     private static IWorkSubscriptionService SubscriptionService =>
@@ -41,7 +39,7 @@ public partial class SeriesContainer : UserControl
         SimpleWorkType workType,
         long seriesId,
         IWorkViewViewModel viewModel,
-        SeriesDetailBase seriesDetail,
+        Series seriesDetail,
         IWorkEntry firstWork)
         : this(workType, seriesId, seriesDetail, firstWork)
     {
@@ -54,7 +52,7 @@ public partial class SeriesContainer : UserControl
         SimpleWorkType workType,
         long seriesId,
         IFetchEngine<IWorkEntry> engine,
-        SeriesDetailBase seriesDetail,
+        Series seriesDetail,
         IWorkEntry firstWork)
         : this(workType, seriesId, seriesDetail, firstWork)
     {
@@ -65,7 +63,7 @@ public partial class SeriesContainer : UserControl
     private SeriesContainer(
         SimpleWorkType workType,
         long seriesId,
-        SeriesDetailBase? seriesDetail,
+        Series? seriesDetail,
         IWorkEntry? firstWork)
     {
         _workType = workType;

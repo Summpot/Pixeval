@@ -1,11 +1,11 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using Mako.Global.Enum;
-using Mako.Model;
 using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Options;
+using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
 using Pixeval.ViewModels;
 
 namespace Pixeval.Views;
@@ -28,13 +28,19 @@ public class PixevalSettings : ViewModelBase
 
     public static double IllustrationMasonryColumnWidth => Settings.BrowsingExperienceSettings.ThumbnailLayout.IllustrationMasonryColumnWidth;
 
-    public static TokenUser Me => App.AppViewModel.MakoClient.Me!;
+    public static TokenUser? Me => App.AppViewModel.MakoClient.GetUser();
 
-    public static long MyId => Me.Id;
+    public static long MyId => long.TryParse(Me?.Id, out var id) ? id : 0;
+
+    public static User? MyUser => Me is { } u
+        ? new User(MyId, u.Name, u.Account, u.ProfileImageUrls, false, null)
+        : null;
+
+    public static User? MyUserBasicInfo => MyUser;
 
     public static PixevalSettings Instance { get; } = new();
 
-    public bool IsLoggedIn => App.AppViewModel.MakoClient.Me is not null;
+    public bool IsLoggedIn => App.AppViewModel.MakoClient.GetUser() is not null;
 
     public void OnIsLoggedInChanged() => OnPropertyChanged(nameof(IsLoggedIn));
 

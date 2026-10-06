@@ -4,8 +4,8 @@
 using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Mako.Global.Enum;
 using Misaki;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Viewers;
@@ -22,11 +22,14 @@ public partial class SeriesItem : EntryItem
             || TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
             return;
 
+        if (viewModel.Entry.LatestContentId is not { } latestContentId)
+            return;
+
         if (viewModel.WorkType is SimpleWorkType.Novel)
-            viewContainer.CreateNovelPage(viewModel.Entry.LatestContentId);
+            viewContainer.CreateNovelPage(latestContentId);
         else
             viewContainer.CreateIllustrationPage(
-                viewModel.Entry.LatestContentId.ToString(CultureInfo.InvariantCulture),
+                latestContentId.ToString(CultureInfo.InvariantCulture),
                 IPlatformInfo.Pixiv);
     }
 
@@ -37,6 +40,7 @@ public partial class SeriesItem : EntryItem
         if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
             return;
 
-        viewContainer.CreateUserPage(viewModel.Entry.User.Id);
+        if (viewModel.Entry.User is { } user)
+            viewContainer.CreateUserPage(user.Id);
     }
 }

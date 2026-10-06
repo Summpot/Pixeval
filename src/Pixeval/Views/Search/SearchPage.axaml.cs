@@ -13,11 +13,10 @@ using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
 using Misaki;
 using Pixeval.I18N;
-using Pixeval.Models.Database;
+using Pixeval.Models.Pixiv;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Search;
@@ -50,7 +49,7 @@ public partial class SearchPage : IconContentPage
     {
         var value = sender switch
         {
-            Control { DataContext: SearchHistoryEntry entry } => entry.Value,
+            Control { DataContext: SearchHistoryRecord entry } => entry.Value,
             Control { DataContext: string tag } => tag,
             _ => null
         };
@@ -64,13 +63,13 @@ public partial class SearchPage : IconContentPage
 
     private static void AddPinnedTagButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Control { DataContext: SearchHistoryEntry entry })
+        if (sender is not Control { DataContext: SearchHistoryRecord entry })
             return;
 
         var pinnedTags = App.AppViewModel.AppSettings.BrowsingExperienceSettings.PinnedTags;
         if (!pinnedTags.Contains(entry.Value))
             pinnedTags.Add(entry.Value);
-        _ = App.AppViewModel.HistoryPersistHelper.SearchHistoryEntries.Remove(entry);
+        _ = App.AppViewModel.SearchHistoryEntries.Remove(entry);
     }
 
     private static void UnpinButton_OnClick(object? sender, RoutedEventArgs e)
@@ -79,14 +78,14 @@ public partial class SearchPage : IconContentPage
             return;
 
         if (App.AppViewModel.AppSettings.BrowsingExperienceSettings.PinnedTags.Remove(tag))
-            App.AppViewModel.HistoryPersistHelper.AddSearchHistory(tag);
+            App.AppViewModel.AddSearchHistory(tag);
     }
 
     private void DeleteButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Control { DataContext: SearchHistoryEntry entry })
+        if (sender is not Control { DataContext: SearchHistoryRecord entry })
             return;
-        _ = App.AppViewModel.HistoryPersistHelper.SearchHistoryEntries.Remove(entry);
+        _ = App.AppViewModel.SearchHistoryEntries.Remove(entry);
     }
 
     private void TrendingTagButton_OnClick(object? sender, RoutedEventArgs e)
@@ -330,7 +329,7 @@ public partial class SearchPage : IconContentPage
 
     private void SearchHistoryButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Control { DataContext: SearchHistoryEntry entry })
+        if (sender is not Control { DataContext: SearchHistoryRecord entry })
             return;
 
         if (DataContext is SearchPageViewModel viewModel)
@@ -382,7 +381,7 @@ public partial class SearchPage : IconContentPage
                 }
 
                 var arguments = viewModel.NovelForm.BuildArguments(searchText);
-                App.AppViewModel.HistoryPersistHelper.AddSearchHistory(searchText);
+                App.AppViewModel.AddSearchHistory(searchText);
                 viewContainer.NavigateTo(new WorkSearchResultPage(arguments));
             }
             else
@@ -394,7 +393,7 @@ public partial class SearchPage : IconContentPage
                 }
 
                 var arguments = viewModel.IllustrationForm.BuildArguments(searchText);
-                App.AppViewModel.HistoryPersistHelper.AddSearchHistory(searchText);
+                App.AppViewModel.AddSearchHistory(searchText);
                 viewContainer.NavigateTo(new WorkSearchResultPage(arguments));
             }
         }

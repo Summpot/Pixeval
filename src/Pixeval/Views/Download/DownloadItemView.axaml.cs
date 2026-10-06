@@ -12,9 +12,9 @@ using Avalonia.Controls.Selection;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Mako.Model;
 using Pixeval.I18N;
 using Pixeval.Models.Options;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Viewers;
@@ -169,7 +169,7 @@ public partial class DownloadItemView : ContentPage, IDisposable
                     }
                 }
 
-                _ = App.AppViewModel.HistoryPersistHelper.DownloadManager.TryRemoveTask(item.DownloadTask);
+                _ = App.AppViewModel.DownloadManager.TryRemoveTask(item.DownloadTask);
             }
 
             UnselectAll();

@@ -75,7 +75,11 @@
     "Original": "Original Image Format"
   },
   "UgoiraDownloadFormat": {
-    "Original": "Original Ugoira Format"
+    "Original": "Original Ugoira Format",
+    "Gif": "GIF Animation",
+    "Apng": "APNG Animation",
+    "Webp": "WebP Animation",
+    "Mp4": "MP4 Video"
   },
   "NovelDownloadFormat": {
     "OriginalTxt": "TXT with Embedded Images (Pixiv native tags)",

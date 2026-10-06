@@ -2,7 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using Avalonia.Controls;
-using Mako.Model;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 

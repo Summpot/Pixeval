@@ -10,11 +10,10 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Mako.Global.Enum;
-using Mako.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.AppManagement;
+using Pixeval.Models.Pixiv;
 using Pixeval.I18N;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Options;
@@ -255,7 +254,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
     private async Task LoadSeriesInfoAsync(IArtworkInfo entry, int index, CancellationToken token)
     {
-        SeriesInfo = WorkSeriesInfoViewModel.Create(entry as WorkBase, SimpleWorkType.Illustration);
+        SeriesInfo = WorkSeriesInfoViewModel.Create(entry, SimpleWorkType.Illustration);
         if (entry is not Illustration { Series: not null } illustration)
             return;
 

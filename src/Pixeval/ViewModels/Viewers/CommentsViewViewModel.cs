@@ -2,8 +2,8 @@
 // Licensed under the GPL-3.0 License.
 
 using System.Threading.Tasks;
-using Mako.Global.Enum;
-using Mako.Model;
+using Pixeval.Models.Pixiv;
+using Pixeval.Utilities;
 
 namespace Pixeval.ViewModels.Viewers;
 

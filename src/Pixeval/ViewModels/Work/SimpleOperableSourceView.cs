@@ -5,10 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Mako.Model;
 using Misaki;
 using Pixeval.Collections;
 using Pixeval.Models.Blocking;
+using Pixeval.Models.Pixiv;
 
 namespace Pixeval.ViewModels;
 
@@ -36,7 +36,7 @@ public sealed class SimpleOperableSourceView<TViewModel>(IReadOnlyCollection<IAr
         View.Dispose();
     }
 
-    private static IWorkViewModel CreateWorkViewModel(IArtworkInfo info) => info is Novel novel ? new NovelItemViewModel(novel) : new IllustrationItemViewModel(info);
+    private static IWorkViewModel CreateWorkViewModel(IArtworkInfo info) => info is Pixeval.Native.Mako.Novel novel ? new NovelItemViewModel(novel) : new IllustrationItemViewModel(info);
 
     private static ObservableCollection<IArtworkInfo> CreateSource(IReadOnlyCollection<IArtworkInfo> source) =>
         [.. source.Select(static entry => BlockedContentHelper.Replace(entry))];

@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Mako.Model;
 using Pixeval.Collections;
 
 namespace Pixeval.ViewModels;

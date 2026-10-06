@@ -8,7 +8,6 @@ using System.Linq.Expressions;
 using AutoSettingsPage.Models;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Controls;
-using Pixeval.Download.MacroParser;
 using Pixeval.Models.Download;
 
 namespace Pixeval.Models.Settings.Entries;

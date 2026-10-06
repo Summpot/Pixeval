@@ -1,0 +1,19 @@
+[package]
+name = "pixeval_media"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+uniffi = { workspace = true, features = ["tokio"] }
+image = { workspace = true, features = ["png", "jpeg", "webp", "gif", "avif"] }
+png.workspace = true
+zip.workspace = true
+tokio = { workspace = true, features = ["rt", "sync", "fs", "io-util"] }
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+parking_lot.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { workspace = true, features = ["full"] }

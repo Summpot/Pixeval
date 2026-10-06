@@ -3,9 +3,6 @@
 
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Mako.Engine.Implements;
-using Mako.Global.Enum;
-using Mako.Model;
 using Pixeval.I18N;
 
 namespace Pixeval.ViewModels.Search;
@@ -18,7 +15,7 @@ public partial class NovelSearchFormViewModel : SearchArgumentsFormViewModelBase
     [ObservableProperty]
     public partial IReadOnlyList<SearchOptionsLanguage> LanguageItems { get; set; } =
     [
-        new() { Code = "", Name = CommonUnspecified }
+        new("", CommonUnspecified)
     ];
 
     [ObservableProperty]
@@ -37,7 +34,7 @@ public partial class NovelSearchFormViewModel : SearchArgumentsFormViewModelBase
     [ObservableProperty]
     public partial IReadOnlyList<SearchOptionsGenre> GenreItems { get; set; } =
     [
-        new() { Id = 0, Label = CommonUnspecified }
+        new(0, CommonUnspecified)
     ];
 
     [ObservableProperty]

@@ -17,7 +17,7 @@ using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Extensions.DependencyInjection;
-using Imouto.BooruParser;
+using Pixeval.Native.Booru;
 using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.I18N;
@@ -60,10 +60,10 @@ public sealed class ImageViewerRenderingTest
                 window.Show();
                 foreach (var size in new Size[] { new(640, 320), new(2000, 1000), new(500, 1000) })
                 {
-                    using var model = new SingleViewerViewModel("test", new Post(
-                        new("1", "test", PlatformType.Danbooru), "https://example.com/test.jpg", null, null,
-                        ExistState.Exist, DateTimeOffset.UtcNow, new("1", "test", PlatformType.Danbooru),
-                        null, new(100, 100), 0, SafeRating.General, [], null), 0, (_, _) => Task.CompletedTask);
+                    using var model = new SingleViewerViewModel("test", new BooruPost(
+                        "1", "md5", BooruPlatform.Danbooru, "https://example.com/test.jpg", null, null,
+                        100, 100, 0, "jpg", DateTimeOffset.UtcNow.ToString("o"), "1", "test",
+                        null, "general", [], null, false, 0, false, false, null), 0, (_, _) => Task.CompletedTask);
                     using var thumbnail = CreateSource(size);
                     if (sourceReadyBeforeAttachment)
                     {

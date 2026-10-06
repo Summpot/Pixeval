@@ -1,0 +1,27 @@
+[package]
+name = "pixeval_maho"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { workspace = true, features = ["full"] }
+bytes.workspace = true
+thiserror.workspace = true
+uniffi = { workspace = true, features = ["tokio"] }
+http.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+http-body-util.workspace = true
+tokio-rustls.workspace = true
+rustls-pki-types.workspace = true
+webpki-roots.workspace = true
+tower-service.workspace = true
+futures-util.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+url.workspace = true
+async-compat.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }
+futures.workspace = true
