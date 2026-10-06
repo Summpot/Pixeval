@@ -4,18 +4,17 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using Misaki;
 using Pixeval.Download;
-using Pixeval.Models.Database;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities.IO;
 
 namespace Pixeval.Models.Download.Tasks;
 
 public abstract class SingleImageDownloadTaskGroupBase : ImageDownloadTask, IDownloadTaskGroup
 {
-    public DownloadHistoryEntryBase DatabaseEntry { get; }
+    public IDownloadHistoryEntry DatabaseEntry { get; }
 
     public ValueTask InitializeTaskGroupAsync()
     {
@@ -23,19 +22,19 @@ public abstract class SingleImageDownloadTaskGroupBase : ImageDownloadTask, IDow
         return ValueTask.CompletedTask;
     }
 
-    public string Id => DatabaseEntry.Entry.Id;
+    public string Id => DatabaseEntry.Entry?.Id ?? "";
 
     protected SingleImageDownloadTaskGroupBase(
         IArtworkInfo entry,
         string destination,
-        int? workSubscriptionId = null) : this(DownloadHistoryEntryBase.Create(destination, entry, workSubscriptionId))
+        int? workSubscriptionId = null) : this(IDownloadHistoryEntry.Create(destination, entry, workSubscriptionId))
     {
         CurrentState = DownloadState.Queued;
         ProgressPercentage = 0;
     }
 
-    protected SingleImageDownloadTaskGroupBase(DownloadHistoryEntryBase entry) : base(GetImageUri(entry.Entry),
-        IoHelper.ReplaceTokenExtensionFromUrl(entry.Destination, GetImageUri(entry.Entry), entry.Entry.TryGetSetIndex()))
+    protected SingleImageDownloadTaskGroupBase(IDownloadHistoryEntry entry) : base(GetImageUri(entry.Entry!),
+        IoHelper.ReplaceTokenExtensionFromUrl(entry.Destination, GetImageUri(entry.Entry!), entry.Entry!.TryGetSetIndex()))
     {
         DatabaseEntry = entry;
         ErrorMessage = entry.ErrorMessage;
@@ -73,29 +72,18 @@ public abstract class SingleImageDownloadTaskGroupBase : ImageDownloadTask, IDow
                 g.DatabaseEntry.ErrorMessage = g.CurrentState is DownloadState.Error
                     ? g.ErrorMessage
                     : null;
-                App.AppViewModel.HistoryPersistHelper.UpdateDownloadHistory(g.DatabaseEntry);
+                App.AppViewModel.UpdateDownloadHistory(g.DatabaseEntry);
             }
         };
     }
 
     private bool IsCreateFromEntry { get; set; } = true;
 
-    public DownloadToken GetToken() => new(this, CancellationTokenSource.Token);
-
     public int ActiveCount => CurrentState is DownloadState.Queued or DownloadState.Running or DownloadState.Pending or DownloadState.Paused or DownloadState.Cancelled ? 1 : 0;
 
     public int CompletedCount => CurrentState is DownloadState.Completed ? 1 : 0;
 
     public int ErrorCount => CurrentState is DownloadState.Error ? 1 : 0;
-
-    public void SubscribeProgress(ChannelWriter<DownloadToken> writer)
-    {
-        DownloadTryResume += OnDownloadWrite;
-        DownloadTryReset += OnDownloadWrite;
-
-        return;
-        void OnDownloadWrite(ImageDownloadTask o) => writer.TryWrite(((SingleImageDownloadTaskGroupBase) o).GetToken());
-    }
 
     public int Count => 1;
 

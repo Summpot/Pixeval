@@ -1,0 +1,34 @@
+[package]
+name = "pixeval_mcp"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum.workspace = true
+bytes.workspace = true
+tokio = { workspace = true, features = ["full"] }
+async-compat.workspace = true
+tokio-util.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+parking_lot.workspace = true
+thiserror.workspace = true
+uniffi = { workspace = true, features = ["tokio"] }
+chrono = { workspace = true, features = ["serde"] }
+uuid.workspace = true
+
+pixeval_mako.workspace = true
+pixeval_storage.workspace = true
+pixeval_filters.workspace = true
+pixeval_download.workspace = true
+pixeval_cache.workspace = true
+pixeval_subscription.workspace = true
+pixeval_config.workspace = true
+pixeval_plugin.workspace = true
+pixeval_novel.workspace = true
+pixeval_saucenao.workspace = true
+pixeval_maho.workspace = true
+
+[dev-dependencies]
+pixeval_maho.workspace = true
+tempfile.workspace = true

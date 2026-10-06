@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Misaki;
 using Pixeval.Filters.Syntax;
-using Pixeval.Filters.Values;
 using Pixeval.I18N;
 
 namespace Pixeval.Models.Filters;
@@ -23,6 +22,4 @@ internal sealed class WorkTitleFilterSyntax : FilterTextSyntax<IArtworkInfo>
         FilterSyntaxPattern.Default("keyword", I18NManager.GetResource(FilterResources.Completions.Title)),
         FilterSyntaxPattern.Keyword("title", exampleValue: "keyword", description: I18NManager.GetResource(FilterResources.Completions.Title))
     ];
-
-    public override bool Match(IArtworkInfo context, FilterTextValue value) => value.Matches(context.Title);
 }

@@ -12,7 +12,6 @@ using Avalonia.Media.Imaging;
 using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.Models.Download;
-using Pixeval.Models.Download.Macros;
 using Pixeval.Models.Extensions;
 using Pixeval.Models.Options;
 using SkiaSharp;
@@ -23,7 +22,7 @@ public static partial class IoHelper
 {
     public const string PixevalTempExtension = ".pixevaldownloading";
 
-    private const string FileExtensionTokenPrefix = "<" + FileExtensionMacro.NameConst;
+    private const string FileExtensionTokenPrefix = "<ext";
 
     extension(Stream stream)
     {
@@ -90,7 +89,7 @@ public static partial class IoHelper
     {
         ugoiraDownloadFormat ??= App.AppViewModel.AppSettings.DownloadSettings.DownloadFormats.UgoiraDownloadFormat;
         var token = new UgoiraDownloadFormatToken(ugoiraDownloadFormat);
-        if (token.BuiltInFormat is UgoiraDownloadFormat.Original)
+        if (token.BuiltInFormat is not null)
             return token;
 
         if (token.ExtensionFormatExtension is { } extension
@@ -141,6 +140,10 @@ public static partial class IoHelper
         return (token.BuiltInFormat ?? UgoiraDownloadFormatToken.DefaultBuiltInFormat) switch
         {
             UgoiraDownloadFormat.Original => null,
+            UgoiraDownloadFormat.Gif => "gif",
+            UgoiraDownloadFormat.Apng => "png",
+            UgoiraDownloadFormat.Webp => "webp",
+            UgoiraDownloadFormat.Mp4 => "mp4",
             _ => throw new ArgumentOutOfRangeException(nameof(ugoiraDownloadFormat))
         };
     }
@@ -298,8 +301,8 @@ public static partial class IoHelper
     {
         return ReplaceTokenValues(
                 path,
-                "<" + PicSetIndexMacro.NameConst,
-                formatter => MacroHelper.FormatInteger(setIndex, formatter));
+                "<pic_set_index",
+                formatter => FormatInteger(setIndex, formatter));
     }
 
     private static string ReplaceFileExtensionTokens(string path, string extension)
@@ -308,8 +311,21 @@ public static partial class IoHelper
         return ReplaceTokenValues(
             path,
             FileExtensionTokenPrefix,
-            formatter => MacroHelper.FormatString(extensionValue, formatter));
+            formatter => FormatString(extensionValue, formatter));
     }
+
+    private static string FormatString(string value, string? formatter) =>
+        formatter switch
+        {
+            "u" => value.ToUpperInvariant(),
+            "l" => value.ToLowerInvariant(),
+            _ => value
+        };
+
+    private static string FormatInteger(long value, string? formatter) =>
+        formatter is null
+            ? value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            : value.ToString(formatter, System.Globalization.CultureInfo.InvariantCulture);
 
     private static string ReplaceTokenValues(string path, string tokenPrefix, Func<string?, string> valueFactory)
     {

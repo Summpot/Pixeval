@@ -5,7 +5,7 @@
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:entry="using:Pixeval.Views.Entry"
-    xmlns:enum="using:Mako.Global.Enum"
+    xmlns:enum="using:Pixeval.Models.Pixiv"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"

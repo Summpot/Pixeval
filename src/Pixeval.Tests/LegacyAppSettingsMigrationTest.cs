@@ -3,9 +3,10 @@ using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
+using Pixeval.Native.Config;
 using Pixeval.Models.Options;
-using SharpYaml;
-using SharpYaml.Model;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace Pixeval.Tests;
 
@@ -74,8 +75,8 @@ public sealed class LegacyAppSettingsMigrationTest
         Assert.AreEqual(222, settings.BrowsingExperienceSettings.ThumbnailLayout.IllustrationGridItemSize);
         Assert.AreEqual(333, settings.BrowsingExperienceSettings.ThumbnailLayout.IllustrationGridLineSize);
         Assert.AreEqual(444, settings.BrowsingExperienceSettings.ThumbnailLayout.IllustrationMasonryColumnWidth);
-        Assert.AreEqual(Mako.Global.Enum.RankOption.Month, settings.SearchSettings.RankOptions.IllustrationRankOption);
-        Assert.AreEqual(Mako.Global.Enum.RankOption.Week, settings.SearchSettings.RankOptions.NovelRankOption);
+        Assert.AreEqual(Pixeval.Models.Pixiv.RankOption.Month, settings.SearchSettings.RankOptions.IllustrationRankOption);
+        Assert.AreEqual(Pixeval.Models.Pixiv.RankOption.Week, settings.SearchSettings.RankOptions.NovelRankOption);
         Assert.AreEqual("custom-image", settings.DownloadSettings.DownloadFormats.IllustrationDownloadFormat);
         Assert.AreEqual("custom-animation", settings.DownloadSettings.DownloadFormats.UgoiraDownloadFormat);
         Assert.AreEqual("custom-novel", settings.DownloadSettings.DownloadFormats.NovelDownloadFormat);
@@ -98,12 +99,12 @@ public sealed class LegacyAppSettingsMigrationTest
         Assert.AreEqual(ProxyType.Custom, settings.NetworkSettings.ProxySettings.ProxyType);
         Assert.AreEqual("http://localhost:4321", settings.NetworkSettings.ProxySettings.Proxy);
 
-        var saved = YamlSerializer.Serialize(settings, SettingsSerializerContext.Default.AppSettings);
-        using var reader = new StringReader(saved);
-        var root = (YamlMapping) YamlStream.Load(reader, new YamlNodeTracker())[0].Contents!;
-        Assert.IsFalse(((YamlMapping) root["NetworkSettings"]!).ContainsKey("Proxy"));
-        Assert.IsFalse(((YamlMapping) root["ApplicationSettings"]!).ContainsKey("LimitFileCacheSize"));
-        Assert.AreEqual(saved, YamlSerializer.Serialize(Read(saved), SettingsSerializerContext.Default.AppSettings));
+        var saved = Save(settings);
+        var savedJson = Engine.YamlToJson(saved);
+        var root = JsonNode.Parse(savedJson)!.AsObject();
+        Assert.IsFalse(root["NetworkSettings"]!.AsObject().ContainsKey("Proxy"));
+        Assert.IsFalse(root["ApplicationSettings"]!.AsObject().ContainsKey("LimitFileCacheSize"));
+        Assert.AreEqual(saved, Save(Read(saved)));
     }
 
     [TestMethod]
@@ -137,9 +138,18 @@ public sealed class LegacyAppSettingsMigrationTest
         Assert.AreEqual(new RankOptionsSettings(), settings.SearchSettings.RankOptions);
     }
 
+    private static readonly ConfigEngine Engine = new();
+
     private static AppSettings Read(string yaml)
     {
-        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(yaml));
-        return LegacyAppSettingsMigration.Deserialize(stream)!;
+        var migratedYaml = Engine.MigrateYaml(yaml);
+        var json = Engine.YamlToJson(migratedYaml);
+        return JsonSerializer.Deserialize(json, SettingsSerializerContext.Default.AppSettings)!;
+    }
+
+    private static string Save(AppSettings settings)
+    {
+        var json = JsonSerializer.Serialize(settings, SettingsSerializerContext.Default.AppSettings);
+        return Engine.JsonToYaml(json);
     }
 }

@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Misaki;
 using Pixeval.I18N;
-using Pixeval.Models.SauceNao;
+using Pixeval.Native.SauceNao;
 using Pixeval.Utilities;
 using Pixeval.Views.Viewers;
 
@@ -31,21 +28,11 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage
     {
         var viewContainer = TopLevel.GetTopLevel(this)?.ViewContainer;
 
-        IReadOnlyList<SauceNaoResult>? sauceNaoResults = null;
+        List<SauceNaoItem>? sauceNaoResults = null;
         try
         {
-            var httpClient = App.AppViewModel.GetRequiredHttpClient();
-            using var form = new MultipartFormDataContent();
-            using var fileContent = new ReadOnlyMemoryContent(file);
-            fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-            form.Add(fileContent, "file", "img");
-            var response = await httpClient.PostAsync(new SauceNaoRequest(apiKey).ToQueryString(), form);
-            response.EnsureSuccessStatusCode();
-            var result = await response.Content.ReadFromJsonAsync(SauceNaoResponseSerializerContext.Default.SauceNaoResponse);
-            if (result is { Header.Status : 0, Results: { } results })
-                sauceNaoResults = results;
-            else
-                viewContainer?.ShowError(I18NManager.GetResource(MiscResources.ExceptionEncountered), result?.Header.Message);
+            using var client = new SauceNaoClient(apiKey, null);
+            sauceNaoResults = await client.SearchAsync(file.ToArray());
         }
         catch (Exception e)
         {
@@ -53,9 +40,19 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage
         }
 
         if (sauceNaoResults is not null)
+        {
             foreach (var result in sauceNaoResults)
-                if (result.Data.ToIdentityInfo() is { } identityInfo
+            {
+                if (result.ToIdentityInfo() is { } identityInfo
                     && await identityInfo.TryGetArtworkInfoAsync() is { } artwork)
+                {
                     yield return artwork;
+                }
+                else
+                {
+                    yield return result;
+                }
+            }
+        }
     }
 }

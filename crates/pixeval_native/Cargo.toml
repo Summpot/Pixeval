@@ -1,0 +1,30 @@
+[package]
+name = "pixeval_native"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+uniffi = { workspace = true, features = ["tokio"] }
+tokio = { workspace = true, features = ["full"] }
+async-compat.workspace = true
+thiserror.workspace = true
+pixeval_filters.workspace = true
+pixeval_cache.workspace = true
+pixeval_maho.workspace = true
+pixeval_mako.workspace = true
+pixeval_download.workspace = true
+pixeval_storage.workspace = true
+pixeval_subscription.workspace = true
+pixeval_config.workspace = true
+pixeval_plugin.workspace = true
+pixeval_mcp.workspace = true
+pixeval_novel.workspace = true
+pixeval_media.workspace = true
+pixeval_booru.workspace = true
+pixeval_saucenao.workspace = true
+pixeval_update.workspace = true
+serde.workspace = true
+serde_json.workspace = true

@@ -1,12 +1,12 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Interactivity;
-using Mako;
-using Mako.Engine;
-using Mako.Model;
 using Pixeval.I18N;
+using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 
@@ -34,10 +34,10 @@ public abstract partial class SimpleUsersPage : IconContentPage
         ResetEngine(GetFetchEngine(App.AppViewModel.MakoClient));
     }
 
-    private void ResetEngine(IFetchEngine<User> fetchEngine) =>
+    private void ResetEngine(IAsyncEnumerable<User> fetchEngine) =>
         (UserContainer.UserView.DataContext as UserViewViewModel)?.ResetEngine(fetchEngine, static (user, _) => new(user));
 
-    protected abstract IFetchEngine<User> GetFetchEngine(MakoClient makoClient);
+    protected abstract IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient);
 }
 
 public class UserRecommendedPage : SimpleUsersPage
@@ -51,7 +51,7 @@ public class UserRecommendedPage : SimpleUsersPage
         InitializeSource(viewModel);
     }
 
-    protected override IFetchEngine<User> GetFetchEngine(MakoClient makoClient)
+    protected override IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
     {
         return makoClient.UserRecommended();
     }
@@ -72,12 +72,11 @@ public class UserSearchResultPage : SimpleUsersPage
         InitializeSource(viewModel);
     }
 
-    protected override IFetchEngine<User> GetFetchEngine(MakoClient makoClient)
+    protected override IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
     {
         if (_searchText is null)
-            return makoClient.Computed(AsyncEnumerable.Empty<User>());
-        return App.AppViewModel.MakoClient.UserSearch(
-            _searchText);
+            return AsyncEnumerable.Empty<User>();
+        return makoClient.UserSearch(_searchText);
     }
 }
 
@@ -92,10 +91,11 @@ public class UserFollowerPage : SimpleUsersPage
         InitializeSource(viewModel);
     }
 
-    /// <inheritdoc />
-    protected override IFetchEngine<User> GetFetchEngine(MakoClient makoClient)
+    protected override IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
     {
-        return makoClient.UserFollower();
+        if (PixevalSettings.MyId <= 0)
+            return AsyncEnumerable.Empty<User>();
+        return makoClient.UserFollower(PixevalSettings.MyId);
     }
 }
 
@@ -113,10 +113,11 @@ public class UserMyPixivPage : SimpleUsersPage
         InitializeSource(viewModel);
     }
 
-    /// <inheritdoc />
-    protected override IFetchEngine<User> GetFetchEngine(MakoClient makoClient)
+    protected override IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
     {
-        return makoClient.UserMyPixiv(_userId);
+        if (_userId <= 0)
+            return AsyncEnumerable.Empty<User>();
+        return makoClient.UserMypixiv(_userId);
     }
 }
 
@@ -134,9 +135,10 @@ public class RelatedUsersPage : SimpleUsersPage
         ChangeSource();
     }
 
-    /// <inheritdoc />
-    protected override IFetchEngine<User> GetFetchEngine(MakoClient makoClient)
+    protected override IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
     {
-        return makoClient.Computed(makoClient.RelatedUserAsync(_userId).ToAsyncEnumerable());
+        if (_userId <= 0)
+            return AsyncEnumerable.Empty<User>();
+        return makoClient.UserRelated(_userId);
     }
 }

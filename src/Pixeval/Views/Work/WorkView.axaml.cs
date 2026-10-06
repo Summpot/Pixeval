@@ -9,10 +9,9 @@ using Avalonia.Controls.Selection;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Mako.Global.Enum;
-using Mako.Model;
 using Misaki;
 using Pixeval.Models.Options;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Viewers;
@@ -115,8 +114,8 @@ public sealed partial class WorkView : UserControl, IDisposable
             case (NovelItemViewModel { Entry.Id: var id }, _):
                 viewContainer.CreateNovelPage(id);
                 break;
-            case (IllustrationItemViewModel { Entry: Illustration illustration }, _):
-                viewContainer.CreateIllustrationPage(illustration);
+            case (IllustrationItemViewModel illustrationViewModel, _):
+                viewContainer.CreateIllustrationPage(illustrationViewModel);
                 break;
         }
     }
@@ -126,7 +125,7 @@ public sealed partial class WorkView : UserControl, IDisposable
     /// </summary>
     public void ResetEngine(IAsyncEnumerable<IArtworkInfo> newEngine)
     {
-        var isNovelEngine = newEngine is IAsyncEnumerable<Novel>;
+        var isNovelEngine = newEngine is IAsyncEnumerable<Novel> or IAsyncEnumerable<INovelEntry>;
         var viewModel = DataContext as IWorkViewViewModel;
         switch (viewModel)
         {
@@ -170,7 +169,7 @@ public sealed partial class WorkView : UserControl, IDisposable
 
     public void WorkItem_OnRequestOpenUserInfoPage(Control sender, IWorkViewModel e)
     {
-        if (e is { Entry: WorkBase { User.Id: var id } })
+        if (e is { Entry: IWorkEntry { User.Id: var id } })
         {
             if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
                 viewContainer.CreateUserPage(id);

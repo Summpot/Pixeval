@@ -4,10 +4,9 @@ using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Filters;
 using Pixeval.Filters.Analysis;
-using Pixeval.Filters.Nodes;
 using Pixeval.Filters.Syntax;
-using Pixeval.Filters.Text;
-using Pixeval.Filters.Values;
+using Pixeval.Models.Filters;
+using Pixeval.Native.Filters;
 
 namespace Pixeval.Tests;
 
@@ -78,11 +77,11 @@ public sealed class FilterLanguageTest
 
         Assert.IsTrue(result.IsSuccess);
         Assert.IsNotNull(result.Query);
-        Assert.HasCount(1, result.Query.Root.Children);
-        var predicate = (FilterPredicateNode<object, FilterTextValue>) result.Query.Root.Children.Single();
-        var text = predicate.Value;
-        Assert.AreEqual("Tag", predicate.Syntax.Key);
-        Assert.AreEqual("123", text.ToString());
+        var ast = result.Query.GetAst();
+        Assert.HasCount(1, ast.Children);
+        var predicate = ast.Children.Single();
+        Assert.AreEqual("Tag", predicate.SyntaxKey);
+        Assert.AreEqual("123", predicate.TextContent);
     }
 
     [TestMethod]
@@ -103,7 +102,7 @@ public sealed class FilterLanguageTest
         var result = _Language.Analyze(
             "#to",
             3,
-            static context => context.Match.Syntax.Key == "Tag"
+            static context => context.MatchSyntaxKey == "Tag"
                 ? new FilterCompletionDefinition[] { new("tag:touhou", "touhou", "touhou", "东方") }
                 : []);
 
@@ -111,7 +110,7 @@ public sealed class FilterLanguageTest
         Assert.DoesNotContain(t => t.DisplayText == "#tag", result.Completions);
         var completion = result.Completions.Single(t => t.DisplayText == "touhou");
         Assert.AreEqual("touhou", completion.InsertText);
-        Assert.AreEqual(FilterTextSpan.FromBounds(1, 3), completion.ReplacementSpan);
+        Assert.AreEqual(FromBounds(1, 3), completion.ReplacementSpan);
     }
 
     [TestMethod]
@@ -120,15 +119,15 @@ public sealed class FilterLanguageTest
         var result = _Language.Analyze(
             "artist:sa",
             9,
-            static context => context.Match.Syntax.Key == "Author"
-                ? new FilterCompletionDefinition[] { new("author:saberiii", "saberiii", "saberiii") }
+            static context => context.MatchSyntaxKey == "Author"
+                ? new FilterCompletionDefinition[] { new("author:saberiii", "saberiii", "saberiii", null) }
                 : []);
 
         Assert.Contains(t => t.DisplayText == "saberiii", result.Completions);
         Assert.DoesNotContain(t => t.DisplayText.Contains("artist", StringComparison.OrdinalIgnoreCase),
             result.Completions);
         var completion = result.Completions.Single(t => t.DisplayText == "saberiii");
-        Assert.AreEqual(FilterTextSpan.FromBounds(7, 9), completion.ReplacementSpan);
+        Assert.AreEqual(FromBounds(7, 9), completion.ReplacementSpan);
     }
 
     [TestMethod]
@@ -146,8 +145,9 @@ public sealed class FilterLanguageTest
         var result = _Language.Analyze("+r18g");
 
         Assert.IsTrue(result.IsSuccess);
-        var predicate = (FilterPredicateNode<object, bool>) result.Query!.Root.Children.Single();
-        Assert.AreEqual("R18G", predicate.Syntax.Key);
+        var ast = result.Query!.GetAst();
+        var predicate = ast.Children.Single();
+        Assert.AreEqual("R18G", predicate.SyntaxKey);
     }
 
     [TestMethod]
@@ -221,8 +221,8 @@ public sealed class FilterLanguageTest
             {
                 [FilterValueKind.DoubleRange] =
                 [
-                    new("hint.double-range.lower", "2-", ""),
-                    new("hint.double-range.upper-fraction", "-1/2", "")
+                    new("hint.double-range.lower", "2-", "", null),
+                    new("hint.double-range.upper-fraction", "-1/2", "", null)
                 ]
             });
         var result = language.Analyze("r:", 2);
@@ -238,9 +238,10 @@ public sealed class FilterLanguageTest
         var result = _Language.Analyze("score:12345");
 
         Assert.IsTrue(result.IsSuccess);
-        var predicate = (FilterPredicateNode<object, long>) result.Query!.Root.Children.Single();
-        Assert.AreEqual("Score", predicate.Syntax.Key);
-        Assert.AreEqual(12345L, predicate.Value);
+        var ast = result.Query!.GetAst();
+        var predicate = ast.Children.Single();
+        Assert.AreEqual("Score", predicate.SyntaxKey);
+        Assert.AreEqual(12345L, predicate.LongValue);
     }
 
     [TestMethod]
@@ -249,9 +250,10 @@ public sealed class FilterLanguageTest
         var result = _Language.Analyze("weight:1/2");
 
         Assert.IsTrue(result.IsSuccess);
-        var predicate = (FilterPredicateNode<object, double>) result.Query!.Root.Children.Single();
-        Assert.AreEqual("Weight", predicate.Syntax.Key);
-        Assert.AreEqual(0.5d, predicate.Value, 0.000001d);
+        var ast = result.Query!.GetAst();
+        var predicate = ast.Children.Single();
+        Assert.AreEqual("Weight", predicate.SyntaxKey);
+        Assert.AreEqual(0.5d, predicate.DoubleValue, 0.000001d);
     }
 
     [TestMethod]
@@ -329,8 +331,8 @@ public sealed class FilterLanguageTest
         var result = _Language.Analyze(
             "(#",
             2,
-            static context => context.Match.Syntax.Key == "Tag"
-                ? new FilterCompletionDefinition[] { new("tag:touhou", "touhou", "touhou") }
+            static context => context.MatchSyntaxKey == "Tag"
+                ? new FilterCompletionDefinition[] { new("tag:touhou", "touhou", "touhou", null) }
                 : []);
 
         Assert.IsFalse(result.IsSuccess);
@@ -344,12 +346,11 @@ public sealed class FilterLanguageTest
 
         Assert.IsTrue(result.IsSuccess);
         Assert.IsNotNull(result.Query);
-        var predicate = (FilterPredicateNode<object, FilterLongRange>) result.Query.Root.Children.Single();
-        var range = predicate.Value;
-        Assert.AreEqual(100L, range.Start);
-        Assert.AreEqual(200L, range.End);
-        Assert.IsTrue(range.Contains(200));
-        Assert.IsFalse(range.Contains(99));
+        var ast = result.Query.GetAst();
+        var predicate = ast.Children.Single();
+        Assert.AreEqual("Bookmark", predicate.SyntaxKey);
+        Assert.AreEqual(100L, predicate.RangeStartLong);
+        Assert.AreEqual(200L, predicate.RangeEndLong);
     }
 
     [TestMethod]
@@ -371,8 +372,8 @@ public sealed class FilterLanguageTest
         Assert.IsFalse(result.IsSuccess);
         Assert.AreEqual(FilterDiagnosticKind.RangeMinimumGreaterThanMaximum, result.Diagnostics[0].Kind);
         Assert.AreEqual("l:", result.Diagnostics[0].Arguments[0]);
-        Assert.AreEqual(200L, result.Diagnostics[0].Arguments[1]);
-        Assert.AreEqual(100L, result.Diagnostics[0].Arguments[2]);
+        Assert.AreEqual("200", result.Diagnostics[0].Arguments[1]);
+        Assert.AreEqual("100", result.Diagnostics[0].Arguments[2]);
     }
 
     [TestMethod]
@@ -393,8 +394,6 @@ public sealed class FilterLanguageTest
         public override string? ExampleValue => "keyword";
 
         public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } = [FilterSyntaxPattern.Default("keyword")];
-
-        public override bool Match(object context, FilterTextValue value) => true;
     }
 
     private sealed class TagSyntax : FilterTextSyntax<object>
@@ -405,8 +404,6 @@ public sealed class FilterLanguageTest
 
         public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
             [FilterSyntaxPattern.PrefixOnly("#", "tag")];
-
-        public override bool Match(object context, FilterTextValue value) => true;
     }
 
     private sealed class AuthorSyntax : FilterTextSyntax<object>
@@ -420,8 +417,6 @@ public sealed class FilterLanguageTest
             FilterSyntaxPattern.Keyword("a", exampleValue: "artist"),
             FilterSyntaxPattern.Keyword("artist", exampleValue: "artist")
         ];
-
-        public override bool Match(object context, FilterTextValue value) => true;
     }
 
     private sealed class BookmarkSyntax : FilterLongRangeSyntax<object>
@@ -432,8 +427,6 @@ public sealed class FilterLanguageTest
 
         public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
             [FilterSyntaxPattern.Keyword("l", exampleValue: "100-200")];
-
-        public override bool Match(object context, FilterLongRange value) => true;
     }
 
     private sealed class ScoreSyntax : FilterLongSyntax<object>
@@ -444,8 +437,6 @@ public sealed class FilterLanguageTest
 
         public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
             [FilterSyntaxPattern.Keyword("score", exampleValue: "12345")];
-
-        public override bool Match(object context, long value) => true;
     }
 
     private sealed class WeightSyntax : FilterDoubleSyntax<object>
@@ -456,8 +447,6 @@ public sealed class FilterLanguageTest
 
         public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
             [FilterSyntaxPattern.Keyword("weight", exampleValue: "1/2")];
-
-        public override bool Match(object context, double value) => true;
     }
 
     private sealed class RatioSyntax : FilterDoubleRangeSyntax<object>
@@ -468,8 +457,6 @@ public sealed class FilterLanguageTest
 
         public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
             [FilterSyntaxPattern.Keyword("r", exampleValue: "1-2")];
-
-        public override bool Match(object context, FilterDoubleRange value) => true;
     }
 
     private sealed class StartDateSyntax : FilterDateSyntax<object>
@@ -480,8 +467,6 @@ public sealed class FilterLanguageTest
 
         public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
             [FilterSyntaxPattern.Keyword("s", exampleValue: "2024-1-1")];
-
-        public override bool Match(object context, DateTimeOffset value) => true;
     }
 
     private sealed class AiSyntax : FilterFlagSyntax<object>
@@ -490,11 +475,9 @@ public sealed class FilterLanguageTest
 
         public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
         [
-            new("+", ["ai"], Metadata: false, Description: "仅显示 AI"),
-            new("-", ["ai"], Metadata: true, Description: "排除 AI")
+            new("+", ["ai"], Metadata: "false", Description: "仅显示 AI"),
+            new("-", ["ai"], Metadata: "true", Description: "排除 AI")
         ];
-
-        public override bool Match(object context, bool value) => true;
     }
 
     private sealed class R18Syntax : FilterFlagSyntax<object>
@@ -503,11 +486,9 @@ public sealed class FilterLanguageTest
 
         public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
         [
-            new("+", ["r18"], Metadata: false, Description: "仅显示 R18"),
-            new("-", ["r18"], Metadata: true, Description: "排除 R18")
+            new("+", ["r18"], Metadata: "false", Description: "仅显示 R18"),
+            new("-", ["r18"], Metadata: "true", Description: "排除 R18")
         ];
-
-        public override bool Match(object context, bool value) => true;
     }
 
     private sealed class R18GSyntax : FilterFlagSyntax<object>
@@ -516,11 +497,9 @@ public sealed class FilterLanguageTest
 
         public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
         [
-            new("+", ["r18g"], Metadata: false, Description: "仅显示 R18G"),
-            new("-", ["r18g"], Metadata: true, Description: "排除 R18G")
+            new("+", ["r18g"], Metadata: "false", Description: "仅显示 R18G"),
+            new("-", ["r18g"], Metadata: "true", Description: "排除 R18G")
         ];
-
-        public override bool Match(object context, bool value) => true;
     }
 
     private sealed class GifSyntax : FilterFlagSyntax<object>
@@ -529,11 +508,9 @@ public sealed class FilterLanguageTest
 
         public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
         [
-            new("+", ["gif"], Metadata: false, Description: "仅显示动图"),
-            new("-", ["gif"], Metadata: true, Description: "排除动图")
+            new("+", ["gif"], Metadata: "false", Description: "仅显示动图"),
+            new("-", ["gif"], Metadata: "true", Description: "排除动图")
         ];
-
-        public override bool Match(object context, bool value) => true;
     }
 
     private static void AssertValueHintsOnly(string text, IReadOnlyCollection<string> displayTexts)
@@ -544,4 +521,6 @@ public sealed class FilterLanguageTest
         Assert.IsTrue(result.Completions.All(t => t.InsertText == text));
         Assert.IsTrue(result.Completions.All(t => t.IsHintOnly));
     }
+
+    private static FilterTextSpan FromBounds(int start, int end) => new(Math.Max(start, 0), Math.Max(0, end - start));
 }

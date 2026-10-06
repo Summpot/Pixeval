@@ -7,17 +7,17 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using Imouto.BooruParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Misaki;
 using Pixeval.Download;
-using Pixeval.Models.Database;
-using Pixeval.Models.Database.Managers;
 using Pixeval.Models.Download.Tasks;
+using Pixeval.Native.Booru;
+using Pixeval.Native.Download;
 using Pixeval.Models.Options;
 using Pixeval.Models.Subscriptions;
+using Pixeval.Native.Storage;
+using Pixeval.Native.Subscription;
 using Pixeval.ViewModels;
-using SQLite;
 
 namespace Pixeval.Tests;
 
@@ -29,10 +29,10 @@ public sealed class DownloadManagerTest
     {
         using var httpClient = new HttpClient();
         using var manager = new DownloadManager(httpClient, 1);
-        using var db = new SQLiteConnection(":memory:");
+        using var storage = new StorageEngine(":memory:");
         using var viewModel = new DownloadPageViewModel(
             manager.QueuedTasks,
-            new WorkSubscriptionPersistentManager(db),
+            storage,
             new TestWorkSubscriptionService());
         var original = new TestDownloadTaskGroup("same", "1");
         var other = new TestDownloadTaskGroup("other", "2");
@@ -79,28 +79,30 @@ public sealed class DownloadManagerTest
     }
 
     [TestMethod]
-    public void ViewModel_ProjectsOrdinaryAndSubscriptionSources()
+    public async Task ViewModel_ProjectsOrdinaryAndSubscriptionSources()
     {
         using var httpClient = new HttpClient();
         using var manager = new DownloadManager(httpClient, 1);
-        using var db = new SQLiteConnection(":memory:");
-        var subscriptionManager = new WorkSubscriptionPersistentManager(db);
-        var subscription = subscriptionManager.Upsert(new()
-        {
-            Id = 1,
-            SubscriptionType = WorkSubscriptionType.Posts,
-            WorkKind = WorkSubscriptionWorkKind.Illustration,
-            Name = "Subscription"
-        });
+        using var storage = new StorageEngine(":memory:");
+        var subscription = storage.UpsertSubscription(
+            1,
+            (uint)WorkSubscriptionType.Posts,
+            (uint)WorkSubscriptionWorkKind.Illustration,
+            "Subscription",
+            "author",
+            "",
+            "",
+            null);
         using var viewModel = new DownloadPageViewModel(
             manager.QueuedTasks,
-            subscriptionManager,
+            storage,
             new TestWorkSubscriptionService());
+        await viewModel.SubscriptionFoldersLoadTask;
         var ordinary = new TestDownloadTaskGroup("ordinary", "ordinary");
         var subscriptionTask = new TestDownloadTaskGroup(
             "subscription",
             "subscription",
-            subscription.HistoryEntryId);
+            (int)subscription.HistoryEntryId);
 
         manager.QueueTask(ordinary);
         manager.QueueTask(subscriptionTask);
@@ -121,24 +123,26 @@ public sealed class DownloadManagerTest
     }
 
     [TestMethod]
-    public void ViewModel_PreservesSubscriptionSourceOrderDuringInitialProjection()
+    public async Task ViewModel_PreservesSubscriptionSourceOrderDuringInitialProjection()
     {
-        using var db = new SQLiteConnection(":memory:");
-        var subscriptionManager = new WorkSubscriptionPersistentManager(db);
-        var subscription = subscriptionManager.Upsert(new()
-        {
-            Id = 1,
-            SubscriptionType = WorkSubscriptionType.Posts,
-            WorkKind = WorkSubscriptionWorkKind.Illustration,
-            Name = "Subscription"
-        });
-        var newest = new TestDownloadTaskGroup("newest", "newest", subscription.HistoryEntryId);
-        var older = new TestDownloadTaskGroup("older", "older", subscription.HistoryEntryId);
+        using var storage = new StorageEngine(":memory:");
+        var subscription = storage.UpsertSubscription(
+            1,
+            (uint)WorkSubscriptionType.Posts,
+            (uint)WorkSubscriptionWorkKind.Illustration,
+            "Subscription",
+            "author",
+            "",
+            "",
+            null);
+        var newest = new TestDownloadTaskGroup("newest", "newest", (int)subscription.HistoryEntryId);
+        var older = new TestDownloadTaskGroup("older", "older", (int)subscription.HistoryEntryId);
         ObservableCollection<IDownloadTaskGroupBase> source = [newest, older];
         using var viewModel = new DownloadPageViewModel(
             source,
-            subscriptionManager,
+            storage,
             new TestWorkSubscriptionService());
+        await viewModel.SubscriptionFoldersLoadTask;
 
         var folder = viewModel.SubscriptionFolders[0];
         Assert.AreSame(newest, folder.Items[0].DownloadTask);
@@ -148,20 +152,21 @@ public sealed class DownloadManagerTest
     [TestMethod]
     public async Task ViewModel_DisplaysSubscriptionsWithoutTasks()
     {
-        using var db = new SQLiteConnection(":memory:");
-        var subscriptionManager = new WorkSubscriptionPersistentManager(db);
-        _ = subscriptionManager.Upsert(new()
-        {
-            Id = 1,
-            SubscriptionType = WorkSubscriptionType.Posts,
-            WorkKind = WorkSubscriptionWorkKind.Illustration,
-            Name = "Subscription"
-        });
+        using var storage = new StorageEngine(":memory:");
+        _ = storage.UpsertSubscription(
+            1,
+            (uint)WorkSubscriptionType.Posts,
+            (uint)WorkSubscriptionWorkKind.Illustration,
+            "Subscription",
+            "author",
+            "",
+            "",
+            null);
         using var httpClient = new HttpClient();
         using var manager = new DownloadManager(httpClient, 1);
         using var viewModel = new DownloadPageViewModel(
             manager.QueuedTasks,
-            subscriptionManager,
+            storage,
             new TestWorkSubscriptionService());
 
         await viewModel.SubscriptionFoldersLoadTask;
@@ -173,22 +178,23 @@ public sealed class DownloadManagerTest
     [TestMethod]
     public async Task ViewModel_TracksSubscriptionFetchState()
     {
-        using var db = new SQLiteConnection(":memory:");
-        var subscriptionManager = new WorkSubscriptionPersistentManager(db);
-        var subscription = subscriptionManager.Upsert(new()
-        {
-            Id = 1,
-            SubscriptionType = WorkSubscriptionType.Posts,
-            WorkKind = WorkSubscriptionWorkKind.Illustration,
-            Name = "Subscription"
-        });
+        using var storage = new StorageEngine(":memory:");
+        var subscription = storage.UpsertSubscription(
+            1,
+            (uint)WorkSubscriptionType.Posts,
+            (uint)WorkSubscriptionWorkKind.Illustration,
+            "Subscription",
+            "author",
+            "",
+            "",
+            null);
         using var httpClient = new HttpClient();
         using var manager = new DownloadManager(httpClient, 1);
         var fetchStateSource = new TestWorkSubscriptionService();
-        fetchStateSource.Update(new(subscription.HistoryEntryId, true, 42));
+        fetchStateSource.Update(new(subscription.HistoryEntryId, 1, 42, SubscriptionStatus.Fetching));
         using var viewModel = new DownloadPageViewModel(
             manager.QueuedTasks,
-            subscriptionManager,
+            storage,
             fetchStateSource);
 
         await viewModel.SubscriptionFoldersLoadTask;
@@ -197,7 +203,7 @@ public sealed class DownloadManagerTest
         Assert.IsTrue(folder.IsFetching);
         Assert.AreEqual(42, folder.FetchedCount);
 
-        fetchStateSource.Update(new(subscription.HistoryEntryId, false, 42));
+        fetchStateSource.Update(new(subscription.HistoryEntryId, 1, 42, SubscriptionStatus.Completed));
 
         Assert.IsFalse(folder.IsFetching);
         Assert.AreEqual(0, folder.FetchedCount);
@@ -206,27 +212,28 @@ public sealed class DownloadManagerTest
     [TestMethod]
     public async Task ViewModel_AddsNewSubscriptionWhenFetchingStarts()
     {
-        using var db = new SQLiteConnection(":memory:");
-        var subscriptionManager = new WorkSubscriptionPersistentManager(db);
+        using var storage = new StorageEngine(":memory:");
         using var httpClient = new HttpClient();
         using var manager = new DownloadManager(httpClient, 1);
         var fetchStateSource = new TestWorkSubscriptionService();
         using var viewModel = new DownloadPageViewModel(
             manager.QueuedTasks,
-            subscriptionManager,
+            storage,
             fetchStateSource);
 
         await viewModel.SubscriptionFoldersLoadTask;
         Assert.IsEmpty(viewModel.SubscriptionFolders);
 
-        var subscription = subscriptionManager.Upsert(new()
-        {
-            Id = 1,
-            SubscriptionType = WorkSubscriptionType.Posts,
-            WorkKind = WorkSubscriptionWorkKind.Illustration,
-            Name = "Subscription"
-        });
-        fetchStateSource.Update(new(subscription.HistoryEntryId, true, 0));
+        var subscription = storage.UpsertSubscription(
+            1,
+            (uint)WorkSubscriptionType.Posts,
+            (uint)WorkSubscriptionWorkKind.Illustration,
+            "Subscription",
+            "author",
+            "",
+            "",
+            null);
+        fetchStateSource.Update(new(subscription.HistoryEntryId, 1, 0, SubscriptionStatus.Fetching));
 
         Assert.HasCount(1, viewModel.SubscriptionFolders);
         Assert.AreEqual(
@@ -238,27 +245,28 @@ public sealed class DownloadManagerTest
     [TestMethod]
     public async Task ViewModel_RemovesFolderWhenSubscriptionIsRemoved()
     {
-        using var db = new SQLiteConnection(":memory:");
-        var subscriptionManager = new WorkSubscriptionPersistentManager(db);
-        var subscription = subscriptionManager.Upsert(new()
-        {
-            Id = 1,
-            SubscriptionType = WorkSubscriptionType.Posts,
-            WorkKind = WorkSubscriptionWorkKind.Illustration,
-            Name = "Subscription"
-        });
+        using var storage = new StorageEngine(":memory:");
+        var subscription = storage.UpsertSubscription(
+            1,
+            (uint)WorkSubscriptionType.Posts,
+            (uint)WorkSubscriptionWorkKind.Illustration,
+            "Subscription",
+            "author",
+            "",
+            "",
+            null);
         using var httpClient = new HttpClient();
         using var manager = new DownloadManager(httpClient, 1);
         var subscriptionService = new TestWorkSubscriptionService();
         using var viewModel = new DownloadPageViewModel(
             manager.QueuedTasks,
-            subscriptionManager,
+            storage,
             subscriptionService);
         await viewModel.SubscriptionFoldersLoadTask;
         Assert.HasCount(1, viewModel.SubscriptionFolders);
 
-        _ = subscriptionManager.TryDelete(subscription);
-        subscriptionService.Remove(subscription.HistoryEntryId);
+        _ = storage.DeleteSubscription(subscription.HistoryEntryId);
+        subscriptionService.Remove((int)subscription.HistoryEntryId);
 
         Assert.IsEmpty(viewModel.SubscriptionFolders);
     }
@@ -266,36 +274,32 @@ public sealed class DownloadManagerTest
     [TestMethod]
     public async Task ViewModel_UpdatesSubscriptionMetadata()
     {
-        using var db = new SQLiteConnection(":memory:");
-        var subscriptionManager = new WorkSubscriptionPersistentManager(db);
-        var subscription = subscriptionManager.Upsert(new()
-        {
-            Id = 1,
-            SubscriptionType = WorkSubscriptionType.Posts,
-            WorkKind = WorkSubscriptionWorkKind.Illustration,
-            Name = "Old",
-            AvatarUrl = "old-avatar"
-        });
+        using var storage = new StorageEngine(":memory:");
+        var subscription = storage.UpsertSubscription(
+            1,
+            (uint)WorkSubscriptionType.Posts,
+            (uint)WorkSubscriptionWorkKind.Illustration,
+            "Old",
+            "author",
+            "old-avatar",
+            "",
+            null);
         using var httpClient = new HttpClient();
         using var manager = new DownloadManager(httpClient, 1);
         var subscriptionService = new TestWorkSubscriptionService();
         using var viewModel = new DownloadPageViewModel(
             manager.QueuedTasks,
-            subscriptionManager,
+            storage,
             subscriptionService);
         await viewModel.SubscriptionFoldersLoadTask;
         var folder = viewModel.SubscriptionFolders[0];
         var changedProperties = new List<string?>();
         folder.PropertyChanged += (_, args) => changedProperties.Add(args.PropertyName);
 
-        subscriptionService.UpdateSubscription(new()
+        subscriptionService.UpdateSubscription(subscription with
         {
-            HistoryEntryId = subscription.HistoryEntryId,
-            Id = subscription.Id,
-            SubscriptionType = subscription.SubscriptionType,
-            WorkKind = subscription.WorkKind,
-            Name = "New",
-            AvatarUrl = "new-avatar"
+            Title = "New",
+            Avatar = "new-avatar"
         });
 
         Assert.AreEqual("New", folder.Subscription.Name);
@@ -306,32 +310,34 @@ public sealed class DownloadManagerTest
 
     private sealed class TestWorkSubscriptionService : IWorkSubscriptionService
     {
-        public WorkSubscriptionFetchState? CurrentFetchState { get; private set; }
+        public SubscriptionFetchState? CurrentFetchState { get; private set; }
 
-        public event EventHandler<WorkSubscriptionFetchState>? FetchStateChanged;
+        public event EventHandler<SubscriptionFetchState>? FetchStateChanged;
 
-        public event EventHandler<WorkSubscriptionEntry>? SubscriptionUpdated;
+        public event EventHandler<WorkSubscriptionRecord>? SubscriptionUpdated;
 
-        public event EventHandler<int>? SubscriptionRemoved;
+        public event EventHandler<long>? SubscriptionRemoved;
 
-        public WorkSubscriptionEntry? TryGetSubscription(
+        public WorkSubscriptionType? LastQueryType { get; private set; }
+
+        public WorkSubscriptionRecord? TryGetSubscription(
             long targetId,
             WorkSubscriptionType subscriptionType,
             WorkSubscriptionWorkKind workKind) => null;
 
-        public Task<WorkSubscriptionEntry?> TryRemoveAsync(int historyEntryId) =>
-            Task.FromResult<WorkSubscriptionEntry?>(null);
+        public Task<WorkSubscriptionRecord?> TryRemoveAsync(long historyEntryId) =>
+            Task.FromResult<WorkSubscriptionRecord?>(null);
 
-        public void Update(WorkSubscriptionFetchState state)
+        public void Update(SubscriptionFetchState state)
         {
-            CurrentFetchState = state.IsFetching ? state : null;
+            CurrentFetchState = state.Status == SubscriptionStatus.Fetching ? state : null;
             FetchStateChanged?.Invoke(this, state);
         }
 
-        public void Remove(int workSubscriptionId) =>
+        public void Remove(long workSubscriptionId) =>
             SubscriptionRemoved?.Invoke(this, workSubscriptionId);
 
-        public void UpdateSubscription(WorkSubscriptionEntry subscription) =>
+        public void UpdateSubscription(WorkSubscriptionRecord subscription) =>
             SubscriptionUpdated?.Invoke(this, subscription);
     }
 
@@ -340,10 +346,10 @@ public sealed class DownloadManagerTest
         string id,
         int? workSubscriptionId = null) : IDownloadTaskGroup
     {
-        public DownloadHistoryEntryBase DatabaseEntry { get; } =
-            DownloadHistoryEntryBase.Create(destination, CreatePost(id), workSubscriptionId);
+        public IDownloadHistoryEntry DatabaseEntry { get; } =
+            IDownloadHistoryEntry.Create(destination, CreatePost(id), workSubscriptionId);
 
-        public string Id => DatabaseEntry.Entry.Id;
+        public string Id => DatabaseEntry.Entry?.Id ?? "";
 
         public double ProgressPercentage => 100;
 
@@ -381,12 +387,6 @@ public sealed class DownloadManagerTest
 
         public ValueTask InitializeTaskGroupAsync() => ValueTask.CompletedTask;
 
-        public void SubscribeProgress(ChannelWriter<DownloadToken> writer)
-        {
-        }
-
-        public DownloadToken GetToken() => new(this, CancellationToken.None);
-
         public void Reset()
         {
         }
@@ -415,18 +415,27 @@ public sealed class DownloadManagerTest
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
-    private static Post CreatePost(string id) => new(
-        new(id, $"hash-{id}", PlatformType.Danbooru),
+    private static BooruPost CreatePost(string id) => new(
+        id,
+        $"hash-{id}",
+        BooruPlatform.Danbooru,
         $"https://example.com/{id}.jpg",
         null,
         null,
-        ExistState.Exist,
-        DateTimeOffset.UtcNow,
-        new("1", "uploader", PlatformType.Danbooru),
-        null,
-        new(100, 100),
+        100,
+        100,
         0,
-        SafeRating.General,
+        "jpg",
+        DateTimeOffset.UtcNow.ToString("O"),
+        "1",
+        "uploader",
+        null,
+        "general",
         [],
+        null,
+        false,
+        0,
+        false,
+        false,
         null);
 }

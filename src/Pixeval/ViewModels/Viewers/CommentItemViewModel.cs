@@ -4,9 +4,8 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
-using Mako.Global.Enum;
-using Mako.Model;
 using Pixeval.Models.Blocking;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.Views;
 

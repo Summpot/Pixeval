@@ -35,9 +35,6 @@ public record ApplicationSettingsGroup
     [SettingsEntry(Symbol.DarkTheme, AppSettingsResources.ThemeEntry.Header, AppSettingsResources.ThemeEntry.Description)]
     public ApplicationTheme Theme { get; set; }
 
-    [SettingsEntry(Symbol.Database, AppSettingsResources.UseFileCacheEntry.Header, AppSettingsResources.UseFileCacheEntry.Description)]
-    public bool UseFileCache { get; set; } = true;
-
     [SettingsEntry(Symbol.DatabaseLightning, AppSettingsResources.LimitFileCacheSizeEntry.Header, AppSettingsResources.LimitFileCacheSizeEntry.Description)]
     public FileCacheSettings FileCache { get; set; } = new();
 

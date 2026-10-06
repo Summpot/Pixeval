@@ -1,9 +1,5 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
-
-using Mako.Global.Enum;
-using Mako.Model;
-
 namespace Pixeval.ViewModels.Viewers;
 
 public sealed record WorkSeriesInfoViewModel(
@@ -14,10 +10,16 @@ public sealed record WorkSeriesInfoViewModel(
     WorkSeriesNavigationViewModel? Next = null,
     string? PositionText = null)
 {
-    public static WorkSeriesInfoViewModel? Create(WorkBase? work, SimpleWorkType workType) =>
-        work?.Series is { Id: > 0 } series
-            ? new(workType, series.Id, series.Title)
-            : null;
+    public static WorkSeriesInfoViewModel? Create(Misaki.IArtworkInfo? work, SimpleWorkType workType)
+    {
+        var series = work switch
+        {
+            Pixeval.Native.Mako.Illustration illust => illust.Series,
+            Pixeval.Native.Mako.Novel novel => novel.Series,
+            _ => null
+        };
+        return series is { Id: > 0 } s ? new(workType, s.Id, s.Title) : null;
+    }
 
     public static WorkSeriesInfoViewModel Create(MangaSeriesContextResponse response)
     {
@@ -27,7 +29,7 @@ public sealed record WorkSeriesInfoViewModel(
             response.Detail.Title,
             CreateNavigation(response.Context.Previous),
             CreateNavigation(response.Context.Next),
-            $"{response.Context.ContentOrder}/{response.Detail.SeriesWorkCount}");
+            $"{response.Context.ContentOrder}/{response.Detail.PublishedContentCount ?? 0}");
 
         static WorkSeriesNavigationViewModel? CreateNavigation(Illustration? work) =>
             work is { Id: > 0, Visible: true }
@@ -35,7 +37,7 @@ public sealed record WorkSeriesInfoViewModel(
                 : null;
     }
 
-    public static WorkSeriesInfoViewModel? Create(NovelContent content, SimpleSeries? fallback)
+    public static WorkSeriesInfoViewModel? Create(NovelContent content, Pixeval.Native.Mako.Series? fallback)
     {
         var id = content.SeriesId ?? fallback?.Id;
         if (id is not > 0)

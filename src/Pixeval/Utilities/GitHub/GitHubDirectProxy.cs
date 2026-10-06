@@ -3,7 +3,6 @@
 
 using System;
 using System.Net;
-using Mako.Net;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Options;
 

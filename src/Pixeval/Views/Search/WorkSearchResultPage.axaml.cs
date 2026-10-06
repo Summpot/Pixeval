@@ -2,12 +2,13 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
-using Mako.Engine.Implements;
-using Mako.Global.Enum;
-using Mako.Model;
+using Misaki;
 using Pixeval.Controls;
 using Pixeval.I18N;
+using Pixeval.Models.Pixiv;
+using Pixeval.Utilities;
 using Pixeval.ViewModels;
 
 namespace Pixeval.Views.Search;
@@ -62,15 +63,15 @@ public partial class WorkSearchResultPage : IconContentPage
 
     private void ChangeSource()
     {
-        var engine = (_illustrationArguments, _novelArguments) switch
+        IAsyncEnumerable<IArtworkInfo> engine = (_illustrationArguments, _novelArguments) switch
         {
-            (null, null) => App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<IWorkEntry>()),
-            (_, null) => App.AppViewModel.MakoClient.IllustrationSearch(_illustrationArguments),
-            (null, _) => App.AppViewModel.MakoClient.NovelSearch(_novelArguments),
+            (null, null) => App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<IArtworkInfo>()),
+            (_, null) => App.AppViewModel.MakoClient.IllustrationSearch(_illustrationArguments!),
+            (null, _) => App.AppViewModel.MakoClient.NovelSearch(_novelArguments!),
             _ => SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>() switch
             {
-                SimpleWorkType.Novel => App.AppViewModel.MakoClient.NovelSearch(_novelArguments),
-                _ => App.AppViewModel.MakoClient.IllustrationSearch(_illustrationArguments),
+                SimpleWorkType.Novel => App.AppViewModel.MakoClient.NovelSearch(_novelArguments!),
+                _ => App.AppViewModel.MakoClient.IllustrationSearch(_illustrationArguments!),
             }
         };
 

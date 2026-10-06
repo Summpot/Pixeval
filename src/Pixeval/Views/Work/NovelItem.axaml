@@ -7,8 +7,9 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
+    xmlns:mako="using:Pixeval.Native.Mako"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:model="using:Mako.Model"
+    xmlns:model="using:Pixeval.Models.Pixiv"
     xmlns:novel="using:Pixeval.ViewModels"
     xmlns:pixeval="using:Pixeval"
     xmlns:utilities="using:Pixeval.Utilities"
@@ -194,7 +195,7 @@
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="{x:Type model:Tag}">
+                        <DataTemplate x:DataType="{x:Type mako:Tag}">
                             <Button
                                 Padding="2"
                                 Click="TagButton_OnClicked"

@@ -3,8 +3,8 @@
 
 using System;
 using Avalonia.Interactivity;
-using Mako.Global.Enum;
 using Pixeval.Controls;
+using Pixeval.Utilities;
 using Pixeval.ViewModels;
 
 namespace Pixeval.Views.Capability;
@@ -38,8 +38,9 @@ public partial class WorkFollowingPage : IconContentPage
 
     private void ChangeSource()
     {
-        WorkContainer.ResetEngine(App.AppViewModel.MakoClient.WorkFollowing(
-            SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>(),
-            PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>()));
+        var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
+        var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>();
+        var engine = App.AppViewModel.MakoClient.WorkFollowing(workType, privacy);
+        WorkContainer.ResetEngine(engine);
     }
 }

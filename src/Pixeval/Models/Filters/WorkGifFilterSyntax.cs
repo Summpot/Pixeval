@@ -17,10 +17,7 @@ internal sealed class WorkGifFilterSyntax : FilterFlagSyntax<IArtworkInfo>
 
     public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
     [
-        new("+", ["gif"], Metadata: false, Description: I18NManager.GetResource(FilterResources.Completions.Include.Gif)),
-        new("-", ["gif"], Metadata: true, Description: I18NManager.GetResource(FilterResources.Completions.Exclude.Gif))
+        new("+", ["gif"], Metadata: "false", Description: I18NManager.GetResource(FilterResources.Completions.Include.Gif)),
+        new("-", ["gif"], Metadata: "true", Description: I18NManager.GetResource(FilterResources.Completions.Exclude.Gif))
     ];
-
-    public override bool Match(IArtworkInfo context, bool value) =>
-        value ^ (context.ImageType is ImageType.SingleAnimatedImage);
 }

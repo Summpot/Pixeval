@@ -3,17 +3,19 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Mako.Model;
 using Microsoft.Extensions.DependencyInjection;
+using Misaki;
 using Pixeval.Download;
 using Pixeval.Extensions.Common.FormatProviders;
-using Pixeval.Models.Database;
 using Pixeval.Models.Extensions;
 using Pixeval.Models.Options;
+using Pixeval.Models.Pixiv;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO;
 using Pixeval.ViewModels;
@@ -22,7 +24,7 @@ namespace Pixeval.Models.Download.Tasks;
 
 public class NovelDownloadTaskGroup : DownloadTaskGroup
 {
-    public Novel Entry => (Novel) DatabaseEntry.Entry;
+    public Pixeval.Native.Mako.Novel Entry => (Pixeval.Native.Mako.Novel) DatabaseEntry.Entry!;
 
     private NovelContent NovelContent { get; set; } = null!;
 
@@ -74,7 +76,7 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
         SetNotCreateFromEntry();
     }
 
-    public NovelDownloadTaskGroup(DownloadHistoryEntryBase entry) : base(entry)
+    public NovelDownloadTaskGroup(IDownloadHistoryEntry entry) : base(entry)
     {
         DestinationNovelFormat = GetNovelFormat(entry);
 
@@ -82,7 +84,7 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
     }
 
     public NovelDownloadTaskGroup(
-        Novel entry,
+        IArtworkInfo entry,
         string destination,
         NovelContent? novelContent,
         int? workSubscriptionId = null) : base(entry, destination, workSubscriptionId)
@@ -114,7 +116,15 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
     public override async ValueTask InitializeTaskGroupAsync()
     {
         if (NovelContent == null!)
-            SetNovelContent(await App.AppViewModel.MakoClient.GetNovelContentAsync(Entry.Id));
+        {
+            var content = await App.AppViewModel.MakoClient.GetNovelContentStructuredAsync(Entry.RawId);
+            SetNovelContent(content with
+            {
+                Title = string.IsNullOrWhiteSpace(content.Title) ? Entry.Title : content.Title,
+                CoverUrl = string.IsNullOrWhiteSpace(content.CoverUrl) ? (Entry.Thumbnails.FirstOrDefault()?.ImageUri.OriginalString ?? "") : content.CoverUrl,
+                UserId = content.UserId == 0 ? Entry.Author.Id : content.UserId
+            });
+        }
         else
             SetTasksSet();
 
@@ -242,7 +252,7 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
         FileHelper.DeleteEmptyFolder(ImageFolderPath);
     }
 
-    private static NovelDownloadFormatToken GetNovelFormat(DownloadHistoryEntryBase entry)
+    private static NovelDownloadFormatToken GetNovelFormat(IDownloadHistoryEntry entry)
     {
         if (!string.IsNullOrWhiteSpace(entry.FormatToken))
             return IoHelper.GetAvailableNovelDownloadFormatToken(entry.FormatToken);

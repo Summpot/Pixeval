@@ -13,8 +13,6 @@ using Avalonia.Controls.Selection;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Mako.Global.Enum;
-using Mako.Model;
 using Misaki;
 using Pixeval.Collections;
 using Pixeval.Controls;
@@ -22,6 +20,8 @@ using Pixeval.Filters.Analysis;
 using Pixeval.I18N;
 using Pixeval.Models.Filters;
 using Pixeval.Models.Options;
+using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 
@@ -290,8 +290,8 @@ public partial class WorkContainer : UserControl
             return;
         }
 
-        viewModel.UserFilter = query.HasPredicates
-            ? IFilter<IWorkViewModel>.Create(o => o.Filter(query.Root), false)
+        viewModel.UserFilter = query.HasPredicates()
+            ? IFilter<IWorkViewModel>.Create(o => o.Filter(query), false)
             : null;
         WorkFilterAutoSuggestBox.ClearSelection();
     }
@@ -305,7 +305,7 @@ public partial class WorkContainer : UserControl
             return [];
 
         EnsureFilterValueCompletions(viewModel.Source);
-        return context.Match.Syntax.Key switch
+        return context.MatchSyntaxKey switch
         {
             WorkTagFilterSyntax.KeyConst => _tagValueCompletions,
             WorkAuthorFilterSyntax.KeyConst => _authorValueCompletions,
@@ -343,7 +343,7 @@ public partial class WorkContainer : UserControl
         }
 
         _tagValueCompletions = [.. tags.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase).Select(pair => new FilterCompletionDefinition($"tag:{pair.Key}", pair.Key, pair.Key, pair.Value))];
-        _authorValueCompletions = [.. authors.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase).Select(a => new FilterCompletionDefinition($"author:{a.Name}", a.Name, a.Name, a is UserInfo user ? user.Account : null))];
+        _authorValueCompletions = [.. authors.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase).Select(a => new FilterCompletionDefinition($"author:{a.Name}", a.Name, a.Name, (a as User)?.Account ?? (a as TokenUser)?.Account))];
         _filterCompletionSource = source;
         _filterCompletionSourceCount = source.Count;
     }

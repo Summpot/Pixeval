@@ -8,9 +8,10 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Mako.Global.Enum;
-using Mako.Net.Responses;
 using Pixeval.Models.Blocking;
+using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
+using Pixeval.Utilities;
 using Pixeval.Views;
 using Pixeval.Views.Capability;
 
@@ -37,15 +38,15 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(TabPages))]
     public partial SingleUserResponse? UserDetail { get; private set; }
 
-    public string Header => UserDetail?.UserEntity.Name ?? Id.ToString();
+    public string Header => UserDetail?.User.Name ?? Id.ToString();
 
-    public long Id => UserDetail?.UserEntity.Id ?? field;
+    public long Id => UserDetail?.User.Id ?? field;
 
-    public string? AvatarUrl => UserDetail?.UserEntity.ProfileImageUrls.Medium;
+    public string? AvatarUrl => UserDetail?.User.AvatarUrl;
 
-    public string? BackgroundUrl => UserDetail?.UserProfile.BackgroundImageUrl ?? AvatarUrl;
+    public string? BackgroundUrl => UserDetail?.Profile.BackgroundImageUrl ?? AvatarUrl;
 
-    public IReadOnlyList<ContentPage> TabPages => UserDetail is { UserEntity: var user }
+    public IReadOnlyList<ContentPage> TabPages => UserDetail is { User: var user }
         ?
         [
             new WorkPostsPage(user),
@@ -58,8 +59,8 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
 
     public UserViewerPageViewModel(SingleUserResponse userDetail)
     {
-        Id = userDetail.UserEntity.Id;
-        UserDetail = BlockedContentHelper.Replace(userDetail);
+        Id = userDetail.User.Id;
+        UserDetail = userDetail;
     }
 
     public UserViewerPageViewModel(long userId)
@@ -71,7 +72,7 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     partial void OnUserDetailChanged(SingleUserResponse? value)
     {
         if (value is not null)
-            IsFollowed = value.UserEntity.IsFollowed;
+            IsFollowed = value.User.IsFollowed;
 
         FollowCommand.NotifyCanExecuteChanged();
         FollowPrivatelyCommand.NotifyCanExecuteChanged();
@@ -127,10 +128,11 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private async Task FollowAsync()
     {
-        var result = await App.AppViewModel.MakoClient.PostFollowUserAsync(Id, PrivacyPolicy.Public);
+        var result = await MakoHelper.SetFollowAsync(Id, true, false);
         if (result)
         {
-            UserDetail?.UserEntity.IsFollowed = true;
+            if (UserDetail?.User is { } user)
+                user.IsFollowedState = true;
             IsFollowed = true;
         }
     }
@@ -138,10 +140,11 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private async Task FollowPrivatelyAsync()
     {
-        var result = await App.AppViewModel.MakoClient.PostFollowUserAsync(Id, PrivacyPolicy.Private);
+        var result = await MakoHelper.SetFollowAsync(Id, true, true);
         if (result)
         {
-            UserDetail?.UserEntity.IsFollowed = true;
+            if (UserDetail?.User is { } user)
+                user.IsFollowedState = true;
             IsFollowed = true;
         }
     }
@@ -149,10 +152,11 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private async Task UnfollowAsync()
     {
-        var result = await App.AppViewModel.MakoClient.RemoveFollowUserAsync(Id);
+        var result = await MakoHelper.SetFollowAsync(Id, false);
         if (result)
         {
-            UserDetail?.UserEntity.IsFollowed = false;
+            if (UserDetail?.User is { } user)
+                user.IsFollowedState = false;
             IsFollowed = false;
         }
     }

@@ -1,0 +1,25 @@
+[package]
+name = "pixeval_cache"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+foyer.workspace = true
+foyer-common.workspace = true
+lz4.workspace = true
+image = { workspace = true, features = ["png", "jpeg", "webp", "gif"] }
+parking_lot.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+uniffi = { workspace = true, features = ["tokio"] }
+tokio = { workspace = true, features = ["full"] }
+async-compat.workspace = true
+futures-util = { workspace = true, default-features = false, features = ["std"] }
+flate2.workspace = true
+pixeval_maho.workspace = true
+bytes.workspace = true
+http.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { workspace = true, features = ["full"] }

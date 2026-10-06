@@ -8,7 +8,6 @@ using AutoSettingsPage;
 using Avalonia;
 using Avalonia.Styling;
 using FluentIcons.Common;
-using Mako;
 using Pixeval.Models.Options;
 using Pixeval.Utilities;
 
@@ -95,16 +94,18 @@ public record AppSettings
         ? Application.Current!.ActualThemeVariant == ThemeVariant.Dark ? ApplicationTheme.Dark : ApplicationTheme.Light
         : ApplicationSettings.Theme;
 
-    public MakoConfiguration ToMakoConfiguration()
+    public MakoConfigurationDto ToMakoConfiguration()
     {
-        return new MakoConfiguration(
-            NetworkSettings.PixivDomainFronting.EnablePixivDomainFronting,
-            NetworkSettings.PixivDomainFronting.PixivDomainFrontingType,
-            MakoHelper.ToMakoProxy(NetworkSettings.ProxySettings.ProxyType, NetworkSettings.ProxySettings.Proxy),
-            NetworkSettings.WebCookie,
-            NetworkSettings.MirrorHost,
-            BrowsingExperienceSettings.TargetFilter,
+        return MakoHelper.CreateMakoConfiguration(
+            NetworkSettings.PixivDomainFronting,
             NetworkSettings.ApiRequestCooldown,
-            CultureInfo.CurrentCulture);
+            proxyUrl: MakoHelper.GetEffectiveProxyUrl(NetworkSettings),
+            targetFilter: BrowsingExperienceSettings.TargetFilter switch
+            {
+                Models.Pixiv.TargetFilter.ForIos => "for_ios",
+                _ => "for_android"
+            },
+            mirrorHost: NetworkSettings.MirrorHost,
+            webCookie: NetworkSettings.WebCookie);
     }
 }

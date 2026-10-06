@@ -6,9 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Mako.Engine;
-using Mako.Global.Enum;
-using Mako.Model;
 using Pixeval.I18N;
 using Pixeval.Utilities;
 
@@ -31,7 +28,7 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
     [NotifyPropertyChangedFor(nameof(Caption))]
     [NotifyPropertyChangedFor(nameof(ContentCountText))]
     [NotifyPropertyChangedFor(nameof(CoverUrl))]
-    public partial SeriesDetailBase? SeriesDetail { get; private set; }
+    public partial Series? SeriesDetail { get; private set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CoverUrl))]
@@ -55,7 +52,7 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
     public SeriesViewerPageViewModel(
         SimpleWorkType workType,
         long seriesId,
-        SeriesDetailBase seriesDetail,
+        Series seriesDetail,
         IWorkEntry firstWork,
         IWorkViewViewModel worksViewModel)
     {
@@ -72,24 +69,17 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
 
     public string Header => SeriesDetail?.Title ?? Id.ToString();
 
-    public long AuthorId => SeriesDetail?.User.Id ?? 0;
+    public long AuthorId => SeriesDetail?.User?.Id ?? FirstWork?.User?.Id ?? 0;
 
-    public string? AuthorName => SeriesDetail?.User.Name;
+    public string? AuthorName => SeriesDetail?.User?.Name ?? FirstWork?.User?.Name;
 
     public string? Caption => SeriesDetail?.Caption;
 
     public string ContentCountText => I18NManager.GetResource(
         SeriesViewerPageResources.WorksCountFormatted,
-        SeriesDetail switch
-        {
-            NovelSeriesDetail novel => novel.ContentCount,
-            MangaSeriesDetail manga => manga.SeriesWorkCount,
-            _ => 0
-        });
+        SeriesDetail?.PublishedContentCount ?? 0);
 
-    public string? CoverUrl => SeriesDetail is MangaSeriesDetail manga
-        ? manga.CoverImageUrls.Medium
-        : FirstWork?.GetThumbnailUrl();
+    public string? CoverUrl => SeriesDetail?.CoverUrl ?? FirstWork?.GetThumbnailUrl();
 
     public IWorkViewViewModel? TakeWorksViewModel()
     {
@@ -98,9 +88,9 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
         return viewModel;
     }
 
-    partial void OnSeriesDetailChanged(SeriesDetailBase? value)
+    partial void OnSeriesDetailChanged(Series? value)
     {
-        IsWatchlistAdded = value?.WatchlistAdded is true;
+        IsWatchlistAdded = false;
         AddToWatchlistCommand.NotifyCanExecuteChanged();
         RemoveFromWatchlistCommand.NotifyCanExecuteChanged();
     }

@@ -13,8 +13,6 @@ using Avalonia.Data;
 using Avalonia.Layout;
 using Avalonia.Media;
 using FluentIcons.Common;
-using Mako;
-using Mako.Global.Enum;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Controls;
 using Pixeval.Extensions.Common.Settings;

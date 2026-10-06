@@ -3,9 +3,8 @@
 
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Models.Database;
-using Pixeval.Models.Database.Managers;
-using SQLite;
+using Pixeval.Models.Options;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.Tests;
 
@@ -13,60 +12,32 @@ namespace Pixeval.Tests;
 public sealed class UserInfoEntryDatabaseTest
 {
     [TestMethod]
-    public void DerivedEntries_KeepIndependentIdIndexes()
+    public void DerivedEntries_CanPersistAndQueryIndependently()
     {
-        using var db = new SQLiteConnection(":memory:");
-        _ = new WorkSubscriptionPersistentManager(db);
-        _ = new BlockedUserPersistentManager(db);
+        using var storage = new StorageEngine(":memory:");
 
-        var subscriptionId = db.GetMapping<WorkSubscriptionEntry>().Columns
-            .Single(column => column.Name is nameof(WorkSubscriptionEntry.Id));
-        var blockedUserId = db.GetMapping<BlockedUserEntry>().Columns
-            .Single(column => column.Name is nameof(BlockedUserEntry.Id));
+        storage.UpsertSubscription(
+            12345,
+            (uint)WorkSubscriptionType.Posts,
+            (uint)WorkSubscriptionWorkKind.Illustration,
+            "Artist 1",
+            "Artist 1",
+            "",
+            "",
+            null);
 
-        Assert.AreEqual(typeof(WorkSubscriptionEntry), subscriptionId.PropertyInfo?.DeclaringType);
-        Assert.AreEqual(typeof(BlockedUserEntry), blockedUserId.PropertyInfo?.DeclaringType);
-        var subscriptionIndexes = db.Query<IndexRow>(
-                $"pragma index_list(\"{nameof(WorkSubscriptionEntry)}\")")
-            .Select(static row => row.Name)
-            .ToArray();
-        var blockedUserIndexes = db.Query<IndexRow>(
-                $"pragma index_list(\"{nameof(BlockedUserEntry)}\")")
-            .Select(static row => row.Name)
-            .ToArray();
+        storage.AddOrUpdateBlockedUser(67890, "Blocked 1", "", "blocked_1");
 
-        Assert.AreSequenceEqual(["IX_WorkSubscriptionEntry_Key"], subscriptionIndexes, SequenceOrder.InAnyOrder);
-        Assert.AreSequenceEqual(["IX_BlockedUserEntry_Id"], blockedUserIndexes, SequenceOrder.InAnyOrder);
+        Assert.AreEqual(1, storage.CountSubscriptions());
+        Assert.AreEqual(1, storage.CountBlockedUsers());
 
-        var subscriptionIndexColumns = db.Query<IndexColumnRow>(
-                "pragma index_info(\"IX_WorkSubscriptionEntry_Key\")")
-            .OrderBy(static row => row.Seq)
-            .Select(static row => row.Name)
-            .ToArray();
-        var blockedUserIndexColumns = db.Query<IndexColumnRow>(
-                "pragma index_info(\"IX_BlockedUserEntry_Id\")")
-            .OrderBy(static row => row.Seq)
-            .Select(static row => row.Name)
-            .ToArray();
+        var sub = storage.GetSubscriptionByKey(12345, (uint)WorkSubscriptionType.Posts, (uint)WorkSubscriptionWorkKind.Illustration);
+        Assert.IsNotNull(sub);
+        Assert.AreEqual("Artist 1", sub.Title);
 
-        Assert.AreSequenceEqual(
-        [
-            nameof(WorkSubscriptionEntry.Id),
-                nameof(WorkSubscriptionEntry.SubscriptionType),
-                nameof(WorkSubscriptionEntry.WorkKind)
-        ], subscriptionIndexColumns);
-        Assert.AreSequenceEqual([nameof(BlockedUserEntry.Id)], blockedUserIndexColumns);
-    }
-
-    private sealed class IndexRow
-    {
-        public string Name { get; set; } = "";
-    }
-
-    private sealed class IndexColumnRow
-    {
-        public int Seq { get; set; }
-
-        public string Name { get; set; } = "";
+        var blockedUsers = storage.GetAllBlockedUsers();
+        Assert.AreEqual(1, blockedUsers.Count);
+        Assert.AreEqual(67890, blockedUsers[0].Id);
+        Assert.AreEqual("Blocked 1", blockedUsers[0].UserName);
     }
 }

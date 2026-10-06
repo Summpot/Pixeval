@@ -1,8 +1,6 @@
 using System.Collections.Generic;
-using System.Linq;
 using Misaki;
 using Pixeval.Filters.Syntax;
-using Pixeval.Filters.Values;
 using Pixeval.I18N;
 
 namespace Pixeval.Models.Filters;
@@ -25,9 +23,4 @@ internal sealed class WorkTagFilterSyntax : FilterTextSyntax<IArtworkInfo>
         FilterSyntaxPattern.Keyword("t", exampleValue: "tag", description: I18NManager.GetResource(FilterResources.Completions.Tag)),
         FilterSyntaxPattern.Keyword("tag", exampleValue: "tag", description: I18NManager.GetResource(FilterResources.Completions.Tag))
     ];
-
-    public override bool Match(IArtworkInfo context, FilterTextValue value) =>
-        context.Tags.Any(tags => tags.Any(tag =>
-            value.Matches(tag.Name)
-            || (tag.TranslatedName is { } translatedName && value.Matches(translatedName))));
 }

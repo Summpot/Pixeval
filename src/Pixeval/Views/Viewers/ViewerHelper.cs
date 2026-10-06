@@ -3,11 +3,9 @@
 
 using System;
 using System.Threading.Tasks;
-using Mako.Global.Enum;
-using Mako.Model;
-using Mako.Net.Responses;
 using Microsoft.Extensions.DependencyInjection;
 using Misaki;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
@@ -108,7 +106,7 @@ public static class ViewerHelper
         public void CreateSeriesPage(
             SimpleWorkType workType,
             long seriesId,
-            SeriesDetailBase seriesDetail,
+            Series seriesDetail,
             IWorkEntry firstWork,
             IWorkViewViewModel worksViewModel)
         {
