@@ -2,8 +2,8 @@
 // Licensed under the GPL-3.0 License.
 
 using System.IO;
+using System.Text.Json;
 using Pixeval.Native.Config;
-using SharpYaml;
 
 namespace Pixeval.AppManagement.Settings;
 
@@ -20,8 +20,7 @@ public static class LegacyAppSettingsMigration
         using var reader = new StreamReader(stream, leaveOpen: true);
         var rawYaml = reader.ReadToEnd();
         var migratedYaml = Engine.MigrateYaml(rawYaml);
-
-        // Keep type conversion and validation in the AOT-compatible generated serializer.
-        return YamlSerializer.Deserialize(migratedYaml, SettingsSerializerContext.Default.AppSettings);
+        var json = Engine.YamlToJson(migratedYaml);
+        return JsonSerializer.Deserialize(json, SettingsSerializerContext.Default.AppSettings);
     }
 }

@@ -11,6 +11,9 @@ pub enum ConfigError {
     #[error("YAML parse or serialize error: {message}")]
     Yaml { message: String },
 
+    #[error("JSON error: {message}")]
+    Json { message: String },
+
     #[error("Migration error: {message}")]
     Migration { message: String },
 }
@@ -26,6 +29,14 @@ impl From<std::io::Error> for ConfigError {
 impl From<serde_yaml::Error> for ConfigError {
     fn from(err: serde_yaml::Error) -> Self {
         ConfigError::Yaml {
+            message: err.to_string(),
+        }
+    }
+}
+
+impl From<serde_json::Error> for ConfigError {
+    fn from(err: serde_json::Error) -> Self {
+        ConfigError::Json {
             message: err.to_string(),
         }
     }

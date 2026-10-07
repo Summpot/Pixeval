@@ -12,7 +12,7 @@ using Avalonia.Platform;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Home;
 using Pixeval.Utilities;
-using SharpYaml;
+using System.Text.Json;
 
 namespace Pixeval.AppManagement;
 
@@ -132,8 +132,10 @@ public static class AppInfo
         return TryLoad(() =>
         {
             var rawYaml = File.ReadAllText(AppSettingsPath);
-            var migratedYaml = new ConfigEngine().MigrateYaml(rawYaml);
-            return YamlSerializer.Deserialize(migratedYaml, SettingsSerializerContext.Default.AppSettings);
+            var engine = new ConfigEngine();
+            var migratedYaml = engine.MigrateYaml(rawYaml);
+            var json = engine.YamlToJson(migratedYaml);
+            return JsonSerializer.Deserialize(json, SettingsSerializerContext.Default.AppSettings);
         }, logger);
     }
 
@@ -142,7 +144,12 @@ public static class AppInfo
         if (!File.Exists(LoginContextPath))
             return null;
 
-        return TryLoad(() => YamlSerializer.DeserializeFile(LoginContextPath, SettingsSerializerContext.Default.LoginContext), logger);
+        return TryLoad(() =>
+        {
+            var rawYaml = File.ReadAllText(LoginContextPath);
+            var json = new ConfigEngine().YamlToJson(rawYaml);
+            return JsonSerializer.Deserialize(json, SettingsSerializerContext.Default.LoginContext);
+        }, logger);
     }
 
     public static ObservableCollection<HomePageCardLayout>? LoadHomePageCards(FileLogger logger)
@@ -150,7 +157,12 @@ public static class AppInfo
         if (!File.Exists(HomePageCardsPath))
             return null;
 
-        return TryLoad(() => YamlSerializer.DeserializeFile(HomePageCardsPath, SettingsSerializerContext.Default.ObservableCollectionHomePageCardLayout), logger);
+        return TryLoad(() =>
+        {
+            var rawYaml = File.ReadAllText(HomePageCardsPath);
+            var json = new ConfigEngine().YamlToJson(rawYaml);
+            return JsonSerializer.Deserialize(json, SettingsSerializerContext.Default.ObservableCollectionHomePageCardLayout);
+        }, logger);
     }
 
     public static string? LoadNavigationMenuYaml(FileLogger logger)
@@ -175,8 +187,10 @@ public static class AppInfo
 
         _ = TrySave(() =>
         {
-            var yaml = YamlSerializer.Serialize(appSettings, SettingsSerializerContext.Default.AppSettings);
-            new ConfigEngine().SaveToFile(AppSettingsPath, yaml);
+            var json = JsonSerializer.Serialize(appSettings, SettingsSerializerContext.Default.AppSettings);
+            var engine = new ConfigEngine();
+            var yaml = engine.JsonToYaml(json);
+            engine.SaveToFile(AppSettingsPath, yaml);
         });
     }
 
@@ -186,7 +200,12 @@ public static class AppInfo
             return;
 
         _ = TrySave(() =>
-            YamlSerializer.SerializeToFile(LoginContextPath, loginContext, SettingsSerializerContext.Default.LoginContext));
+        {
+            var json = JsonSerializer.Serialize(loginContext, SettingsSerializerContext.Default.LoginContext);
+            var engine = new ConfigEngine();
+            var yaml = engine.JsonToYaml(json);
+            engine.SaveToFile(LoginContextPath, yaml);
+        });
     }
 
     public static void SaveHomePageCards(ObservableCollection<HomePageCardLayout>? cards)
@@ -195,7 +214,12 @@ public static class AppInfo
             return;
 
         _ = TrySave(() =>
-            YamlSerializer.SerializeToFile(HomePageCardsPath, cards, SettingsSerializerContext.Default.ObservableCollectionHomePageCardLayout));
+        {
+            var json = JsonSerializer.Serialize(cards, SettingsSerializerContext.Default.ObservableCollectionHomePageCardLayout);
+            var engine = new ConfigEngine();
+            var yaml = engine.JsonToYaml(json);
+            engine.SaveToFile(HomePageCardsPath, yaml);
+        });
     }
 
     public static void SaveNavigationMenuYaml(string? yaml)

@@ -194,26 +194,20 @@ public sealed partial class HomePage
         out int column,
         out int row)
     {
-        var maxColumnSpan = int.Min(preferredColumnSpan, ColumnCount);
-        var maxRowSpan = int.Min(preferredRowSpan, RowCount);
-        var candidates = Enumerable.Range(1, maxRowSpan)
-            .SelectMany(height => Enumerable.Range(1, maxColumnSpan), (height, width) => new
-            {
-                Width = width,
-                Height = height
-            })
-            .OrderByDescending(t => t.Width * t.Height)
-            .ThenBy(t => int.Abs(preferredColumnSpan - t.Width) + int.Abs(preferredRowSpan - t.Height))
-            .ThenByDescending(t => t.Height)
-            .ThenByDescending(t => t.Width);
+        var boundsList = _cards.Select(HomeCardBounds.From).ToList();
+        var placement = new ConfigEngine().LayoutTryFindBestFittingFreePosition(
+            boundsList,
+            preferredColumnSpan,
+            preferredRowSpan,
+            RowCount,
+            ColumnCount);
 
-        foreach (var candidate in candidates)
+        if (placement is not null)
         {
-            if (!TryFindFreePosition(candidate.Width, candidate.Height, out column, out row))
-                continue;
-
-            columnSpan = candidate.Width;
-            rowSpan = candidate.Height;
+            columnSpan = placement.ColumnSpan;
+            rowSpan = placement.RowSpan;
+            column = placement.Column;
+            row = placement.Row;
             return true;
         }
 
@@ -247,51 +241,30 @@ public sealed partial class HomePage
 
     private void NormalizeCards()
     {
-        var changed = false;
-        var occupiedCards = new List<HomePageCardLayout>();
+        var boundsList = _cards.Select(HomeCardBounds.From).ToList();
+        var result = new ConfigEngine().LayoutNormalizeCards(boundsList, RowCount, ColumnCount);
 
-        foreach (var card in _cards.ToList())
+        if (!result.Changed)
+            return;
+
+        foreach (var item in result.PlacedCards)
         {
-            changed |= ClampCard(card);
-
-            if (CanPlace(occupiedCards, card.Column, card.Row, card.ColumnSpan, card.RowSpan))
-            {
-                occupiedCards.Add(card);
-                continue;
-            }
-
-            if (TryFindFreePosition(card.ColumnSpan, card.RowSpan, occupiedCards, out var column, out var row)
-                || TryShrinkAndFindFreePosition(card, occupiedCards, out column, out row))
-            {
-                card.Column = column;
-                card.Row = row;
-                occupiedCards.Add(card);
-            }
-            else
-            {
-                _ = _cards.Remove(card);
-                if (card == _selectedCard)
-                    SelectCard(null);
-            }
-
-            changed = true;
+            var card = _cards[(int)item.Index];
+            item.Bounds.ApplyTo(card);
         }
 
-        if (changed)
-            SaveLayout();
-    }
+        var removedCards = result.RemovedIndices
+            .OrderByDescending(i => i)
+            .Select(i => _cards[(int)i])
+            .ToList();
 
-    private bool TryShrinkAndFindFreePosition(
-        HomePageCardLayout card,
-        IReadOnlyCollection<HomePageCardLayout> occupiedCards,
-        out int column,
-        out int row)
-    {
-        if (!TryFindFreePosition(1, 1, occupiedCards, out column, out row))
-            return false;
+        foreach (var card in removedCards)
+        {
+            _ = _cards.Remove(card);
+            if (card == _selectedCard)
+                SelectCard(null);
+        }
 
-        card.ColumnSpan = 1;
-        card.RowSpan = 1;
-        return true;
+        SaveLayout();
     }
 }

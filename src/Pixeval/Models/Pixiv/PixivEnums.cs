@@ -1,6 +1,8 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Pixeval.Models.Pixiv;
@@ -32,6 +34,7 @@ public enum PrivacyPolicy
     Private
 }
 
+[JsonConverter(typeof(RankOptionJsonConverter))]
 public enum RankOption
 {
     [JsonStringEnumMemberName("day")]
@@ -105,6 +108,80 @@ public static class RankOptionHelper
             and not RankOption.WeekOriginal
             and not RankOption.DayAi
             and not RankOption.DayR18Ai;
+}
+
+public sealed class RankOptionJsonConverter : JsonConverter<RankOption>
+{
+    public override RankOption Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.String)
+        {
+            var str = reader.GetString();
+            if (!string.IsNullOrEmpty(str))
+            {
+                if (Enum.TryParse<RankOption>(str, ignoreCase: true, out var result))
+                    return result;
+
+                return str switch
+                {
+                    "day" => RankOption.Day,
+                    "week" => RankOption.Week,
+                    "month" => RankOption.Month,
+                    "day_male" => RankOption.DayMale,
+                    "day_female" => RankOption.DayFemale,
+                    "day_manga" => RankOption.DayManga,
+                    "week_manga" => RankOption.WeekManga,
+                    "month_manga" => RankOption.MonthManga,
+                    "week_original" => RankOption.WeekOriginal,
+                    "week_rookie" => RankOption.WeekRookie,
+                    "day_r18" => RankOption.DayR18,
+                    "day_male_r18" => RankOption.DayMaleR18,
+                    "day_female_r18" => RankOption.DayFemaleR18,
+                    "week_r18" => RankOption.WeekR18,
+                    "week_r18g" => RankOption.WeekR18G,
+                    "day_ai" => RankOption.DayAi,
+                    "day_r18_ai" => RankOption.DayR18Ai,
+                    "week_ai" => RankOption.WeekAi,
+                    "week_ai_r18" => RankOption.WeekAiR18,
+                    _ => default
+                };
+            }
+        }
+        else if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out var intVal))
+        {
+            return (RankOption)intVal;
+        }
+
+        return default;
+    }
+
+    public override void Write(Utf8JsonWriter writer, RankOption value, JsonSerializerOptions options)
+    {
+        var str = value switch
+        {
+            RankOption.Day => "day",
+            RankOption.Week => "week",
+            RankOption.Month => "month",
+            RankOption.DayMale => "day_male",
+            RankOption.DayFemale => "day_female",
+            RankOption.DayManga => "day_manga",
+            RankOption.WeekManga => "week_manga",
+            RankOption.MonthManga => "month_manga",
+            RankOption.WeekOriginal => "week_original",
+            RankOption.WeekRookie => "week_rookie",
+            RankOption.DayR18 => "day_r18",
+            RankOption.DayMaleR18 => "day_male_r18",
+            RankOption.DayFemaleR18 => "day_female_r18",
+            RankOption.WeekR18 => "week_r18",
+            RankOption.WeekR18G => "week_r18g",
+            RankOption.DayAi => "day_ai",
+            RankOption.DayR18Ai => "day_r18_ai",
+            RankOption.WeekAi => "week_ai",
+            RankOption.WeekAiR18 => "week_ai_r18",
+            _ => value.ToString()
+        };
+        writer.WriteStringValue(str);
+    }
 }
 
 public enum AiType

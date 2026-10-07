@@ -18,7 +18,7 @@ using Pixeval.Utilities;
 using Pixeval.Utilities.IO.Caching;
 using Pixeval.ViewModels;
 using Pixeval.Views.Login;
-using SharpYaml;
+using System.Text.Json;
 
 namespace Pixeval.Views.Settings;
 
@@ -194,7 +194,10 @@ public partial class SettingsMainView : ContentPage
             }) is not { } file)
                 return;
             await using var stream = await file.OpenWriteAsync();
-            YamlSerializer.Serialize(stream, vm.AppSettings, SettingsSerializerContext.Default.AppSettings);
+            var json = JsonSerializer.Serialize(vm.AppSettings, SettingsSerializerContext.Default.AppSettings);
+            var yaml = new ConfigEngine().JsonToYaml(json);
+            await using var writer = new StreamWriter(stream);
+            await writer.WriteAsync(yaml);
 
             viewContainer.ShowSuccess(I18NManager.GetResource(SettingsMainViewResources.ExportSettingsSuccess));
         }
@@ -221,9 +224,11 @@ public partial class SettingsMainView : ContentPage
             await using var stream = await file.OpenReadAsync();
             using var reader = new StreamReader(stream);
             var rawYaml = await reader.ReadToEndAsync();
-            var migratedYaml = new ConfigEngine().MigrateYaml(rawYaml);
+            var engine = new ConfigEngine();
+            var migratedYaml = engine.MigrateYaml(rawYaml);
+            var json = engine.YamlToJson(migratedYaml);
 
-            if (YamlSerializer.Deserialize(migratedYaml, SettingsSerializerContext.Default.AppSettings) is { } appSettings)
+            if (JsonSerializer.Deserialize(json, SettingsSerializerContext.Default.AppSettings) is { } appSettings)
             {
                 foreach (var localGroup in vm.LocalGroups)
                     foreach (var settingsEntry in localGroup)

@@ -5,11 +5,16 @@ uniffi::setup_scaffolding!();
 
 pub mod engine;
 pub mod error;
+pub mod layout;
 pub mod migration;
+pub mod navigation;
+pub mod text;
 
 pub use engine::*;
 pub use error::*;
+pub use layout::*;
 pub use migration::*;
+pub use navigation::*;
 
 #[cfg(test)]
 mod tests {
@@ -148,5 +153,153 @@ ApplicationSettings:
         let _ = std::env::set_current_dir(prev_dir);
 
         assert!(res.is_ok());
+    }
+
+    #[test]
+    fn test_yaml_json_roundtrip() {
+        let engine = ConfigEngine::new();
+        let yaml = "name: Pixeval\nversion: 2\nenabled: true\nitems:\n  - a\n  - b\n";
+        let json = engine.yaml_to_json(yaml.to_string()).unwrap();
+        assert!(json.contains("\"name\":\"Pixeval\""));
+        assert!(json.contains("\"version\":2"));
+        assert!(json.contains("\"enabled\":true"));
+
+        let restored_yaml = engine.json_to_yaml(json).unwrap();
+        assert!(restored_yaml.contains("name: Pixeval"));
+        assert!(restored_yaml.contains("version: 2"));
+    }
+
+    #[test]
+    fn test_navigation_parser_and_formatter() {
+        let engine = ConfigEngine::new();
+        let valid_yaml = r#"
+newTab: Search
+
+header:
+  - folder: Level1
+    icon: Folder
+    children:
+      - folder: Level2
+        icon: FolderOpen
+        children:
+          - page: Search
+
+footer:
+  - page: Settings
+"#;
+
+        let known_pages = vec!["Search".to_string(), "Settings".to_string()];
+        let known_icons = vec!["Folder".to_string(), "FolderOpen".to_string()];
+        let res = engine.parse_navigation_yaml(
+            valid_yaml.to_string(),
+            known_pages.clone(),
+            known_icons.clone(),
+            None,
+        );
+        assert!(res.is_valid);
+        assert!(res.diagnostics.is_empty());
+        let settings = res.settings.unwrap();
+        assert_eq!(settings.new_tab.as_deref(), Some("Search"));
+
+        let formatted = engine.format_navigation_yaml(settings).unwrap();
+        assert!(formatted.contains("- folder: Level1"));
+        assert!(formatted.contains("- folder: Level2"));
+        assert!(formatted.contains("- page: Search"));
+        assert!(formatted.contains("- page: Settings"));
+
+        // Reject unknown field
+        let invalid_field = r#"
+newTab: Search
+header:
+  - page: Search
+    visible: false
+footer:
+  - page: Settings
+"#;
+        let res_invalid = engine.parse_navigation_yaml(
+            invalid_field.to_string(),
+            known_pages.clone(),
+            known_icons.clone(),
+            None,
+        );
+        assert!(!res_invalid.is_valid);
+        assert!(res_invalid
+            .diagnostics
+            .iter()
+            .any(|d| d.kind == NavigationDiagnosticKind::UnknownField && d.arguments.contains(&"visible".to_string())));
+
+        // Reject exceeding max depth
+        let too_deep = r#"
+newTab: Search
+header:
+  - folder: Level1
+    children:
+      - folder: Level2
+        children:
+          - folder: Level3
+            children:
+              - page: Search
+footer:
+  - page: Settings
+"#;
+        let res_deep = engine.parse_navigation_yaml(
+            too_deep.to_string(),
+            known_pages,
+            known_icons,
+            None,
+        );
+        assert!(!res_deep.is_valid);
+        assert!(res_deep
+            .diagnostics
+            .iter()
+            .any(|d| d.kind == NavigationDiagnosticKind::MaxDepthExceededFolder
+                || d.kind == NavigationDiagnosticKind::MaxDepthExceeded));
+    }
+
+    #[test]
+    fn test_card_layout_engine() {
+        let engine = ConfigEngine::new();
+        let existing = HomeCardBounds {
+            column: 0,
+            row: 0,
+            column_span: 1,
+            row_span: 1,
+        };
+        let moving = HomeCardBounds {
+            column: 0,
+            row: 0,
+            column_span: 1,
+            row_span: 1,
+        };
+
+        // Collision detection: same bounds collision when moving_index is None
+        assert!(!engine.layout_can_place(vec![existing], None, moving, 2, 2));
+
+        // When moving_index is Some(0), ignores original bounds
+        assert!(engine.layout_can_place(vec![moving], Some(0), HomeCardBounds { column: 1, row: 1, column_span: 1, row_span: 1 }, 2, 2));
+
+        // Free position scan
+        let free_pos = engine.layout_try_find_free_position(vec![existing], 1, 1, 2, 2).unwrap();
+        assert_eq!(free_pos.column, 1);
+        assert_eq!(free_pos.row, 0);
+
+        // Clamp
+        let clamped = engine.layout_clamp(
+            HomeCardBounds { column: -1, row: -1, column_span: 4, row_span: 4 },
+            2,
+            3,
+        );
+        assert_eq!(clamped, HomeCardBounds { column: 0, row: 0, column_span: 3, row_span: 2 });
+
+        // Normalization (2D bin-packing & overlap resolution)
+        let cards = vec![
+            HomeCardBounds { column: 0, row: 0, column_span: 1, row_span: 1 },
+            HomeCardBounds { column: 0, row: 0, column_span: 1, row_span: 1 }, // overlaps!
+        ];
+        let norm = engine.layout_normalize_cards(cards, 2, 2);
+        assert!(norm.changed);
+        assert_eq!(norm.placed_cards.len(), 2);
+        assert_eq!(norm.placed_cards[0].bounds, HomeCardBounds { column: 0, row: 0, column_span: 1, row_span: 1 });
+        assert_eq!(norm.placed_cards[1].bounds, HomeCardBounds { column: 1, row: 0, column_span: 1, row_span: 1 });
     }
 }

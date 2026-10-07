@@ -5,7 +5,6 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
-using SharpYaml;
 
 namespace Pixeval.Utilities;
 
@@ -35,21 +34,6 @@ public static class SerializerHelper
         {
             await using var stream = File.OpenAsyncRead(filePath);
             return await JsonSerializer.DeserializeAsync(stream, info);
-        }
-    }
-
-    extension(YamlSerializer)
-    {
-        public static void SerializeToFile<TValue>(string filePath, TValue value, YamlTypeInfo<TValue> context)
-        {
-            using var stream = File.OpenWriteOrTruncate(filePath);
-            YamlSerializer.Serialize(stream, value, context);
-        }
-
-        public static TValue? DeserializeFile<TValue>(string filePath, YamlTypeInfo<TValue> info)
-        {
-            using var stream = File.OpenAsyncRead(filePath);
-            return YamlSerializer.Deserialize(stream, info);
         }
     }
 }

@@ -98,7 +98,7 @@ flowchart TD
     subgraph Phase3 ["Phase 3: 业务仓储闭环与辅助服务下沉 (去胶水/去依赖)"]
         P3_1["3.1 领域仓储与状态机闭环 [已完成]<br/>【吸收修复】H1(JSON大小写与老数据水合兼容), 2.5(存储枚举错位/稳定ID/唯一索引)<br/>【Partial规范】仓储实体在 NativeExtensions/Storage 原地扩展，清退 26 个 Manager"]
         P3_2["3.2 多图站聚合与 SauceNao 搜图 (清退 Imouto.BooruParser)<br/>【Partial规范】Booru/SauceNao 模型在 NativeExtensions 原地实现 IArtworkInfo"]
-        P3_3["3.3 导航 YAML 诊断与主页网格算法 (清退 SharpYaml)"]
+        P3_3["3.3 导航 YAML 诊断与主页网格算法 (清退 SharpYaml) [已完成]"]
         P3_4["3.4 原生应用更新与 GitHub 代理引擎 (pixeval_update)"]
         P3_5["3.5 [专项] MCP 协议服务器全量恢复与插件宿主激活<br/>【吸收修复】H3(补齐49工具与游标分页), H4(生产激活插件宿主), 2.6(信号量释放)"]
         P3_6["3.6 [专项] 网络韧性与会话安全防护<br/>【吸收修复】H7(通用API端点), H8(用户横幅), H10(鉴权失效同步), H11(MyId防护), 2.3(429限流串行化)"]
@@ -228,7 +228,7 @@ flowchart TD
   - 彻底移除 `src/lib/Imouto` C# 项目及相关引用。
   - C# 搜图页面直接调用原生 `SauceNaoClient.search(file_bytes)`。
 
-#### 3.3 导航 YAML 解析诊断与主页网格算法
+#### 3.3 导航 YAML 解析诊断与主页网格算法 [已完成]
 - **功能目标**：
   - 将导航 YAML 解析、Schema 严格校验、行列光标诊断与格式化下沉至 `pixeval_config`。
   - 将主页卡片网格算法（2D Bin-Packing、碰撞检测、重叠修正）下沉至 Rust。

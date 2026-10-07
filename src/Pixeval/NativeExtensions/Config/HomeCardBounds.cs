@@ -1,9 +1,11 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-namespace Pixeval.Models.Home;
+using Pixeval.Models.Home;
 
-public readonly record struct HomeCardBounds(int Column, int Row, int ColumnSpan, int RowSpan)
+namespace Pixeval.Native.Config;
+
+public partial record HomeCardBounds
 {
     public static HomeCardBounds From(HomePageCardLayout card) => new(card.Column, card.Row, card.ColumnSpan, card.RowSpan);
 

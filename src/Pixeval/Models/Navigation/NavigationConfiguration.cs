@@ -13,10 +13,7 @@ public sealed record NavigationConfiguration(
     IReadOnlyList<NavigationMenuItem> FooterItems)
 {
     public NavigationYamlSettings ToYamlSettings() =>
-        new()
-        {
-            NewTab = NewTabKey,
-            Header = HeaderItems.Select(child => child.ToYamlItem()).ToArray(),
-            Footer = FooterItems.Select(child => child.ToYamlItem()).ToArray()
-        };
+        new(NewTabKey,
+            HeaderItems.Select(static child => child.ToYamlItem()).ToList(),
+            FooterItems.Select(static child => child.ToYamlItem()).ToList());
 }

@@ -4,20 +4,21 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using AutoSettingsPage;
 using Avalonia.Media;
 using FluentIcons.Common;
-using SharpYaml.Serialization;
 
 namespace Pixeval.AppManagement.Settings;
 
 public record NovelSettingsGroup
 {
-    [YamlConverter(typeof(YamlColorConverter))]
+    [JsonConverter(typeof(JsonColorConverter))]
     [SettingsEntry(Symbol.TextColor, AppSettingsResources.NovelSettingsFontColorEntry.Header, AppSettingsResources.NovelSettingsFontColorEntry.Description)]
     public uint NovelFontColor { get; set; }
 
-    [YamlConverter(typeof(YamlColorConverter))]
+    [JsonConverter(typeof(JsonColorConverter))]
     [SettingsEntry(Symbol.ColorBackground, AppSettingsResources.NovelSettingsBackgroundEntry.Header, AppSettingsResources.NovelSettingsBackgroundEntry.Description)]
     public uint NovelBackground { get; set; }
 
@@ -37,21 +38,21 @@ public record NovelSettingsGroup
     public int NovelMaxWidth { get; set; } = 1000;
 }
 
-public class YamlColorConverter : YamlConverter<uint>
+public class JsonColorConverter : JsonConverter<uint>
 {
-    /// <inheritdoc />
-    public override uint Read(YamlReader reader)
+    public override uint Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var text = reader.ScalarValue!;
-        reader.Read();
+        if (reader.TokenType == JsonTokenType.Number)
+            return reader.GetUInt32();
+
+        var text = reader.GetString();
         if (text is not ['#', .. { Length: 8 } color])
             throw new FormatException("Invalid color format.");
         return uint.Parse(color, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
     }
 
-    /// <inheritdoc />
-    public override void Write(YamlWriter writer, uint value)
+    public override void Write(Utf8JsonWriter writer, uint value, JsonSerializerOptions options)
     {
-        writer.WriteScalar($"#{value:X8}");
+        writer.WriteStringValue($"#{value:X8}");
     }
 }

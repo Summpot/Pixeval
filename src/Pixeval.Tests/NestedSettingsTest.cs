@@ -9,7 +9,8 @@ using Pixeval.I18N;
 using Pixeval.Models.Options;
 using Pixeval.Models.Settings;
 using Pixeval.Utilities;
-using SharpYaml;
+using System.Text.Json;
+using Pixeval.Native.Config;
 
 namespace Pixeval.Tests;
 
@@ -161,11 +162,12 @@ public sealed class NestedSettingsTest
         settings.NetworkSettings.GitHubDomainFronting.GitHubNameResolver = ["127.0.0.1"];
         settings.NetworkSettings.ProxySettings.Proxy = "http://localhost:1234";
         settings.NetworkSettings.ProxySettings.ProxyType = ProxyType.Custom;
-        using var stream = new MemoryStream();
 
-        YamlSerializer.Serialize(stream, settings, SettingsSerializerContext.Default.AppSettings);
-        stream.Position = 0;
-        var restored = YamlSerializer.Deserialize(stream, SettingsSerializerContext.Default.AppSettings)!;
+        var engine = new ConfigEngine();
+        var json = JsonSerializer.Serialize(settings, SettingsSerializerContext.Default.AppSettings);
+        var yaml = engine.JsonToYaml(json);
+        var backJson = engine.YamlToJson(yaml);
+        var restored = JsonSerializer.Deserialize(backJson, SettingsSerializerContext.Default.AppSettings)!;
 
         Assert.AreEqual(settings.ApplicationSettings.FileCache, restored.ApplicationSettings.FileCache);
         Assert.AreEqual(settings.ApplicationSettings.HomePage, restored.ApplicationSettings.HomePage);

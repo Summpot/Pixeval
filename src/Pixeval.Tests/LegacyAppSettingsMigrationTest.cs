@@ -5,8 +5,8 @@ using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Native.Config;
 using Pixeval.Models.Options;
-using SharpYaml;
-using SharpYaml.Model;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace Pixeval.Tests;
 
@@ -99,12 +99,12 @@ public sealed class LegacyAppSettingsMigrationTest
         Assert.AreEqual(ProxyType.Custom, settings.NetworkSettings.ProxySettings.ProxyType);
         Assert.AreEqual("http://localhost:4321", settings.NetworkSettings.ProxySettings.Proxy);
 
-        var saved = YamlSerializer.Serialize(settings, SettingsSerializerContext.Default.AppSettings);
-        using var reader = new StringReader(saved);
-        var root = (YamlMapping) YamlStream.Load(reader, new YamlNodeTracker())[0].Contents!;
-        Assert.IsFalse(((YamlMapping) root["NetworkSettings"]!).ContainsKey("Proxy"));
-        Assert.IsFalse(((YamlMapping) root["ApplicationSettings"]!).ContainsKey("LimitFileCacheSize"));
-        Assert.AreEqual(saved, YamlSerializer.Serialize(Read(saved), SettingsSerializerContext.Default.AppSettings));
+        var saved = Save(settings);
+        var savedJson = Engine.YamlToJson(saved);
+        var root = JsonNode.Parse(savedJson)!.AsObject();
+        Assert.IsFalse(root["NetworkSettings"]!.AsObject().ContainsKey("Proxy"));
+        Assert.IsFalse(root["ApplicationSettings"]!.AsObject().ContainsKey("LimitFileCacheSize"));
+        Assert.AreEqual(saved, Save(Read(saved)));
     }
 
     [TestMethod]
@@ -138,9 +138,18 @@ public sealed class LegacyAppSettingsMigrationTest
         Assert.AreEqual(new RankOptionsSettings(), settings.SearchSettings.RankOptions);
     }
 
+    private static readonly ConfigEngine Engine = new();
+
     private static AppSettings Read(string yaml)
     {
-        var migratedYaml = new ConfigEngine().MigrateYaml(yaml);
-        return YamlSerializer.Deserialize(migratedYaml, SettingsSerializerContext.Default.AppSettings)!;
+        var migratedYaml = Engine.MigrateYaml(yaml);
+        var json = Engine.YamlToJson(migratedYaml);
+        return JsonSerializer.Deserialize(json, SettingsSerializerContext.Default.AppSettings)!;
+    }
+
+    private static string Save(AppSettings settings)
+    {
+        var json = JsonSerializer.Serialize(settings, SettingsSerializerContext.Default.AppSettings);
+        return Engine.JsonToYaml(json);
     }
 }

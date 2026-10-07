@@ -82,8 +82,7 @@ mod tests {
 
         let cache = CacheEngine::new(
             temp_dir.path().join("cache").to_str().unwrap().to_string(),
-            1024 * 1024,
-            100,
+            Some(1024 * 1024),
         )
         .unwrap();
 
