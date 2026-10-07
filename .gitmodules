@@ -1,7 +1,3 @@
-[submodule "src/lib/Imouto"]
-	path = src/lib/Imouto
-	url = https://github.com/Pixeval/Imouto.git
-	branch = master
 [submodule "src/lib/AutoSettingsPage"]
 	path = src/lib/AutoSettingsPage
 	url = https://github.com/Pixeval/AutoSettingsPage.git

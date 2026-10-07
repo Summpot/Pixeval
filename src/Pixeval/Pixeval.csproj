@@ -15,7 +15,7 @@
 		<FileVersion>$(Version)</FileVersion>
 		<InformationalVersion>$(Version)</InformationalVersion>
 		<UniFFICrateName>pixeval_native</UniFFICrateName>
-		<UniFFINamespace>Pixeval.Native;pixeval_filters=Filters;pixeval_cache=Cache;pixeval_maho=Maho;pixeval_mako=Mako;pixeval_download=Download;pixeval_storage=Storage;pixeval_subscription=Subscription;pixeval_config=Config;pixeval_mcp=Mcp;pixeval_plugin=Plugin;pixeval_novel=Novel;pixeval_media=Media</UniFFINamespace>
+		<UniFFINamespace>Pixeval.Native;pixeval_filters=Filters;pixeval_cache=Cache;pixeval_maho=Maho;pixeval_mako=Mako;pixeval_download=Download;pixeval_storage=Storage;pixeval_subscription=Subscription;pixeval_config=Config;pixeval_mcp=Mcp;pixeval_plugin=Plugin;pixeval_novel=Novel;pixeval_media=Media;pixeval_booru=Booru;pixeval_saucenao=SauceNao</UniFFINamespace>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 	</PropertyGroup>
 
@@ -65,7 +65,6 @@
 		<ProjectReference Include="..\lib\AutoSettingsPage\AutoSettingsPage\AutoSettingsPage.csproj" />
 		<ProjectReference Include="..\lib\AnimatedControls.Avalonia\AnimatedControls.Avalonia\AnimatedControls.Avalonia.csproj" />
 		<ProjectReference Include="..\lib\FluentAvalonia\FluentAvalonia.csproj" />
-		<ProjectReference Include="..\lib\Imouto\Imouto.BooruParser\Imouto.BooruParser.csproj" />
 		<ProjectReference Include="..\lib\SmoothScroll.Avalonia\src\SmoothScroll.Avalonia.Controls\SmoothScroll.Avalonia.Controls.csproj" />
 		<ProjectReference Include="..\Pixeval.I18N\Pixeval.I18N.csproj" />
 		<ProjectReference Include="..\Pixeval.Utilities\Pixeval.Utilities.csproj" />

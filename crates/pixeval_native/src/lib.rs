@@ -12,6 +12,8 @@ pixeval_plugin::uniffi_reexport_scaffolding!();
 pixeval_mcp::uniffi_reexport_scaffolding!();
 pixeval_novel::uniffi_reexport_scaffolding!();
 pixeval_media::uniffi_reexport_scaffolding!();
+pixeval_booru::uniffi_reexport_scaffolding!();
+pixeval_saucenao::uniffi_reexport_scaffolding!();
 
 #[uniffi::export]
 pub fn version() -> String {

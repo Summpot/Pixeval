@@ -88,7 +88,7 @@ public sealed class McpServerTest
                 null
             ));
             using var download = new DownloadManager(3, null, null);
-            using var cache = new CacheEngine(Path.Combine(tempDir, "cache"), 1024 * 1024, 100);
+            using var cache = new CacheEngine(Path.Combine(tempDir, "cache"), 1024 * 1024);
             using var sub = new SubscriptionSyncEngine(5, null);
             using var plugin = new PluginHostEngine("5.0.0");
 

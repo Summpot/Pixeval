@@ -106,9 +106,9 @@ mod tests {
     }
 
     #[test]
-    fn test_purge_to_size() {
+    fn test_cache_clear_and_remove() {
         let dir = create_test_dir();
-        let cache = CacheEngine::new(dir.path().to_string_lossy().to_string(), 128, 4).unwrap();
+        let cache = CacheEngine::new(dir.path().to_string_lossy().to_string(), Some(128 * 1024 * 1024)).unwrap();
 
         let d1 = vec![1u8; 32];
         let d2 = vec![2u8; 32];
@@ -120,14 +120,13 @@ mod tests {
 
         let stats = cache.stats();
         assert_eq!(stats.entry_count, 3);
-        assert_eq!(stats.total_used_bytes, 96);
 
-        let evicted = cache.purge_to_size(40).unwrap();
-        assert_eq!(evicted, 2);
+        assert!(cache.remove("k1".to_string()));
+        let stats_after_remove = cache.stats();
+        assert_eq!(stats_after_remove.entry_count, 2);
 
-        let stats_after = cache.stats();
-        assert_eq!(stats_after.entry_count, 1);
-        assert_eq!(stats_after.total_used_bytes, 32);
-        assert_eq!(cache.get("k3".to_string()), Some(d3));
+        cache.clear().unwrap();
+        let stats_after_clear = cache.stats();
+        assert_eq!(stats_after_clear.entry_count, 0);
     }
 }

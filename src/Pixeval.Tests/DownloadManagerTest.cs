@@ -7,11 +7,11 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using Imouto.BooruParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Misaki;
 using Pixeval.Download;
 using Pixeval.Models.Download.Tasks;
+using Pixeval.Native.Booru;
 using Pixeval.Native.Download;
 using Pixeval.Models.Options;
 using Pixeval.Models.Subscriptions;
@@ -415,18 +415,27 @@ public sealed class DownloadManagerTest
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
-    private static Post CreatePost(string id) => new(
-        new(id, $"hash-{id}", PlatformType.Danbooru),
+    private static BooruPost CreatePost(string id) => new(
+        id,
+        $"hash-{id}",
+        BooruPlatform.Danbooru,
         $"https://example.com/{id}.jpg",
         null,
         null,
-        ExistState.Exist,
-        DateTimeOffset.UtcNow,
-        new("1", "uploader", PlatformType.Danbooru),
-        null,
-        new(100, 100),
+        100,
+        100,
         0,
-        SafeRating.General,
+        "jpg",
+        DateTimeOffset.UtcNow.ToString("O"),
+        "1",
+        "uploader",
+        null,
+        "general",
         [],
+        null,
+        false,
+        0,
+        false,
+        false,
         null);
 }

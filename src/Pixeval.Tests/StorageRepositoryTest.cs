@@ -6,10 +6,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Imouto.BooruParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Misaki;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Booru;
 using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -91,7 +91,7 @@ public sealed class StorageRepositoryTest
         Assert.AreEqual(1, repo.CountBrowseHistory());
         await using var enumerator = repo.StreamAsync(SimpleWorkType.Illustration).GetAsyncEnumerator();
         Assert.IsTrue(await enumerator.MoveNextAsync());
-        Assert.AreEqual(post.Id.Id, enumerator.Current.Id);
+        Assert.AreEqual(post.Id, enumerator.Current.Id);
     }
 
     [TestMethod]
@@ -232,18 +232,77 @@ public sealed class StorageRepositoryTest
         Assert.AreEqual("new-name", result.Name);
     }
 
-    private static Post CreatePost(string id) => new(
-        new(id, $"hash-{id}", PlatformType.Danbooru),
+    [TestMethod]
+    public void ArtworkPayloadHydrator_LegacyImoutoJson_HydratesCorrectly()
+    {
+        var legacyJson = """
+        {
+          "Id": {
+            "Id": "12345",
+            "Md5Hash": "abcdef123456",
+            "PlatformType": 0
+          },
+          "OriginalUrl": "https://danbooru.donmai.us/data/sample.jpg",
+          "SampleUrl": "https://danbooru.donmai.us/data/sample.jpg",
+          "PreviewUrl": "https://danbooru.donmai.us/data/preview.jpg",
+          "ExistState": 0,
+          "CreateDate": "2026-01-01T00:00:00+00:00",
+          "Uploader": {
+            "Id": "1",
+            "Name": "test_uploader",
+            "Platform": 0
+          },
+          "Source": "https://twitter.com/test",
+          "FileResolution": {
+            "Width": 1920,
+            "Height": 1080
+          },
+          "ByteSize": 102400,
+          "SafeRating": 1,
+          "Tags": [
+            {
+              "Type": "character",
+              "Name": "hatsune_miku"
+            }
+          ]
+        }
+        """;
+
+        var hydrated = ArtworkPayloadHydrator.Hydrate("Imouto.BooruParser.Post", legacyJson);
+        Assert.IsNotNull(hydrated);
+        Assert.IsInstanceOfType<BooruPost>(hydrated);
+        var post = (BooruPost) hydrated;
+        Assert.AreEqual("12345", post.Id);
+        Assert.AreEqual(BooruPlatform.Danbooru, post.Platform);
+        Assert.AreEqual(1920u, post.Width);
+        Assert.AreEqual(1080u, post.Height);
+        Assert.AreEqual("test_uploader", post.UploaderName);
+        Assert.AreEqual(1, post.Tags.Count);
+        Assert.AreEqual("hatsune_miku", post.Tags[0].Name);
+        Assert.AreEqual("character", post.Tags[0].TagType);
+    }
+
+    private static BooruPost CreatePost(string id) => new(
+        id,
+        $"hash-{id}",
+        BooruPlatform.Danbooru,
         $"https://example.com/{id}.jpg",
         null,
         null,
-        ExistState.Exist,
-        DateTimeOffset.UtcNow,
-        new("1", "uploader", PlatformType.Danbooru),
-        null,
-        new(100, 100),
+        100,
+        100,
         0,
-        SafeRating.General,
+        "jpg",
+        DateTimeOffset.UtcNow.ToString("O"),
+        "1",
+        "uploader",
+        null,
+        "general",
         [],
+        null,
+        false,
+        0,
+        false,
+        false,
         null);
 }

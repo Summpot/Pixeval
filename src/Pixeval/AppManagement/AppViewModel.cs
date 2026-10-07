@@ -10,9 +10,9 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
-using Imouto.BooruParser;
 using Microsoft.Extensions.DependencyInjection;
 using Misaki;
+using Pixeval.Native.Booru;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Download;
 using Pixeval.Models.Download.Tasks;
@@ -120,7 +120,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
 
         return new ServiceCollection()
             .AddSingleton(_ => logger)
-            .AddBooruParsers()
+            .AddBooruServices()
             .AddKeyedSingleton<IGetArtworkService>(IPlatformInfo.Pixiv, (provider, key) => pixivService)
             .AddKeyedSingleton<IDownloadHttpClientService>(IPlatformInfo.Pixiv, (provider, key) => pixivService)
             .AddKeyedSingleton<IPostFavoriteService>(IPlatformInfo.Pixiv, (provider, key) => pixivService)

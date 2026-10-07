@@ -2,8 +2,9 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using Imouto.BooruParser;
 using Misaki;
+using Pixeval.Native.Booru;
+using Pixeval.Native.SauceNao;
 using Pixeval.Utilities;
 using MakoIllustration = Pixeval.Native.Mako.Illustration;
 using MakoNovel = Pixeval.Native.Mako.Novel;
@@ -37,13 +38,24 @@ public static class ArtworkPayloadHydrator
                     return MakoNovel.Deserialize(payloadJson).Apply(t => t.IsFavorite = false);
                 }
 
-                if (serializeKey.Equals(typeof(Post).FullName, StringComparison.OrdinalIgnoreCase))
+                if (serializeKey.Equals(BooruPost.LegacyPostToken, StringComparison.OrdinalIgnoreCase)
+                    || serializeKey.Equals(BooruPost.NativePostToken, StringComparison.OrdinalIgnoreCase)
+                    || serializeKey.Equals(typeof(BooruPost).FullName, StringComparison.OrdinalIgnoreCase)
+                    || serializeKey.StartsWith("BooruPost", StringComparison.OrdinalIgnoreCase)
+                    || serializeKey.StartsWith("Post", StringComparison.OrdinalIgnoreCase))
                 {
-                    return Post.Deserialize(payloadJson);
+                    return BooruPost.Deserialize(payloadJson);
+                }
+
+                if (serializeKey.Equals(SauceNaoItem.SauceNaoItemToken, StringComparison.OrdinalIgnoreCase)
+                    || serializeKey.Equals(typeof(SauceNaoItem).FullName, StringComparison.OrdinalIgnoreCase)
+                    || serializeKey.StartsWith("SauceNao", StringComparison.OrdinalIgnoreCase))
+                {
+                    return SauceNaoItem.Deserialize(payloadJson);
                 }
             }
 
-            // Fallback: try parsing as Illustration first, then Novel, then Post
+            // Fallback: try parsing as Illustration first, then Novel, then BooruPost, then SauceNaoItem
             try
             {
                 var illust = MakoIllustration.Deserialize(payloadJson);
@@ -68,7 +80,16 @@ public static class ArtworkPayloadHydrator
 
             try
             {
-                return Post.Deserialize(payloadJson);
+                return BooruPost.Deserialize(payloadJson);
+            }
+            catch
+            {
+                // try next
+            }
+
+            try
+            {
+                return SauceNaoItem.Deserialize(payloadJson);
             }
             catch
             {

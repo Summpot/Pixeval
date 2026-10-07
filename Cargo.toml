@@ -13,5 +13,7 @@ members = [
     "crates/pixeval_mcp",
     "crates/pixeval_novel",
     "crates/pixeval_media",
+    "crates/pixeval_booru",
+    "crates/pixeval_saucenao",
 ]
 resolver = "2"
