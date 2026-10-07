@@ -39,7 +39,7 @@ public static partial class DownloadPathMacroParser
         var setIndex = artwork.TryGetSetIndex();
 
         var isAi = artwork.IsAiGenerated;
-        var isR18 = artwork.SafeRating.IsR18;
+        var isR18 = artwork.SafeRating.IsR18 || artwork.SafeRating.IsR18G;
         var isR18G = artwork.SafeRating.IsR18G;
         var isNovel = artwork is Novel or INovelEntry;
         var series = (artwork as IWorkEntry)?.Series;

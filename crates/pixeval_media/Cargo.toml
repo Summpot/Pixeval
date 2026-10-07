@@ -1,0 +1,19 @@
+[package]
+name = "pixeval_media"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+uniffi = { version = "0.32", features = ["tokio"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif", "avif"] }
+png = "0.17"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+tokio = { version = "1", features = ["rt", "sync", "fs", "io-util"] }
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+parking_lot = "0.12"
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["full"] }

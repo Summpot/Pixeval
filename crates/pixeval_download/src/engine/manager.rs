@@ -35,7 +35,7 @@ pub struct DownloadNetworkOptions {
 #[derive(uniffi::Object)]
 pub struct DownloadManager {
     concurrency_degree: Arc<AtomicUsize>,
-    semaphore: Arc<RwLock<Arc<Semaphore>>>,
+    semaphore: Arc<Semaphore>,
     tasks: Arc<RwLock<HashMap<DownloadTaskKey, DownloadTaskItem>>>,
     cancel_tokens: Arc<RwLock<HashMap<DownloadTaskKey, CancellationToken>>>,
     callback: Option<Arc<dyn DownloadProgressCallback>>,
@@ -56,7 +56,7 @@ impl DownloadManager {
 
         Arc::new(Self {
             concurrency_degree: Arc::new(AtomicUsize::new(concurrency)),
-            semaphore: Arc::new(RwLock::new(Arc::new(Semaphore::new(concurrency)))),
+            semaphore: Arc::new(Semaphore::new(concurrency)),
             tasks: Arc::new(RwLock::new(HashMap::new())),
             cancel_tokens: Arc::new(RwLock::new(HashMap::new())),
             callback: cb,
@@ -90,7 +90,7 @@ impl DownloadManager {
 
         let tasks = self.tasks.clone();
         let cancel_tokens = self.cancel_tokens.clone();
-        let sem_arc = self.semaphore.read().clone();
+        let sem_arc = self.semaphore.clone();
         let callback = self.callback.clone();
         let client = self.client.read().clone();
 
@@ -162,15 +162,23 @@ impl DownloadManager {
 
                 let _ = fs::remove_file(&temp_dest).await;
 
-                let response = client
+                let send_future = client
                     .get(&url)
                     .header("Referer", "https://app-api.pixiv.net/")
                     .header(
                         "User-Agent",
-                        "PixivAndroidApp/5.0.234 (Android 11; Pixel 5)",
+                        "PixivAndroidApp/6.140.2 (Android 15.0)",
                     )
-                    .send()
-                    .await;
+                    .send();
+
+                let response = tokio::select! {
+                    res = send_future => res,
+                    _ = token.cancelled() => {
+                        let _ = fs::remove_file(&temp_dest).await;
+                        cancel_tokens.write().remove(&key);
+                        return;
+                    }
+                };
 
                 let response = match response {
                     Ok(r) if r.status().is_success() => r,
@@ -220,12 +228,21 @@ impl DownloadManager {
                 let mut stream = response.bytes_stream();
                 let mut stream_failed = false;
 
-                while let Some(chunk_result) = stream.next().await {
-                    if token.is_cancelled() {
-                        let _ = fs::remove_file(&temp_dest).await;
-                        cancel_tokens.write().remove(&key);
-                        return;
-                    }
+                loop {
+                    let chunk_result = tokio::select! {
+                        chunk_opt = stream.next() => {
+                            match chunk_opt {
+                                Some(res) => res,
+                                None => break,
+                            }
+                        }
+                        _ = token.cancelled() => {
+                            drop(file);
+                            let _ = fs::remove_file(&temp_dest).await;
+                            cancel_tokens.write().remove(&key);
+                            return;
+                        }
+                    };
 
                     match chunk_result {
                         Ok(chunk) => {
@@ -370,9 +387,9 @@ impl DownloadManager {
         let c = (concurrency as usize).max(1);
         let old = self.concurrency_degree.swap(c, Ordering::SeqCst);
         if c > old {
-            self.semaphore.read().add_permits(c - old);
+            self.semaphore.add_permits(c - old);
         } else if c < old {
-            *self.semaphore.write() = Arc::new(Semaphore::new(c));
+            self.semaphore.forget_permits(old - c);
         }
     }
 }
@@ -422,10 +439,14 @@ impl DownloadManager {
         }
 
         for (domain, ips) in all_domain_ips {
+            let mut addrs = Vec::new();
             for ip_str in ips {
                 if let Ok(ip) = ip_str.parse::<std::net::IpAddr>() {
-                    builder = builder.resolve(&domain, std::net::SocketAddr::new(ip, 443));
+                    addrs.push(std::net::SocketAddr::new(ip, 443));
                 }
+            }
+            if !addrs.is_empty() {
+                builder = builder.resolve_to_addrs(&domain, &addrs);
             }
         }
 

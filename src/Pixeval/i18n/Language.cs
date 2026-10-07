@@ -762,6 +762,10 @@ namespace Pixeval
         public static class UgoiraDownloadFormat
         {
             public const string Original = "Enum.UgoiraDownloadFormat.Original";
+            public const string Gif = "Enum.UgoiraDownloadFormat.Gif";
+            public const string Apng = "Enum.UgoiraDownloadFormat.Apng";
+            public const string Webp = "Enum.UgoiraDownloadFormat.Webp";
+            public const string Mp4 = "Enum.UgoiraDownloadFormat.Mp4";
         }
         public static class WorkSortOption
         {

@@ -173,7 +173,6 @@ impl SubscriptionSyncEngine {
             token.cancel();
         }
         inner.queue.clear();
-        inner.is_running = false;
         inner.active_request = None;
     }
 
@@ -531,8 +530,13 @@ impl SubscriptionSyncEngine {
                     macro_ctx.image_type = "Other".to_string();
                     macro_ctx.is_novel = true;
                     macro_ctx.is_ai = novel.novel_ai_type == 2;
-                    macro_ctx.is_r18 = novel.x_restrict == 1;
+                    macro_ctx.is_r18 = novel.x_restrict == 1 || novel.x_restrict == 2;
                     macro_ctx.is_r18g = novel.x_restrict == 2;
+                    if let Some(ref series) = novel.series {
+                        macro_ctx.has_series = true;
+                        macro_ctx.series_id = Some(series.id.to_string());
+                        macro_ctx.series_title = Some(series.title.clone());
+                    }
                     macro_ctx.work_subscription_id = Some(history_id);
                     macro_ctx.work_subscription_type = Some(match sub.subscription_type {
                         0 => "Bookmarks".to_string(),
@@ -554,6 +558,18 @@ impl SubscriptionSyncEngine {
                         format!("{base_dir}/{clean_rel}")
                     };
 
+                    let novel_folder = destination
+                        .replace("<ext>", "")
+                        .replace("<ext:l>", "")
+                        .replace("<ext:u>", "")
+                        .trim_end_matches(['.', '/', '\\'])
+                        .to_string();
+                    let is_real_file_present = std::path::Path::new(&destination).exists()
+                        || std::path::Path::new(&format!("{novel_folder}/novel.txt")).exists()
+                        || std::path::Path::new(&format!("{novel_folder}/novel.html")).exists()
+                        || std::path::Path::new(&format!("{novel_folder}/novel.md")).exists()
+                        || std::path::Path::new(&format!("{novel_folder}.txt")).exists();
+
                     let is_dup = storage
                         .contains_subscription_download_identity(
                             history_id,
@@ -561,7 +577,7 @@ impl SubscriptionSyncEngine {
                             destination.clone(),
                         )
                         .unwrap_or(false)
-                        || std::path::Path::new(&destination).exists();
+                        || is_real_file_present;
 
                     let is_fused = {
                         let mut g = inner.lock();
@@ -590,7 +606,7 @@ impl SubscriptionSyncEngine {
                         novel.id.to_string(),
                         Some(format!("Novel:{}", novel.id)),
                         destination.clone(),
-                        0,
+                        1,
                         None,
                         None,
                         history_id,
@@ -676,8 +692,13 @@ impl SubscriptionSyncEngine {
                         "SingleImage".to_string()
                     };
                     macro_ctx.is_ai = illust.illust_ai_type == 2;
-                    macro_ctx.is_r18 = illust.x_restrict == 1;
+                    macro_ctx.is_r18 = illust.x_restrict == 1 || illust.x_restrict == 2;
                     macro_ctx.is_r18g = illust.x_restrict == 2;
+                    if let Some(ref series) = illust.series {
+                        macro_ctx.has_series = true;
+                        macro_ctx.series_id = Some(series.id.to_string());
+                        macro_ctx.series_title = Some(series.title.clone());
+                    }
                     macro_ctx.work_subscription_id = Some(history_id);
                     macro_ctx.work_subscription_type = Some(match sub.subscription_type {
                         0 => "Bookmarks".to_string(),
@@ -734,6 +755,12 @@ impl SubscriptionSyncEngine {
                         format!("{base_dir}/{clean_rel}")
                     };
 
+                    let resolved_p0 = resolve_tokens(&destination, ext, 0);
+                    let is_real_file_present = std::path::Path::new(&destination).exists()
+                        || std::path::Path::new(&resolved_p0).exists()
+                        || std::path::Path::new(&resolve_tokens(&destination, "jpg", 0)).exists()
+                        || std::path::Path::new(&resolve_tokens(&destination, "png", 0)).exists();
+
                     let is_dup = storage
                         .contains_subscription_download_identity(
                             history_id,
@@ -741,7 +768,7 @@ impl SubscriptionSyncEngine {
                             destination.clone(),
                         )
                         .unwrap_or(false)
-                        || std::path::Path::new(&destination).exists();
+                        || is_real_file_present;
 
                     let is_fused = {
                         let mut g = inner.lock();
@@ -764,7 +791,7 @@ impl SubscriptionSyncEngine {
                         illust.id.to_string(),
                         Some(format!("Illustration:{}", illust.id)),
                         destination.clone(),
-                        0,
+                        1,
                         None,
                         None,
                         history_id,

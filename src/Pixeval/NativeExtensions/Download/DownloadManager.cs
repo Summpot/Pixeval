@@ -91,7 +91,7 @@ public partial class DownloadManager
             QueuedTasks.Insert(0, taskGroup);
         }
 
-        if (taskGroup.CurrentState is DownloadState.Queued)
+        if (taskGroup.CurrentState is DownloadState.Queued || (int)taskGroup.CurrentState == 0)
             _ = EnqueueGroupToNativeAsync(taskGroup);
     }
 
@@ -101,7 +101,7 @@ public partial class DownloadManager
             return false;
 
         QueuedTasks.Add(taskGroup);
-        if (taskGroup.CurrentState is DownloadState.Queued)
+        if (taskGroup.CurrentState is DownloadState.Queued || (int)taskGroup.CurrentState == 0)
             _ = EnqueueGroupToNativeAsync(taskGroup);
         return true;
     }
@@ -134,7 +134,7 @@ public partial class DownloadManager
 
     public bool TryExecuteTaskGroupInline(IDownloadTaskGroupBase taskGroup)
     {
-        if (QueuedTasks.Contains(taskGroup) && taskGroup.CurrentState is DownloadState.Queued)
+        if (QueuedTasks.Contains(taskGroup) && (taskGroup.CurrentState is DownloadState.Queued || (int)taskGroup.CurrentState == 0))
         {
             _ = EnqueueGroupToNativeAsync(taskGroup);
             return true;
@@ -165,7 +165,7 @@ public partial class DownloadManager
             if (subTask is not ImageDownloadTask imgTask)
                 continue;
 
-            if (imgTask.CurrentState is not DownloadState.Queued)
+            if (imgTask.CurrentState is not DownloadState.Queued && (int)imgTask.CurrentState != 0)
                 continue;
 
             var subKey = new DownloadTaskKey(
@@ -261,7 +261,7 @@ public partial class DownloadManager
         {
             if (Parent?._subTaskMap.TryGetValue(key, out var mapping) == true && mapping.SubTask is { } subTask)
             {
-                SafePost(() => subTask.UpdateProgress(progressPercentage));
+                SafePost(() => subTask.UpdateProgress(progressPercentage, downloadedBytes, totalBytes));
             }
         }
 

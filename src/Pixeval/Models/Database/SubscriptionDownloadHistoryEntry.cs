@@ -19,10 +19,12 @@ public sealed class SubscriptionDownloadHistoryEntry : DownloadHistoryEntryBase
 
         WorkSubscriptionId = workSubscriptionId;
         ArtworkId = entry.Id;
+        State = DownloadState.Queued;
     }
 
     public SubscriptionDownloadHistoryEntry()
     {
+        State = DownloadState.Queued;
     }
 
     public int WorkSubscriptionId { get; init; }

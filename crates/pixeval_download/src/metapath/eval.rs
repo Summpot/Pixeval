@@ -200,7 +200,7 @@ fn evaluate_predicate(name: &str, context: &MacroContext) -> bool {
         "is_pic_set" => context.image_type() == MacroImageType::ImageSet,
         "is_pic_one" => context.image_type() == MacroImageType::SingleImage,
         "is_pic_gif" => context.image_type() == MacroImageType::SingleAnimatedImage,
-        "is_r18" => context.is_r18,
+        "is_r18" => context.is_r18 || context.is_r18g,
         "is_r18g" => context.is_r18g,
         "is_ai" => context.is_ai,
         "is_novel" => context.is_novel,

@@ -90,8 +90,8 @@ Phase 1 成功构建了跨语言基础底座并下沉了底层密集型子系统
 ```mermaid
 flowchart TD
     subgraph Phase2 ["Phase 2: 内容计算与媒体管线原生化 (高收益/零 UI 耦合)"]
-        P2_1["2.1 小说解析与排版引擎 (pixeval_novel)<br/>【附带修复】H6(正文插图/前后篇), H7(小说端点), 2.4(ratio谓词误判), 高级搜索参数丢失<br/>【Partial规范】NovelArticle/NovelContent 在 NativeExtensions/Novel 原地实现接口"]
-        P2_2["2.2 媒体后处理与动图转码 (pixeval_media)<br/>【附带修复】H2(任务组入队), H5(系列宏与R18G), 2.1(订阅下载探错与孤儿行), 2.2(下载并发缩容/多IP/取消感知)<br/>【Partial规范】DownloadManager 原地扩展，严禁手写任务包装类"]
+        P2_1["2.1 小说解析与排版引擎 (pixeval_novel) [已完成]<br/>【附带修复】H6(正文插图/前后篇), H7(小说端点), 2.4(ratio谓词误判), 高级搜索参数丢失<br/>【Partial规范】NovelArticle/NovelContent 在 NativeExtensions/Novel 原地实现接口"]
+        P2_2["2.2 媒体后处理与动图转码 (pixeval_media) [已完成]<br/>【附带修复】H2(任务组入队), H5(系列宏与R18G), 2.1(订阅下载探错与孤儿行), 2.2(下载并发缩容/多IP/取消感知)<br/>【Partial规范】DownloadManager 原地扩展，严禁手写任务包装类"]
         P2_3["2.3 零拷贝图片抓取与流式预览管线<br/>【附带修复】H9(缓存重启清空与持久索引), 2.3(Mako全面接驳Maho抗审查/超时), 2.4(缓存实时限额/内存对齐)<br/>【Partial规范】维持 CacheEngine 在 NativeExtensions/Cache 原地扩展"]
     end
 
@@ -119,7 +119,7 @@ flowchart TD
 
 ### 阶段 2：内容计算与媒体管线原生化 (Phase 2)
 
-#### 2.1 Pixiv 小说标记语法解析与多格式排版引擎 (`crates/pixeval_novel`)
+#### 2.1 Pixiv 小说标记语法解析与多格式排版引擎 (`crates/pixeval_novel`) (已完成)
 - **功能目标**：
   - 新建 `crates/pixeval_novel`，基于 Rust 高性能零拷贝 Tokenizer 实现解析。
   - 支持完整的 Pixiv 标记语法：`[newpage]`、`[[rb:汉字 > 注音]]`、`[jumpuri:文本 > 链接]`、`[jump:页面]`、`[chapter:章节名]`、`[uploadimage:id]`、`[pixivimage:id-page]`。
@@ -142,7 +142,7 @@ flowchart TD
   - C# 物理删除 `PixivNovelParser.cs`、`PixivNovelHtmlParser.cs`、`PixivNovelMdParser.cs`、`PixivNovelMdDisplayParser.cs`。
   - 小说正文插图与前后篇导航正常显示；单元测试覆盖 AST 解析与结构化模型反序列化。
 
-#### 2.2 媒体后处理与动图转码管道 (`crates/pixeval_media` 或扩展 `pixeval_download`)
+#### 2.2 媒体后处理与动图转码管道 (`crates/pixeval_media` 或扩展 `pixeval_download`) (已完成)
 - **功能目标**：
   - 构建原生媒体转码与打包管线：
     1. **Ugoira 动图合成**：原生流式解压 zip 帧包，结合帧延迟数组，直接调用原生编解码库生成高质量 GIF、APNG、WebP 或 MP4 视频。
@@ -298,14 +298,14 @@ flowchart TD
 
 建议按照**“高解耦、高收益、零 UI 阻抗、顺带修复核心阻塞”**的原则分步启动：
 
-1. **第一优先级（立即启动）：小说解析与排版引擎 (`crates/pixeval_novel`)**
+1. **第一优先级：小说解析与排版引擎 (`crates/pixeval_novel`) [已完成]**
    - **理由**：输入为纯文本小说字符串，输出为结构化 AST 与 Markdown/HTML/EPUB，**完全没有 UI 依赖，测试边界极其清晰**。
    - **顺带修复**：小说结构化正文插图与前后篇导航失效（**H6**）、小说评论回复与相关作品端点（**H7**）、DSL 比例过滤对小说的误排除（**2.4**）、高级搜索参数透传（**2.3**）。
    - **严守铁律**：`NovelArticle` / `NovelChapter` / `NovelContent` 必须在 `src/Pixeval/NativeExtensions/Novel/` 中直接通过 `public partial record` 补齐接口，严禁创建包装类！
-2. **第二优先级：动图后处理与媒体管线 (`crates/pixeval_media`)**
+2. **第二优先级：动图后处理与媒体管线 (`crates/pixeval_media`) [已完成]**
    - **理由**：彻底解决 Ugoira 动图合成与格式转换的跨语言性能损耗，关闭下载模块的最后一段 C# 尾巴。
    - **顺带修复**：多页插画与小说任务组未入队阻塞（**H2**）、订阅路径宏丢失系列与 R18G 语义（**H5**）、下载引擎静态多 IP 覆盖与并发缩容缺陷（**2.2**）、订阅下载探错与孤儿行（**2.1**）。
-3. **第三优先级：零拷贝图片抓取与缓存/预览管线 (`pixeval_cache` / `pixeval_maho`)**
+3. **第三优先级（建议下一步启动）：零拷贝图片抓取与缓存/预览管线 (`pixeval_cache` / `pixeval_maho`)**
    - **顺带修复**：文件缓存每次重启无条件截断被清空（**H9**）、Mako 客户端未走 Maho TLS 分片抗审查（**2.3**）、缓存运行时容量限制（**2.4**）。
 4. **第四优先级：先行存量缺陷专项（H1 序列化、H3 MCP 补齐、H7/H10 会话与端点）**
    - **说明**：此部分已在 Phase 3 的专属小节（3.1、3.5、3.6）中全量挂载，可根据业务优先级按需提前插入实施。

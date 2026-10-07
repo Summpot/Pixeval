@@ -49,7 +49,7 @@ public static partial class IoHelper
     {
         ugoiraDownloadFormat ??= App.AppViewModel.AppSettings.DownloadSettings.DownloadFormats.UgoiraDownloadFormat;
         var token = new UgoiraDownloadFormatToken(ugoiraDownloadFormat);
-        if (token.BuiltInFormat is UgoiraDownloadFormat.Original)
+        if (token.BuiltInFormat is not null)
             return token;
 
         if (token.ExtensionFormatExtension is { } extension
@@ -100,6 +100,10 @@ public static partial class IoHelper
         return (token.BuiltInFormat ?? UgoiraDownloadFormatToken.DefaultBuiltInFormat) switch
         {
             UgoiraDownloadFormat.Original => null,
+            UgoiraDownloadFormat.Gif => "gif",
+            UgoiraDownloadFormat.Apng => "png",
+            UgoiraDownloadFormat.Webp => "webp",
+            UgoiraDownloadFormat.Mp4 => "mp4",
             _ => throw new ArgumentOutOfRangeException(nameof(ugoiraDownloadFormat))
         };
     }

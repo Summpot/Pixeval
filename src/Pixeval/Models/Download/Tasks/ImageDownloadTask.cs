@@ -74,6 +74,12 @@ public partial class ImageDownloadTask : ViewModelBase, ISingleDownloadTaskBase,
     public partial double ProgressPercentage { get; protected set; }
 
     [ObservableProperty]
+    public partial ulong DownloadedBytes { get; protected set; }
+
+    [ObservableProperty]
+    public partial ulong TotalBytes { get; protected set; }
+
+    [ObservableProperty]
     public partial string? ErrorMessage { get; protected set; }
 
     [ObservableProperty]
@@ -123,9 +129,11 @@ public partial class ImageDownloadTask : ViewModelBase, ISingleDownloadTaskBase,
         await DownloadErrorAsync.Invoke(this);
     }
 
-    internal void UpdateProgress(double percentage)
+    internal void UpdateProgress(double percentage, ulong downloadedBytes = 0, ulong totalBytes = 0)
     {
         ProgressPercentage = percentage;
+        DownloadedBytes = downloadedBytes;
+        TotalBytes = totalBytes;
     }
 
     internal void SetNativeState(DownloadState state)

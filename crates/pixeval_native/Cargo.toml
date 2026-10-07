@@ -21,6 +21,7 @@ pixeval_config = { path = "../pixeval_config" }
 pixeval_plugin = { path = "../pixeval_plugin" }
 pixeval_mcp = { path = "../pixeval_mcp" }
 pixeval_novel = { path = "../pixeval_novel" }
+pixeval_media = { path = "../pixeval_media" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
