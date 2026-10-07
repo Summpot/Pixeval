@@ -85,19 +85,6 @@ public partial class CacheEngine
             Put(key, data);
             return true;
         }
-        catch (CacheError.OutOfMemory)
-        {
-            try
-            {
-                _ = PurgeCompact();
-                Put(key, data);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
         catch
         {
             return false;

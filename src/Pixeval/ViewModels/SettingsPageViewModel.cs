@@ -56,7 +56,6 @@ public class SettingsPageViewModel : ViewModelBase
                         _ => ThemeVariant.Default
                     })
                 .Font(t => t.AppFontFamily, entry => entry.ValueChanged += App.ApplyAppFontFamily)
-                .Bool(t => t.UseFileCache)
                 .MultiValuesWithSwitch(t => t.FileCache, t => t.LimitFileCacheSize,
                     entry => entry.Int(t => t.FileCacheSizeLimitInMegabytes, 1, 0x100000, 0x80,
                         t => t.ValueChanged += _value => _ = CacheHelper.EnforceCacheSizeLimitAsync()),

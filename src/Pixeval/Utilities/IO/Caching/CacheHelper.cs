@@ -22,7 +22,8 @@ public static class CacheHelper
     private static readonly Lazy<CacheEngine> _CacheEngine =
         new(() =>
         {
-            var engine = new CacheEngine(CachePath, initialFileSize: 16 * 1024 * 1024, maxFiles: 128);
+            var capacity = (ulong)GetCacheSizeLimitInBytes();
+            var engine = new CacheEngine(CachePath, capacity);
             try
             {
                 if (App.AppViewModel?.AppSettings is { } settings)
@@ -76,15 +77,7 @@ public static class CacheHelper
     public static Task PurgeCacheAsync(CancellationToken token = default) =>
         Task.Run(() => _CacheEngine.Value.Clear(), token);
 
-    public static Task EnforceCacheSizeLimitAsync(CancellationToken token = default)
-    {
-        var settings = App.AppViewModel.AppSettings.ApplicationSettings;
-        if (!settings.FileCache.LimitFileCacheSize)
-            return Task.CompletedTask;
-
-        var limit = (ulong)GetCacheSizeLimitInBytes();
-        return Task.Run(() => _CacheEngine.Value.PurgeToSize(limit), token);
-    }
+    public static Task EnforceCacheSizeLimitAsync(CancellationToken token = default) => Task.CompletedTask;
 
     private static long GetCacheSizeLimitInBytes()
     {
@@ -323,7 +316,7 @@ public static class CacheHelper
     {
         try
         {
-            if (desiredWidth is null && App.AppViewModel?.AppSettings?.ApplicationSettings?.UseFileCache == true)
+            if (desiredWidth is null)
             {
                 if (_CacheEngine.Value.TryReadPlanarBitmap(key) is { } planarBmp)
                     return planarBmp;
@@ -332,7 +325,7 @@ public static class CacheHelper
             if (await GetStreamAsync(platform, key, progress, token: token) is not { } stream)
                 return WrappedImageNotAvailable.Value;
 
-            if (desiredWidth is null && App.AppViewModel?.AppSettings?.ApplicationSettings?.UseFileCache == true && stream is MemoryStream ms)
+            if (desiredWidth is null && stream is MemoryStream ms)
             {
                 var bytes = ms.ToArray();
                 _ = Task.Run(() =>
@@ -365,7 +358,7 @@ public static class CacheHelper
     }
 
     /// <summary>
-    /// 本方法会根据<see cref="ApplicationSettingsGroup.UseFileCache"/>判断是否使用文件缓存
+    /// 获取图片流，优先从文件缓存读取，未命中则请求网络并自动写入缓存
     /// </summary>
     /// <returns><see langword="null"/>表示下载失败</returns>
     private static async ValueTask<Stream?> GetStreamAsync(
@@ -445,14 +438,11 @@ public static class CacheHelper
     {
         try
         {
-            if (!App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache)
-                return null;
-
             return _CacheEngine.Value.TryReadCache(key, out var stream) ? stream : null;
         }
         catch (Exception e)
         {
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+            App.AppViewModel?.AppServiceProvider?.GetService<FileLogger>()?
                 .LogError(nameof(TryGetStream), e);
         }
 
@@ -462,10 +452,6 @@ public static class CacheHelper
     /// <exception cref="InvalidOperationException"/>
     internal static bool TryCacheStream(string key, Stream stream)
     {
-        if (!App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache)
-            throw new InvalidOperationException(
-                $"Check {nameof(App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache)} before {nameof(TryCacheStream)}");
-
         return _CacheEngine.Value.TryCache(key, stream);
     }
 }

@@ -8,17 +8,8 @@ pub enum CacheError {
     #[error("I/O error: {message}")]
     Io { message: String },
 
-    #[error("Cache is full and reached maximum file count")]
-    OutOfMemory,
-
-    #[error("Memory mapping error: {message}")]
-    MmapFailed { message: String },
-
     #[error("Invalid cache header or corrupted data")]
     CorruptedData,
-
-    #[error("Cache engine is closed")]
-    Closed,
 
     #[error("Item size {size} exceeds maximum allowable item limit {limit}")]
     ItemTooLarge { size: u64, limit: u64 },

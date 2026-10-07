@@ -38,7 +38,7 @@ mod tests {
     #[test]
     fn test_cache_put_get_remove() {
         let dir = create_test_dir();
-        let cache = CacheEngine::new(dir.path().to_string_lossy().to_string(), 8192, 5).unwrap();
+        let cache = CacheEngine::new(dir.path().to_string_lossy().to_string(), Some(64 * 1024)).unwrap();
 
         assert_eq!(cache.get("key1".to_string()), None);
 
@@ -49,8 +49,7 @@ mod tests {
 
         let stats = cache.stats();
         assert_eq!(stats.entry_count, 1);
-        // 11 bytes aligned to 8 is 16 bytes
-        assert_eq!(stats.total_used_bytes, 16);
+        assert!(stats.total_allocated_bytes >= 64 * 1024);
 
         assert!(cache.remove("key1".to_string()));
         assert_eq!(cache.get("key1".to_string()), None);
@@ -62,13 +61,13 @@ mod tests {
         let dir_str = dir.path().to_string_lossy().to_string();
 
         {
-            let cache1 = CacheEngine::new(dir_str.clone(), 8192, 4).unwrap();
+            let cache1 = CacheEngine::new(dir_str.clone(), Some(64 * 1024)).unwrap();
             cache1.put("k_persist".to_string(), b"persisted_payload".to_vec()).unwrap();
             assert_eq!(cache1.get("k_persist".to_string()), Some(b"persisted_payload".to_vec()));
         }
 
         {
-            let cache2 = CacheEngine::new(dir_str, 8192, 4).unwrap();
+            let cache2 = CacheEngine::new(dir_str, Some(64 * 1024)).unwrap();
             let retrieved = cache2.get("k_persist".to_string());
             assert_eq!(retrieved, Some(b"persisted_payload".to_vec()));
         }

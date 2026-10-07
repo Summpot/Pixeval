@@ -2,14 +2,12 @@
 // Licensed under the GPL-3.0 License.
 
 use futures_util::StreamExt;
-use parking_lot::RwLock;
 use pixeval_maho::{DnsResolver, IMAGE_HOST, IMAGE_HOST2, MahoConfig, MahoHttpClient};
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::fs;
 use std::net::IpAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use foyer::{
     BlockEngineConfig, DeviceBuilder, FileDeviceBuilder, HybridCache, HybridCacheBuilder,
@@ -23,7 +21,6 @@ use crate::planar::{
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
 pub struct CacheStats {
-    pub file_count: u32,
     pub entry_count: u32,
     pub total_allocated_bytes: u64,
     pub total_used_bytes: u64,
@@ -46,11 +43,6 @@ pub struct PlanarImageInfo {
 pub trait CachePreviewCallback: Send + Sync {
     fn on_preview_frame(&self, frame_data: Vec<u8>);
     fn on_progress(&self, downloaded_bytes: u64, total_bytes: u64);
-}
-
-struct EngineMeta {
-    entries: HashMap<String, usize>,
-    lru_order: VecDeque<String>,
 }
 
 fn build_http_client(
@@ -105,11 +97,7 @@ pub struct CacheEngine {
     hybrid_cache: HybridCache<String, Vec<u8>>,
     rt: Arc<tokio::runtime::Runtime>,
     http_client: Arc<parking_lot::RwLock<MahoHttpClient>>,
-    _cache_dir: PathBuf,
-    _cache_file: PathBuf,
     storage_capacity: u64,
-    meta: Arc<RwLock<EngineMeta>>,
-    total_used_bytes: Arc<AtomicU64>,
 }
 
 #[uniffi::export(async_runtime = "tokio")]
@@ -117,8 +105,7 @@ impl CacheEngine {
     #[uniffi::constructor]
     pub fn new(
         cache_dir: String,
-        initial_file_size: u64,
-        max_files: u32,
+        capacity: Option<u64>,
     ) -> Result<Arc<Self>, CacheError> {
         let dir = PathBuf::from(&cache_dir);
         fs::create_dir_all(&dir)?;
@@ -137,10 +124,12 @@ impl CacheEngine {
             }
         }
 
-        let max_files = max_files.max(1);
-        let storage_capacity = ((initial_file_size as usize) * (max_files as usize))
-            .max(64 * 1024)
-            .min(16 * 1024 * 1024 * 1024) as u64;
+        let storage_capacity = match capacity {
+            Some(cap) if cap > 0 => cap,
+            _ => 2 * 1024 * 1024 * 1024,
+        }
+        .max(64 * 1024)
+        .min(64 * 1024 * 1024 * 1024);
 
         let cache_file = dir.join("foyer_cache.bin");
 
@@ -178,22 +167,13 @@ impl CacheEngine {
                 })
         })?;
 
-        let meta = Arc::new(RwLock::new(EngineMeta {
-            entries: HashMap::new(),
-            lru_order: VecDeque::new(),
-        }));
-
         let http_client = build_http_client(true, 100, &HashMap::new(), None);
 
         Ok(Arc::new(Self {
             hybrid_cache,
             rt,
             http_client: Arc::new(parking_lot::RwLock::new(http_client)),
-            _cache_dir: dir,
-            _cache_file: cache_file,
             storage_capacity,
-            meta,
-            total_used_bytes: Arc::new(AtomicU64::new(0)),
         }))
     }
 
@@ -221,18 +201,13 @@ impl CacheEngine {
     pub fn get(&self, key: String) -> Option<Vec<u8>> {
         // Fast path: in-memory cache
         if let Some(entry) = self.hybrid_cache.memory().get(&key) {
-            let mut meta = self.meta.write();
-            if let Some(pos) = meta.lru_order.iter().position(|k| k == &key) {
-                meta.lru_order.remove(pos);
-            }
-            meta.lru_order.push_back(key);
             return Some(entry.value().clone());
         }
 
         // Storage path
         let key_clone = key.clone();
         let cache = self.hybrid_cache.clone();
-        let val = tokio::task::block_in_place(|| {
+        tokio::task::block_in_place(|| {
             self.rt.block_on(async {
                 cache
                     .get(&key_clone)
@@ -241,22 +216,7 @@ impl CacheEngine {
                     .flatten()
                     .map(|e| e.value().clone())
             })
-        });
-
-        if let Some(ref data) = val {
-            let mut meta = self.meta.write();
-            if let Some(pos) = meta.lru_order.iter().position(|k| k == &key) {
-                meta.lru_order.remove(pos);
-            }
-            meta.lru_order.push_back(key.clone());
-            if !meta.entries.contains_key(&key) {
-                meta.entries.insert(key, data.len());
-                let aligned = ((data.len() + 7) & !7) as u64;
-                self.total_used_bytes.fetch_add(aligned, Ordering::Relaxed);
-            }
-        }
-
-        val
+        })
     }
 
     pub async fn get_async(&self, key: String) -> Option<Vec<u8>> {
@@ -281,43 +241,12 @@ impl CacheEngine {
             });
         }
 
-        let aligned_len = ((data.len() + 7) & !7) as u64;
-        let mut meta = self.meta.write();
-
-        if let Some(old_len) = meta.entries.insert(key.clone(), data.len()) {
-            let old_aligned = ((old_len + 7) & !7) as u64;
-            if aligned_len >= old_aligned {
-                self.total_used_bytes
-                    .fetch_add(aligned_len - old_aligned, Ordering::Relaxed);
-            } else {
-                self.total_used_bytes
-                    .fetch_sub(old_aligned - aligned_len, Ordering::Relaxed);
-            }
-        } else {
-            self.total_used_bytes
-                .fetch_add(aligned_len, Ordering::Relaxed);
-        }
-
-        if let Some(pos) = meta.lru_order.iter().position(|k| k == &key) {
-            meta.lru_order.remove(pos);
-        }
-        meta.lru_order.push_back(key.clone());
-
         self.hybrid_cache.insert(key, data);
         Ok(())
     }
 
     pub fn remove(&self, key: String) -> bool {
-        let mut meta = self.meta.write();
-        if let Some(old_len) = meta.entries.remove(&key) {
-            let aligned = ((old_len + 7) & !7) as u64;
-            self.total_used_bytes.fetch_sub(aligned, Ordering::Relaxed);
-            if let Some(pos) = meta.lru_order.iter().position(|k| k == &key) {
-                meta.lru_order.remove(pos);
-            }
-            self.hybrid_cache.remove(&key);
-            true
-        } else if self.hybrid_cache.contains(&key) {
+        if self.hybrid_cache.contains(&key) {
             self.hybrid_cache.remove(&key);
             true
         } else {
@@ -326,13 +255,6 @@ impl CacheEngine {
     }
 
     pub fn clear(&self) -> Result<(), CacheError> {
-        {
-            let mut meta = self.meta.write();
-            meta.entries.clear();
-            meta.lru_order.clear();
-            self.total_used_bytes.store(0, Ordering::Relaxed);
-        }
-
         let cache = self.hybrid_cache.clone();
         tokio::task::block_in_place(|| {
             self.rt.block_on(async {
@@ -343,64 +265,11 @@ impl CacheEngine {
         Ok(())
     }
 
-    pub fn purge_compact(&self) -> Result<u64, CacheError> {
-        let mut meta = self.meta.write();
-        let total = meta.lru_order.len();
-        if total == 0 {
-            return Ok(0);
-        }
-
-        let retain_count = (total / 2).max(1);
-        let evict_count = total - retain_count;
-
-        for _ in 0..evict_count {
-            if let Some(old_key) = meta.lru_order.pop_front() {
-                if let Some(len) = meta.entries.remove(&old_key) {
-                    let aligned = ((len + 7) & !7) as u64;
-                    self.total_used_bytes.fetch_sub(aligned, Ordering::Relaxed);
-                }
-                self.hybrid_cache.remove(&old_key);
-            }
-        }
-
-        Ok(evict_count as u64)
-    }
-
-    pub fn purge_to_size(&self, max_bytes: u64) -> Result<u64, CacheError> {
-        let mut meta = self.meta.write();
-        let mut current_used = self.total_used_bytes.load(Ordering::Relaxed);
-        if current_used <= max_bytes {
-            return Ok(0);
-        }
-
-        let mut evict_count = 0u64;
-        while current_used > max_bytes {
-            if let Some(old_key) = meta.lru_order.pop_front() {
-                if let Some(len) = meta.entries.remove(&old_key) {
-                    let aligned = ((len + 7) & !7) as u64;
-                    current_used = current_used.saturating_sub(aligned);
-                    self.total_used_bytes.fetch_sub(aligned, Ordering::Relaxed);
-                    evict_count += 1;
-                }
-                self.hybrid_cache.remove(&old_key);
-            } else {
-                break;
-            }
-        }
-
-        Ok(evict_count)
-    }
-
     pub fn stats(&self) -> CacheStats {
-        let meta = self.meta.read();
-        let entry_count = meta.entries.len() as u32;
-        let total_used = self.total_used_bytes.load(Ordering::Relaxed);
-
         CacheStats {
-            file_count: 1,
-            entry_count,
+            entry_count: self.hybrid_cache.memory().entries() as u32,
             total_allocated_bytes: self.storage_capacity,
-            total_used_bytes: total_used,
+            total_used_bytes: self.hybrid_cache.memory().usage() as u64,
         }
     }
 
