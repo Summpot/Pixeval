@@ -4,12 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-memmap2 = "0.9"
+foyer = "0.22"
+lz4 = "1.28"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
 parking_lot = "0.12"
 thiserror = "2"
 uuid = { version = "1", features = ["v4"] }
 uniffi = { version = "0.32", features = ["tokio"] }
-tokio = { version = "1", features = ["rt", "sync", "macros", "time"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "sync", "macros", "time"] }
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 flate2 = "1.0"
 pixeval_maho = { path = "../pixeval_maho" }

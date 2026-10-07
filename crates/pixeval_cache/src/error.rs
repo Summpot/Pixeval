@@ -1,3 +1,6 @@
+// Copyright (c) Pixeval.
+// Licensed under the GPL-3.0 License.
+
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq, uniffi::Error)]
@@ -28,6 +31,9 @@ pub enum CacheError {
 
     #[error("Operation cancelled")]
     Cancelled,
+
+    #[error("Image codec error: {message}")]
+    Codec { message: String },
 }
 
 impl From<std::io::Error> for CacheError {
@@ -37,3 +43,12 @@ impl From<std::io::Error> for CacheError {
         }
     }
 }
+
+impl From<foyer::Error> for CacheError {
+    fn from(err: foyer::Error) -> Self {
+        Self::Io {
+            message: err.to_string(),
+        }
+    }
+}
+

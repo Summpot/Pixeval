@@ -3,8 +3,13 @@
 
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 
 namespace Pixeval.Native.Cache;
 
@@ -117,6 +122,83 @@ public partial class CacheEngine
         {
             readonlyStream = null;
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Attempts to read and decompress a Planar RGBA cached image directly into an Avalonia WriteableBitmap
+    /// with zero intermediate allocations on the managed heap.
+    /// </summary>
+    public WriteableBitmap? TryReadPlanarBitmap(string key)
+    {
+        try
+        {
+            var dims = GetPlanarDimensions(key);
+            if (dims is null)
+                return null;
+
+            var width = (int)dims.Width;
+            var height = (int)dims.Height;
+            if (width <= 0 || height <= 0)
+                return null;
+
+            var wb = new WriteableBitmap(
+                new PixelSize(width, height),
+                new Vector(96, 96),
+                PixelFormat.Bgra8888,
+                AlphaFormat.Premul);
+
+            using (var fb = wb.Lock())
+            {
+                try
+                {
+                    _ = DecompressPlanarToMemory(key, (ulong)(nint)fb.Address, (ulong)(fb.RowBytes * height));
+                }
+                catch
+                {
+                    wb.Dispose();
+                    return null;
+                }
+            }
+
+            return wb;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Decodes a raw image byte stream in Rust, saves it as Planar LZ4 for future instant zero-copy loading,
+    /// and returns the decoded WriteableBitmap.
+    /// </summary>
+    public WriteableBitmap? CacheAndDecodePlanarBitmap(string key, byte[] rawBytes)
+    {
+        try
+        {
+            var planarResult = DecodeAndCachePlanar(key, rawBytes);
+            var width = (int)planarResult.Width;
+            var height = (int)planarResult.Height;
+            if (width <= 0 || height <= 0)
+                return null;
+
+            var wb = new WriteableBitmap(
+                new PixelSize(width, height),
+                new Vector(96, 96),
+                PixelFormat.Bgra8888,
+                AlphaFormat.Premul);
+
+            using (var fb = wb.Lock())
+            {
+                Marshal.Copy(planarResult.BgraData, 0, fb.Address, planarResult.BgraData.Length);
+            }
+
+            return wb;
+        }
+        catch
+        {
+            return null;
         }
     }
 }

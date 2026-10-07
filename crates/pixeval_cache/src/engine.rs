@@ -1,17 +1,25 @@
+// Copyright (c) Pixeval.
+// Licensed under the GPL-3.0 License.
+
 use futures_util::StreamExt;
 use parking_lot::RwLock;
 use pixeval_maho::{DnsResolver, IMAGE_HOST, IMAGE_HOST2, MahoConfig, MahoHttpClient};
 use std::collections::{HashMap, VecDeque};
 use std::fs;
 use std::net::IpAddr;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+use foyer::{
+    BlockEngineConfig, DeviceBuilder, FileDeviceBuilder, HybridCache, HybridCacheBuilder,
+    HybridCachePolicy, PsyncIoEngineConfig,
+};
 
 use crate::error::CacheError;
-use crate::mmap_chunk::MmapChunk;
-
-const INDEX_MAGIC: &[u8; 8] = b"PXCACHE1";
-const INDEX_VERSION: u32 = 1;
+use crate::planar::{
+    decode_planar_lz4_to_bgra, decode_planar_lz4_to_bgra_vec, encode_planar_lz4, is_planar_lz4,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
 pub struct CacheStats {
@@ -21,142 +29,28 @@ pub struct CacheStats {
     pub total_used_bytes: u64,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct PlanarImageResult {
+    pub width: u32,
+    pub height: u32,
+    pub bgra_data: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct PlanarImageInfo {
+    pub width: u32,
+    pub height: u32,
+}
+
 #[uniffi::export(callback_interface)]
 pub trait CachePreviewCallback: Send + Sync {
     fn on_preview_frame(&self, frame_data: Vec<u8>);
     fn on_progress(&self, downloaded_bytes: u64, total_bytes: u64);
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CacheEntry {
-    pub chunk_id: u32,
-    pub offset: usize,
-    pub len: usize,
-}
-
-struct CacheInner {
-    cache_dir: PathBuf,
-    initial_file_size: usize,
-    max_files: u32,
-    chunks: Vec<MmapChunk>,
-    entries: HashMap<String, CacheEntry>,
+struct EngineMeta {
+    entries: HashMap<String, usize>,
     lru_order: VecDeque<String>,
-    fragmented_bytes: usize,
-}
-
-fn save_index(
-    dir: &Path,
-    entries: &HashMap<String, CacheEntry>,
-    lru_order: &VecDeque<String>,
-) -> Result<(), CacheError> {
-    let tmp_path = dir.join("cache_index.bin.tmp");
-    let final_path = dir.join("cache_index.bin");
-
-    let mut buf = Vec::new();
-    buf.extend_from_slice(INDEX_MAGIC);
-    buf.extend_from_slice(&INDEX_VERSION.to_le_bytes());
-    buf.extend_from_slice(&(entries.len() as u32).to_le_bytes());
-
-    for (key, entry) in entries {
-        let key_bytes = key.as_bytes();
-        let key_len = key_bytes.len().min(u16::MAX as usize) as u16;
-        buf.extend_from_slice(&key_len.to_le_bytes());
-        buf.extend_from_slice(&key_bytes[..key_len as usize]);
-        buf.extend_from_slice(&entry.chunk_id.to_le_bytes());
-        buf.extend_from_slice(&(entry.offset as u64).to_le_bytes());
-        buf.extend_from_slice(&(entry.len as u64).to_le_bytes());
-    }
-
-    buf.extend_from_slice(&(lru_order.len() as u32).to_le_bytes());
-    for key in lru_order {
-        let key_bytes = key.as_bytes();
-        let key_len = key_bytes.len().min(u16::MAX as usize) as u16;
-        buf.extend_from_slice(&key_len.to_le_bytes());
-        buf.extend_from_slice(&key_bytes[..key_len as usize]);
-    }
-
-    fs::write(&tmp_path, &buf)?;
-    fs::rename(&tmp_path, &final_path)?;
-    Ok(())
-}
-
-fn load_index(dir: &Path) -> Option<(HashMap<String, CacheEntry>, VecDeque<String>)> {
-    let path = dir.join("cache_index.bin");
-    let bytes = fs::read(&path).ok()?;
-    if bytes.len() < 16 {
-        return None;
-    }
-    if &bytes[0..8] != INDEX_MAGIC {
-        return None;
-    }
-    let version = u32::from_le_bytes(bytes[8..12].try_into().ok()?);
-    if version != INDEX_VERSION {
-        return None;
-    }
-
-    let entry_count = u32::from_le_bytes(bytes[12..16].try_into().ok()?) as usize;
-    let mut offset = 16;
-    let mut entries = HashMap::with_capacity(entry_count);
-
-    for _ in 0..entry_count {
-        if offset + 2 > bytes.len() {
-            return None;
-        }
-        let key_len = u16::from_le_bytes(bytes[offset..offset + 2].try_into().ok()?) as usize;
-        offset += 2;
-
-        if offset + key_len + 4 + 8 + 8 > bytes.len() {
-            return None;
-        }
-        let key = String::from_utf8(bytes[offset..offset + key_len].to_vec()).ok()?;
-        offset += key_len;
-
-        let chunk_id = u32::from_le_bytes(bytes[offset..offset + 4].try_into().ok()?);
-        offset += 4;
-        let entry_offset = u64::from_le_bytes(bytes[offset..offset + 8].try_into().ok()?) as usize;
-        offset += 8;
-        let len = u64::from_le_bytes(bytes[offset..offset + 8].try_into().ok()?) as usize;
-        offset += 8;
-
-        entries.insert(
-            key,
-            CacheEntry {
-                chunk_id,
-                offset: entry_offset,
-                len,
-            },
-        );
-    }
-
-    let mut lru_order = VecDeque::new();
-    if offset + 4 <= bytes.len() {
-        let lru_count = u32::from_le_bytes(bytes[offset..offset + 4].try_into().ok()?) as usize;
-        offset += 4;
-        for _ in 0..lru_count {
-            if offset + 2 > bytes.len() {
-                break;
-            }
-            let key_len = u16::from_le_bytes(bytes[offset..offset + 2].try_into().ok()?) as usize;
-            offset += 2;
-            if offset + key_len > bytes.len() {
-                break;
-            }
-            if let Ok(key) = String::from_utf8(bytes[offset..offset + key_len].to_vec()) {
-                if entries.contains_key(&key) {
-                    lru_order.push_back(key);
-                }
-            }
-            offset += key_len;
-        }
-    }
-
-    for key in entries.keys() {
-        if !lru_order.contains(key) {
-            lru_order.push_back(key.clone());
-        }
-    }
-
-    Some((entries, lru_order))
 }
 
 fn build_http_client(
@@ -208,8 +102,14 @@ fn build_http_client(
 
 #[derive(uniffi::Object)]
 pub struct CacheEngine {
-    inner: Arc<RwLock<CacheInner>>,
+    hybrid_cache: HybridCache<String, Vec<u8>>,
+    rt: Arc<tokio::runtime::Runtime>,
     http_client: Arc<parking_lot::RwLock<MahoHttpClient>>,
+    _cache_dir: PathBuf,
+    _cache_file: PathBuf,
+    storage_capacity: u64,
+    meta: Arc<RwLock<EngineMeta>>,
+    total_used_bytes: Arc<AtomicU64>,
 }
 
 #[uniffi::export(async_runtime = "tokio")]
@@ -220,82 +120,80 @@ impl CacheEngine {
         initial_file_size: u64,
         max_files: u32,
     ) -> Result<Arc<Self>, CacheError> {
-        let dir = PathBuf::from(cache_dir);
+        let dir = PathBuf::from(&cache_dir);
         fs::create_dir_all(&dir)?;
 
-        // Clean up legacy *.cache files if present
+        // Clean up legacy custom MMF chunk files (*.bin / *.cache / cache_index.bin)
         if let Ok(entries) = fs::read_dir(&dir) {
             for entry in entries.flatten() {
-                if let Some(ext) = entry.path().extension() {
-                    if ext == "cache" {
-                        let _ = fs::remove_file(entry.path());
-                    }
+                let name = entry.file_name().to_string_lossy().to_string();
+                if (name.starts_with("cache_chunk_") && name.ends_with(".bin"))
+                    || name == "cache_index.bin"
+                    || name == "cache_index.bin.tmp"
+                    || entry.path().extension().is_some_and(|e| e == "cache")
+                {
+                    let _ = fs::remove_file(entry.path());
                 }
             }
         }
 
-        let initial_size = initial_file_size.max(64) as usize;
         let max_files = max_files.max(1);
+        let storage_capacity = ((initial_file_size as usize) * (max_files as usize))
+            .max(64 * 1024)
+            .min(16 * 1024 * 1024 * 1024) as u64;
 
-        let mut chunks = Vec::new();
-        let mut entries = HashMap::new();
-        let mut lru_order = VecDeque::new();
+        let cache_file = dir.join("foyer_cache.bin");
 
-        let loaded_index = load_index(&dir);
-        let mut existing_chunk_ids: Vec<u32> = Vec::new();
-        if let Ok(dir_entries) = fs::read_dir(&dir) {
-            for entry in dir_entries.flatten() {
-                let file_name = entry.file_name().to_string_lossy().to_string();
-                if file_name.starts_with("cache_chunk_") && file_name.ends_with(".bin") {
-                    let num_part = &file_name["cache_chunk_".len()..file_name.len() - ".bin".len()];
-                    if let Ok(id) = num_part.parse::<u32>() {
-                        existing_chunk_ids.push(id);
-                    }
-                }
-            }
-        }
-        existing_chunk_ids.sort();
+        let rt = Arc::new(
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| CacheError::Io {
+                    message: format!("Failed to create Tokio runtime: {e}"),
+                })?,
+        );
 
-        if let Some((idx_entries, idx_lru)) = loaded_index {
-            for &chunk_id in &existing_chunk_ids {
-                if let Ok(chunk) = MmapChunk::open_or_create(&dir, chunk_id, initial_size) {
-                    chunks.push(chunk);
-                }
-            }
-            if chunks.is_empty() {
-                chunks.push(MmapChunk::open_or_create(&dir, 0, initial_size)?);
-            }
-            entries = idx_entries;
-            lru_order = idx_lru;
-            for chunk in &mut chunks {
-                let mut max_end = 0;
-                for entry in entries.values() {
-                    if entry.chunk_id == chunk.id {
-                        let aligned = (entry.len + 7) & !7;
-                        max_end = max_end.max(entry.offset + aligned);
-                    }
-                }
-                chunk.bump_offset = max_end;
-            }
-        } else {
-            chunks.push(MmapChunk::open_or_create(&dir, 0, initial_size)?);
-        }
+        let cache_file_clone = cache_file.clone();
+        let hybrid_cache = rt.block_on(async {
+            HybridCacheBuilder::new()
+                .with_name("pixeval_foyer")
+                .with_policy(HybridCachePolicy::WriteOnInsertion)
+                .memory((storage_capacity / 8).max(4 * 1024 * 1024) as usize)
+                .with_weighter(|_k, v: &Vec<u8>| (v.len() + 7) & !7)
+                .storage()
+                .with_io_engine_config(PsyncIoEngineConfig::new())
+                .with_engine_config(
+                    BlockEngineConfig::new(
+                        FileDeviceBuilder::new(&cache_file_clone)
+                            .with_capacity(storage_capacity as usize)
+                            .build()?,
+                    )
+                    .with_block_size(64 * 1024),
+                )
+                .with_recover_mode(foyer::RecoverMode::Quiet)
+                .build()
+                .await
+                .map_err(|e| CacheError::Io {
+                    message: format!("Failed to build foyer HybridCache: {e}"),
+                })
+        })?;
 
-        let inner = CacheInner {
-            cache_dir: dir,
-            initial_file_size: initial_size,
-            max_files,
-            chunks,
-            entries,
-            lru_order,
-            fragmented_bytes: 0,
-        };
+        let meta = Arc::new(RwLock::new(EngineMeta {
+            entries: HashMap::new(),
+            lru_order: VecDeque::new(),
+        }));
 
         let http_client = build_http_client(true, 100, &HashMap::new(), None);
 
         Ok(Arc::new(Self {
-            inner: Arc::new(RwLock::new(inner)),
+            hybrid_cache,
+            rt,
             http_client: Arc::new(parking_lot::RwLock::new(http_client)),
+            _cache_dir: dir,
+            _cache_file: cache_file,
+            storage_capacity,
+            meta,
+            total_used_bytes: Arc::new(AtomicU64::new(0)),
         }))
     }
 
@@ -321,25 +219,61 @@ impl CacheEngine {
     }
 
     pub fn get(&self, key: String) -> Option<Vec<u8>> {
-        let mut inner = self.inner.write();
-        let entry = *inner.entries.get(&key)?;
-
-        if let Some(pos) = inner.lru_order.iter().position(|k| k == &key) {
-            inner.lru_order.remove(pos);
+        // Fast path: in-memory cache
+        if let Some(entry) = self.hybrid_cache.memory().get(&key) {
+            let mut meta = self.meta.write();
+            if let Some(pos) = meta.lru_order.iter().position(|k| k == &key) {
+                meta.lru_order.remove(pos);
+            }
+            meta.lru_order.push_back(key);
+            return Some(entry.value().clone());
         }
-        inner.lru_order.push_back(key);
 
-        let chunk = inner.chunks.iter().find(|c| c.id == entry.chunk_id)?;
-        let slice = chunk.read(entry.offset, entry.len)?;
-        Some(slice.to_vec())
+        // Storage path
+        let key_clone = key.clone();
+        let cache = self.hybrid_cache.clone();
+        let val = tokio::task::block_in_place(|| {
+            self.rt.block_on(async {
+                cache
+                    .get(&key_clone)
+                    .await
+                    .ok()
+                    .flatten()
+                    .map(|e| e.value().clone())
+            })
+        });
+
+        if let Some(ref data) = val {
+            let mut meta = self.meta.write();
+            if let Some(pos) = meta.lru_order.iter().position(|k| k == &key) {
+                meta.lru_order.remove(pos);
+            }
+            meta.lru_order.push_back(key.clone());
+            if !meta.entries.contains_key(&key) {
+                meta.entries.insert(key, data.len());
+                let aligned = ((data.len() + 7) & !7) as u64;
+                self.total_used_bytes.fetch_add(aligned, Ordering::Relaxed);
+            }
+        }
+
+        val
+    }
+
+    pub async fn get_async(&self, key: String) -> Option<Vec<u8>> {
+        if let Some(entry) = self.hybrid_cache.memory().get(&key) {
+            return Some(entry.value().clone());
+        }
+
+        self.hybrid_cache
+            .get(&key)
+            .await
+            .ok()
+            .flatten()
+            .map(|e| e.value().clone())
     }
 
     pub fn put(&self, key: String, data: Vec<u8>) -> Result<(), CacheError> {
-        let mut inner = self.inner.write();
-
-        let max_item_limit = (inner.initial_file_size as u64)
-            .max((inner.initial_file_size as u64) * (inner.max_files as u64).min(4))
-            .max(64 * 1024 * 1024);
+        let max_item_limit = self.storage_capacity.max(64 * 1024 * 1024);
         if data.len() as u64 > max_item_limit {
             return Err(CacheError::ItemTooLarge {
                 size: data.len() as u64,
@@ -347,108 +281,44 @@ impl CacheEngine {
             });
         }
 
-        let aligned_len = (data.len() + 7) & !7;
+        let aligned_len = ((data.len() + 7) & !7) as u64;
+        let mut meta = self.meta.write();
 
-        // If key already exists and can fit into previous slot, overwrite in place
-        if let Some(existing) = inner.entries.get(&key).copied() {
-            let existing_aligned = (existing.len + 7) & !7;
-            if aligned_len <= existing_aligned {
-                if let Some(chunk) = inner.chunks.iter_mut().find(|c| c.id == existing.chunk_id) {
-                    chunk.write_at(existing.offset, &data)?;
-                    let entry = inner.entries.get_mut(&key).unwrap();
-                    entry.len = data.len();
-                    if let Some(pos) = inner.lru_order.iter().position(|k| k == &key) {
-                        inner.lru_order.remove(pos);
-                    }
-                    inner.lru_order.push_back(key);
-                    let _ = save_index(&inner.cache_dir, &inner.entries, &inner.lru_order);
-                    return Ok(());
-                }
+        if let Some(old_len) = meta.entries.insert(key.clone(), data.len()) {
+            let old_aligned = ((old_len + 7) & !7) as u64;
+            if aligned_len >= old_aligned {
+                self.total_used_bytes
+                    .fetch_add(aligned_len - old_aligned, Ordering::Relaxed);
             } else {
-                // Key size expanded, old slot becomes fragmented dead space
-                inner.fragmented_bytes += existing_aligned;
-            }
-        }
-
-        // Try to allocate in any existing chunk
-        let mut allocated = None;
-        for chunk in &mut inner.chunks {
-            if chunk.can_allocate(aligned_len) {
-                let offset = chunk.allocate(&data)?;
-                allocated = Some((chunk.id, offset));
-                break;
-            }
-        }
-
-        let (chunk_id, offset) = if let Some(alloc) = allocated {
-            alloc
-        } else if (inner.chunks.len() as u32) < inner.max_files {
-            let new_id = inner.chunks.len() as u32;
-            let chunk_size = inner.initial_file_size.max(aligned_len);
-            let mut new_chunk = MmapChunk::open_or_create(&inner.cache_dir, new_id, chunk_size)?;
-            let offset = new_chunk.allocate(&data)?;
-            let chunk_id = new_chunk.id;
-            inner.chunks.push(new_chunk);
-            (chunk_id, offset)
-        } else if inner.fragmented_bytes > 0 {
-            // Memory is fragmented with abandoned slots: defragment without evicting
-            defragment_inner(&mut inner)?;
-            let mut reallocated = None;
-            for chunk in &mut inner.chunks {
-                if chunk.can_allocate(aligned_len) {
-                    let offset = chunk.allocate(&data)?;
-                    reallocated = Some((chunk.id, offset));
-                    break;
-                }
-            }
-            if let Some(alloc) = reallocated {
-                alloc
-            } else if (inner.chunks.len() as u32) < inner.max_files {
-                let new_id = inner.chunks.len() as u32;
-                let chunk_size = inner.initial_file_size.max(aligned_len);
-                let mut new_chunk =
-                    MmapChunk::open_or_create(&inner.cache_dir, new_id, chunk_size)?;
-                let offset = new_chunk.allocate(&data)?;
-                let chunk_id = new_chunk.id;
-                inner.chunks.push(new_chunk);
-                (chunk_id, offset)
-            } else {
-                return Err(CacheError::OutOfMemory);
+                self.total_used_bytes
+                    .fetch_sub(old_aligned - aligned_len, Ordering::Relaxed);
             }
         } else {
-            return Err(CacheError::OutOfMemory);
-        };
-
-        if inner
-            .entries
-            .insert(
-                key.clone(),
-                CacheEntry {
-                    chunk_id,
-                    offset,
-                    len: data.len(),
-                },
-            )
-            .is_some()
-            && let Some(pos) = inner.lru_order.iter().position(|k| k == &key)
-        {
-            inner.lru_order.remove(pos);
+            self.total_used_bytes
+                .fetch_add(aligned_len, Ordering::Relaxed);
         }
-        inner.lru_order.push_back(key);
 
-        let _ = save_index(&inner.cache_dir, &inner.entries, &inner.lru_order);
+        if let Some(pos) = meta.lru_order.iter().position(|k| k == &key) {
+            meta.lru_order.remove(pos);
+        }
+        meta.lru_order.push_back(key.clone());
+
+        self.hybrid_cache.insert(key, data);
         Ok(())
     }
 
     pub fn remove(&self, key: String) -> bool {
-        let mut inner = self.inner.write();
-        if let Some(entry) = inner.entries.remove(&key) {
-            let aligned = (entry.len + 7) & !7;
-            inner.fragmented_bytes += aligned;
-            if let Some(pos) = inner.lru_order.iter().position(|k| k == &key) {
-                inner.lru_order.remove(pos);
+        let mut meta = self.meta.write();
+        if let Some(old_len) = meta.entries.remove(&key) {
+            let aligned = ((old_len + 7) & !7) as u64;
+            self.total_used_bytes.fetch_sub(aligned, Ordering::Relaxed);
+            if let Some(pos) = meta.lru_order.iter().position(|k| k == &key) {
+                meta.lru_order.remove(pos);
             }
-            let _ = save_index(&inner.cache_dir, &inner.entries, &inner.lru_order);
+            self.hybrid_cache.remove(&key);
+            true
+        } else if self.hybrid_cache.contains(&key) {
+            self.hybrid_cache.remove(&key);
             true
         } else {
             false
@@ -456,108 +326,186 @@ impl CacheEngine {
     }
 
     pub fn clear(&self) -> Result<(), CacheError> {
-        let mut inner = self.inner.write();
-        inner.entries.clear();
-        inner.lru_order.clear();
-        inner.fragmented_bytes = 0;
-
-        let chunk_paths: Vec<PathBuf> = inner.chunks.iter().map(|c| c.path.clone()).collect();
-        inner.chunks.clear();
-        for path in chunk_paths {
-            let _ = fs::remove_file(&path);
+        {
+            let mut meta = self.meta.write();
+            meta.entries.clear();
+            meta.lru_order.clear();
+            self.total_used_bytes.store(0, Ordering::Relaxed);
         }
 
-        let idx_path = inner.cache_dir.join("cache_index.bin");
-        let _ = fs::remove_file(&idx_path);
-        let tmp_idx = inner.cache_dir.join("cache_index.bin.tmp");
-        let _ = fs::remove_file(&tmp_idx);
+        let cache = self.hybrid_cache.clone();
+        tokio::task::block_in_place(|| {
+            self.rt.block_on(async {
+                let _ = cache.clear().await;
+            });
+        });
 
-        if let Ok(entries) = fs::read_dir(&inner.cache_dir) {
-            for entry in entries.flatten() {
-                if let Some(ext) = entry.path().extension() {
-                    if ext == "cache" {
-                        let _ = fs::remove_file(entry.path());
-                    }
-                }
-            }
-        }
-
-        let first_chunk = MmapChunk::open_or_create(&inner.cache_dir, 0, inner.initial_file_size)?;
-        inner.chunks.push(first_chunk);
         Ok(())
     }
 
     pub fn purge_compact(&self) -> Result<u64, CacheError> {
-        let mut inner = self.inner.write();
-        let total_entries = inner.lru_order.len();
-        if total_entries == 0 {
+        let mut meta = self.meta.write();
+        let total = meta.lru_order.len();
+        if total == 0 {
             return Ok(0);
         }
 
-        let retain_count = (total_entries / 2).max(1);
-        let evict_count = total_entries - retain_count;
+        let retain_count = (total / 2).max(1);
+        let evict_count = total - retain_count;
 
         for _ in 0..evict_count {
-            if let Some(old_key) = inner.lru_order.pop_front() {
-                inner.entries.remove(&old_key);
+            if let Some(old_key) = meta.lru_order.pop_front() {
+                if let Some(len) = meta.entries.remove(&old_key) {
+                    let aligned = ((len + 7) & !7) as u64;
+                    self.total_used_bytes.fetch_sub(aligned, Ordering::Relaxed);
+                }
+                self.hybrid_cache.remove(&old_key);
             }
         }
 
-        defragment_inner(&mut inner)?;
         Ok(evict_count as u64)
     }
 
     pub fn purge_to_size(&self, max_bytes: u64) -> Result<u64, CacheError> {
-        let mut inner = self.inner.write();
-        let current_used: u64 = inner
-            .entries
-            .values()
-            .map(|e| ((e.len + 7) & !7) as u64)
-            .sum();
+        let mut meta = self.meta.write();
+        let mut current_used = self.total_used_bytes.load(Ordering::Relaxed);
         if current_used <= max_bytes {
             return Ok(0);
         }
 
-        let mut target_used = current_used;
         let mut evict_count = 0u64;
-
-        while target_used > max_bytes {
-            if let Some(old_key) = inner.lru_order.pop_front() {
-                if let Some(entry) = inner.entries.remove(&old_key) {
-                    let aligned = ((entry.len + 7) & !7) as u64;
-                    target_used = target_used.saturating_sub(aligned);
+        while current_used > max_bytes {
+            if let Some(old_key) = meta.lru_order.pop_front() {
+                if let Some(len) = meta.entries.remove(&old_key) {
+                    let aligned = ((len + 7) & !7) as u64;
+                    current_used = current_used.saturating_sub(aligned);
+                    self.total_used_bytes.fetch_sub(aligned, Ordering::Relaxed);
                     evict_count += 1;
                 }
+                self.hybrid_cache.remove(&old_key);
             } else {
                 break;
             }
         }
 
-        if evict_count == 0 {
-            return Ok(0);
-        }
-
-        defragment_inner(&mut inner)?;
         Ok(evict_count)
     }
 
     pub fn stats(&self) -> CacheStats {
-        let inner = self.inner.read();
-        let file_count = inner.chunks.len() as u32;
-        let entry_count = inner.entries.len() as u32;
-        let total_allocated = inner.chunks.iter().map(|c| c.capacity as u64).sum();
-        let total_used = inner
-            .entries
-            .values()
-            .map(|e| ((e.len + 7) & !7) as u64)
-            .sum();
+        let meta = self.meta.read();
+        let entry_count = meta.entries.len() as u32;
+        let total_used = self.total_used_bytes.load(Ordering::Relaxed);
 
         CacheStats {
-            file_count,
+            file_count: 1,
             entry_count,
-            total_allocated_bytes: total_allocated,
+            total_allocated_bytes: self.storage_capacity,
             total_used_bytes: total_used,
         }
+    }
+
+    // ==========================================
+    // Planar RGBA & SIMD Zero-Copy Endpoints
+    // ==========================================
+
+    /// Puts an uncompressed RGBA pixel buffer by converting it to Planar RGBA + LZ4 and storing under `key + "#planar"`.
+    pub fn put_planar_image(
+        &self,
+        key: String,
+        width: u32,
+        height: u32,
+        rgba: Vec<u8>,
+    ) -> Result<(), CacheError> {
+        let encoded = encode_planar_lz4(width, height, &rgba)?;
+        let planar_key = format!("{key}#planar");
+        self.put(planar_key, encoded)
+    }
+
+    /// Retrieves and decompresses Planar RGBA into interleaved BGRA bytes (Avalonia Bgra8888).
+    pub fn get_planar_image(&self, key: String) -> Option<PlanarImageResult> {
+        let planar_key = if key.ends_with("#planar") {
+            key
+        } else {
+            format!("{key}#planar")
+        };
+
+        let raw = self.get(planar_key)?;
+        if !is_planar_lz4(&raw) {
+            return None;
+        }
+
+        let (width, height, bgra_data) = decode_planar_lz4_to_bgra_vec(&raw).ok()?;
+        Some(PlanarImageResult {
+            width,
+            height,
+            bgra_data,
+        })
+    }
+
+    /// Retrieves dimensions of a cached planar image without full decompression.
+    pub fn get_planar_dimensions(&self, key: String) -> Option<PlanarImageInfo> {
+        let planar_key = if key.ends_with("#planar") {
+            key
+        } else {
+            format!("{key}#planar")
+        };
+
+        let raw = self.get(planar_key)?;
+        if !is_planar_lz4(&raw) {
+            return None;
+        }
+
+        let width = u32::from_le_bytes(raw[4..8].try_into().ok()?);
+        let height = u32::from_le_bytes(raw[8..12].try_into().ok()?);
+        Some(PlanarImageInfo { width, height })
+    }
+
+    /// Decodes a raw image (PNG/JPEG/WebP/GIF) in Rust, saves it as Planar LZ4, and returns BGRA pixels.
+    pub fn decode_and_cache_planar(
+        &self,
+        key: String,
+        raw_image_bytes: Vec<u8>,
+    ) -> Result<PlanarImageResult, CacheError> {
+        let img = image::load_from_memory(&raw_image_bytes).map_err(|e| CacheError::Codec {
+            message: format!("Image decode failed: {e}"),
+        })?;
+
+        let rgba = img.to_rgba8();
+        let width = rgba.width();
+        let height = rgba.height();
+        let rgba_bytes = rgba.into_raw();
+
+        self.put_planar_image(key.clone(), width, height, rgba_bytes)?;
+
+        self.get_planar_image(key).ok_or(CacheError::CorruptedData)
+    }
+
+    /// Decompresses a cached planar RGBA image directly into external memory (e.g. Avalonia WriteableBitmap framebuffer).
+    /// `dst_ptr` is the pointer address passed as an integer (`u64`).
+    pub fn decompress_planar_to_memory(
+        &self,
+        key: String,
+        dst_ptr: u64,
+        dst_len: u64,
+    ) -> Result<PlanarImageInfo, CacheError> {
+        if dst_ptr == 0 {
+            return Err(CacheError::Io {
+                message: "Destination pointer is null".to_string(),
+            });
+        }
+
+        let planar_key = if key.ends_with("#planar") {
+            key
+        } else {
+            format!("{key}#planar")
+        };
+
+        let data = self.get(planar_key).ok_or(CacheError::CorruptedData)?;
+        let dst_slice =
+            unsafe { std::slice::from_raw_parts_mut(dst_ptr as *mut u8, dst_len as usize) };
+        let (width, height) = decode_planar_lz4_to_bgra(&data, dst_slice)?;
+
+        Ok(PlanarImageInfo { width, height })
     }
 
     pub async fn get_or_fetch(
@@ -660,65 +608,6 @@ impl CacheEngine {
         let _ = self.put(url, buffer.clone());
         Ok(buffer)
     }
-}
-
-impl Drop for CacheEngine {
-    fn drop(&mut self) {
-        let inner = self.inner.read();
-        let _ = save_index(&inner.cache_dir, &inner.entries, &inner.lru_order);
-    }
-}
-
-fn defragment_inner(inner: &mut CacheInner) -> Result<(), CacheError> {
-    let mut active_data: Vec<(String, Vec<u8>)> = Vec::new();
-    for key in &inner.lru_order {
-        if let Some(entry) = inner.entries.get(key)
-            && let Some(chunk) = inner.chunks.iter().find(|c| c.id == entry.chunk_id)
-            && let Some(slice) = chunk.read(entry.offset, entry.len)
-        {
-            active_data.push((key.clone(), slice.to_vec()));
-        }
-    }
-
-    let chunk_paths: Vec<PathBuf> = inner.chunks.iter().map(|c| c.path.clone()).collect();
-    inner.chunks.clear();
-    for path in chunk_paths {
-        let _ = fs::remove_file(&path);
-    }
-
-    inner.entries.clear();
-    inner.lru_order.clear();
-    inner.fragmented_bytes = 0;
-
-    let mut current_chunk =
-        MmapChunk::open_or_create(&inner.cache_dir, 0, inner.initial_file_size)?;
-    for (key, data) in active_data {
-        let aligned = (data.len() + 7) & !7;
-        if !current_chunk.can_allocate(aligned) {
-            let new_id = inner.chunks.len() as u32 + 1;
-            let chunk_size = inner.initial_file_size.max(aligned);
-            let prev = std::mem::replace(
-                &mut current_chunk,
-                MmapChunk::open_or_create(&inner.cache_dir, new_id, chunk_size)?,
-            );
-            inner.chunks.push(prev);
-        }
-        let offset = current_chunk.allocate(&data)?;
-        let chunk_id = current_chunk.id;
-        inner.entries.insert(
-            key.clone(),
-            CacheEntry {
-                chunk_id,
-                offset,
-                len: data.len(),
-            },
-        );
-        inner.lru_order.push_back(key);
-    }
-    inner.chunks.push(current_chunk);
-    let _ = save_index(&inner.cache_dir, &inner.entries, &inner.lru_order);
-
-    Ok(())
 }
 
 struct ZipSniffer {

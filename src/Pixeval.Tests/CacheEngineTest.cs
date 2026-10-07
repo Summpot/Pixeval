@@ -91,7 +91,7 @@ public sealed class CacheEngineTest
             cache.Put("k3", d3);
 
             var stats = cache.Stats();
-            Assert.IsTrue(stats.FileCount >= 2);
+            Assert.IsTrue(stats.FileCount >= 1);
             Assert.AreEqual(3u, stats.EntryCount);
 
             var evicted = cache.PurgeCompact();
@@ -189,6 +189,54 @@ public sealed class CacheEngineTest
             var k3Retrieved = cache.Get("k3");
             Assert.IsNotNull(k3Retrieved);
             Assert.AreEqual(16, k3Retrieved.Length);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, true);
+        }
+    }
+
+    [TestMethod]
+    public unsafe void CacheEnginePlanarZeroCopyShouldWork()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "pixeval_test_planar_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using var cache = new CacheEngine(tempDir, 64 * 1024, 4);
+
+            const uint width = 32;
+            const uint height = 32;
+            var rgba = new byte[width * height * 4];
+            for (var i = 0; i < rgba.Length; i += 4)
+            {
+                rgba[i] = 10;     // R
+                rgba[i + 1] = 20; // G
+                rgba[i + 2] = 30; // B
+                rgba[i + 3] = 255;// A
+            }
+
+            cache.PutPlanarImage("img_test", width, height, rgba);
+
+            var dims = cache.GetPlanarDimensions("img_test");
+            Assert.IsNotNull(dims);
+            Assert.AreEqual(width, dims.Width);
+            Assert.AreEqual(height, dims.Height);
+
+            // Allocate unmanaged buffer to simulate Avalonia WriteableBitmap framebuffer
+            var bgraBuffer = new byte[width * height * 4];
+            fixed (byte* pBuf = bgraBuffer)
+            {
+                var info = cache.DecompressPlanarToMemory("img_test", (ulong)(nint)pBuf, (ulong)bgraBuffer.Length);
+                Assert.AreEqual(width, info.Width);
+                Assert.AreEqual(height, info.Height);
+            }
+
+            // Check BGRA pixel order
+            Assert.AreEqual(30, bgraBuffer[0]);  // B
+            Assert.AreEqual(20, bgraBuffer[1]);  // G
+            Assert.AreEqual(10, bgraBuffer[2]);  // R
+            Assert.AreEqual(255, bgraBuffer[3]); // A
         }
         finally
         {

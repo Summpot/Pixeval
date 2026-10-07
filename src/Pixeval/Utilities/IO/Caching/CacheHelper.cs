@@ -323,9 +323,33 @@ public static class CacheHelper
     {
         try
         {
-            return await GetStreamAsync(platform, key, progress, token: token) is { } stream
-                ? await stream.DecodeBitmapImageAsync(true, desiredWidth)
-                : WrappedImageNotAvailable.Value;
+            if (desiredWidth is null && App.AppViewModel?.AppSettings?.ApplicationSettings?.UseFileCache == true)
+            {
+                if (_CacheEngine.Value.TryReadPlanarBitmap(key) is { } planarBmp)
+                    return planarBmp;
+            }
+
+            if (await GetStreamAsync(platform, key, progress, token: token) is not { } stream)
+                return WrappedImageNotAvailable.Value;
+
+            if (desiredWidth is null && App.AppViewModel?.AppSettings?.ApplicationSettings?.UseFileCache == true && stream is MemoryStream ms)
+            {
+                var bytes = ms.ToArray();
+                _ = Task.Run(() =>
+                {
+                    try
+                    {
+                        _ = _CacheEngine.Value.DecodeAndCachePlanar(key, bytes);
+                    }
+                    catch
+                    {
+                        // ignore background planar caching error
+                    }
+                }, CancellationToken.None);
+                ms.Position = 0;
+            }
+
+            return await stream.DecodeBitmapImageAsync(true, desiredWidth);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
