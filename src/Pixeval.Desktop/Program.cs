@@ -29,7 +29,6 @@ sealed class Program
                 // 再往上拉还能有提升，不过必要性不高（？）
                 MaxGpuResourceSizeBytes = 256 * 1024 * 1024
             })
-            .With(new Win32PlatformOptions() { CompositionMode = [Win32CompositionMode.DirectComposition] })
             .WithPixevalFonts()
             .LogToTrace();
 }

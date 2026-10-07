@@ -1,0 +1,23 @@
+[package]
+name = "pixeval_update"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+pixeval_maho = { path = "../pixeval_maho" }
+uniffi = { version = "0.32", features = ["tokio"] }
+tokio = { version = "1", features = ["sync", "time", "rt", "macros", "fs", "io-util"] }
+futures-util = "0.3"
+semver = "1.0"
+sha2 = "0.10"
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+http = "1"
+bytes = "1"
+url = "2"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+tempfile = "3"

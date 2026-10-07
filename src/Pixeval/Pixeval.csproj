@@ -15,7 +15,7 @@
 		<FileVersion>$(Version)</FileVersion>
 		<InformationalVersion>$(Version)</InformationalVersion>
 		<UniFFICrateName>pixeval_native</UniFFICrateName>
-		<UniFFINamespace>Pixeval.Native;pixeval_filters=Filters;pixeval_cache=Cache;pixeval_maho=Maho;pixeval_mako=Mako;pixeval_download=Download;pixeval_storage=Storage;pixeval_subscription=Subscription;pixeval_config=Config;pixeval_mcp=Mcp;pixeval_plugin=Plugin;pixeval_novel=Novel;pixeval_media=Media;pixeval_booru=Booru;pixeval_saucenao=SauceNao</UniFFINamespace>
+		<UniFFINamespace>Pixeval.Native;pixeval_filters=Filters;pixeval_cache=Cache;pixeval_maho=Maho;pixeval_mako=Mako;pixeval_download=Download;pixeval_storage=Storage;pixeval_subscription=Subscription;pixeval_config=Config;pixeval_mcp=Mcp;pixeval_plugin=Plugin;pixeval_novel=Novel;pixeval_media=Media;pixeval_booru=Booru;pixeval_saucenao=SauceNao;pixeval_update=Update</UniFFINamespace>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 	</PropertyGroup>
 

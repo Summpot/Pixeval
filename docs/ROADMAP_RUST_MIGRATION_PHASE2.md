@@ -235,7 +235,7 @@ flowchart TD
 - **验收标准**：
   - 从 `Pixeval.csproj` 物理移除 `SharpYaml` NuGet 依赖。
 
-#### 3.4 原生应用更新与 GitHub 代理引擎 (`crates/pixeval_update`)
+#### 3.4 原生应用更新与 GitHub 代理引擎 (`crates/pixeval_update`) (已完成)
 - **功能目标**：
   - 新建 `crates/pixeval_update`：集成 `semver` 规范化版本判定，复用 Maho 代理通道抓取 GitHub Releases，原生断点续传下载并校验 SHA256。
 - **验收标准**：

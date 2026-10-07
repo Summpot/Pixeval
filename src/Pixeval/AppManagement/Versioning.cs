@@ -3,11 +3,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Pixeval.AppManagement.Settings;
+using Pixeval.Native.Update;
 using Pixeval.Utilities;
 using Pixeval.Utilities.GitHub;
 using Velopack;
@@ -23,7 +26,8 @@ public class Versioning
     private GithubSource? _velopackSource;
     private UpdateManager? _velopackUpdateManager;
     private UpdateInfo? _velopackUpdateInfo;
-    private AppReleaseModel? _velopackUpdateReleaseModel;
+    private AppRelease? _velopackUpdateReleaseModel;
+    private UpdateEngine? _updateEngine;
     private readonly SemaphoreSlim _updateCheckLock = new(1, 1);
     private readonly SemaphoreSlim _updateDownloadLock = new(1, 1);
     private bool _updateApplyRequested;
@@ -47,38 +51,29 @@ public class Versioning
     /// </remarks>
     public string CurrentVersionFullText { get; }
 
-    public Version? NewestVersion => NewestAppReleaseModel?.Version;
+    public Version? NewestVersion => NewestAppReleaseModel?.ParsedVersion;
 
-    public AppReleaseModel? NewestAppReleaseModel => _velopackUpdateReleaseModel ?? AppReleaseModels?.FirstOrDefault();
+    public AppRelease? NewestAppReleaseModel => _velopackUpdateReleaseModel ?? AppReleaseModels?.FirstOrDefault();
 
-    public AppReleaseModel? CurrentAppReleaseModel => AppReleaseModels?.FirstOrDefault(t => t.Version == CurrentVersion);
+    public AppRelease? CurrentAppReleaseModel => AppReleaseModels?.FirstOrDefault(t => t.ParsedVersion == CurrentVersion || t.Version == CurrentVersionShortText);
+
+    public UpdateEngine UpdateEngine => _updateEngine ??= UpdateEngine.CreateFromSettings(App.AppViewModel?.AppSettings?.NetworkSettings ?? new NetworkSettingsGroup());
+
+    public void ResetUpdateEngine() => _updateEngine = null;
 
     public UpdateState CompareUpdateState(Version currentVersion, Version? newVersion)
     {
         if (newVersion is null)
             return UpdateState.Unknown;
 
-        var comparison = currentVersion.CompareTo(newVersion);
-        if (comparison is > 0)
-            return UpdateState.Insider;
-        if (comparison is 0)
-            return UpdateState.UpToDate;
-        if (currentVersion.Major != newVersion.Major)
-            return UpdateState.MajorUpdate;
-        if (currentVersion.Minor != newVersion.Minor)
-            return UpdateState.MinorUpdate;
-        if (currentVersion.Build != newVersion.Build)
-            return UpdateState.BuildUpdate;
-
-        // Pixeval 不单独发布 revision 更新，因此将仅 revision 不同的版本归为次要更新。
-        return UpdateState.MinorUpdate;
+        return UpdateEngine.CompareVersions(currentVersion.ToString(), newVersion.ToString());
     }
 
     public UpdateState UpdateState { get; private set; } = UpdateState.Unknown;
 
     public bool UpdateAvailable => UpdateState is not UpdateState.UpToDate and not UpdateState.Insider and not UpdateState.Unknown;
 
-    public IReadOnlyList<AppReleaseModel>? AppReleaseModels { get; private set; }
+    public IReadOnlyList<AppRelease>? AppReleaseModels { get; private set; }
 
     public bool UsesVelopack => StoreDataMigration.IsVelopackInstallation;
 
@@ -91,7 +86,19 @@ public class Versioning
         await _updateCheckLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            await CheckVelopackForUpdateAsync().ConfigureAwait(false);
+            if (UsesVelopack)
+            {
+                await CheckVelopackForUpdateAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                var result = await UpdateEngine.CheckForUpdatesAsync(CurrentVersionShortText, includePrereleases: false).ConfigureAwait(false);
+                AppReleaseModels = result.AllReleases;
+                _velopackUpdateInfo = null;
+                _velopackUpdateReleaseModel = result.LatestRelease;
+                UpdateState = result.UpdateState;
+                App.AppViewModel.AppSettings.ApplicationSettings.LastCheckedUpdate = DateTime.UtcNow;
+            }
         }
         catch (Exception exception)
         {
@@ -114,25 +121,63 @@ public class Versioning
         await _updateDownloadLock.WaitAsync(cancelToken).ConfigureAwait(false);
         try
         {
-            if (!UsesVelopack)
-                return false;
+            if (UsesVelopack)
+            {
+                var manager = GetVelopackUpdateManager();
+                if (manager is null)
+                    return false;
+                if (manager.UpdatePendingRestart is not null)
+                    return true;
+                if (_velopackUpdateInfo is not { } updateInfo)
+                    return false;
 
-            var manager = GetVelopackUpdateManager();
-            if (manager is null)
-                return false;
-            if (manager.UpdatePendingRestart is not null)
+                await manager.DownloadUpdatesAsync(updateInfo, progress ?? (static _ => { }), cancelToken)
+                    .ConfigureAwait(false);
                 return true;
-            if (_velopackUpdateInfo is not { } updateInfo)
+            }
+
+            if (NewestAppReleaseModel is not { } release || release.Assets.Count == 0)
                 return false;
 
-            await manager.DownloadUpdatesAsync(updateInfo, progress ?? (static _ => { }), cancelToken)
-                .ConfigureAwait(false);
+            var asset = PickMatchingAsset(release.Assets);
+            if (asset is null)
+                return false;
+
+            var updatesDir = Path.Combine(AppInfo.CacheFolder, "Updates");
+            var destinationPath = Path.Combine(updatesDir, asset.Name);
+            var progressAdapter = progress != null ? new Progress<int>(progress) : null;
+
+            await UpdateEngine.DownloadAssetWithProgressAsync(asset, destinationPath, progressAdapter, cancelToken).ConfigureAwait(false);
             return true;
         }
         finally
         {
             _updateDownloadLock.Release();
         }
+    }
+
+    private static ReleaseAsset? PickMatchingAsset(IReadOnlyList<ReleaseAsset> assets)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return assets.FirstOrDefault(static a => a.Name.Contains("win-x64", StringComparison.OrdinalIgnoreCase))
+                ?? assets.FirstOrDefault(static a => a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                ?? assets.FirstOrDefault(static a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                ?? assets.FirstOrDefault();
+        }
+        if (OperatingSystem.IsLinux())
+        {
+            return assets.FirstOrDefault(static a => a.Name.Contains("linux-x64", StringComparison.OrdinalIgnoreCase))
+                ?? assets.FirstOrDefault(static a => a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
+                ?? assets.FirstOrDefault();
+        }
+        if (OperatingSystem.IsMacOS())
+        {
+            return assets.FirstOrDefault(static a => a.Name.Contains("osx", StringComparison.OrdinalIgnoreCase) || a.Name.Contains("mac", StringComparison.OrdinalIgnoreCase))
+                ?? assets.FirstOrDefault(static a => a.Name.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase))
+                ?? assets.FirstOrDefault();
+        }
+        return assets.FirstOrDefault();
     }
 
     public void ApplyUpdateAndRestart()
@@ -187,21 +232,6 @@ public class Versioning
         _velopackUpdateInfo = null;
         _velopackUpdateReleaseModel = null;
 
-        if (!UsesVelopack)
-        {
-            if (await GetVelopackReleaseModelsAsync().ConfigureAwait(false) is not { Count: > 0 } releaseModels)
-            {
-                AppReleaseModels = null;
-                UpdateState = UpdateState.Unknown;
-                return;
-            }
-
-            AppReleaseModels = releaseModels;
-            UpdateState = CompareUpdateState(CurrentVersion, releaseModels[0].Version);
-            App.AppViewModel.AppSettings.ApplicationSettings.LastCheckedUpdate = DateTime.UtcNow;
-            return;
-        }
-
         var manager = GetVelopackUpdateManager();
         if (manager is null)
         {
@@ -219,30 +249,46 @@ public class Versioning
         }
         else
         {
-            _velopackUpdateReleaseModel = new AppReleaseModel(
-                release.Version.Version,
-                release.NotesMarkdown ?? string.Empty,
-                null);
+            var versionStr = release.Version.Version.ToString();
+            _velopackUpdateReleaseModel = new AppRelease(
+                Version: versionStr,
+                TagName: versionStr,
+                Title: versionStr,
+                ReleaseNotes: release.NotesMarkdown ?? string.Empty,
+                PublishedAt: null,
+                HtmlUrl: string.Empty,
+                IsPrerelease: false,
+                Assets: []);
             AppReleaseModels = [_velopackUpdateReleaseModel];
-            UpdateState = CompareUpdateState(CurrentVersion, release.Version.Version);
+            UpdateState = UpdateEngine.CompareVersions(CurrentVersionShortText, versionStr);
         }
 
         App.AppViewModel.AppSettings.ApplicationSettings.LastCheckedUpdate = DateTime.UtcNow;
     }
 
-    public async Task<AppReleaseModel?> GetCurrentAppReleaseModelAsync()
+    public async Task<AppRelease?> GetCurrentAppReleaseModelAsync()
     {
         await _updateCheckLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (AppReleaseModels?.FirstOrDefault(t => t.Version == CurrentVersion) is { } currentRelease)
+            if (AppReleaseModels?.FirstOrDefault(t => t.ParsedVersion == CurrentVersion || t.Version == CurrentVersionShortText) is { } currentRelease)
                 return currentRelease;
 
-            if (await GetVelopackReleaseModelsAsync().ConfigureAwait(false) is not { Count: > 0 } appReleaseModels)
+            if (UsesVelopack)
+            {
+                if (await GetVelopackReleaseModelsAsync().ConfigureAwait(false) is not { Count: > 0 } appReleaseModels)
+                    return null;
+
+                AppReleaseModels = appReleaseModels;
+                return appReleaseModels.FirstOrDefault(t => t.ParsedVersion == CurrentVersion || t.Version == CurrentVersionShortText);
+            }
+
+            var releases = await UpdateEngine.GetReleasesAsync(includePrereleases: false).ConfigureAwait(false);
+            if (releases.Count == 0)
                 return null;
 
-            AppReleaseModels = appReleaseModels;
-            return appReleaseModels.FirstOrDefault(t => t.Version == CurrentVersion);
+            AppReleaseModels = releases;
+            return releases.FirstOrDefault(t => t.ParsedVersion == CurrentVersion || t.Version == CurrentVersionShortText);
         }
         catch
         {
@@ -254,7 +300,7 @@ public class Versioning
         }
     }
 
-    private async Task<IReadOnlyList<AppReleaseModel>?> GetVelopackReleaseModelsAsync()
+    private async Task<IReadOnlyList<AppRelease>?> GetVelopackReleaseModelsAsync()
     {
         var feed = await GetVelopackSource()
             .GetReleaseFeed(
@@ -269,12 +315,18 @@ public class Versioning
             .Select(static assets =>
             {
                 var release = assets.First();
-                return new AppReleaseModel(
-                    release.Version.Version,
-                    release.NotesMarkdown ?? string.Empty,
-                    null);
+                var versionStr = release.Version.Version.ToString();
+                return new AppRelease(
+                    Version: versionStr,
+                    TagName: versionStr,
+                    Title: versionStr,
+                    ReleaseNotes: release.NotesMarkdown ?? string.Empty,
+                    PublishedAt: null,
+                    HtmlUrl: string.Empty,
+                    IsPrerelease: false,
+                    Assets: []);
             })
-            .OrderByDescending(static release => release.Version)
+            .OrderByDescending(static release => release.ParsedVersion)
             .ToArray();
 
         return appReleaseModels.Length is 0 ? null : appReleaseModels;
@@ -295,34 +347,5 @@ public class Versioning
         return _velopackUpdateManager ??= new UpdateManager(
             GetVelopackSource(),
             new UpdateOptions { MaximumDeltasBeforeFallback = 10 });
-    }
-}
-
-public record AppReleaseModel(
-    Version Version,
-    string ReleaseNote,
-    Uri? ReleaseUri) : IComparable<AppReleaseModel>
-{
-    public int CompareTo(AppReleaseModel? other)
-    {
-        if (ReferenceEquals(this, other))
-            return 0;
-        if (other is null)
-            return 1;
-        var currentLong =
-            ((ulong) Version.Major << 0x30) +
-            ((ulong) Version.Minor << 0x20) +
-            ((ulong) Version.Build << 0x10) +
-            (ulong) Version.Revision;
-        var newLong =
-            ((ulong) other.Version.Major << 0x30) +
-            ((ulong) other.Version.Minor << 0x20) +
-            ((ulong) other.Version.Build << 0x10) +
-            (ulong) other.Version.Revision;
-        if (currentLong > newLong)
-            return 1;
-        if (currentLong < newLong)
-            return -1;
-        return 0;
     }
 }

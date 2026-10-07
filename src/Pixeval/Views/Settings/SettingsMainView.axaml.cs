@@ -139,7 +139,7 @@ public partial class SettingsMainView : ContentPage
             }
 
             UpdateStatusInfoBar.Mode = InfoBarMode.Success;
-            var readyVersion = AppInfo.AppVersion.PendingUpdateVersion ?? release.Version;
+            var readyVersion = AppInfo.AppVersion.PendingUpdateVersion?.ToString() ?? release.Version;
             var readyMessage = I18NManager.GetResource(
                 SettingsMainViewResources.UpdateDownloadReadyFormatted,
                 readyVersion);

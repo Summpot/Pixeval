@@ -48,9 +48,13 @@ public partial class SettingsPage : NavigationPage
     public static string ReleaseTitle => GetReleaseTitle(AppInfo.AppVersion.CurrentVersion);
 
     public static string GetReleaseTitle(Version version) =>
-        I18NManager.GetResource(SettingsMainViewResources.ReleaseNoteDialog.TitleFormatted, version.ToString());
+        GetReleaseTitle(version.ToString());
 
-    public static Control CreateReleaseNotes(AppReleaseModel? release) => new MarkdownBox { Markdown = release?.ReleaseNote ?? I18NManager.GetResource(SettingsMainViewResources.ReleaseNoteDialog.Empty) };
+    public static string GetReleaseTitle(string version) =>
+        I18NManager.GetResource(SettingsMainViewResources.ReleaseNoteDialog.TitleFormatted, version);
+
+    public static Control CreateReleaseNotes(Pixeval.Native.Update.AppRelease? release) =>
+        new MarkdownBox { Markdown = release?.ReleaseNotes ?? I18NManager.GetResource(SettingsMainViewResources.ReleaseNoteDialog.Empty) };
 
     public static async Task<Control> GetReleaseNotesAsync()
     {

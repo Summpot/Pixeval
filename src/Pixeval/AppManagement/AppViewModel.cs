@@ -700,6 +700,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         MakoClient.UpdateConfiguration(config);
         CacheHelper.UpdateNetworkOptions(config);
         (AppServiceProvider.GetKeyedService<IDownloadHttpClientService>(IPlatformInfo.Pixiv) as PixivArtworkService)?.Reset();
+        AppInfo.AppVersion.ResetUpdateEngine();
     }
 
     public T? GetPlatformService<T>(string platformKey) where T : IMisakiService

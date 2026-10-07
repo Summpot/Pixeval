@@ -24,6 +24,7 @@ pixeval_novel = { path = "../pixeval_novel" }
 pixeval_media = { path = "../pixeval_media" }
 pixeval_booru = { path = "../pixeval_booru" }
 pixeval_saucenao = { path = "../pixeval_saucenao" }
+pixeval_update = { path = "../pixeval_update" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
