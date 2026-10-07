@@ -28,10 +28,40 @@ public sealed class CacheEngineTest
 
             var stats = cache.Stats();
             Assert.AreEqual(1u, stats.EntryCount);
-            Assert.AreEqual((ulong) data.Length, stats.TotalUsedBytes);
+            Assert.AreEqual((ulong) ((data.Length + 7) & ~7), stats.TotalUsedBytes);
 
             Assert.IsTrue(cache.Remove("key1"));
             Assert.IsNull(cache.Get("key1"));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, true);
+        }
+    }
+
+    [TestMethod]
+    public void CacheEnginePersistenceAcrossRestartShouldWork()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "pixeval_test_restart_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var data = Encoding.UTF8.GetBytes("persistent cached content");
+            using (var cache1 = new CacheEngine(tempDir, 8192, 4))
+            {
+                cache1.Put("restart_key", data);
+                Assert.IsNotNull(cache1.Get("restart_key"));
+            }
+
+            // Reopen engine on the same directory
+            using (var cache2 = new CacheEngine(tempDir, 8192, 4))
+            {
+                var restored = cache2.Get("restart_key");
+                Assert.IsNotNull(restored, "Cached item should survive CacheEngine restart");
+                Assert.AreEqual("persistent cached content", Encoding.UTF8.GetString(restored));
+                var stats = cache2.Stats();
+                Assert.AreEqual(1u, stats.EntryCount);
+            }
         }
         finally
         {

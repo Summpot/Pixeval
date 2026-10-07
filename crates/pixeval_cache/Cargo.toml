@@ -8,7 +8,13 @@ memmap2 = "0.9"
 parking_lot = "0.12"
 thiserror = "2"
 uuid = { version = "1", features = ["v4"] }
-uniffi = { version = "0.32" }
+uniffi = { version = "0.32", features = ["tokio"] }
+tokio = { version = "1", features = ["rt", "sync", "macros", "time"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "socks"] }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+flate2 = "1.0"
+pixeval_maho = { path = "../pixeval_maho" }
 
 [dev-dependencies]
 tempfile = "3"
+tokio = { version = "1", features = ["full"] }

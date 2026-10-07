@@ -57,7 +57,21 @@ mod tests {
         Arc<SubscriptionSyncEngine>,
         Option<Arc<PluginHostEngine>>,
     ) {
-        let temp_dir = tempfile::tempdir().unwrap();
+        let repo_tmp = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("target").join("tmp"))
+            .unwrap_or_else(std::env::temp_dir);
+        let _ = std::fs::create_dir_all(&repo_tmp);
+        let temp_dir = tempfile::Builder::new()
+            .prefix("test_mcp_")
+            .tempdir_in(&repo_tmp)
+            .unwrap_or_else(|_| {
+                tempfile::Builder::new()
+                    .prefix("test_mcp_")
+                    .tempdir()
+                    .unwrap()
+            });
         let db_path = temp_dir.path().join("test.sqlite");
         let storage = Arc::new(StorageEngine::new(db_path.to_str().unwrap().to_string()).unwrap());
 

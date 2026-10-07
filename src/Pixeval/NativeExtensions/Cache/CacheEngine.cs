@@ -3,11 +3,62 @@
 
 using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Pixeval.Native.Cache;
 
 public partial class CacheEngine
 {
+    private sealed class ActionCachePreviewCallback(
+        Action<byte[]>? onPreview,
+        Action<ulong, ulong>? onProgress) : ICachePreviewCallback
+    {
+        public void OnPreviewFrame(byte[] frameData) => onPreview?.Invoke(frameData);
+        public void OnProgress(ulong downloadedBytes, ulong totalBytes) => onProgress?.Invoke(downloadedBytes, totalBytes);
+    }
+
+    public async Task<Stream?> GetOrFetchStreamAsync(
+        string url,
+        string? referer = null,
+        IProgress<double>? progress = null,
+        Action<byte[]>? onPreview = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            ActionCachePreviewCallback? callback = null;
+            if (progress is not null || onPreview is not null)
+            {
+                callback = new ActionCachePreviewCallback(
+                    onPreview,
+                    progress is null ? null : (downloaded, total) =>
+                    {
+                        if (total > 0)
+                        {
+                            var pct = (double)downloaded / total * 100.0;
+                            progress.Report(Math.Min(100.0, pct));
+                        }
+                    });
+            }
+
+            var bytes = await GetOrFetchAsync(url, referer, callback);
+            cancellationToken.ThrowIfCancellationRequested();
+            progress?.Report(100.0);
+            return new MemoryStream(bytes, writable: false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public bool TryCache(string key, Stream stream)
     {
         try

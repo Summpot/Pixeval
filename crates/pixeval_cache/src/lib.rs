@@ -1,3 +1,6 @@
+// Copyright (c) Pixeval.
+// Licensed under the GPL-3.0 License.
+
 uniffi::setup_scaffolding!();
 
 pub mod engine;
@@ -11,11 +14,28 @@ pub use mmap_chunk::*;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
+
+    fn create_test_dir() -> tempfile::TempDir {
+        let repo_tmp = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("target").join("tmp"))
+            .unwrap_or_else(std::env::temp_dir);
+        let _ = std::fs::create_dir_all(&repo_tmp);
+        tempfile::Builder::new()
+            .prefix("test_cache_")
+            .tempdir_in(&repo_tmp)
+            .unwrap_or_else(|_| {
+                tempfile::Builder::new()
+                    .prefix("test_cache_")
+                    .tempdir()
+                    .unwrap()
+            })
+    }
 
     #[test]
     fn test_cache_put_get_remove() {
-        let dir = tempdir().unwrap();
+        let dir = create_test_dir();
         let cache = CacheEngine::new(dir.path().to_string_lossy().to_string(), 8192, 5).unwrap();
 
         assert_eq!(cache.get("key1".to_string()), None);
@@ -27,7 +47,8 @@ mod tests {
 
         let stats = cache.stats();
         assert_eq!(stats.entry_count, 1);
-        assert_eq!(stats.total_used_bytes, 11);
+        // 11 bytes aligned to 8 is 16 bytes
+        assert_eq!(stats.total_used_bytes, 16);
 
         assert!(cache.remove("key1".to_string()));
         assert_eq!(cache.get("key1".to_string()), None);
@@ -35,7 +56,7 @@ mod tests {
 
     #[test]
     fn test_multi_chunk_expansion_and_compact() {
-        let dir = tempdir().unwrap();
+        let dir = create_test_dir();
         // small initial file size to trigger chunk expansion
         let cache = CacheEngine::new(dir.path().to_string_lossy().to_string(), 64, 4).unwrap();
 
@@ -65,7 +86,7 @@ mod tests {
 
     #[test]
     fn test_put_overwrite_in_place() {
-        let dir = tempdir().unwrap();
+        let dir = create_test_dir();
         let cache = CacheEngine::new(dir.path().to_string_lossy().to_string(), 8192, 4).unwrap();
 
         let initial_data = vec![1u8; 32];
@@ -87,7 +108,7 @@ mod tests {
 
     #[test]
     fn test_purge_to_size() {
-        let dir = tempdir().unwrap();
+        let dir = create_test_dir();
         let cache = CacheEngine::new(dir.path().to_string_lossy().to_string(), 128, 4).unwrap();
 
         let d1 = vec![1u8; 32];
@@ -112,5 +133,49 @@ mod tests {
         assert_eq!(cache.get("k1".to_string()), None);
         assert_eq!(cache.get("k2".to_string()), None);
         assert_eq!(cache.get("k3".to_string()), Some(d3));
+    }
+
+    #[test]
+    fn test_restart_persistence_and_index() {
+        let dir = create_test_dir();
+        let dir_path = dir.path().to_string_lossy().to_string();
+
+        {
+            let cache = CacheEngine::new(dir_path.clone(), 8192, 4).unwrap();
+            cache.put("k1".to_string(), b"hello_persisted".to_vec()).unwrap();
+            cache.put("k2".to_string(), b"second_entry".to_vec()).unwrap();
+            assert_eq!(cache.get("k1".to_string()), Some(b"hello_persisted".to_vec()));
+            assert_eq!(cache.get("k2".to_string()), Some(b"second_entry".to_vec()));
+        } // Drop cache here
+
+        {
+            let cache2 = CacheEngine::new(dir_path, 8192, 4).unwrap();
+            assert_eq!(cache2.get("k1".to_string()), Some(b"hello_persisted".to_vec()));
+            assert_eq!(cache2.get("k2".to_string()), Some(b"second_entry".to_vec()));
+            let stats = cache2.stats();
+            assert_eq!(stats.entry_count, 2);
+        }
+    }
+
+    #[test]
+    fn test_item_too_large() {
+        let dir = create_test_dir();
+        let cache = CacheEngine::new(dir.path().to_string_lossy().to_string(), 64, 2).unwrap();
+        let huge = vec![0u8; 100 * 1024 * 1024];
+        let res = cache.put("huge".to_string(), huge);
+        assert!(matches!(res, Err(CacheError::ItemTooLarge { .. })));
+    }
+
+    #[tokio::test]
+    async fn test_get_or_fetch_local_file() {
+        let dir = create_test_dir();
+        let cache = CacheEngine::new(dir.path().to_string_lossy().to_string(), 8192, 4).unwrap();
+        let file_path = dir.path().join("sample.txt");
+        std::fs::write(&file_path, b"local file content").unwrap();
+
+        let file_url = format!("file://{}", file_path.to_string_lossy());
+        let fetched = cache.get_or_fetch(file_url.clone(), None, None).await.unwrap();
+        assert_eq!(fetched, b"local file content");
+        assert_eq!(cache.get(file_url), Some(b"local file content".to_vec()));
     }
 }

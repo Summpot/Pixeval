@@ -105,9 +105,27 @@ ApplicationSettings:
         assert_eq!(file_cache.get(&serde_yaml::Value::String("FileCacheSizeLimitInMegabytes".to_string())).unwrap(), &serde_yaml::Value::Number(123.into()));
     }
 
+    fn create_test_dir() -> tempfile::TempDir {
+        let repo_tmp = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("target").join("tmp"))
+            .unwrap_or_else(std::env::temp_dir);
+        let _ = std::fs::create_dir_all(&repo_tmp);
+        tempfile::Builder::new()
+            .prefix("test_cfg_")
+            .tempdir_in(&repo_tmp)
+            .unwrap_or_else(|_| {
+                tempfile::Builder::new()
+                    .prefix("test_cfg_")
+                    .tempdir()
+                    .unwrap()
+            })
+    }
+
     #[test]
     fn test_atomic_save_and_load() {
-        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_dir = create_test_dir();
         let file_path = temp_dir.path().join("config.yaml").to_str().unwrap().to_string();
 
         let engine = ConfigEngine::new();
@@ -120,7 +138,7 @@ ApplicationSettings:
 
     #[test]
     fn test_save_to_bare_file() {
-        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_dir = create_test_dir();
         let prev_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(temp_dir.path()).unwrap();
 

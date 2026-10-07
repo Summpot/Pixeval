@@ -174,7 +174,7 @@ flowchart TD
   - 下载任务在 Rust 内部完成“下载 -> 解压 -> 帧合成/打包 -> 原子重命名”闭环。
   - C# `UgoiraDownloadTaskGroup`、`MangaDownloadTaskGroup` 瘦身为纯展示进度的轻量句柄。
 
-#### 2.3 零拷贝图片流式抓取与渐进式预览管线 (`pixeval_cache` / `pixeval_maho`)
+#### 2.3 零拷贝图片流式抓取与渐进式预览管线 (`pixeval_cache` / `pixeval_maho`) (已完成)
 - **功能目标**：
   - 将图片网络抓取直接交由 Rust 原生网络栈（Tokio/Maho），命中直接返回 MMF 内存切片；未命中后台抓取并原子写入 MMF 缓存。
   - 在 Rust 端实现流式首帧与渐进式预览嗅探，清退 C# 端的二值嗅探代码。

@@ -14,16 +14,25 @@ pub struct MmapChunk {
 }
 
 impl MmapChunk {
-    pub fn create(dir: &Path, id: u32, size: usize) -> Result<Self, CacheError> {
+    pub fn open_or_create(dir: &Path, id: u32, size: usize) -> Result<Self, CacheError> {
         let path = dir.join(format!("cache_chunk_{id:04}.bin"));
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(&path)?;
+        let (file, capacity) = if path.exists() {
+            let file = OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(&path)?;
+            let len = file.metadata()?.len() as usize;
+            (file, len)
+        } else {
+            let file = OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .open(&path)?;
+            file.set_len(size as u64)?;
+            (file, size)
+        };
 
-        file.set_len(size as u64)?;
         let mmap = unsafe { MmapMut::map_mut(&file)? };
 
         Ok(Self {
@@ -31,9 +40,13 @@ impl MmapChunk {
             path,
             _file: file,
             mmap,
-            capacity: size,
+            capacity,
             bump_offset: 0,
         })
+    }
+
+    pub fn create(dir: &Path, id: u32, size: usize) -> Result<Self, CacheError> {
+        Self::open_or_create(dir, id, size)
     }
 
     pub fn can_allocate(&self, bytes: usize) -> bool {

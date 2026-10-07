@@ -53,71 +53,80 @@ impl<T: Send + Sync + 'static> MakoFetchEngine<T> {
     }
 
     pub async fn next(&self) -> Option<T> {
-        if self.is_cancelled() {
-            return None;
-        }
-
-        // Fast path: check current in-memory buffer
-        {
-            let mut buf = self.buffer.lock().await;
-            if let Some(item) = buf.pop_front() {
-                return Some(item);
+        loop {
+            if self.is_cancelled() {
+                return None;
             }
-        }
 
-        // Buffer is empty, check if stream is exhausted
-        if self.is_exhausted.load(Ordering::SeqCst) {
-            return None;
-        }
-
-        // Fetch next page
-        let current_url = {
-            let guard = self.next_url.lock().await;
-            guard.clone()
-        };
-
-        if self.first_fetch_done.load(Ordering::SeqCst) && current_url.is_none() {
-            self.is_exhausted.store(true, Ordering::SeqCst);
-            return None;
-        }
-
-        self.first_fetch_done.store(true, Ordering::SeqCst);
-        let mut attempts = 0;
-        let fetch_res = loop {
-            attempts += 1;
-            let res = self.fetcher.fetch_page(current_url.as_deref()).await;
-            if res.is_ok() || attempts >= 3 || self.is_cancelled() {
-                break res;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(500 * (1 << (attempts - 1)))).await;
-        };
-
-        if self.is_cancelled() {
-            return None;
-        }
-
-        match fetch_res {
-            Ok((items, new_next_url)) => {
-                self.requested_pages.fetch_add(1, Ordering::Relaxed);
-                {
-                    let mut guard = self.next_url.lock().await;
-                    *guard = new_next_url.clone();
-                }
-
-                if new_next_url.is_none() {
-                    self.is_exhausted.store(true, Ordering::SeqCst);
-                }
-
+            // Fast path: check current in-memory buffer
+            {
                 let mut buf = self.buffer.lock().await;
-                for item in items {
-                    buf.push_back(item);
+                if let Some(item) = buf.pop_front() {
+                    return Some(item);
                 }
-
-                buf.pop_front()
             }
-            Err(_err) => {
-                // Do not mark exhausted on transient error so callers can retry
-                None
+
+            // Buffer is empty, check if stream is exhausted
+            if self.is_exhausted.load(Ordering::SeqCst) {
+                return None;
+            }
+
+            // Fetch next page
+            let current_url = {
+                let guard = self.next_url.lock().await;
+                guard.clone()
+            };
+
+            if self.first_fetch_done.load(Ordering::SeqCst) && current_url.is_none() {
+                self.is_exhausted.store(true, Ordering::SeqCst);
+                return None;
+            }
+
+            self.first_fetch_done.store(true, Ordering::SeqCst);
+            let mut attempts = 0;
+            let fetch_res = loop {
+                attempts += 1;
+                let res = self.fetcher.fetch_page(current_url.as_deref()).await;
+                if res.is_ok() || attempts >= 3 || self.is_cancelled() {
+                    break res;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(500 * (1 << (attempts - 1)))).await;
+            };
+
+            if self.is_cancelled() {
+                return None;
+            }
+
+            match fetch_res {
+                Ok((items, new_next_url)) => {
+                    self.requested_pages.fetch_add(1, Ordering::Relaxed);
+                    {
+                        let mut guard = self.next_url.lock().await;
+                        *guard = new_next_url.clone();
+                    }
+
+                    if new_next_url.is_none() {
+                        self.is_exhausted.store(true, Ordering::SeqCst);
+                    }
+
+                    let mut buf = self.buffer.lock().await;
+                    for item in items {
+                        buf.push_back(item);
+                    }
+
+                    if let Some(item) = buf.pop_front() {
+                        return Some(item);
+                    }
+
+                    if new_next_url.is_none() {
+                        return None;
+                    }
+                    // If intermediate page had 0 items but has next_url, loop continues!
+                }
+                Err(_err) => {
+                    // Do not mark exhausted on transient error so callers can retry
+                    return None;
+                }
             }
         }
     }

@@ -1,7 +1,7 @@
 using System;
 using System.IO;
-using System.Net.Http;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -19,20 +19,23 @@ public sealed class IoHelperDownloadTest
         var expected = new byte[16384];
         new Random(42).NextBytes(expected);
         using var client = new HttpClient(new ImageResponseHandler(expected));
+        using var destination = new MemoryStream();
         var updates = 0;
-        var result = await client.DownloadMemoryStreamAsync(new Uri("https://example.test/image"),
-            bufferSize: 1024, onDataAvailable: (stream, _) =>
+        var error = await client.DownloadStreamAsync(
+            destination,
+            new Uri("https://example.test/image"),
+            bufferSize: 1024,
+            onDataAvailable: (stream, _) =>
             {
                 updates++;
                 stream.Position = 0;
                 Assert.AreEqual(expected[0], stream.ReadByte());
                 return Task.CompletedTask;
             });
-        await using var downloaded = result.UnwrapOrThrow();
-        using var copy = new MemoryStream();
-        await downloaded.CopyToAsync(copy);
-        Assert.IsGreaterThan(1, updates);
-        CollectionAssert.AreEqual(expected, copy.ToArray());
+
+        Assert.IsNull(error);
+        Assert.IsTrue(updates > 1);
+        CollectionAssert.AreEqual(expected, destination.ToArray());
     }
 
     [TestMethod]
@@ -40,18 +43,22 @@ public sealed class IoHelperDownloadTest
     {
         using var client = new HttpClient(new ImageResponseHandler(new byte[16384]));
         using var cancellation = new CancellationTokenSource();
+        using var destination = new MemoryStream();
         Stream? borrowed = null;
-        var result = await client.DownloadMemoryStreamAsync(new Uri("https://example.test/image"),
+        var error = await client.DownloadStreamAsync(
+            destination,
+            new Uri("https://example.test/image"),
             onDataAvailable: (stream, token) =>
             {
                 borrowed = stream;
                 cancellation.Cancel();
                 token.ThrowIfCancellationRequested();
                 return Task.CompletedTask;
-            }, token: cancellation.Token);
-        Assert.IsInstanceOfType<Result<Stream>.Failure>(result);
+            },
+            token: cancellation.Token);
+
+        Assert.IsNotNull(error);
         Assert.IsNotNull(borrowed);
-        Assert.IsFalse(borrowed.CanRead);
     }
 
     private sealed class ImageResponseHandler(byte[] bytes) : HttpMessageHandler
@@ -65,34 +72,9 @@ public sealed class IoHelperDownloadTest
     {
         using var client = new HttpClient();
 
-        var result = await client.DownloadMemoryStreamAsync("http://[");
+        var result = await client.DownloadByteArrayAsync("http://[");
 
-        Assert.IsInstanceOfType<Result<Stream>.Failure>(result);
-    }
-
-    [TestMethod]
-    public async Task LocalFileUriShouldReturnReadableStream()
-    {
-        var path = Path.GetTempFileName();
-        var expected = new byte[] { 1, 2, 3 };
-        await File.WriteAllBytesAsync(path, expected);
-
-        try
-        {
-            using var client = new HttpClient();
-            var uri = new UriBuilder(Uri.UriSchemeFile, "", -1, path).Uri;
-            var result = await client.DownloadMemoryStreamAsync(uri);
-            await using var stream = result.UnwrapOrThrow();
-            using var memory = new MemoryStream();
-            await stream.CopyToAsync(memory);
-
-            Assert.IsTrue(stream is FileStream);
-            Assert.AreSequenceEqual(expected, memory.ToArray());
-        }
-        finally
-        {
-            File.Delete(path);
-        }
+        Assert.IsInstanceOfType<Result<Memory<byte>>.Failure>(result);
     }
 
     [TestMethod]
@@ -110,6 +92,7 @@ public sealed class IoHelperDownloadTest
             var error = await client.DownloadStreamAsync(destination, uri);
 
             Assert.IsNull(error);
+            CollectionAssert.AreEqual(expected, destination.ToArray());
         }
         finally
         {
@@ -122,10 +105,11 @@ public sealed class IoHelperDownloadTest
     {
         HttpRequestMessage? capturedRequest = null;
         using var client = new HttpClient(new HeaderInspectHandler(req => capturedRequest = req));
+        using var destination = new MemoryStream();
 
-        var result = await client.DownloadMemoryStreamAsync(new Uri("https://i.pximg.net/c/240x480/custom.jpg"));
+        var error = await client.DownloadStreamAsync(destination, new Uri("https://i.pximg.net/c/240x480/custom.jpg"));
 
-        Assert.IsInstanceOfType<Result<Stream>.Success>(result);
+        Assert.IsNull(error);
         Assert.IsNotNull(capturedRequest);
         Assert.AreEqual(new Uri("https://app-api.pixiv.net/"), capturedRequest.Headers.Referrer);
         Assert.IsTrue(capturedRequest.Headers.UserAgent.ToString().Contains("PixivAndroidApp"));
@@ -136,10 +120,11 @@ public sealed class IoHelperDownloadTest
     {
         HttpRequestMessage? capturedRequest = null;
         using var client = new HttpClient(new HeaderInspectHandler(req => capturedRequest = req));
+        using var destination = new MemoryStream();
 
-        var result = await client.DownloadMemoryStreamAsync(new Uri("https://example.com/image.png"));
+        var error = await client.DownloadStreamAsync(destination, new Uri("https://example.com/image.png"));
 
-        Assert.IsInstanceOfType<Result<Stream>.Success>(result);
+        Assert.IsNull(error);
         Assert.IsNotNull(capturedRequest);
         Assert.IsNull(capturedRequest.Headers.Referrer);
     }

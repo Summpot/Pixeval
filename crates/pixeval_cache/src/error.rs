@@ -16,6 +16,18 @@ pub enum CacheError {
 
     #[error("Cache engine is closed")]
     Closed,
+
+    #[error("Item size {size} exceeds maximum allowable item limit {limit}")]
+    ItemTooLarge { size: u64, limit: u64 },
+
+    #[error("Network error: {message}")]
+    Network { message: String },
+
+    #[error("HTTP error status: {code}")]
+    Http { code: u16 },
+
+    #[error("Operation cancelled")]
+    Cancelled,
 }
 
 impl From<std::io::Error> for CacheError {

@@ -124,67 +124,6 @@ public static partial class IoHelper
         }
     }
 
-    private static async Task<Result<Stream>> DownloadMemoryStreamCoreAsync(
-        HttpClient httpClient,
-        Uri uri,
-        IProgress<double>? progress = null,
-        long startPosition = 0,
-        int bufferSize = 4096,
-        Func<Stream, CancellationToken, Task>? onDataAvailable = null,
-        CancellationToken token = default)
-    {
-        Stream? streamToDispose = null;
-        try
-        {
-            if (uri.IsFile)
-            {
-                progress?.Report(100);
-                return Result<Stream>.AsSuccess(File.OpenAsyncRead(uri.LocalPath));
-            }
-
-            uri = ResolveAssetUri(uri);
-            if (uri.Scheme is "avares")
-            {
-                progress?.Report(100);
-                return Result<Stream>.AsSuccess(AssetLoader.Open(uri));
-            }
-
-            var stream = Streams.RentStream();
-            streamToDispose = stream;
-            var result = await DownloadStreamCoreAsync(
-                httpClient,
-                stream,
-                uri,
-                progress,
-                startPosition,
-                bufferSize,
-                onDataAvailable,
-                token);
-            if (result is not null)
-                return Result<Stream>.AsFailure(result);
-
-            stream.Position = 0;
-            streamToDispose = null;
-            return Result<Stream>.AsSuccess(stream);
-        }
-        catch (Exception e)
-        {
-            return Result<Stream>.AsFailure(e);
-        }
-        finally
-        {
-            if (streamToDispose is not null)
-                try
-                {
-                    await streamToDispose.DisposeAsync();
-                }
-                catch
-                {
-                    // Disposal must not replace the original download failure.
-                }
-        }
-    }
-
     extension(HttpClient httpClient)
     {
         /// <summary>
@@ -203,34 +142,6 @@ public static partial class IoHelper
             }
         }
 
-        /// <inheritdoc cref="DownloadStreamAsync"/>
-        public async Task<Result<Stream>> DownloadMemoryStreamAsync(string url,
-            IProgress<double>? progress = null,
-            long startPosition = 0,
-            int bufferSize = 4096,
-            CancellationToken token = default)
-        {
-            try
-            {
-                return await httpClient.DownloadMemoryStreamAsync(
-                    new Uri(url), progress, startPosition, bufferSize, token: token);
-            }
-            catch (Exception e)
-            {
-                return Result<Stream>.AsFailure(e);
-            }
-        }
-
-        /// <inheritdoc cref="DownloadStreamAsync"/>
-        public Task<Result<Stream>> DownloadMemoryStreamAsync(
-            Uri uri,
-            IProgress<double>? progress = null,
-            long startPosition = 0,
-            int bufferSize = 4096,
-            Func<Stream, CancellationToken, Task>? onDataAvailable = null,
-            CancellationToken token = default)
-            => DownloadMemoryStreamCoreAsync(httpClient, uri, progress, startPosition, bufferSize, onDataAvailable, token);
-
         /// <summary>
         /// Downloads or copies the content located by <paramref name="uri" /> to a
         /// <see cref="Stream" /> with progress support.
@@ -241,20 +152,37 @@ public static partial class IoHelper
             IProgress<double>? progress = null,
             long startPosition = 0,
             int bufferSize = 1 << 15,
+            Func<Stream, CancellationToken, Task>? onDataAvailable = null,
             CancellationToken token = default)
         {
             try
             {
-                await using var source = (await DownloadMemoryStreamCoreAsync(
+                if (uri.IsFile)
+                {
+                    await using var source = File.OpenAsyncRead(uri.LocalPath);
+                    await source.CopyToAsync(destination, token);
+                    progress?.Report(100);
+                    return null;
+                }
+
+                uri = ResolveAssetUri(uri);
+                if (uri.Scheme is "avares")
+                {
+                    await using var source = AssetLoader.Open(uri);
+                    await source.CopyToAsync(destination, token);
+                    progress?.Report(100);
+                    return null;
+                }
+
+                return await DownloadStreamCoreAsync(
                     httpClient,
+                    destination,
                     uri,
                     progress,
                     startPosition,
                     bufferSize,
-                    token: token)).UnwrapOrThrow();
-                await source.CopyToAsync(destination, token);
-                progress?.Report(100);
-                return null;
+                    onDataAvailable,
+                    token: token);
             }
             catch (Exception e)
             {

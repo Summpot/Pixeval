@@ -4,6 +4,7 @@ pub mod config;
 pub mod dns;
 pub mod fragmentation;
 pub mod locator;
+pub mod proxy;
 pub mod state_machine;
 pub mod stream;
 
@@ -11,6 +12,7 @@ pub use config::*;
 pub use dns::*;
 pub use fragmentation::*;
 pub use locator::*;
+pub use proxy::*;
 pub use state_machine::*;
 pub use stream::*;
 

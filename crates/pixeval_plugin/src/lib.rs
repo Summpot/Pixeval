@@ -71,7 +71,21 @@ mod tests {
 
     #[test]
     fn test_plugin_enumeration() {
-        let dir = tempfile::tempdir().unwrap();
+        let repo_tmp = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("target").join("tmp"))
+            .unwrap_or_else(std::env::temp_dir);
+        let _ = std::fs::create_dir_all(&repo_tmp);
+        let dir = tempfile::Builder::new()
+            .prefix("test_plugin_")
+            .tempdir_in(&repo_tmp)
+            .unwrap_or_else(|_| {
+                tempfile::Builder::new()
+                    .prefix("test_plugin_")
+                    .tempdir()
+                    .unwrap()
+            });
         let sub = dir.path().join("sub");
         fs::create_dir(&sub).unwrap();
 

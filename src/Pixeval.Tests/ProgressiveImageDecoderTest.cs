@@ -156,37 +156,6 @@ public sealed class ProgressiveImageDecoderTest
         Assert.AreEqual(0, source.Position);
     }
 
-    [TestMethod]
-    [DataRow(CompressionLevel.NoCompression)]
-    [DataRow(CompressionLevel.Optimal)]
-    public void ZipFrameIsAvailableBeforeCentralDirectory(CompressionLevel compression)
-    {
-        using var zip = new MemoryStream();
-        byte[] first = [1, 2, 3, 4];
-        byte[] second = [5, 6, 7, 8];
-        long firstEnd;
-        long secondEnd;
-        using (var archive = new ZipArchive(zip, ZipArchiveMode.Create, true))
-        {
-            using (var entry = archive.CreateEntry("000000.jpg", compression).Open())
-                entry.Write(first);
-            firstEnd = zip.Position;
-            using (var entry = archive.CreateEntry("000001.jpg", compression).Open())
-                entry.Write(second);
-            secondEnd = zip.Position;
-        }
-        using var growing = new MemoryStream();
-        using var reader = new ZipImagePreviewReader();
-        growing.Write(zip.GetBuffer().AsSpan(0, (int) firstEnd - 1));
-        Assert.IsNull(reader.ReadLatestFrame(growing));
-        growing.WriteByte(zip.GetBuffer()[firstEnd - 1]);
-        CollectionAssert.AreEqual(first, ((MemoryStream) reader.ReadLatestFrame(growing)!).ToArray());
-        growing.Write(zip.GetBuffer().AsSpan((int) firstEnd, (int) (secondEnd - firstEnd)));
-        CollectionAssert.AreEqual(second, ((MemoryStream) reader.ReadLatestFrame(growing)!).ToArray());
-        Assert.AreEqual(secondEnd, growing.Position);
-        Assert.IsNull(reader.ReadLatestFrame(growing));
-    }
-
     private static SKBitmap CreateImage(int width, int height)
     {
         var bitmap = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);

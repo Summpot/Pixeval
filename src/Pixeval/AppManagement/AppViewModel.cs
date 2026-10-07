@@ -76,6 +76,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         // 触发卸载插件
         _ = AppServiceProvider.GetRequiredService<ExtensionService>();
         _ = CacheHelper.EnforceCacheSizeLimitAsync();
+        CacheHelper.UpdateNetworkOptions(AppSettings.ToMakoConfiguration());
     }
 
     private ServiceProvider CreateServiceProvider()
@@ -211,7 +212,9 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
 
     public void UpdateMakoNetworkOptions()
     {
-        MakoClient.UpdateConfiguration(AppSettings.ToMakoConfiguration());
+        var config = AppSettings.ToMakoConfiguration();
+        MakoClient.UpdateConfiguration(config);
+        CacheHelper.UpdateNetworkOptions(config);
         (AppServiceProvider.GetKeyedService<IDownloadHttpClientService>(IPlatformInfo.Pixiv) as PixivArtworkService)?.Reset();
     }
 

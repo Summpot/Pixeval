@@ -6,7 +6,7 @@ use std::net::{IpAddr, SocketAddr};
 use std::pin::Pin;
 use std::sync::Arc;
 
-use pixeval_maho::{DnsResolver, MahoConfig};
+use pixeval_maho::{DnsResolver, MahoConfig, MahoProxyServer};
 
 use crate::auth::{AuthError, OAuthManager};
 use crate::models::*;
@@ -73,8 +73,8 @@ pub struct MakoClient {
     http_client: Arc<parking_lot::RwLock<reqwest::Client>>,
     oauth: Arc<OAuthManager>,
     throttler: Arc<RequestThrottler>,
-    #[allow(dead_code)]
     maho_config: Arc<MahoConfig>,
+    maho_proxy: Arc<parking_lot::RwLock<Option<Arc<MahoProxyServer>>>>,
     target_filter: Arc<parking_lot::RwLock<String>>,
     mirror_host: Arc<parking_lot::RwLock<Option<String>>>,
     web_cookie: Arc<parking_lot::RwLock<Option<String>>>,
@@ -90,13 +90,24 @@ impl MakoClient {
             resolver.set_static_ips(host, parsed);
         }
 
-        let maho_config = MahoConfig {
+        let maho_config = Arc::new(MahoConfig {
             enabled: config.domain_fronting_enabled,
             split_delay_ms: config.split_delay_ms,
             dns_resolver: resolver,
-        };
+        });
 
-        let http_client = Self::build_client(&config)?;
+        let maho_proxy: Option<Arc<MahoProxyServer>> = if config.domain_fronting_enabled
+            && config.proxy_url.as_deref().unwrap_or("").trim().is_empty()
+        {
+            MahoProxyServer::start_sync(maho_config.clone())
+                .ok()
+                .map(Arc::new)
+        } else {
+            None
+        };
+        let maho_proxy_url = maho_proxy.as_ref().map(|p| p.proxy_url());
+
+        let http_client = Self::build_client(&config, maho_proxy_url.as_deref())?;
         let target_filter = config
             .target_filter
             .unwrap_or_else(|| "for_android".to_string());
@@ -104,7 +115,8 @@ impl MakoClient {
             http_client: Arc::new(parking_lot::RwLock::new(http_client)),
             oauth: Arc::new(OAuthManager::new()),
             throttler: Arc::new(RequestThrottler::new(config.cooldown_ms)),
-            maho_config: Arc::new(maho_config),
+            maho_config,
+            maho_proxy: Arc::new(parking_lot::RwLock::new(maho_proxy)),
             target_filter: Arc::new(parking_lot::RwLock::new(target_filter)),
             mirror_host: Arc::new(parking_lot::RwLock::new(config.mirror_host)),
             web_cookie: Arc::new(parking_lot::RwLock::new(config.web_cookie)),
@@ -112,9 +124,33 @@ impl MakoClient {
     }
 
     pub fn update_configuration(&self, config: MakoConfigurationDto) -> Result<(), MakoError> {
-        let new_client = Self::build_client(&config)?;
+        let resolver = DnsResolver::new();
+        for (host, ips) in &config.host_ips {
+            let parsed: Vec<IpAddr> = ips.iter().filter_map(|s| s.parse().ok()).collect();
+            resolver.set_static_ips(host, parsed);
+        }
+
+        let maho_config = Arc::new(MahoConfig {
+            enabled: config.domain_fronting_enabled,
+            split_delay_ms: config.split_delay_ms,
+            dns_resolver: resolver,
+        });
+
+        let maho_proxy: Option<Arc<MahoProxyServer>> = if config.domain_fronting_enabled
+            && config.proxy_url.as_deref().unwrap_or("").trim().is_empty()
+        {
+            MahoProxyServer::start_sync(maho_config.clone())
+                .ok()
+                .map(Arc::new)
+        } else {
+            None
+        };
+        let maho_proxy_url = maho_proxy.as_ref().map(|p| p.proxy_url());
+
+        let new_client = Self::build_client(&config, maho_proxy_url.as_deref())?;
         self.throttler.set_cooldown_ms(config.cooldown_ms);
         *self.http_client.write() = new_client;
+        *self.maho_proxy.write() = maho_proxy;
         if let Some(tf) = config.target_filter {
             *self.target_filter.write() = tf;
         }
@@ -1335,9 +1371,18 @@ impl MakoClient {
 }
 
 impl MakoClient {
-    fn build_client(config: &MakoConfigurationDto) -> Result<reqwest::Client, MakoError> {
-        let mut builder =
-            reqwest::Client::builder().user_agent("PixivAndroidApp/6.140.2 (Android 15.0)");
+    pub fn maho_config(&self) -> &Arc<MahoConfig> {
+        &self.maho_config
+    }
+
+    fn build_client(
+        config: &MakoConfigurationDto,
+        maho_proxy_url: Option<&str>,
+    ) -> Result<reqwest::Client, MakoError> {
+        let mut builder = reqwest::Client::builder()
+            .user_agent("PixivAndroidApp/6.140.2 (Android 15.0)")
+            .connect_timeout(std::time::Duration::from_secs(10))
+            .timeout(std::time::Duration::from_secs(30));
 
         if let Some(ref proxy_str) = config.proxy_url {
             let trimmed = proxy_str.trim();
@@ -1345,6 +1390,10 @@ impl MakoClient {
                 if let Ok(proxy) = reqwest::Proxy::all(trimmed) {
                     builder = builder.proxy(proxy);
                 }
+            }
+        } else if let Some(m_proxy) = maho_proxy_url {
+            if let Ok(proxy) = reqwest::Proxy::all(m_proxy) {
+                builder = builder.proxy(proxy);
             }
         }
 
@@ -1364,8 +1413,10 @@ impl MakoClient {
                 pixeval_maho::ACCOUNT_HOST,
             ] {
                 if let Some(ips) = resolver.get_static_ips(host) {
-                    for ip in ips {
-                        builder = builder.resolve(host, SocketAddr::new(ip, 443));
+                    let addrs: Vec<SocketAddr> =
+                        ips.into_iter().map(|ip| SocketAddr::new(ip, 443)).collect();
+                    if !addrs.is_empty() {
+                        builder = builder.resolve_to_addrs(host, &addrs);
                     }
                 }
             }
