@@ -1,11 +1,11 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ffi::CStr;
 use std::fs;
 use std::os::raw::c_char;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use parking_lot::RwLock;
@@ -54,14 +54,25 @@ impl PluginHostEngine {
         };
 
         let mut results = Vec::new();
-        let mut stack = vec![base.to_path_buf()];
+        let mut visited_dirs: HashSet<PathBuf> = HashSet::new();
 
-        while let Some(current_dir) = stack.pop() {
+        if let Ok(canonical_base) = fs::canonicalize(base) {
+            visited_dirs.insert(canonical_base);
+        }
+
+        let mut stack = vec![(base.to_path_buf(), 0usize)];
+
+        while let Some((current_dir, depth)) = stack.pop() {
             if let Ok(entries) = fs::read_dir(&current_dir) {
                 for entry in entries.flatten() {
                     let path = entry.path();
                     if path.is_dir() {
-                        stack.push(path);
+                        if depth < 5 {
+                            let canonical = fs::canonicalize(&path).unwrap_or_else(|_| path.clone());
+                            if visited_dirs.insert(canonical) {
+                                stack.push((path, depth + 1));
+                            }
+                        }
                     } else if path.is_file() {
                         if let Some(e) = path.extension() {
                             if e.to_string_lossy().eq_ignore_ascii_case(ext) {

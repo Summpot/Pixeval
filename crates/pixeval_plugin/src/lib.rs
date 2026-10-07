@@ -105,4 +105,53 @@ mod tests {
         let discovered = engine.enumerate_plugins(dir.path().to_string_lossy().to_string());
         assert_eq!(discovered.len(), 2);
     }
+
+    #[test]
+    fn test_plugin_enumeration_depth_limit() {
+        let repo_tmp = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("target").join("tmp"))
+            .unwrap_or_else(std::env::temp_dir);
+        let _ = std::fs::create_dir_all(&repo_tmp);
+        let dir = tempfile::Builder::new()
+            .prefix("test_plugin_depth_")
+            .tempdir_in(&repo_tmp)
+            .unwrap_or_else(|_| {
+                tempfile::Builder::new()
+                    .prefix("test_plugin_depth_")
+                    .tempdir()
+                    .unwrap()
+            });
+
+        let ext = if cfg!(target_os = "windows") {
+            "dll"
+        } else if cfg!(target_os = "macos") {
+            "dylib"
+        } else {
+            "so"
+        };
+
+        // Create 7 levels of nesting: d0/d1/d2/d3/d4/d5/d6
+        let mut curr = dir.path().to_path_buf();
+        for i in 1..=7 {
+            curr = curr.join(format!("d{i}"));
+            fs::create_dir(&curr).unwrap();
+            // Put a plugin at depth i
+            fs::write(curr.join(format!("plugin_d{i}.{ext}")), b"dummy").unwrap();
+        }
+
+        let engine = PluginHostEngine::new("5.0.0".to_string());
+        let discovered = engine.enumerate_plugins(dir.path().to_string_lossy().to_string());
+        // base = 0:
+        // d1 (depth 1) -> plugin_d1 found
+        // d2 (depth 2) -> plugin_d2 found
+        // d3 (depth 3) -> plugin_d3 found
+        // d4 (depth 4) -> plugin_d4 found
+        // d5 (depth 5) -> plugin_d5 found
+        // d6 (depth 6) -> not entered because depth < 5 check prevents pushing d6 when depth=5
+        // So plugins at d1, d2, d3, d4, d5 are found (5 plugins)
+        assert_eq!(discovered.len(), 5);
+    }
 }
+

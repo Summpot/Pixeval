@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 foyer = "0.22"
+foyer-common = "0.22"
 lz4 = "1.28"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
 parking_lot = "0.12"

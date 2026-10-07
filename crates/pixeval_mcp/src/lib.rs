@@ -3,6 +3,7 @@ uniffi::setup_scaffolding!();
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+pub mod cursor;
 pub mod error;
 pub mod models;
 pub mod protocol;
@@ -11,6 +12,7 @@ pub mod server;
 pub mod session;
 pub mod tools;
 
+pub use cursor::*;
 pub use error::*;
 pub use models::*;
 pub use protocol::*;
@@ -130,10 +132,12 @@ mod tests {
         );
 
         let tools = registry.list_tools();
-        assert!(tools.len() >= 15);
+        assert_eq!(tools.len(), 49);
         assert!(tools.iter().any(|t| t.name == "status"));
         assert!(tools.iter().any(|t| t.name == "capabilities"));
         assert!(tools.iter().any(|t| t.name == "set_download_macro"));
+        assert!(tools.iter().any(|t| t.name == "search_illustrations"));
+        assert!(tools.iter().any(|t| t.name == "more"));
     }
 
     #[tokio::test]

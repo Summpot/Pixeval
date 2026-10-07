@@ -25,7 +25,13 @@ public sealed partial class ExtensionsHostModel(
     public bool IsActive
     {
         get => Values.TryGetTargetOrAddDefault(nameof(IsActive), true);
-        set => Values[nameof(IsActive)] = value;
+        set
+        {
+            if (Values.TryGetTargetOrAddDefault(nameof(IsActive), true) == value)
+                return;
+            Values[nameof(IsActive)] = value;
+            OnPropertyChanged();
+        }
     }
 
     public int Priority

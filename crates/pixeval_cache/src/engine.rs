@@ -13,6 +13,7 @@ use foyer::{
     BlockEngineConfig, DeviceBuilder, FileDeviceBuilder, HybridCache, HybridCacheBuilder,
     HybridCachePolicy, PsyncIoEngineConfig,
 };
+use foyer_common::properties::Properties;
 
 use crate::error::CacheError;
 use crate::planar::{
@@ -94,8 +95,8 @@ fn build_http_client(
 
 #[derive(uniffi::Object)]
 pub struct CacheEngine {
-    hybrid_cache: HybridCache<String, Vec<u8>>,
-    rt: Arc<tokio::runtime::Runtime>,
+    pub(crate) hybrid_cache: HybridCache<String, Vec<u8>>,
+    pub(crate) rt: Arc<tokio::runtime::Runtime>,
     http_client: Arc<parking_lot::RwLock<MahoHttpClient>>,
     storage_capacity: u64,
 }
@@ -143,29 +144,40 @@ impl CacheEngine {
         );
 
         let cache_file_clone = cache_file.clone();
-        let hybrid_cache = rt.block_on(async {
-            HybridCacheBuilder::new()
-                .with_name("pixeval_foyer")
-                .with_policy(HybridCachePolicy::WriteOnInsertion)
-                .memory((storage_capacity / 8).max(4 * 1024 * 1024) as usize)
-                .with_weighter(|_k, v: &Vec<u8>| (v.len() + 7) & !7)
-                .storage()
-                .with_io_engine_config(PsyncIoEngineConfig::new())
-                .with_engine_config(
-                    BlockEngineConfig::new(
-                        FileDeviceBuilder::new(&cache_file_clone)
-                            .with_capacity(storage_capacity as usize)
-                            .build()?,
+        let rt_clone = rt.clone();
+        let block_size = ((storage_capacity / 16) as usize).clamp(16 * 1024, 16 * 1024 * 1024);
+        let block_size = (block_size + 4095) & !4095;
+
+        let hybrid_cache = std::thread::spawn(move || {
+            rt_clone.block_on(async {
+                HybridCacheBuilder::new()
+                    .with_name("pixeval_foyer")
+                    .with_policy(HybridCachePolicy::WriteOnEviction)
+                    .with_flush_on_close(true)
+                    .memory((storage_capacity / 8).max(4 * 1024 * 1024) as usize)
+                    .with_weighter(|_k, v: &Vec<u8>| (v.len() + 7) & !7)
+                    .storage()
+                    .with_io_engine_config(PsyncIoEngineConfig::new())
+                    .with_engine_config(
+                        BlockEngineConfig::new(
+                            FileDeviceBuilder::new(&cache_file_clone)
+                                .with_capacity(storage_capacity as usize)
+                                .build()?,
+                        )
+                        .with_block_size(block_size),
                     )
-                    .with_block_size(64 * 1024),
-                )
-                .with_recover_mode(foyer::RecoverMode::Quiet)
-                .build()
-                .await
-                .map_err(|e| CacheError::Io {
-                    message: format!("Failed to build foyer HybridCache: {e}"),
-                })
-        })?;
+                    .with_recover_mode(foyer::RecoverMode::Quiet)
+                    .build()
+                    .await
+                    .map_err(|e| CacheError::Io {
+                        message: format!("Failed to build foyer HybridCache: {e}"),
+                    })
+            })
+        })
+        .join()
+        .map_err(|_| CacheError::Io {
+            message: "Cache initialization thread panicked".to_string(),
+        })??;
 
         let http_client = build_http_client(true, 100, &HashMap::new(), None);
 
@@ -207,15 +219,13 @@ impl CacheEngine {
         // Storage path
         let key_clone = key.clone();
         let cache = self.hybrid_cache.clone();
-        tokio::task::block_in_place(|| {
-            self.rt.block_on(async {
-                cache
-                    .get(&key_clone)
-                    .await
-                    .ok()
-                    .flatten()
-                    .map(|e| e.value().clone())
-            })
+        self.block_on(async {
+            cache
+                .get(&key_clone)
+                .await
+                .ok()
+                .flatten()
+                .map(|e| e.value().clone())
         })
     }
 
@@ -241,7 +251,11 @@ impl CacheEngine {
             });
         }
 
-        self.hybrid_cache.insert(key, data);
+        self.hybrid_cache.insert_with_properties(
+            key,
+            data,
+            foyer::HybridCacheProperties::default().with_age(foyer::Age::Fresh),
+        );
         Ok(())
     }
 
@@ -254,12 +268,17 @@ impl CacheEngine {
         }
     }
 
+    pub fn close(&self) {
+        let cache = self.hybrid_cache.clone();
+        self.block_on(async move {
+            let _ = cache.close().await;
+        });
+    }
+
     pub fn clear(&self) -> Result<(), CacheError> {
         let cache = self.hybrid_cache.clone();
-        tokio::task::block_in_place(|| {
-            self.rt.block_on(async {
-                let _ = cache.clear().await;
-            });
+        self.block_on(async {
+            let _ = cache.clear().await;
         });
 
         Ok(())
@@ -569,4 +588,25 @@ fn is_previewable_image_prefix(buf: &[u8]) -> bool {
         return true;
     }
     false
+}
+
+impl Drop for CacheEngine {
+    fn drop(&mut self) {
+        self.close();
+    }
+}
+
+impl CacheEngine {
+    fn block_on<F, R>(&self, f: F) -> R
+    where
+        F: std::future::Future<Output = R>,
+    {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(f)
+            })
+        } else {
+            self.rt.block_on(f)
+        }
+    }
 }

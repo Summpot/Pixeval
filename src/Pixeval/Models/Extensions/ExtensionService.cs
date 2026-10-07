@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -302,6 +303,7 @@ public sealed class ExtensionService : IDisposable
             loadedModel.IsPendingUninstall =
                 _pendingExtensionUninstallTargets.Contains(loadedModel.UninstallTargetRelativePath);
             InsertHost(loadedModel);
+            RegisterHostWithPluginEngine(loadedModel, path, logger);
             return ExtensionHostLoadResult.Loaded;
         }
         catch
@@ -325,11 +327,20 @@ public sealed class ExtensionService : IDisposable
     {
         try
         {
+            model.PropertyChanged -= OnHostModelPropertyChanged;
             _ = HostModels.Remove(model);
             if (_settingsGroups.FirstOrDefault(t => t.Model == model) is { } group)
                 _ = _settingsGroups.Remove(group);
             foreach (var extension in model.Extensions)
                 extension.OnExtensionUnloaded();
+            try
+            {
+                _ = PluginEngine.UnloadPlugin(model.Name);
+            }
+            catch
+            {
+                // ignored
+            }
             model.Dispose();
         }
         catch
@@ -558,6 +569,7 @@ public sealed class ExtensionService : IDisposable
 
     private void InsertHost(ExtensionsHostModel model)
     {
+        model.PropertyChanged += OnHostModelPropertyChanged;
         var inserted = false;
         for (var i = 0; i < HostModels.Count; ++i)
             if (HostModels[i].Priority >= model.Priority)
@@ -679,5 +691,91 @@ public sealed class ExtensionService : IDisposable
         _disposed = true;
         while (HostModels is [var model, ..])
             UnloadHost(model);
+        PluginEngine.Dispose();
+    }
+
+    private void RegisterHostWithPluginEngine(ExtensionsHostModel loadedModel, string path, ILogger logger)
+    {
+        try
+        {
+            var host = loadedModel.Host;
+            var extDescriptors = new List<PluginExtensionDescriptor>();
+            foreach (var ext in loadedModel.Extensions)
+            {
+                var kind = ext switch
+                {
+                    IImageTransformerCommandExtension => "image_transformer",
+                    ITextTransformerCommandExtension => "text_transformer",
+                    IDownloaderExtension => "downloader",
+                    IStaticImageFormatProviderExtension => "static_image_format_provider",
+                    IAnimatedImageFormatProviderExtension => "animated_image_format_provider",
+                    INovelFormatProviderExtension => "novel_format_provider",
+                    ISettingsExtension => "settings",
+                    _ => "extension"
+                };
+
+                var label = ext switch
+                {
+                    IEntryExtension entry => entry.Label,
+                    IFormatProviderExtension fp => fp.FormatExtension,
+                    _ => ext.GetType().Name
+                };
+
+                var desc = ext switch
+                {
+                    IEntryExtension entry => entry.Description,
+                    IFormatProviderExtension fp => fp.FormatDescription,
+                    _ => ""
+                };
+
+                var identifier = ext.GetType().FullName ?? $"{host.ExtensionName}.{label}";
+                extDescriptors.Add(new PluginExtensionDescriptor(kind, label ?? "", desc ?? "", identifier));
+            }
+
+            var pluginMeta = new PluginMetadata(
+                host.ExtensionName,
+                host.ExtensionName,
+                host.AuthorName ?? "",
+                host.Version ?? "",
+                host.Description ?? "",
+                host.SdkVersion ?? CurrentVersion,
+                path,
+                extDescriptors,
+                loadedModel.IsActive
+            );
+
+            PluginEngine.RegisterMetadata(pluginMeta);
+
+            try
+            {
+                _ = PluginEngine.LoadPlugin(path);
+            }
+            catch
+            {
+                // Native host library might already be opened by host or rely on C-ABI GetExtensionsHost
+            }
+        }
+        catch (Exception ex)
+        {
+            if (logger is FileLogger fileLogger)
+                fileLogger.LogWarning($"Failed to register plugin metadata with native engine for {path}", ex);
+            else
+                logger.Log(LogLevel.Warning, $"Failed to register plugin metadata with native engine for {path}", null, "", "", 0);
+        }
+    }
+
+    private void OnHostModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is ExtensionsHostModel model && e.PropertyName == nameof(ExtensionsHostModel.IsActive))
+        {
+            try
+            {
+                _ = PluginEngine.SetPluginActive(model.Name, model.IsActive);
+            }
+            catch
+            {
+                // ignored
+            }
+        }
     }
 }

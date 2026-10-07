@@ -136,6 +136,9 @@ public sealed class PixevalMcpService : IPixevalMcpService, IMcpSessionBridge
 
     public async ValueTask DisposeAsync()
     {
+        if (_disposed)
+            return;
+
         await _lifetimeLock.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -144,11 +147,11 @@ public sealed class PixevalMcpService : IPixevalMcpService, IMcpSessionBridge
 
             _disposed = true;
             await StopCoreAsync().ConfigureAwait(false);
-            _lifetimeLock.Dispose();
         }
         finally
         {
-            // Lock released
+            _lifetimeLock.Release();
+            _lifetimeLock.Dispose();
         }
     }
 
