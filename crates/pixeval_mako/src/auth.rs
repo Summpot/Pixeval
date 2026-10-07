@@ -14,11 +14,11 @@ pub const REDIRECT_URI: &str = "https://app-api.pixiv.net/web/v1/users/auth/pixi
 #[derive(Debug, thiserror::Error)]
 pub enum AuthError {
     #[error("Network error during auth: {0}")]
-    Network(#[from] reqwest::Error),
+    Network(#[from] pixeval_maho::MahoError),
     #[error("No refresh token available")]
     NoRefreshToken,
     #[error("Auth failed with status {0}: {1}")]
-    AuthFailed(reqwest::StatusCode, String),
+    AuthFailed(http::StatusCode, String),
     #[error("Deserialization error: {0}")]
     Json(#[from] serde_json::Error),
 }
@@ -146,7 +146,10 @@ impl OAuthManager {
         self.state.read().as_ref().map(|t| t.response.clone())
     }
 
-    pub async fn refresh(&self, client: &reqwest::Client) -> Result<TokenResponse, AuthError> {
+    pub async fn refresh(
+        &self,
+        client: &pixeval_maho::MahoHttpClient,
+    ) -> Result<TokenResponse, AuthError> {
         let _guard = self.refresh_lock.lock().await;
         // Double check after lock
         if self.get_valid_access_token().is_some() {
@@ -174,7 +177,8 @@ impl OAuthManager {
 
         if !resp.status().is_success() {
             let status = resp.status();
-            let text = resp.text().await.unwrap_or_default();
+            let text =
+                String::from_utf8_lossy(&resp.bytes().await.unwrap_or_default()).into_owned();
             return Err(AuthError::AuthFailed(status, text));
         }
 
@@ -185,7 +189,7 @@ impl OAuthManager {
 
     pub async fn exchange_code(
         &self,
-        client: &reqwest::Client,
+        client: &pixeval_maho::MahoHttpClient,
         code: &str,
         code_verifier: &str,
     ) -> Result<TokenResponse, AuthError> {
@@ -208,7 +212,8 @@ impl OAuthManager {
 
         if !resp.status().is_success() {
             let status = resp.status();
-            let text = resp.text().await.unwrap_or_default();
+            let text =
+                String::from_utf8_lossy(&resp.bytes().await.unwrap_or_default()).into_owned();
             return Err(AuthError::AuthFailed(status, text));
         }
 

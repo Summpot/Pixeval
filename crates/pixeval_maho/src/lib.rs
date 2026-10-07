@@ -1,18 +1,20 @@
 uniffi::setup_scaffolding!();
 
+pub mod client;
 pub mod config;
+pub mod connector;
 pub mod dns;
 pub mod fragmentation;
 pub mod locator;
-pub mod proxy;
 pub mod state_machine;
 pub mod stream;
 
+pub use client::*;
 pub use config::*;
+pub use connector::*;
 pub use dns::*;
 pub use fragmentation::*;
 pub use locator::*;
-pub use proxy::*;
 pub use state_machine::*;
 pub use stream::*;
 
@@ -232,7 +234,10 @@ mod tests {
         let resolved = resolver.resolve_host("test.pixiv.net").await.unwrap();
         assert_eq!(resolved, vec![ip]);
 
-        let resolved_strings = resolver.resolve("test.pixiv.net".to_string()).await.unwrap();
+        let resolved_strings = resolver
+            .resolve("test.pixiv.net".to_string())
+            .await
+            .unwrap();
         assert_eq!(resolved_strings, vec!["1.2.3.4"]);
     }
 

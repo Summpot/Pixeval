@@ -2,11 +2,11 @@
 // Licensed under the GPL-3.0 License.
 
 use std::future::Future;
-use std::net::{IpAddr, SocketAddr};
+use std::net::IpAddr;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use pixeval_maho::{DnsResolver, MahoConfig, MahoProxyServer};
+use pixeval_maho::{DnsResolver, MahoConfig, MahoHttpClient, MahoResponse};
 
 use crate::auth::{AuthError, OAuthManager};
 use crate::models::*;
@@ -32,8 +32,8 @@ pub enum MakoError {
     Unauthorized,
 }
 
-impl From<reqwest::Error> for MakoError {
-    fn from(err: reqwest::Error) -> Self {
+impl From<pixeval_maho::MahoError> for MakoError {
+    fn from(err: pixeval_maho::MahoError) -> Self {
         Self::Network {
             message: err.to_string(),
         }
@@ -46,9 +46,7 @@ impl From<AuthError> for MakoError {
             AuthError::Network(e) => Self::Network {
                 message: e.to_string(),
             },
-            AuthError::AuthFailed(_code, msg) => Self::Auth {
-                message: msg,
-            },
+            AuthError::AuthFailed(_code, msg) => Self::Auth { message: msg },
             other => Self::Auth {
                 message: other.to_string(),
             },
@@ -70,11 +68,10 @@ fn url_encode(input: &str) -> String {
 
 #[derive(uniffi::Object, Clone)]
 pub struct MakoClient {
-    http_client: Arc<parking_lot::RwLock<reqwest::Client>>,
+    http_client: Arc<parking_lot::RwLock<MahoHttpClient>>,
     oauth: Arc<OAuthManager>,
     throttler: Arc<RequestThrottler>,
     maho_config: Arc<MahoConfig>,
-    maho_proxy: Arc<parking_lot::RwLock<Option<Arc<MahoProxyServer>>>>,
     target_filter: Arc<parking_lot::RwLock<String>>,
     mirror_host: Arc<parking_lot::RwLock<Option<String>>>,
     web_cookie: Arc<parking_lot::RwLock<Option<String>>>,
@@ -84,30 +81,8 @@ pub struct MakoClient {
 impl MakoClient {
     #[uniffi::constructor]
     pub fn new(config: MakoConfigurationDto) -> Result<Arc<Self>, MakoError> {
-        let resolver = DnsResolver::new();
-        for (host, ips) in &config.host_ips {
-            let parsed: Vec<IpAddr> = ips.iter().filter_map(|s| s.parse().ok()).collect();
-            resolver.set_static_ips(host, parsed);
-        }
-
-        let maho_config = Arc::new(MahoConfig {
-            enabled: config.domain_fronting_enabled,
-            split_delay_ms: config.split_delay_ms,
-            dns_resolver: resolver,
-        });
-
-        let maho_proxy: Option<Arc<MahoProxyServer>> = if config.domain_fronting_enabled
-            && config.proxy_url.as_deref().unwrap_or("").trim().is_empty()
-        {
-            MahoProxyServer::start_sync(maho_config.clone())
-                .ok()
-                .map(Arc::new)
-        } else {
-            None
-        };
-        let maho_proxy_url = maho_proxy.as_ref().map(|p| p.proxy_url());
-
-        let http_client = Self::build_client(&config, maho_proxy_url.as_deref())?;
+        let http_client = Self::build_client(&config)?;
+        let maho_config = http_client.config().clone();
         let target_filter = config
             .target_filter
             .unwrap_or_else(|| "for_android".to_string());
@@ -116,7 +91,6 @@ impl MakoClient {
             oauth: Arc::new(OAuthManager::new()),
             throttler: Arc::new(RequestThrottler::new(config.cooldown_ms)),
             maho_config,
-            maho_proxy: Arc::new(parking_lot::RwLock::new(maho_proxy)),
             target_filter: Arc::new(parking_lot::RwLock::new(target_filter)),
             mirror_host: Arc::new(parking_lot::RwLock::new(config.mirror_host)),
             web_cookie: Arc::new(parking_lot::RwLock::new(config.web_cookie)),
@@ -124,33 +98,9 @@ impl MakoClient {
     }
 
     pub fn update_configuration(&self, config: MakoConfigurationDto) -> Result<(), MakoError> {
-        let resolver = DnsResolver::new();
-        for (host, ips) in &config.host_ips {
-            let parsed: Vec<IpAddr> = ips.iter().filter_map(|s| s.parse().ok()).collect();
-            resolver.set_static_ips(host, parsed);
-        }
-
-        let maho_config = Arc::new(MahoConfig {
-            enabled: config.domain_fronting_enabled,
-            split_delay_ms: config.split_delay_ms,
-            dns_resolver: resolver,
-        });
-
-        let maho_proxy: Option<Arc<MahoProxyServer>> = if config.domain_fronting_enabled
-            && config.proxy_url.as_deref().unwrap_or("").trim().is_empty()
-        {
-            MahoProxyServer::start_sync(maho_config.clone())
-                .ok()
-                .map(Arc::new)
-        } else {
-            None
-        };
-        let maho_proxy_url = maho_proxy.as_ref().map(|p| p.proxy_url());
-
-        let new_client = Self::build_client(&config, maho_proxy_url.as_deref())?;
+        let new_client = Self::build_client(&config)?;
         self.throttler.set_cooldown_ms(config.cooldown_ms);
         *self.http_client.write() = new_client;
-        *self.maho_proxy.write() = maho_proxy;
         if let Some(tf) = config.target_filter {
             *self.target_filter.write() = tf;
         }
@@ -186,9 +136,13 @@ impl MakoClient {
     pub async fn identify_token(&self) -> Result<BoolResult, MakoError> {
         match self.refresh_token().await {
             Ok(_) => Ok(BoolResult { success: true }),
-            Err(MakoError::Auth { .. } | MakoError::Unauthorized | MakoError::ApiStatus { code: 400..=403, .. }) => {
-                Ok(BoolResult { success: false })
-            }
+            Err(
+                MakoError::Auth { .. }
+                | MakoError::Unauthorized
+                | MakoError::ApiStatus {
+                    code: 400..=403, ..
+                },
+            ) => Ok(BoolResult { success: false }),
             Err(e) => Err(e),
         }
     }
@@ -314,10 +268,9 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(MakoFetchEngine::new(
-            fetcher,
-            Some(initial_url),
-        ))))
+        Arc::new(IllustrationFetchEngine::new(Arc::new(
+            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        )))
     }
 
     pub fn novel_recommended(
@@ -341,8 +294,10 @@ impl MakoClient {
 
     pub fn work_ranking(&self, mode: String, date: Option<String>) -> Arc<IllustrationFetchEngine> {
         let filter = self.target_filter.read().clone();
-        let mut initial_url =
-            format!("{APP_API_BASE_URL}/v1/illust/ranking?filter={filter}&mode={}", url_encode(&mode));
+        let mut initial_url = format!(
+            "{APP_API_BASE_URL}/v1/illust/ranking?filter={filter}&mode={}",
+            url_encode(&mode)
+        );
         if let Some(d) = date {
             initial_url.push_str(&format!("&date={}", url_encode(&d)));
         }
@@ -350,10 +305,9 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(MakoFetchEngine::new(
-            fetcher,
-            Some(initial_url),
-        ))))
+        Arc::new(IllustrationFetchEngine::new(Arc::new(
+            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        )))
     }
 
     pub fn work_bookmarks(
@@ -373,10 +327,9 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(MakoFetchEngine::new(
-            fetcher,
-            Some(initial_url),
-        ))))
+        Arc::new(IllustrationFetchEngine::new(Arc::new(
+            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        )))
     }
 
     pub fn work_new(
@@ -396,10 +349,9 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(MakoFetchEngine::new(
-            fetcher,
-            Some(initial_url),
-        ))))
+        Arc::new(IllustrationFetchEngine::new(Arc::new(
+            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        )))
     }
 
     pub fn novel_new(&self, max_novel_id: Option<i64>) -> Arc<NovelFetchEngine> {
@@ -477,10 +429,9 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(MakoFetchEngine::new(
-            fetcher,
-            Some(initial_url),
-        ))))
+        Arc::new(IllustrationFetchEngine::new(Arc::new(
+            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        )))
     }
 
     pub fn illustration_search(
@@ -497,10 +448,7 @@ impl MakoClient {
         })
     }
 
-    pub fn novel_search_advanced(
-        &self,
-        params: NovelSearchParams,
-    ) -> Arc<NovelFetchEngine> {
+    pub fn novel_search_advanced(&self, params: NovelSearchParams) -> Arc<NovelFetchEngine> {
         let filter = self.target_filter.read().clone();
         let target = params
             .search_target
@@ -625,8 +573,10 @@ impl MakoClient {
 
     pub fn user_search(&self, word: String) -> Arc<UserFetchEngine> {
         let filter = self.target_filter.read().clone();
-        let initial_url =
-            format!("{APP_API_BASE_URL}/v1/search/user?filter={filter}&word={}", url_encode(&word));
+        let initial_url = format!(
+            "{APP_API_BASE_URL}/v1/search/user?filter={filter}&word={}",
+            url_encode(&word)
+        );
         let fetcher = Arc::new(UserPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
@@ -700,7 +650,10 @@ impl MakoClient {
     ) -> Result<BoolResult, MakoError> {
         let url = format!("{APP_API_BASE_URL}/v1/user/follow/add");
         let id_str = user_id.to_string();
-        let params = [("user_id", id_str.as_str()), ("restrict", restrict.as_str())];
+        let params = [
+            ("user_id", id_str.as_str()),
+            ("restrict", restrict.as_str()),
+        ];
         let resp = self.request_post_form(&url, &params).await?;
         Ok(BoolResult {
             success: resp.status().is_success(),
@@ -718,15 +671,17 @@ impl MakoClient {
     }
 
     pub fn work_following(&self, restrict: String) -> Arc<IllustrationFetchEngine> {
-        let initial_url = format!("{APP_API_BASE_URL}/v2/illust/follow?restrict={}", url_encode(&restrict));
+        let initial_url = format!(
+            "{APP_API_BASE_URL}/v2/illust/follow?restrict={}",
+            url_encode(&restrict)
+        );
         let fetcher = Arc::new(IllustrationPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(MakoFetchEngine::new(
-            fetcher,
-            Some(initial_url),
-        ))))
+        Arc::new(IllustrationFetchEngine::new(Arc::new(
+            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        )))
     }
 
     pub fn work_mypixiv(&self) -> Arc<IllustrationFetchEngine> {
@@ -735,10 +690,9 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(MakoFetchEngine::new(
-            fetcher,
-            Some(initial_url),
-        ))))
+        Arc::new(IllustrationFetchEngine::new(Arc::new(
+            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        )))
     }
 
     pub fn work_related(&self, illust_id: i64) -> Arc<IllustrationFetchEngine> {
@@ -749,10 +703,9 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(MakoFetchEngine::new(
-            fetcher,
-            Some(initial_url),
-        ))))
+        Arc::new(IllustrationFetchEngine::new(Arc::new(
+            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        )))
     }
 
     pub fn novel_related(&self, novel_id: i64) -> Arc<NovelFetchEngine> {
@@ -779,16 +732,17 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(MakoFetchEngine::new(
-            fetcher,
-            Some(initial_url),
-        ))))
+        Arc::new(IllustrationFetchEngine::new(Arc::new(
+            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        )))
     }
 
     pub fn novel_ranking(&self, mode: String, date: Option<String>) -> Arc<NovelFetchEngine> {
         let filter = self.target_filter.read().clone();
-        let mut initial_url =
-            format!("{APP_API_BASE_URL}/v1/novel/ranking?filter={filter}&mode={}", url_encode(&mode));
+        let mut initial_url = format!(
+            "{APP_API_BASE_URL}/v1/novel/ranking?filter={filter}&mode={}",
+            url_encode(&mode)
+        );
         if let Some(d) = date {
             initial_url.push_str(&format!("&date={}", url_encode(&d)));
         }
@@ -826,7 +780,10 @@ impl MakoClient {
     }
 
     pub fn novel_following(&self, restrict: String) -> Arc<NovelFetchEngine> {
-        let initial_url = format!("{APP_API_BASE_URL}/v1/novel/follow?restrict={}", url_encode(&restrict));
+        let initial_url = format!(
+            "{APP_API_BASE_URL}/v1/novel/follow?restrict={}",
+            url_encode(&restrict)
+        );
         let fetcher = Arc::new(NovelPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
@@ -851,9 +808,8 @@ impl MakoClient {
 
     pub fn novel_posted(&self, user_id: i64) -> Arc<NovelFetchEngine> {
         let filter = self.target_filter.read().clone();
-        let initial_url = format!(
-            "{APP_API_BASE_URL}/v1/user/novels?user_id={user_id}&filter={filter}"
-        );
+        let initial_url =
+            format!("{APP_API_BASE_URL}/v1/user/novels?user_id={user_id}&filter={filter}");
         let fetcher = Arc::new(NovelPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
@@ -887,10 +843,9 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(MakoFetchEngine::new(
-            fetcher,
-            Some(initial_url),
-        ))))
+        Arc::new(IllustrationFetchEngine::new(Arc::new(
+            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        )))
     }
 
     pub async fn work_bookmark_tags(
@@ -935,7 +890,8 @@ impl MakoClient {
     }
 
     pub async fn get_novel_content_structured(&self, id: i64) -> Result<NovelContent, MakoError> {
-        let webview_url = format!("{APP_API_BASE_URL}/webview/v2/novel?id={id}&viewer_version=20221031_ai");
+        let webview_url =
+            format!("{APP_API_BASE_URL}/webview/v2/novel?id={id}&viewer_version=20221031_ai");
         if let Ok(resp) = self.request_get(&webview_url).await {
             if let Ok(html) = resp.text().await {
                 if let Some(json_str) = extract_novel_json_from_html(&html) {
@@ -985,9 +941,13 @@ impl MakoClient {
     ) -> Result<CommentsResponse, MakoError> {
         let filter = self.target_filter.read().clone();
         let mut url = if is_novel {
-            format!("{APP_API_BASE_URL}/v2/novel/comment/replies?comment_id={comment_id}&filter={filter}")
+            format!(
+                "{APP_API_BASE_URL}/v2/novel/comment/replies?comment_id={comment_id}&filter={filter}"
+            )
         } else {
-            format!("{APP_API_BASE_URL}/v1/illust/comment/replies?comment_id={comment_id}&filter={filter}")
+            format!(
+                "{APP_API_BASE_URL}/v1/illust/comment/replies?comment_id={comment_id}&filter={filter}"
+            )
         };
         if let Some(off) = offset {
             url.push_str(&format!("&offset={off}"));
@@ -1075,7 +1035,9 @@ impl MakoClient {
         illust_id: i64,
     ) -> Result<MangaSeriesContextResult, MakoError> {
         let filter = self.target_filter.read().clone();
-        let url = format!("{APP_API_BASE_URL}/v1/illust/series/context?illust_id={illust_id}&filter={filter}");
+        let url = format!(
+            "{APP_API_BASE_URL}/v1/illust/series/context?illust_id={illust_id}&filter={filter}"
+        );
         let resp = self.request_get(&url).await?;
         let raw: MangaSeriesContextResponseRaw = resp.json().await?;
         let series = raw.illust_series_detail.or(raw.series);
@@ -1111,7 +1073,9 @@ impl MakoClient {
 
     pub async fn search_autocomplete(&self, word: String) -> Result<Vec<Tag>, MakoError> {
         let enc_word = url_encode(&word);
-        let url = format!("{APP_API_BASE_URL}/v2/search/autocomplete?word={enc_word}&merge_plain_keyword_results=true");
+        let url = format!(
+            "{APP_API_BASE_URL}/v2/search/autocomplete?word={enc_word}&merge_plain_keyword_results=true"
+        );
         let resp = self.request_get(&url).await?;
         let res: AutocompleteResponse = resp.json().await?;
         let mut tags = res.tags;
@@ -1215,7 +1179,7 @@ impl MakoClient {
         Ok(resp.access_token)
     }
 
-    pub async fn request_get(&self, url: &str) -> Result<reqwest::Response, MakoError> {
+    pub async fn request_get(&self, url: &str) -> Result<MahoResponse, MakoError> {
         self.throttler.throttle().await;
         let token = self.get_access_token_or_refresh().await?;
 
@@ -1250,7 +1214,7 @@ impl MakoClient {
 
         let resp = req.send().await?;
 
-        if resp.status() == reqwest::StatusCode::UNAUTHORIZED {
+        if resp.status() == http::StatusCode::UNAUTHORIZED {
             self.oauth.invalidate_access_token();
             let new_token = self.refresh_token().await?.access_token;
             let mut retry_req = client
@@ -1293,7 +1257,7 @@ impl MakoClient {
         &self,
         url: &str,
         params: &[(&str, &str)],
-    ) -> Result<reqwest::Response, MakoError> {
+    ) -> Result<MahoResponse, MakoError> {
         self.throttler.throttle().await;
         let token = self.get_access_token_or_refresh().await?;
 
@@ -1329,7 +1293,7 @@ impl MakoClient {
 
         let resp = req.send().await?;
 
-        if resp.status() == reqwest::StatusCode::UNAUTHORIZED {
+        if resp.status() == http::StatusCode::UNAUTHORIZED {
             self.oauth.invalidate_access_token();
             let new_token = self.refresh_token().await?.access_token;
             let mut retry_req = client
@@ -1375,30 +1339,9 @@ impl MakoClient {
         &self.maho_config
     }
 
-    fn build_client(
-        config: &MakoConfigurationDto,
-        maho_proxy_url: Option<&str>,
-    ) -> Result<reqwest::Client, MakoError> {
-        let mut builder = reqwest::Client::builder()
-            .user_agent("PixivAndroidApp/6.140.2 (Android 15.0)")
-            .connect_timeout(std::time::Duration::from_secs(10))
-            .timeout(std::time::Duration::from_secs(30));
-
-        if let Some(ref proxy_str) = config.proxy_url {
-            let trimmed = proxy_str.trim();
-            if !trimmed.is_empty() {
-                if let Ok(proxy) = reqwest::Proxy::all(trimmed) {
-                    builder = builder.proxy(proxy);
-                }
-            }
-        } else if let Some(m_proxy) = maho_proxy_url {
-            if let Ok(proxy) = reqwest::Proxy::all(m_proxy) {
-                builder = builder.proxy(proxy);
-            }
-        }
-
+    fn build_client(config: &MakoConfigurationDto) -> Result<MahoHttpClient, MakoError> {
+        let resolver = DnsResolver::new();
         if config.domain_fronting_enabled {
-            let resolver = DnsResolver::new();
             for (host, ips) in &config.host_ips {
                 let parsed: Vec<IpAddr> = ips.iter().filter_map(|s| s.parse().ok()).collect();
                 resolver.set_static_ips(host, parsed);
@@ -1413,16 +1356,25 @@ impl MakoClient {
                 pixeval_maho::ACCOUNT_HOST,
             ] {
                 if let Some(ips) = resolver.get_static_ips(host) {
-                    let addrs: Vec<SocketAddr> =
-                        ips.into_iter().map(|ip| SocketAddr::new(ip, 443)).collect();
-                    if !addrs.is_empty() {
-                        builder = builder.resolve_to_addrs(host, &addrs);
-                    }
+                    resolver.set_static_ips(host, ips);
                 }
             }
         }
 
-        Ok(builder.build()?)
+        let maho_config = Arc::new(MahoConfig {
+            enabled: config.domain_fronting_enabled,
+            split_delay_ms: config.split_delay_ms,
+            dns_resolver: resolver,
+        });
+
+        let clean_proxy = config
+            .proxy_url
+            .as_deref()
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+
+        Ok(MahoHttpClient::new(maho_config, clean_proxy))
     }
 }
 
@@ -1626,5 +1578,3 @@ pub fn extract_novel_json_from_html(html: &str) -> Option<String> {
     }
     None
 }
-
-

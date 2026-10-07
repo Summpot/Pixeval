@@ -13,6 +13,8 @@ use tokio::io::AsyncWriteExt;
 use tokio::sync::Semaphore;
 use tokio_util::sync::CancellationToken;
 
+use pixeval_maho::{DnsResolver, MahoConfig, MahoHttpClient};
+
 use crate::engine::callback::DownloadProgressCallback;
 use crate::engine::key::DownloadTaskKey;
 use crate::engine::state::DownloadState;
@@ -39,7 +41,7 @@ pub struct DownloadManager {
     tasks: Arc<RwLock<HashMap<DownloadTaskKey, DownloadTaskItem>>>,
     cancel_tokens: Arc<RwLock<HashMap<DownloadTaskKey, CancellationToken>>>,
     callback: Option<Arc<dyn DownloadProgressCallback>>,
-    client: Arc<RwLock<reqwest::Client>>,
+    client: Arc<RwLock<MahoHttpClient>>,
 }
 
 #[uniffi::export]
@@ -165,10 +167,7 @@ impl DownloadManager {
                 let send_future = client
                     .get(&url)
                     .header("Referer", "https://app-api.pixiv.net/")
-                    .header(
-                        "User-Agent",
-                        "PixivAndroidApp/6.140.2 (Android 15.0)",
-                    )
+                    .header("User-Agent", "PixivAndroidApp/6.140.2 (Android 15.0)")
                     .send();
 
                 let response = tokio::select! {
@@ -185,7 +184,7 @@ impl DownloadManager {
                     Ok(r) => {
                         let status = r.status();
                         let err_msg = format!("HTTP error: {status}");
-                        if status == reqwest::StatusCode::NOT_FOUND || status.is_client_error() {
+                        if status == http::StatusCode::NOT_FOUND || status.is_client_error() {
                             Self::handle_error(
                                 &tasks,
                                 &cancel_tokens,
@@ -276,7 +275,12 @@ impl DownloadManager {
                             }
 
                             if let Some(cb) = &callback {
-                                cb.on_progress(key.clone(), percentage, downloaded_bytes, total_bytes);
+                                cb.on_progress(
+                                    key.clone(),
+                                    percentage,
+                                    downloaded_bytes,
+                                    total_bytes,
+                                );
                             }
                         }
                         Err(e) => {
@@ -334,7 +338,8 @@ impl DownloadManager {
                 return;
             }
 
-            let err_msg = last_error.unwrap_or_else(|| "Download failed after multiple attempts".to_string());
+            let err_msg =
+                last_error.unwrap_or_else(|| "Download failed after multiple attempts".to_string());
             Self::handle_error(
                 &tasks,
                 &cancel_tokens,
@@ -395,20 +400,16 @@ impl DownloadManager {
 }
 
 impl DownloadManager {
-    fn build_client(options: Option<&DownloadNetworkOptions>) -> reqwest::Client {
-        let mut builder = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .user_agent("PixivAndroidApp/6.140.2 (Android 15.0)");
-
+    fn build_client(options: Option<&DownloadNetworkOptions>) -> MahoHttpClient {
+        let resolver = DnsResolver::new();
         let mut all_domain_ips: HashMap<String, Vec<String>> = HashMap::new();
+        let mut proxy_url = None;
 
         if let Some(opts) = options {
             if let Some(ref proxy_str) = opts.proxy_url {
                 let trimmed = proxy_str.trim();
                 if !trimmed.is_empty() {
-                    if let Ok(proxy) = reqwest::Proxy::all(trimmed) {
-                        builder = builder.proxy(proxy);
-                    }
+                    proxy_url = Some(trimmed.to_string());
                 }
             }
 
@@ -439,18 +440,17 @@ impl DownloadManager {
         }
 
         for (domain, ips) in all_domain_ips {
-            let mut addrs = Vec::new();
-            for ip_str in ips {
-                if let Ok(ip) = ip_str.parse::<std::net::IpAddr>() {
-                    addrs.push(std::net::SocketAddr::new(ip, 443));
-                }
-            }
-            if !addrs.is_empty() {
-                builder = builder.resolve_to_addrs(&domain, &addrs);
-            }
+            let parsed: Vec<std::net::IpAddr> = ips.iter().filter_map(|s| s.parse().ok()).collect();
+            resolver.set_static_ips(&domain, parsed);
         }
 
-        builder.build().unwrap_or_default()
+        let config = Arc::new(MahoConfig {
+            enabled: true,
+            split_delay_ms: 100,
+            dns_resolver: resolver,
+        });
+
+        MahoHttpClient::new(config, proxy_url)
     }
 
     async fn handle_error(

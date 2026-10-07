@@ -1,9 +1,9 @@
 use futures_util::StreamExt;
 use parking_lot::RwLock;
-use pixeval_maho::{DnsResolver, MahoConfig, MahoProxyServer, IMAGE_HOST, IMAGE_HOST2};
+use pixeval_maho::{DnsResolver, IMAGE_HOST, IMAGE_HOST2, MahoConfig, MahoHttpClient};
 use std::collections::{HashMap, VecDeque};
 use std::fs;
-use std::net::{IpAddr, SocketAddr};
+use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -161,75 +161,55 @@ fn load_index(dir: &Path) -> Option<(HashMap<String, CacheEntry>, VecDeque<Strin
 
 fn build_http_client(
     domain_fronting_enabled: bool,
+    split_delay_ms: u64,
     host_ips: &HashMap<String, Vec<String>>,
     proxy_url: Option<&str>,
-    maho_proxy_url: Option<&str>,
-) -> reqwest::Client {
-    let mut builder = reqwest::Client::builder()
-        .user_agent("PixivAndroidApp/6.140.2 (Android 15.0)")
-        .connect_timeout(std::time::Duration::from_secs(10))
-        .timeout(std::time::Duration::from_secs(30));
-
-    if let Some(proxy_str) = proxy_url {
-        let trimmed = proxy_str.trim();
-        if !trimmed.is_empty() {
-            if let Ok(proxy) = reqwest::Proxy::all(trimmed) {
-                builder = builder.proxy(proxy);
-            }
-        }
-    } else if let Some(m_proxy) = maho_proxy_url {
-        if let Ok(proxy) = reqwest::Proxy::all(m_proxy) {
-            builder = builder.proxy(proxy);
-        }
+) -> MahoHttpClient {
+    let resolver = DnsResolver::new();
+    for (host, ips) in host_ips {
+        let parsed: Vec<IpAddr> = ips.iter().filter_map(|s| s.parse().ok()).collect();
+        resolver.set_static_ips(host, parsed);
+    }
+    if resolver.get_static_ips(IMAGE_HOST).is_none() {
+        resolver.set_static_ips(
+            IMAGE_HOST,
+            vec![
+                "210.140.139.134".parse().unwrap(),
+                "210.140.139.135".parse().unwrap(),
+                "210.140.139.136".parse().unwrap(),
+                "210.140.139.137".parse().unwrap(),
+            ],
+        );
+    }
+    if resolver.get_static_ips(IMAGE_HOST2).is_none() {
+        resolver.set_static_ips(
+            IMAGE_HOST2,
+            vec![
+                "210.140.139.135".parse().unwrap(),
+                "210.140.139.136".parse().unwrap(),
+                "210.140.139.137".parse().unwrap(),
+            ],
+        );
     }
 
-    if domain_fronting_enabled {
-        let resolver = DnsResolver::new();
-        for (host, ips) in host_ips {
-            let parsed: Vec<IpAddr> = ips.iter().filter_map(|s| s.parse().ok()).collect();
-            resolver.set_static_ips(host, parsed);
-        }
-        if resolver.get_static_ips(IMAGE_HOST).is_none() {
-            resolver.set_static_ips(
-                IMAGE_HOST,
-                vec![
-                    "210.140.139.134".parse().unwrap(),
-                    "210.140.139.135".parse().unwrap(),
-                    "210.140.139.136".parse().unwrap(),
-                    "210.140.139.137".parse().unwrap(),
-                ],
-            );
-        }
-        if resolver.get_static_ips(IMAGE_HOST2).is_none() {
-            resolver.set_static_ips(
-                IMAGE_HOST2,
-                vec![
-                    "210.140.139.135".parse().unwrap(),
-                    "210.140.139.136".parse().unwrap(),
-                    "210.140.139.137".parse().unwrap(),
-                ],
-            );
-        }
+    let maho_config = Arc::new(MahoConfig {
+        enabled: domain_fronting_enabled,
+        split_delay_ms,
+        dns_resolver: resolver,
+    });
 
-        for host in [IMAGE_HOST, IMAGE_HOST2] {
-            if let Some(ips) = resolver.get_static_ips(host) {
-                let addrs: Vec<SocketAddr> =
-                    ips.into_iter().map(|ip| SocketAddr::new(ip, 443)).collect();
-                if !addrs.is_empty() {
-                    builder = builder.resolve_to_addrs(host, &addrs);
-                }
-            }
-        }
-    }
+    let clean_proxy = proxy_url
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string());
 
-    builder.build().unwrap_or_default()
+    MahoHttpClient::new(maho_config, clean_proxy)
 }
 
 #[derive(uniffi::Object)]
 pub struct CacheEngine {
     inner: Arc<RwLock<CacheInner>>,
-    http_client: Arc<parking_lot::RwLock<reqwest::Client>>,
-    maho_proxy: Arc<parking_lot::RwLock<Option<Arc<MahoProxyServer>>>>,
+    http_client: Arc<parking_lot::RwLock<MahoHttpClient>>,
 }
 
 #[uniffi::export(async_runtime = "tokio")]
@@ -311,17 +291,11 @@ impl CacheEngine {
             fragmented_bytes: 0,
         };
 
-        let maho_config = Arc::new(MahoConfig::default());
-        let maho_proxy: Option<Arc<MahoProxyServer>> = MahoProxyServer::start_sync(maho_config)
-            .ok()
-            .map(Arc::new);
-        let maho_proxy_url = maho_proxy.as_ref().map(|p| p.proxy_url());
-        let http_client = build_http_client(true, &HashMap::new(), None, maho_proxy_url.as_deref());
+        let http_client = build_http_client(true, 100, &HashMap::new(), None);
 
         Ok(Arc::new(Self {
             inner: Arc::new(RwLock::new(inner)),
             http_client: Arc::new(parking_lot::RwLock::new(http_client)),
-            maho_proxy: Arc::new(parking_lot::RwLock::new(maho_proxy)),
         }))
     }
 
@@ -332,59 +306,14 @@ impl CacheEngine {
         host_ips: HashMap<String, Vec<String>>,
         proxy_url: Option<String>,
     ) {
-        let resolver = DnsResolver::new();
-        for (host, ips) in &host_ips {
-            let parsed: Vec<IpAddr> = ips.iter().filter_map(|s| s.parse().ok()).collect();
-            resolver.set_static_ips(host, parsed);
-        }
-        if resolver.get_static_ips(IMAGE_HOST).is_none() {
-            resolver.set_static_ips(
-                IMAGE_HOST,
-                vec![
-                    "210.140.139.134".parse().unwrap(),
-                    "210.140.139.135".parse().unwrap(),
-                    "210.140.139.136".parse().unwrap(),
-                    "210.140.139.137".parse().unwrap(),
-                ],
-            );
-        }
-        if resolver.get_static_ips(IMAGE_HOST2).is_none() {
-            resolver.set_static_ips(
-                IMAGE_HOST2,
-                vec![
-                    "210.140.139.135".parse().unwrap(),
-                    "210.140.139.136".parse().unwrap(),
-                    "210.140.139.137".parse().unwrap(),
-                ],
-            );
-        }
-
-        let maho_config = Arc::new(MahoConfig {
-            enabled: domain_fronting_enabled,
-            split_delay_ms,
-            dns_resolver: resolver,
-        });
-
-        let maho_proxy: Option<Arc<MahoProxyServer>> = if domain_fronting_enabled
-            && proxy_url.as_deref().unwrap_or("").trim().is_empty()
-        {
-            MahoProxyServer::start_sync(maho_config)
-                .ok()
-                .map(Arc::new)
-        } else {
-            None
-        };
-        let maho_proxy_url = maho_proxy.as_ref().map(|p| p.proxy_url());
-
         let new_client = build_http_client(
             domain_fronting_enabled,
+            split_delay_ms,
             &host_ips,
             proxy_url.as_deref(),
-            maho_proxy_url.as_deref(),
         );
 
         *self.http_client.write() = new_client;
-        *self.maho_proxy.write() = maho_proxy;
     }
 
     pub fn set_proxy(&self, proxy_url: Option<String>) {
@@ -477,7 +406,8 @@ impl CacheEngine {
             } else if (inner.chunks.len() as u32) < inner.max_files {
                 let new_id = inner.chunks.len() as u32;
                 let chunk_size = inner.initial_file_size.max(aligned_len);
-                let mut new_chunk = MmapChunk::open_or_create(&inner.cache_dir, new_id, chunk_size)?;
+                let mut new_chunk =
+                    MmapChunk::open_or_create(&inner.cache_dir, new_id, chunk_size)?;
                 let offset = new_chunk.allocate(&data)?;
                 let chunk_id = new_chunk.id;
                 inner.chunks.push(new_chunk);
@@ -657,8 +587,9 @@ impl CacheEngine {
             } else {
                 &url
             };
-            let bytes =
-                fs::read(path_str).map_err(|e| CacheError::Io { message: e.to_string() })?;
+            let bytes = fs::read(path_str).map_err(|e| CacheError::Io {
+                message: e.to_string(),
+            })?;
             if let Some(cb) = &callback {
                 cb.on_progress(bytes.len() as u64, bytes.len() as u64);
             }
@@ -678,10 +609,9 @@ impl CacheEngine {
             req = req.header("User-Agent", "PixivAndroidApp/6.140.2 (Android 15.0)");
         }
 
-        let resp = req
-            .send()
-            .await
-            .map_err(|e| CacheError::Network { message: e.to_string() })?;
+        let resp = req.send().await.map_err(|e| CacheError::Network {
+            message: e.to_string(),
+        })?;
         let status = resp.status();
         if !status.is_success() {
             return Err(CacheError::Http {
@@ -697,7 +627,9 @@ impl CacheEngine {
         let mut last_progress_report = std::time::Instant::now();
 
         while let Some(chunk_res) = stream.next().await {
-            let chunk = chunk_res.map_err(|e| CacheError::Network { message: e.to_string() })?;
+            let chunk = chunk_res.map_err(|e| CacheError::Network {
+                message: e.to_string(),
+            })?;
             buffer.extend_from_slice(&chunk);
 
             if let Some(cb) = &callback {

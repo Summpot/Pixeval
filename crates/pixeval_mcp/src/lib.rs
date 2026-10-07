@@ -22,13 +22,13 @@ pub use tools::*;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
     use pixeval_cache::CacheEngine;
     use pixeval_download::DownloadManager;
     use pixeval_mako::{MakoClient, MakoConfigurationDto};
     use pixeval_plugin::PluginHostEngine;
     use pixeval_storage::StorageEngine;
     use pixeval_subscription::SubscriptionSyncEngine;
+    use std::sync::Arc;
 
     #[derive(Clone)]
     struct MockSessionBridge {
@@ -90,7 +90,14 @@ mod tests {
         let sub_engine = Arc::new(SubscriptionSyncEngine::new(Some(5), None));
         let plugin_engine = PluginHostEngine::new("5.0.0".to_string());
 
-        (mako, storage, download, cache, sub_engine, Some(plugin_engine))
+        (
+            mako,
+            storage,
+            download,
+            cache,
+            sub_engine,
+            Some(plugin_engine),
+        )
     }
 
     #[test]
@@ -165,12 +172,15 @@ mod tests {
         server.start().await.unwrap();
         assert!(server.is_running());
 
-        let client = reqwest::Client::new();
+        let client = pixeval_maho::MahoHttpClient::new(
+            std::sync::Arc::new(pixeval_maho::MahoConfig::default()),
+            None,
+        );
         let endpoint = server.endpoint();
 
         // 1. GET /mcp
         let res = client.get(&endpoint).send().await.unwrap();
-        assert_eq!(res.status(), reqwest::StatusCode::OK);
+        assert_eq!(res.status().as_u16(), 200);
 
         // 2. POST /mcp with initialize
         let init_body = serde_json::json!({
@@ -179,8 +189,14 @@ mod tests {
             "method": "initialize",
             "params": {}
         });
-        let res = client.post(&endpoint).json(&init_body).send().await.unwrap();
-        assert_eq!(res.status(), reqwest::StatusCode::OK);
+        let res = client
+            .post(&endpoint)
+            .json(&init_body)
+            .unwrap()
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(res.status().as_u16(), 200);
         let val: serde_json::Value = res.json().await.unwrap();
         assert_eq!(val["result"]["serverInfo"]["name"], "Pixeval MCP");
 
@@ -191,8 +207,14 @@ mod tests {
             "method": "tools/list",
             "params": {}
         });
-        let res = client.post(&endpoint).json(&list_body).send().await.unwrap();
-        assert_eq!(res.status(), reqwest::StatusCode::OK);
+        let res = client
+            .post(&endpoint)
+            .json(&list_body)
+            .unwrap()
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(res.status().as_u16(), 200);
         let val: serde_json::Value = res.json().await.unwrap();
         let tools = val["result"]["tools"].as_array().unwrap();
         assert!(!tools.is_empty());
@@ -207,8 +229,14 @@ mod tests {
                 "arguments": {}
             }
         });
-        let res = client.post(&endpoint).json(&call_body).send().await.unwrap();
-        assert_eq!(res.status(), reqwest::StatusCode::OK);
+        let res = client
+            .post(&endpoint)
+            .json(&call_body)
+            .unwrap()
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(res.status().as_u16(), 200);
         let val: serde_json::Value = res.json().await.unwrap();
         assert_eq!(val["id"], 3);
 
