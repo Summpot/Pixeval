@@ -96,7 +96,7 @@ flowchart TD
     end
 
     subgraph Phase3 ["Phase 3: 业务仓储闭环与辅助服务下沉 (去胶水/去依赖)"]
-        P3_1["3.1 领域仓储与状态机闭环<br/>【吸收修复】H1(JSON大小写与老数据水合兼容), 2.5(存储枚举错位/稳定ID/唯一索引)<br/>【Partial规范】仓储实体在 NativeExtensions/Storage 原地扩展，清退 26 个 Manager"]
+        P3_1["3.1 领域仓储与状态机闭环 [已完成]<br/>【吸收修复】H1(JSON大小写与老数据水合兼容), 2.5(存储枚举错位/稳定ID/唯一索引)<br/>【Partial规范】仓储实体在 NativeExtensions/Storage 原地扩展，清退 26 个 Manager"]
         P3_2["3.2 多图站聚合与 SauceNao 搜图 (清退 Imouto.BooruParser)<br/>【Partial规范】Booru/SauceNao 模型在 NativeExtensions 原地实现 IArtworkInfo"]
         P3_3["3.3 导航 YAML 诊断与主页网格算法 (清退 SharpYaml)"]
         P3_4["3.4 原生应用更新与 GitHub 代理引擎 (pixeval_update)"]
@@ -199,7 +199,7 @@ flowchart TD
 
 ### 阶段 3：业务仓储闭环与辅助服务下沉 (Phase 3)
 
-#### 3.1 领域仓储与状态机闭环 (清退 C# 26 个 Database 类)
+#### 3.1 领域仓储与状态机闭环 (清退 C# 26 个 Database 类) (已完成)
 - **功能目标**：
   - 在 `pixeval_storage` 内部封装高阶业务仓储（Repository Pattern）：`HistoryRepository`、`WatchLaterRepository`、`DownloadRepository`。
   - 实体在 Rust 端以强类型结构（`WorkMetadata`）直接读写 SQLite，无需在 C# 端中转 JSON。

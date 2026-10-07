@@ -5,8 +5,8 @@ using System;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Pixeval.Controls;
-using Pixeval.Models.Database.Managers;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 
 namespace Pixeval.Views;
@@ -78,7 +78,7 @@ public class BrowsingHistoryPage : HistoryPage
 
     /// <inheritdoc />
     protected override IArtworkHistorySource Source =>
-        App.AppViewModel.HistoryPersistHelper.BrowseHistorySource;
+        App.AppViewModel.StorageEngine.HistoryRepository;
 }
 
 public class WatchLaterPage : HistoryPage
@@ -87,5 +87,5 @@ public class WatchLaterPage : HistoryPage
 
     /// <inheritdoc />
     protected override IArtworkHistorySource Source =>
-        App.AppViewModel.HistoryPersistHelper.WatchLaterSource;
+        App.AppViewModel.StorageEngine.WatchLaterRepository;
 }

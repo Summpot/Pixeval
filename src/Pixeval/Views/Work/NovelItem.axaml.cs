@@ -29,7 +29,7 @@ public partial class NovelItem : WorkItem
             return;
         if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
             return;
-        App.AppViewModel.HistoryPersistHelper.AddSearchHistory(tag.Name, tag.TranslatedName);
+        App.AppViewModel.AddSearchHistory(tag.Name, tag.TranslatedName);
         viewContainer.NavigateTo(new WorkSearchResultPage(tag.Name, SimpleWorkType.Novel));
     }
 

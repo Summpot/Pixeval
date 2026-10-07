@@ -11,10 +11,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.Download;
 using Pixeval.Extensions.Common.FormatProviders;
-using Pixeval.Models.Database;
 using Pixeval.Models.Extensions;
 using Pixeval.Models.Options;
 using Pixeval.Native.Media;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO;
 
@@ -25,7 +25,7 @@ namespace Pixeval.Models.Download.Tasks;
 /// </summary>
 public class UgoiraDownloadTaskGroup : DownloadTaskGroup
 {
-    public ISingleAnimatedImage Entry => (ISingleAnimatedImage) DatabaseEntry.Entry;
+    public ISingleAnimatedImage Entry => (ISingleAnimatedImage) DatabaseEntry.Entry!;
 
     /// <summary>
     /// 表示将每张图下载到的目标文件夹。
@@ -79,7 +79,7 @@ public class UgoiraDownloadTaskGroup : DownloadTaskGroup
         SetNotCreateFromEntry();
     }
 
-    public UgoiraDownloadTaskGroup(DownloadHistoryEntryBase entry) : base(entry)
+    public UgoiraDownloadTaskGroup(IDownloadHistoryEntry entry) : base(entry)
     {
         DestinationUgoiraFormat = GetFormatToken(entry);
 
@@ -262,7 +262,7 @@ public class UgoiraDownloadTaskGroup : DownloadTaskGroup
         }
     }
 
-    private static UgoiraDownloadFormatToken GetFormatToken(DownloadHistoryEntryBase entry)
+    private static UgoiraDownloadFormatToken GetFormatToken(IDownloadHistoryEntry entry)
     {
         if (!string.IsNullOrWhiteSpace(entry.FormatToken))
             return IoHelper.GetAvailableUgoiraDownloadFormatToken(entry.FormatToken);

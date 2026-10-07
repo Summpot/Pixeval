@@ -245,19 +245,19 @@ public partial class SettingsMainView : ContentPage
 
     private void DeleteSearchHistoriesButton_OnClicked(object sender, RoutedEventArgs e)
     {
-        App.AppViewModel.HistoryPersistHelper.SearchHistoryEntries.Clear();
+        App.AppViewModel.ClearSearchHistory();
         ShowClearData(ClearDataKind.SearchHistory);
     }
 
     private void DeleteBrowseHistoriesButton_OnClicked(object sender, RoutedEventArgs e)
     {
-        App.AppViewModel.HistoryPersistHelper.ClearBrowseHistory();
+        App.AppViewModel.ClearBrowseHistory();
         ShowClearData(ClearDataKind.BrowseHistory);
     }
 
     private void DeleteDownloadHistoriesButton_OnClicked(object sender, RoutedEventArgs e)
     {
-        App.AppViewModel.HistoryPersistHelper.DownloadManager.ClearTasks();
+        App.AppViewModel.DownloadManager.ClearTasks();
         ShowClearData(ClearDataKind.DownloadHistory);
     }
 

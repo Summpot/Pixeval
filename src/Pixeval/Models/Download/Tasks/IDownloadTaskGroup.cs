@@ -3,7 +3,7 @@
 
 using Misaki;
 using Pixeval.Download;
-using Pixeval.Models.Database;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.Models.Download.Tasks;
 
@@ -11,7 +11,7 @@ public interface IDownloadTaskGroup : IDownloadTaskGroupBase, IIdentityInfo
 {
     string IPlatformInfo.Platform => Pixiv;
 
-    DownloadHistoryEntryBase DatabaseEntry { get; }
+    IDownloadHistoryEntry DatabaseEntry { get; }
 
     DownloadTaskKey IDownloadTaskGroupBase.Key => DatabaseEntry.DownloadTaskKey;
 }

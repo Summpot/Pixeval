@@ -5,7 +5,6 @@ using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Download;
-using Pixeval.Models.Database;
 using Pixeval.Models.Download;
 using Pixeval.Models.Options;
 using Pixeval.Utilities;

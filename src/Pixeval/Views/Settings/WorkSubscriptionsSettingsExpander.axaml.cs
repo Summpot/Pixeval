@@ -16,8 +16,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.Models.Pixiv;
 using Pixeval.I18N;
-using Pixeval.Models.Database;
-using Pixeval.Models.Database.Managers;
 using Pixeval.Models.Options;
 using Pixeval.Models.Settings.Entries;
 using Pixeval.Models.Subscriptions;
@@ -50,9 +48,6 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         UpdateWorkKindItems();
     }
 
-    private static WorkSubscriptionPersistentManager SubscriptionManager =>
-        App.AppViewModel.AppServiceProvider.GetRequiredService<WorkSubscriptionPersistentManager>();
-
     private static IWorkSubscriptionService SubscriptionService =>
         App.AppViewModel.AppServiceProvider.GetRequiredService<IWorkSubscriptionService>();
 
@@ -73,8 +68,11 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         Subscriptions.Clear();
         try
         {
-            await foreach (var entry in SubscriptionManager.StreamEntriesAsync(token: token))
+            foreach (var entry in App.AppViewModel.StorageEngine.GetAllSubscriptions())
+            {
+                token.ThrowIfCancellationRequested();
                 Subscriptions.Add(new(entry));
+            }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {

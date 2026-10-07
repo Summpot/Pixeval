@@ -9,9 +9,9 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.Extensions.Common.FormatProviders;
-using Pixeval.Models.Database;
 using Pixeval.Models.Extensions;
 using Pixeval.Native.Media;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO;
 
@@ -19,9 +19,9 @@ namespace Pixeval.Models.Download.Tasks;
 
 public class MangaDownloadTaskGroup : DownloadTaskGroup
 {
-    public IImageSet Entry => (IImageSet) DatabaseEntry.Entry;
+    public IImageSet Entry => (IImageSet) DatabaseEntry.Entry!;
 
-    public MangaDownloadTaskGroup(DownloadHistoryEntryBase entry) : base(entry)
+    public MangaDownloadTaskGroup(IDownloadHistoryEntry entry) : base(entry)
     {
         DestinationIllustrationFormat = GetFormatToken(entry);
     }
@@ -152,7 +152,7 @@ public class MangaDownloadTaskGroup : DownloadTaskGroup
         FileHelper.DeleteEmptyFolder(OpenLocalDestination);
     }
 
-    private static IllustrationDownloadFormatToken GetFormatToken(DownloadHistoryEntryBase entry)
+    private static IllustrationDownloadFormatToken GetFormatToken(IDownloadHistoryEntry entry)
     {
         if (!string.IsNullOrWhiteSpace(entry.FormatToken))
             return IoHelper.GetAvailableIllustrationDownloadFormatToken(entry.FormatToken);

@@ -7,8 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Models.Database.Managers;
 using Pixeval.Native.Storage;
 
 namespace Pixeval.ViewModels;
@@ -17,18 +15,18 @@ public partial class LoginPageViewModel : ViewModelBase
 {
     private readonly SemaphoreSlim _loadUsersLock = new(1, 1);
     private readonly int _currentUserKey;
-    private readonly LoginUserPersistentManager _manager;
+    private readonly StorageEngine _storageEngine;
     private bool _areUsersLoaded;
 
     public LoginPageViewModel() : this(
-        App.AppViewModel.AppServiceProvider.GetRequiredService<LoginUserPersistentManager>(),
+        App.AppViewModel.StorageEngine,
         App.AppViewModel.LoginContext.CurrentKey)
     {
     }
 
-    internal LoginPageViewModel(LoginUserPersistentManager manager, int currentUserKey)
+    internal LoginPageViewModel(StorageEngine storageEngine, int currentUserKey)
     {
-        _manager = manager;
+        _storageEngine = storageEngine;
         _currentUserKey = currentUserKey;
         Users = [];
         RefreshToken = "";
@@ -57,8 +55,11 @@ public partial class LoginPageViewModel : ViewModelBase
                 return;
 
             Users.Clear();
-            await foreach (var user in _manager.StreamEntriesAsync(token: token))
+            foreach (var user in _storageEngine.GetAllLoginUsers())
+            {
+                token.ThrowIfCancellationRequested();
                 Users.Add(user);
+            }
             _areUsersLoaded = true;
             SelectedUser = Users.FirstOrDefault(user => user.HistoryEntryId == _currentUserKey);
         }

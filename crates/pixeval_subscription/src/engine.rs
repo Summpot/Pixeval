@@ -604,7 +604,7 @@ impl SubscriptionSyncEngine {
                     let payload_json = serde_json::to_string(&novel).unwrap_or_default();
                     let _ = storage.add_or_replace_subscription_download_history(
                         novel.id.to_string(),
-                        Some(format!("Novel:{}", novel.id)),
+                        Some("Mako.Model.Novel".to_string()),
                         destination.clone(),
                         1,
                         None,
@@ -789,7 +789,7 @@ impl SubscriptionSyncEngine {
                     let payload_json = serde_json::to_string(&illust).unwrap_or_default();
                     let _ = storage.add_or_replace_subscription_download_history(
                         illust.id.to_string(),
-                        Some(format!("Illustration:{}", illust.id)),
+                        Some("Mako.Model.Illustration".to_string()),
                         destination.clone(),
                         1,
                         None,

@@ -39,7 +39,7 @@ public partial class NovelItemViewModel
     {
         var factory = App.AppViewModel.AppServiceProvider.GetRequiredService<NovelDownloadTaskFactory>();
         var task = factory.Create(Entry, path, content);
-        App.AppViewModel.HistoryPersistHelper.DownloadManager.QueueTask(task);
+        App.AppViewModel.DownloadManager.QueueTask(task);
         viewContainerBase?.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
     }
 

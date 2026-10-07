@@ -251,7 +251,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
                     return;
 
                 SeriesInfo = WorkSeriesInfoViewModel.Create(content, currentNovel.Entry.Series);
-                App.AppViewModel.HistoryPersistHelper.AddBrowseHistory(currentNovel.Entry);
+                App.AppViewModel.AddBrowseHistory(currentNovel.Entry);
                 var markdowns = await Task.Run(() => BuildPageMarkdowns(content), token);
                 token.ThrowIfCancellationRequested();
                 if (index != CurrentWorkIndex || _disposed)

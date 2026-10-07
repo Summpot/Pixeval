@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Download;
-using Pixeval.Models.Database;
+using Pixeval.Native.Storage;
 using Pixeval.Models.Download;
 using Pixeval.Models.Download.Tasks;
 using Pixeval.Models.Options;
@@ -57,7 +57,7 @@ public sealed class NovelDownloadTaskGroupTest
         {
             var tokenizedDestination = Path.Combine(directory, "work.<ext>");
             var format = NovelDownloadFormatToken.BuiltIn(NovelDownloadFormat.OriginalTxt);
-            var entry = DownloadHistoryEntryBase.Create(tokenizedDestination, DesignHelper.DesignNovel);
+            var entry = IDownloadHistoryEntry.Create(tokenizedDestination, DesignHelper.DesignNovel);
             entry.FormatToken = format.Value;
             var novelFile = NovelDownloadTaskGroup.GetOutputPaths(tokenizedDestination, format).NovelFile;
             Directory.CreateDirectory(Path.GetDirectoryName(novelFile)!);
@@ -82,7 +82,7 @@ public sealed class NovelDownloadTaskGroupTest
         try
         {
             var tokenizedDestination = Path.Combine(directory, "work.<ext>");
-            var entry = DownloadHistoryEntryBase.Create(tokenizedDestination, DesignHelper.DesignIllustration);
+            var entry = IDownloadHistoryEntry.Create(tokenizedDestination, DesignHelper.DesignIllustration);
             entry.FormatToken = UgoiraDownloadFormatToken.DefaultToken;
             var folder = IoHelper.RemoveTokenExtension(tokenizedDestination);
             var intervalsFile = Path.Combine(folder, "intervals in milliseconds.csv");
@@ -190,12 +190,12 @@ public sealed class NovelDownloadTaskGroupTest
         ]
     };
 
-    private sealed class TestNovelDownloadTaskGroup(DownloadHistoryEntryBase entry) : NovelDownloadTaskGroup(entry)
+    private sealed class TestNovelDownloadTaskGroup(IDownloadHistoryEntry entry) : NovelDownloadTaskGroup(entry)
     {
         public void InvokeBeforeReset() => BeforeReset();
     }
 
-    private sealed class TestUgoiraDownloadTaskGroup(DownloadHistoryEntryBase entry) : UgoiraDownloadTaskGroup(entry)
+    private sealed class TestUgoiraDownloadTaskGroup(IDownloadHistoryEntry entry) : UgoiraDownloadTaskGroup(entry)
     {
         public void InvokeBeforeReset() => BeforeReset();
     }

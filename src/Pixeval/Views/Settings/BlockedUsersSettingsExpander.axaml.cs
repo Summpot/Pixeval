@@ -12,7 +12,6 @@ using Avalonia.Interactivity;
 using CommunityToolkit.Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
-using Pixeval.Models.Database.Managers;
 using Pixeval.Models.Settings.Entries;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Settings;
@@ -36,9 +35,6 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
 
     public BlockedUsersSettingsExpander() => InitializeComponent();
 
-    private static BlockedUserPersistentManager UserManager =>
-        App.AppViewModel.AppServiceProvider.GetRequiredService<BlockedUserPersistentManager>();
-
     private async Task ReloadAsync()
     {
         _reloadCancellationTokenSource?.Cancel();
@@ -48,8 +44,11 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
         Users.Clear();
         try
         {
-            await foreach (var entry in UserManager.StreamEntriesAsync(token: token))
+            foreach (var entry in App.AppViewModel.StorageEngine.GetAllBlockedUsers())
+            {
+                token.ThrowIfCancellationRequested();
                 Users.Add(new(entry));
+            }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -73,7 +72,7 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
         try
         {
             var user = (await App.AppViewModel.MakoClient.GetUserFromIdAsync(userId)).User;
-            UserManager.Upsert(BlockedContentModelHelper.CreateBlockedUserRecord(user));
+            App.AppViewModel.StorageEngine.AddOrUpdateBlockedUser(BlockedContentModelHelper.CreateBlockedUserRecord(user));
             TargetIdTextBox.Text = "";
             await ReloadAsync();
         }
@@ -101,7 +100,7 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
         try
         {
             var user = (await App.AppViewModel.MakoClient.GetUserFromIdAsync(item.Entry.Id)).User;
-            var entry = UserManager.Upsert(BlockedContentModelHelper.CreateBlockedUserRecord(user));
+            var entry = App.AppViewModel.StorageEngine.AddOrUpdateBlockedUser(BlockedContentModelHelper.CreateBlockedUserRecord(user));
             item.UpdateUser(entry);
         }
         catch (Exception exception)
@@ -115,7 +114,7 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
         if (sender is not Button { Tag: BlockedUserItemViewModel item })
             return;
 
-        _ = UserManager.TryDeleteByUserId(item.Entry.Id);
+        _ = App.AppViewModel.StorageEngine.TryDeleteBlockedUser(item.Entry.Id);
         await ReloadAsync();
     }
 

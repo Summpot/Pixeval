@@ -86,7 +86,7 @@ public class WorkInfoPane : TemplatedControl
             return;
 
         var type = entry is Illustration ? SimpleWorkType.Illustration : SimpleWorkType.Novel;
-        App.AppViewModel.HistoryPersistHelper.AddSearchHistory(tag.Name, tag.TranslatedName);
+        App.AppViewModel.AddSearchHistory(tag.Name, tag.TranslatedName);
         viewContainer.NavigateTo(new WorkSearchResultPage(tag.Name, type));
     }
 

@@ -1,8 +1,8 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Models.Database.Managers;
 using Pixeval.Models.Options;
 using Pixeval.Native.Storage;
 
@@ -15,26 +15,29 @@ public sealed class UserInfoEntryDatabaseTest
     public void DerivedEntries_CanPersistAndQueryIndependently()
     {
         using var storage = new StorageEngine(":memory:");
-        var subManager = new WorkSubscriptionPersistentManager(storage);
-        var blockedManager = new BlockedUserPersistentManager(storage);
 
-        subManager.AddOrUpdate(new WorkSubscriptionRecord(
+        storage.UpsertSubscription(
             12345,
-            WorkSubscriptionType.Posts,
-            WorkSubscriptionWorkKind.Illustration,
-            "Artist 1"));
+            (uint)WorkSubscriptionType.Posts,
+            (uint)WorkSubscriptionWorkKind.Illustration,
+            "Artist 1",
+            "Artist 1",
+            "",
+            "",
+            null);
 
-        blockedManager.AddOrUpdate(new BlockedUserRecord(67890, "Blocked 1"));
+        storage.AddOrUpdateBlockedUser(67890, "Blocked 1", "", "blocked_1");
 
-        Assert.AreEqual(1, subManager.Count);
-        Assert.AreEqual(1, blockedManager.Count);
+        Assert.AreEqual(1, storage.CountSubscriptions());
+        Assert.AreEqual(1, storage.CountBlockedUsers());
 
-        var sub = subManager.GetBySubscriptionKey(12345, WorkSubscriptionType.Posts, WorkSubscriptionWorkKind.Illustration);
+        var sub = storage.GetSubscriptionByKey(12345, (uint)WorkSubscriptionType.Posts, (uint)WorkSubscriptionWorkKind.Illustration);
         Assert.IsNotNull(sub);
-        Assert.AreEqual("Artist 1", sub.Name);
+        Assert.AreEqual("Artist 1", sub.Title);
 
-        var blocked = blockedManager.GetByUserId(67890);
-        Assert.IsNotNull(blocked);
-        Assert.AreEqual("Blocked 1", blocked.Name);
+        var blockedUsers = storage.GetAllBlockedUsers();
+        Assert.AreEqual(1, blockedUsers.Count);
+        Assert.AreEqual(67890, blockedUsers[0].Id);
+        Assert.AreEqual("Blocked 1", blockedUsers[0].UserName);
     }
 }

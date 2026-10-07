@@ -5,8 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Misaki;
+using Pixeval.Models.Pixiv;
 
-namespace Pixeval.Models.Database.Managers;
+namespace Pixeval.Native.Storage;
 
 public interface IArtworkHistorySource
 {

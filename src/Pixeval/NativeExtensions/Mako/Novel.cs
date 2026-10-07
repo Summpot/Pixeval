@@ -124,6 +124,41 @@ public partial record Novel : IArtworkInfo, IWorkEntry, INovelEntry, ISerializab
     [JsonIgnore]
     public string SerializeKey => LegacyNovelToken;
 
-    public static Novel Deserialize(string data) =>
-        System.Text.Json.JsonSerializer.Deserialize<Novel>(data)!;
+    private static readonly System.Text.Json.JsonSerializerOptions s_snakeCaseOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower
+    };
+
+    private static readonly System.Text.Json.JsonSerializerOptions s_caseInsensitiveOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    public static Novel Deserialize(string data)
+    {
+        try
+        {
+            var res = System.Text.Json.JsonSerializer.Deserialize<Novel>(data, s_snakeCaseOptions);
+            if (res != null && (res.Id != 0 || res.ImageUrls != null))
+                return res;
+        }
+        catch
+        {
+            // fallback
+        }
+
+        try
+        {
+            var res = System.Text.Json.JsonSerializer.Deserialize<Novel>(data, s_caseInsensitiveOptions);
+            if (res != null)
+                return res;
+        }
+        catch
+        {
+            // fallback
+        }
+
+        return System.Text.Json.JsonSerializer.Deserialize<Novel>(data)!;
+    }
 }

@@ -86,7 +86,7 @@ public class SettingsPageViewModel : ViewModelBase
                     entry => entry.MainValue.ValueChanged += t =>
                     {
                         App.AppViewModel.SetNameResolvers();
-                        App.AppViewModel.HistoryPersistHelper.DownloadManager.UpdateNetworkOptions();
+                        App.AppViewModel.DownloadManager.UpdateNetworkOptions();
                         App.AppViewModel.UpdateMakoNetworkOptions();
                     })
                 .DomainFronting(t => t.GitHubDomainFronting, t => t.EnableGitHubDomainFronting, entry => entry
@@ -98,7 +98,7 @@ public class SettingsPageViewModel : ViewModelBase
                     .IPSet(t => t.GitHubCodeloadNameResolver))
                 .Proxy(entry => entry.ProxyChanged += t =>
                 {
-                    App.AppViewModel.HistoryPersistHelper.DownloadManager.UpdateNetworkOptions();
+                    App.AppViewModel.DownloadManager.UpdateNetworkOptions();
                     App.AppViewModel.UpdateMakoNetworkOptions();
                 })
                 .String(t => t.MirrorHost)
@@ -136,7 +136,7 @@ public class SettingsPageViewModel : ViewModelBase
             .NewGroup(t => t.DownloadSettings, group => group
                 .Bool(t => t.OverwriteDownloadedFile)
                 .Int(t => t.MaxDownloadTaskConcurrencyLevel, 1, Environment.ProcessorCount, 1,
-                    entry => entry.ValueChanged += t => App.AppViewModel.HistoryPersistHelper.DownloadManager.ConcurrencyDegree = t)
+                    entry => entry.ValueChanged += t => App.AppViewModel.DownloadManager.ConcurrencyDegree = t)
                 .DownloadMacro(t => t.DownloadPathMacro)
                 .MultiValues(t => t.DownloadFormats, entry =>
                     entry.IllustrationDownloadFormat()

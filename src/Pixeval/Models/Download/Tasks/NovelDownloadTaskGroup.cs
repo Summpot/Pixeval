@@ -12,10 +12,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.Download;
 using Pixeval.Extensions.Common.FormatProviders;
-using Pixeval.Models.Database;
 using Pixeval.Models.Extensions;
 using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO;
 using Pixeval.ViewModels;
@@ -24,7 +24,7 @@ namespace Pixeval.Models.Download.Tasks;
 
 public class NovelDownloadTaskGroup : DownloadTaskGroup
 {
-    public Pixeval.Native.Mako.Novel Entry => (Pixeval.Native.Mako.Novel) DatabaseEntry.Entry;
+    public Pixeval.Native.Mako.Novel Entry => (Pixeval.Native.Mako.Novel) DatabaseEntry.Entry!;
 
     private NovelContent NovelContent { get; set; } = null!;
 
@@ -76,7 +76,7 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
         SetNotCreateFromEntry();
     }
 
-    public NovelDownloadTaskGroup(DownloadHistoryEntryBase entry) : base(entry)
+    public NovelDownloadTaskGroup(IDownloadHistoryEntry entry) : base(entry)
     {
         DestinationNovelFormat = GetNovelFormat(entry);
 
@@ -252,7 +252,7 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
         FileHelper.DeleteEmptyFolder(ImageFolderPath);
     }
 
-    private static NovelDownloadFormatToken GetNovelFormat(DownloadHistoryEntryBase entry)
+    private static NovelDownloadFormatToken GetNovelFormat(IDownloadHistoryEntry entry)
     {
         if (!string.IsNullOrWhiteSpace(entry.FormatToken))
             return IoHelper.GetAvailableNovelDownloadFormatToken(entry.FormatToken);

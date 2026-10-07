@@ -1,5 +1,33 @@
-// Copyright (c) Pixeval.
-// Licensed under the GPL-3.0 License.
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct WorkMetadata {
+    pub id: String,
+    pub title: String,
+    pub work_type: String,
+    pub author_id: String,
+    pub author_name: String,
+    pub author_account: String,
+    pub author_avatar: String,
+    pub thumb_url: String,
+    pub original_url: Option<String>,
+    pub total_bookmarks: i64,
+    pub total_views: i64,
+    pub create_date: String,
+    pub page_count: i32,
+    pub x_restrict: u32,
+    pub is_ai: bool,
+    pub tags: Vec<String>,
+    pub extra_json: Option<String>,
+}
+
+#[uniffi::export(callback_interface)]
+pub trait StorageObserver: Send + Sync {
+    fn on_browse_history_changed(&self);
+    fn on_watch_later_changed(&self);
+    fn on_download_history_changed(&self);
+    fn on_search_history_changed(&self);
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct SearchHistoryRecord {

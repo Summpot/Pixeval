@@ -169,7 +169,7 @@ public partial class DownloadItemView : ContentPage, IDisposable
                     }
                 }
 
-                _ = App.AppViewModel.HistoryPersistHelper.DownloadManager.TryRemoveTask(item.DownloadTask);
+                _ = App.AppViewModel.DownloadManager.TryRemoveTask(item.DownloadTask);
             }
 
             UnselectAll();

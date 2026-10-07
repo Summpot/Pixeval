@@ -4,9 +4,7 @@
 using System;
 using System.Collections.Frozen;
 using System.Linq;
-using Microsoft.Extensions.DependencyInjection;
 using Misaki;
-using Pixeval.Models.Database.Managers;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Mako;
 using Pixeval.Utilities;
@@ -24,8 +22,9 @@ public static class BlockedContentHelper
         var appViewModel = App.AppViewModel;
         var blockedTags = appViewModel.AppSettings.BrowsingExperienceSettings.BlockedTags
             .ToFrozenSet(StringComparer.Ordinal);
-        var blockedUsers = appViewModel.AppServiceProvider.GetRequiredService<BlockedUserPersistentManager>()
-            .GetBlockedUserIds();
+        var blockedUsers = appViewModel.StorageEngine.GetAllBlockedUsers()
+            .Select(u => u.Id)
+            .ToFrozenSet();
         return new(blockedTags, blockedUsers);
     }
 
@@ -86,14 +85,13 @@ public static class BlockedContentHelper
         var id = user is IIdEntry idEntry && idEntry.Id != 0
             ? idEntry.Id
             : long.TryParse(user.Id, out var parsed) ? parsed : 0;
-        if (id <= 0 || App.AppViewModel?.AppServiceProvider is not { } serviceProvider)
+        if (id <= 0 || App.AppViewModel?.StorageEngine is not { } storage)
             return false;
 
-        var manager = serviceProvider.GetRequiredService<BlockedUserPersistentManager>();
-        if (manager.GetBlockedUserIds().Contains(id))
+        if (storage.GetAllBlockedUsers().Any(u => u.Id == id))
             return false;
 
-        manager.Upsert(BlockedContentModelHelper.CreateBlockedUserRecord(user));
+        storage.AddOrUpdateBlockedUser(BlockedContentModelHelper.CreateBlockedUserRecord(user));
         return true;
     }
 }

@@ -11,7 +11,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Pixeval.Controls;
 using Pixeval.Download;
 using Pixeval.I18N;
-using Pixeval.Models.Database;
 using Pixeval.Models.Options;
 using Pixeval.Models.Subscriptions;
 using Pixeval.Native.Storage;

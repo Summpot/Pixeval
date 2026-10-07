@@ -208,6 +208,41 @@ public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISi
     [JsonIgnore]
     public string SerializeKey => LegacyIllustrationToken;
 
-    public static Illustration Deserialize(string data) =>
-        System.Text.Json.JsonSerializer.Deserialize<Illustration>(data)!;
+    private static readonly System.Text.Json.JsonSerializerOptions s_snakeCaseOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower
+    };
+
+    private static readonly System.Text.Json.JsonSerializerOptions s_caseInsensitiveOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    public static Illustration Deserialize(string data)
+    {
+        try
+        {
+            var res = System.Text.Json.JsonSerializer.Deserialize<Illustration>(data, s_snakeCaseOptions);
+            if (res != null && (res.Id != 0 || res.ImageUrls != null))
+                return res;
+        }
+        catch
+        {
+            // fallback
+        }
+
+        try
+        {
+            var res = System.Text.Json.JsonSerializer.Deserialize<Illustration>(data, s_caseInsensitiveOptions);
+            if (res != null)
+                return res;
+        }
+        catch
+        {
+            // fallback
+        }
+
+        return System.Text.Json.JsonSerializer.Deserialize<Illustration>(data)!;
+    }
 }

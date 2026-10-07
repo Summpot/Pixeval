@@ -90,7 +90,7 @@ public sealed class PixevalMcpService : IPixevalMcpService, IMcpSessionBridge
         try
         {
             var storageEngine = _appViewModel.AppServiceProvider.GetRequiredService<StorageEngine>();
-            var downloadManager = _appViewModel.HistoryPersistHelper.DownloadManager;
+            var downloadManager = _appViewModel.DownloadManager;
             var syncEngine = _appViewModel.AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().SyncEngine;
             var pluginEngine = _appViewModel.AppServiceProvider.GetService<ExtensionService>()?.PluginEngine;
 

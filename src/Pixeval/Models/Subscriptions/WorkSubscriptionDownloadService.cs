@@ -7,11 +7,10 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using Misaki;
 using Pixeval.AppManagement;
-using Pixeval.Models.Database;
-using Pixeval.Models.Database.Managers;
 using Pixeval.Models.Download;
 using Pixeval.Models.Download.Tasks;
 using Pixeval.Models.Options;
+using Pixeval.Native.Download;
 using Pixeval.Native.Mako;
 using Pixeval.Native.Storage;
 using Pixeval.Native.Subscription;
@@ -22,8 +21,6 @@ namespace Pixeval.Models.Subscriptions;
 
 public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, ISubscriptionProgressCallback, IAsyncDisposable
 {
-    private readonly WorkSubscriptionPersistentManager _subscriptionManager;
-    private readonly HistoryPersistHelper _historyPersistHelper;
     private readonly StorageEngine _storageEngine;
     private readonly MakoClient _makoClient;
     private readonly FileLogger _logger;
@@ -53,19 +50,15 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
     public SubscriptionSyncEngine SyncEngine => _syncEngine;
 
     public WorkSubscriptionDownloadService(
-        WorkSubscriptionPersistentManager subscriptionManager,
-        HistoryPersistHelper historyPersistHelper,
         StorageEngine storageEngine,
+        DownloadManager downloadManager,
         MakoClient makoClient,
         FileLogger logger)
     {
-        _subscriptionManager = subscriptionManager;
-        _historyPersistHelper = historyPersistHelper;
         _storageEngine = storageEngine;
         _makoClient = makoClient;
         _logger = logger;
 
-        var downloadManager = historyPersistHelper.DownloadManager;
         var config = CreateSyncConfig();
         _syncEngine = SubscriptionSyncEngine.NewWithServices(
             storageEngine,
@@ -116,7 +109,7 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
         long targetId,
         WorkSubscriptionType subscriptionType,
         WorkSubscriptionWorkKind workKind) =>
-        _subscriptionManager.GetBySubscriptionKey(targetId, subscriptionType, workKind);
+        _storageEngine.GetSubscriptionByIdentity(targetId, (uint)subscriptionType, (uint)workKind);
 
     public async Task<WorkSubscriptionRecord?> TryRemoveAsync(long historyEntryId)
     {
@@ -125,7 +118,7 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_isDisposed, this);
-            subscription = _subscriptionManager.GetByKey(historyEntryId);
+            subscription = _storageEngine.GetSubscriptionByHistoryId(historyEntryId);
             if (subscription is null)
                 return null;
 
@@ -136,14 +129,14 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
         await _mutationGate.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (_subscriptionManager.GetByKey(historyEntryId) is not { } persistedSubscription
-                || !_subscriptionManager.TryDelete(persistedSubscription))
+            if (_storageEngine.GetSubscriptionByHistoryId(historyEntryId) is not { } persistedSubscription
+                || !_storageEngine.DeleteSubscription(historyEntryId))
                 return null;
 
             subscription = persistedSubscription;
             wasDeleted = true;
-            await _historyPersistHelper.RemoveWorkSubscriptionDownloadsAsync((int)historyEntryId)
-                .ConfigureAwait(false);
+            if (App.AppViewModel is { } app)
+                await app.RemoveWorkSubscriptionDownloadsAsync((int)historyEntryId).ConfigureAwait(false);
             return subscription;
         }
         finally
@@ -208,10 +201,10 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
     {
         try
         {
-            if (_subscriptionManager.GetByKey(subscriptionId) is { } entry)
+            if (_storageEngine.GetSubscriptionByHistoryId(subscriptionId) is { } entry)
             {
                 var updated = entry with { Title = name, Author = account, Avatar = avatarUrl };
-                _subscriptionManager.Update(updated);
+                _storageEngine.UpsertSubscription(updated);
 
                 void Notify() => SubscriptionUpdated?.Invoke(this, updated);
                 if (Dispatcher.UIThread.CheckAccess())
@@ -231,7 +224,7 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
         try
         {
             var macro = App.AppViewModel?.AppSettings?.DownloadSettings?.DownloadPathMacro ?? string.Empty;
-            var sub = _subscriptionManager.GetByKey(item.WorkSubscriptionId);
+            var sub = _storageEngine.GetSubscriptionByHistoryId(item.WorkSubscriptionId);
             IDownloadTaskGroup task;
             if (item.IsNovel)
             {
@@ -243,7 +236,8 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
                 var illust = Illustration.Deserialize(item.PayloadJson);
                 task = new IllustrationDownloadTaskFactory().Create(new ParserContext(illust, sub), macro);
             }
-            _ = _historyPersistHelper.QueueSubscriptionDownloadBatchAsync([task]);
+            if (App.AppViewModel is { } app)
+                _ = app.QueueSubscriptionDownloadBatchAsync([task]);
         }
         catch (Exception ex)
         {

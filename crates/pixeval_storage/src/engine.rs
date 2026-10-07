@@ -12,6 +12,10 @@ use crate::schema::init_schema;
 #[derive(Clone, uniffi::Object)]
 pub struct StorageEngine {
     conn: Arc<Mutex<Connection>>,
+    observers: Arc<Mutex<Vec<Arc<dyn StorageObserver>>>>,
+    history_repo: Arc<crate::repository::HistoryRepository>,
+    watch_later_repo: Arc<crate::repository::WatchLaterRepository>,
+    download_repo: Arc<crate::repository::DownloadRepository>,
 }
 
 #[uniffi::export]
@@ -32,9 +36,35 @@ impl StorageEngine {
 
         init_schema(&conn)?;
 
+        let conn_arc = Arc::new(Mutex::new(conn));
+        let observers = Arc::new(Mutex::new(Vec::new()));
+        let history_repo = Arc::new(crate::repository::HistoryRepository::new(conn_arc.clone(), observers.clone()));
+        let watch_later_repo = Arc::new(crate::repository::WatchLaterRepository::new(conn_arc.clone(), observers.clone()));
+        let download_repo = Arc::new(crate::repository::DownloadRepository::new(conn_arc.clone(), observers.clone()));
+
         Ok(Self {
-            conn: Arc::new(Mutex::new(conn)),
+            conn: conn_arc,
+            observers,
+            history_repo,
+            watch_later_repo,
+            download_repo,
         })
+    }
+
+    pub fn register_observer(&self, observer: Box<dyn StorageObserver>) {
+        self.observers.lock().push(Arc::from(observer));
+    }
+
+    pub fn history(&self) -> Arc<crate::repository::HistoryRepository> {
+        self.history_repo.clone()
+    }
+
+    pub fn watch_later(&self) -> Arc<crate::repository::WatchLaterRepository> {
+        self.watch_later_repo.clone()
+    }
+
+    pub fn download(&self) -> Arc<crate::repository::DownloadRepository> {
+        self.download_repo.clone()
     }
 
     // --- Search History ---
@@ -45,18 +75,7 @@ impl StorageEngine {
         translated_name: Option<String>,
         time: String,
     ) -> Result<SearchHistoryRecord, StorageError> {
-        let conn = self.conn.lock();
-        conn.execute(
-            "INSERT INTO SearchHistoryEntry (Value, TranslatedName, Time) VALUES (?1, ?2, ?3)",
-            params![value, translated_name, time],
-        )?;
-        let id = conn.last_insert_rowid();
-        Ok(SearchHistoryRecord {
-            history_entry_id: id,
-            value,
-            translated_name,
-            time,
-        })
+        self.history_repo.insert_search_history(value, translated_name, time)
     }
 
     pub fn upsert_search_history(
@@ -65,43 +84,14 @@ impl StorageEngine {
         translated_name: Option<String>,
         time: String,
     ) -> Result<SearchHistoryRecord, StorageError> {
-        let conn = self.conn.lock();
-        conn.execute(
-            "DELETE FROM SearchHistoryEntry WHERE Value = ?1",
-            params![value],
-        )?;
-        conn.execute(
-            "INSERT INTO SearchHistoryEntry (Value, TranslatedName, Time) VALUES (?1, ?2, ?3)",
-            params![value, translated_name, time],
-        )?;
-        let id = conn.last_insert_rowid();
-        Ok(SearchHistoryRecord {
-            history_entry_id: id,
-            value,
-            translated_name,
-            time,
-        })
+        self.history_repo.upsert_search_history(value, translated_name, time)
     }
 
     pub fn get_search_history_by_value(
         &self,
         value: String,
     ) -> Result<Option<SearchHistoryRecord>, StorageError> {
-        let conn = self.conn.lock();
-        let mut stmt = conn.prepare(
-            "SELECT HistoryEntryId, Value, TranslatedName, CAST(Time AS TEXT) FROM SearchHistoryEntry WHERE Value = ?1",
-        )?;
-        let record = stmt
-            .query_row(params![value], |row| {
-                Ok(SearchHistoryRecord {
-                    history_entry_id: row.get(0)?,
-                    value: row.get(1)?,
-                    translated_name: row.get(2)?,
-                    time: row.get(3)?,
-                })
-            })
-            .optional()?;
-        Ok(record)
+        self.history_repo.get_search_history_by_value(value)
     }
 
     pub fn stream_search_histories(
@@ -109,44 +99,27 @@ impl StorageEngine {
         skip: u32,
         take: u32,
     ) -> Result<Vec<SearchHistoryRecord>, StorageError> {
-        let conn = self.conn.lock();
-        let mut stmt = conn.prepare(
-            "SELECT HistoryEntryId, Value, TranslatedName, CAST(Time AS TEXT) FROM SearchHistoryEntry ORDER BY HistoryEntryId DESC LIMIT ?1 OFFSET ?2",
-        )?;
-        let rows = stmt.query_map(params![take, skip], |row| {
-            Ok(SearchHistoryRecord {
-                history_entry_id: row.get(0)?,
-                value: row.get(1)?,
-                translated_name: row.get(2)?,
-                time: row.get(3)?,
-            })
-        })?;
-        let mut results = Vec::new();
-        for r in rows {
-            results.push(r?);
-        }
-        Ok(results)
+        self.history_repo.stream_search_histories(skip, take)
+    }
+
+    pub fn stream_search_histories_cursor(
+        &self,
+        cursor_id: Option<i64>,
+        take: u32,
+    ) -> Result<Vec<SearchHistoryRecord>, StorageError> {
+        self.history_repo.stream_search_histories_cursor(cursor_id, take)
     }
 
     pub fn try_delete_search_history_by_value(&self, value: String) -> Result<bool, StorageError> {
-        let conn = self.conn.lock();
-        let affected = conn.execute(
-            "DELETE FROM SearchHistoryEntry WHERE Value = ?1",
-            params![value],
-        )?;
-        Ok(affected > 0)
+        self.history_repo.try_delete_search_history_by_value(value)
     }
 
     pub fn clear_search_history(&self) -> Result<(), StorageError> {
-        let conn = self.conn.lock();
-        conn.execute("DELETE FROM SearchHistoryEntry", [])?;
-        Ok(())
+        self.history_repo.clear_search_history()
     }
 
     pub fn count_search_history(&self) -> Result<i64, StorageError> {
-        let conn = self.conn.lock();
-        let count: i64 = conn.query_row("SELECT COUNT(*) FROM SearchHistoryEntry", [], |row| row.get(0))?;
-        Ok(count)
+        self.history_repo.count_search_history()
     }
 
     // --- Browse History ---
@@ -158,83 +131,14 @@ impl StorageEngine {
         work_key: String,
         payload_json: String,
     ) -> Result<BrowseHistoryRecord, StorageError> {
-        let mut conn = self.conn.lock();
-        let tx = conn.transaction()?;
-
-        // Delete existing if any, along with its payload
-        let existing_payload_id: Option<i64> = tx
-            .query_row(
-                "SELECT ArtworkPayloadEntryId FROM BrowseHistoryEntry WHERE WorkKey = ?1",
-                params![work_key],
-                |row| row.get(0),
-            )
-            .optional()?;
-
-        if let Some(payload_id) = existing_payload_id {
-            tx.execute("DELETE FROM BrowseHistoryEntry WHERE WorkKey = ?1", params![work_key])?;
-            tx.execute("DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId = ?1", params![payload_id])?;
-        }
-
-        // Insert new payload
-        tx.execute(
-            "INSERT INTO ArtworkPayloadEntry (SerializedArtwork) VALUES (?1)",
-            params![payload_json],
-        )?;
-        let payload_id = tx.last_insert_rowid();
-
-        // Insert new browse entry
-        tx.execute(
-            "INSERT INTO BrowseHistoryEntry (ArtworkPayloadEntryId, SerializeKey, WorkKey, Id) VALUES (?1, ?2, ?3, ?4)",
-            params![payload_id, serialize_key, work_key, id],
-        )?;
-        let history_id = tx.last_insert_rowid();
-        tx.commit()?;
-
-        Ok(BrowseHistoryRecord {
-            history_entry_id: history_id,
-            id,
-            serialize_key,
-            work_key,
-            payload_json: Some(payload_json),
-        })
+        self.history_repo.add_or_replace_browse_history(id, serialize_key, work_key, payload_json)
     }
 
     pub fn get_browse_history_by_work_key(
         &self,
         work_key: String,
     ) -> Result<Option<BrowseHistoryRecord>, StorageError> {
-        let conn = self.conn.lock();
-        let mut stmt = conn.prepare(
-            "SELECT b.HistoryEntryId, b.Id, b.SerializeKey, b.WorkKey, p.SerializedArtwork
-             FROM BrowseHistoryEntry b
-             LEFT JOIN ArtworkPayloadEntry p ON b.ArtworkPayloadEntryId = p.ArtworkPayloadEntryId
-             WHERE b.WorkKey = ?1",
-        )?;
-        let record = stmt
-            .query_row(params![work_key], |row| {
-                Ok(BrowseHistoryRecord {
-                    history_entry_id: row.get(0)?,
-                    id: row.get(1)?,
-                    serialize_key: row.get(2)?,
-                    work_key: row.get(3)?,
-                    payload_json: row.get(4)?,
-                })
-            })
-            .optional()?;
-
-        if let Some(ref r) = record {
-            // Check for broken payload
-            if r.payload_json.is_none() {
-                drop(stmt);
-                conn.execute(
-                    "DELETE FROM BrowseHistoryEntry WHERE HistoryEntryId = ?1",
-                    params![r.history_entry_id],
-                )?;
-                return Ok(None);
-            }
-        }
-
-        Ok(record)
+        self.history_repo.get_browse_history_by_work_key(work_key)
     }
 
     pub fn stream_browse_history(
@@ -242,81 +146,27 @@ impl StorageEngine {
         skip: u32,
         take: u32,
     ) -> Result<Vec<BrowseHistoryRecord>, StorageError> {
-        let conn = self.conn.lock();
-        let mut stmt = conn.prepare(
-            "SELECT b.HistoryEntryId, b.Id, b.SerializeKey, b.WorkKey, p.SerializedArtwork
-             FROM BrowseHistoryEntry b
-             LEFT JOIN ArtworkPayloadEntry p ON b.ArtworkPayloadEntryId = p.ArtworkPayloadEntryId
-             ORDER BY b.HistoryEntryId DESC
-             LIMIT ?1 OFFSET ?2",
-        )?;
-        let rows = stmt.query_map(params![take, skip], |row| {
-            Ok(BrowseHistoryRecord {
-                history_entry_id: row.get(0)?,
-                id: row.get(1)?,
-                serialize_key: row.get(2)?,
-                work_key: row.get(3)?,
-                payload_json: row.get(4)?,
-            })
-        })?;
-        let mut results = Vec::new();
-        let mut broken_ids = Vec::new();
-        for r in rows {
-            let record = r?;
-            if record.payload_json.is_none() {
-                broken_ids.push(record.history_entry_id);
-            } else {
-                results.push(record);
-            }
-        }
+        self.history_repo.stream_browse_history(skip, take)
+    }
 
-        if !broken_ids.is_empty() {
-            drop(stmt);
-            for id in broken_ids {
-                let _ = conn.execute("DELETE FROM BrowseHistoryEntry WHERE HistoryEntryId = ?1", params![id]);
-            }
-        }
-
-        Ok(results)
+    pub fn stream_browse_history_cursor(
+        &self,
+        cursor_id: Option<i64>,
+        take: u32,
+    ) -> Result<Vec<BrowseHistoryRecord>, StorageError> {
+        self.history_repo.stream_browse_history_cursor(cursor_id, take)
     }
 
     pub fn try_delete_browse_history_by_work_key(&self, work_key: String) -> Result<bool, StorageError> {
-        let mut conn = self.conn.lock();
-        let tx = conn.transaction()?;
-        let payload_id: Option<i64> = tx
-            .query_row(
-                "SELECT ArtworkPayloadEntryId FROM BrowseHistoryEntry WHERE WorkKey = ?1",
-                params![work_key],
-                |row| row.get(0),
-            )
-            .optional()?;
-
-        if let Some(pid) = payload_id {
-            tx.execute("DELETE FROM BrowseHistoryEntry WHERE WorkKey = ?1", params![work_key])?;
-            tx.execute("DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId = ?1", params![pid])?;
-            tx.commit()?;
-            Ok(true)
-        } else {
-            Ok(false)
-        }
+        self.history_repo.try_delete_browse_history_by_work_key(work_key)
     }
 
     pub fn clear_browse_history(&self) -> Result<(), StorageError> {
-        let mut conn = self.conn.lock();
-        let tx = conn.transaction()?;
-        tx.execute(
-            "DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId IN (SELECT ArtworkPayloadEntryId FROM BrowseHistoryEntry)",
-            [],
-        )?;
-        tx.execute("DELETE FROM BrowseHistoryEntry", [])?;
-        tx.commit()?;
-        Ok(())
+        self.history_repo.clear_browse_history()
     }
 
     pub fn count_browse_history(&self) -> Result<i64, StorageError> {
-        let conn = self.conn.lock();
-        let count: i64 = conn.query_row("SELECT COUNT(*) FROM BrowseHistoryEntry", [], |row| row.get(0))?;
-        Ok(count)
+        self.history_repo.count_browse_history()
     }
 
     // --- Watch Later ---
@@ -328,156 +178,42 @@ impl StorageEngine {
         work_key: String,
         payload_json: String,
     ) -> Result<WatchLaterRecord, StorageError> {
-        let mut conn = self.conn.lock();
-        let tx = conn.transaction()?;
-
-        let existing_payload_id: Option<i64> = tx
-            .query_row(
-                "SELECT ArtworkPayloadEntryId FROM WatchLaterEntry WHERE WorkKey = ?1",
-                params![work_key],
-                |row| row.get(0),
-            )
-            .optional()?;
-
-        if let Some(payload_id) = existing_payload_id {
-            tx.execute("DELETE FROM WatchLaterEntry WHERE WorkKey = ?1", params![work_key])?;
-            tx.execute("DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId = ?1", params![payload_id])?;
-        }
-
-        tx.execute(
-            "INSERT INTO ArtworkPayloadEntry (SerializedArtwork) VALUES (?1)",
-            params![payload_json],
-        )?;
-        let payload_id = tx.last_insert_rowid();
-
-        tx.execute(
-            "INSERT INTO WatchLaterEntry (ArtworkPayloadEntryId, SerializeKey, WorkKey, Id) VALUES (?1, ?2, ?3, ?4)",
-            params![payload_id, serialize_key, work_key, id],
-        )?;
-        let history_id = tx.last_insert_rowid();
-        tx.commit()?;
-
-        Ok(WatchLaterRecord {
-            history_entry_id: history_id,
-            id,
-            serialize_key,
-            work_key,
-            payload_json: Some(payload_json),
-        })
+        self.watch_later_repo.add_or_replace_watch_later(id, serialize_key, work_key, payload_json)
     }
 
     pub fn contains_watch_later(&self, work_key: String) -> Result<bool, StorageError> {
-        let conn = self.conn.lock();
-        let count: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM WatchLaterEntry WHERE WorkKey = ?1",
-            params![work_key],
-            |row| row.get(0),
-        )?;
-        Ok(count > 0)
+        self.watch_later_repo.contains_watch_later(work_key)
     }
 
     pub fn remove_watch_later(&self, work_key: String) -> Result<bool, StorageError> {
-        let mut conn = self.conn.lock();
-        let tx = conn.transaction()?;
-        let payload_id: Option<i64> = tx
-            .query_row(
-                "SELECT ArtworkPayloadEntryId FROM WatchLaterEntry WHERE WorkKey = ?1",
-                params![work_key],
-                |row| row.get(0),
-            )
-            .optional()?;
-
-        if let Some(pid) = payload_id {
-            tx.execute("DELETE FROM WatchLaterEntry WHERE WorkKey = ?1", params![work_key])?;
-            tx.execute("DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId = ?1", params![pid])?;
-            tx.commit()?;
-            Ok(true)
-        } else {
-            Ok(false)
-        }
+        self.watch_later_repo.remove_watch_later(work_key)
     }
 
     pub fn stream_watch_later(&self, skip: u32, take: u32) -> Result<Vec<WatchLaterRecord>, StorageError> {
-        let conn = self.conn.lock();
-        let mut stmt = conn.prepare(
-            "SELECT w.HistoryEntryId, w.Id, w.SerializeKey, w.WorkKey, p.SerializedArtwork
-             FROM WatchLaterEntry w
-             LEFT JOIN ArtworkPayloadEntry p ON w.ArtworkPayloadEntryId = p.ArtworkPayloadEntryId
-             ORDER BY w.HistoryEntryId DESC
-             LIMIT ?1 OFFSET ?2",
-        )?;
-        let rows = stmt.query_map(params![take, skip], |row| {
-            Ok(WatchLaterRecord {
-                history_entry_id: row.get(0)?,
-                id: row.get(1)?,
-                serialize_key: row.get(2)?,
-                work_key: row.get(3)?,
-                payload_json: row.get(4)?,
-            })
-        })?;
-        let mut results = Vec::new();
-        for r in rows {
-            let record = r?;
-            if record.payload_json.is_some() {
-                results.push(record);
-            }
-        }
-        Ok(results)
+        self.watch_later_repo.stream_watch_later(skip, take)
+    }
+
+    pub fn stream_watch_later_cursor(
+        &self,
+        cursor_id: Option<i64>,
+        take: u32,
+    ) -> Result<Vec<WatchLaterRecord>, StorageError> {
+        self.watch_later_repo.stream_watch_later_cursor(cursor_id, take)
     }
 
     pub fn clear_watch_later(&self) -> Result<(), StorageError> {
-        let mut conn = self.conn.lock();
-        let tx = conn.transaction()?;
-        tx.execute(
-            "DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId IN (SELECT ArtworkPayloadEntryId FROM WatchLaterEntry)",
-            [],
-        )?;
-        tx.execute("DELETE FROM WatchLaterEntry", [])?;
-        tx.commit()?;
-        Ok(())
+        self.watch_later_repo.clear_watch_later()
     }
 
     pub fn count_watch_later(&self) -> Result<i64, StorageError> {
-        let conn = self.conn.lock();
-        let count: i64 = conn.query_row("SELECT COUNT(*) FROM WatchLaterEntry", [], |row| row.get(0))?;
-        Ok(count)
+        self.watch_later_repo.count_watch_later()
     }
 
     pub fn get_watch_later_by_work_key(
         &self,
         work_key: String,
     ) -> Result<Option<WatchLaterRecord>, StorageError> {
-        let conn = self.conn.lock();
-        let mut stmt = conn.prepare(
-            "SELECT w.HistoryEntryId, w.Id, w.SerializeKey, w.WorkKey, p.SerializedArtwork
-             FROM WatchLaterEntry w
-             LEFT JOIN ArtworkPayloadEntry p ON w.ArtworkPayloadEntryId = p.ArtworkPayloadEntryId
-             WHERE w.WorkKey = ?1",
-        )?;
-        let record = stmt
-            .query_row(params![work_key], |row| {
-                Ok(WatchLaterRecord {
-                    history_entry_id: row.get(0)?,
-                    id: row.get(1)?,
-                    serialize_key: row.get(2)?,
-                    work_key: row.get(3)?,
-                    payload_json: row.get(4)?,
-                })
-            })
-            .optional()?;
-
-        if let Some(ref r) = record {
-            if r.payload_json.is_none() {
-                drop(stmt);
-                conn.execute(
-                    "DELETE FROM WatchLaterEntry WHERE HistoryEntryId = ?1",
-                    params![r.history_entry_id],
-                )?;
-                return Ok(None);
-            }
-        }
-
-        Ok(record)
+        self.watch_later_repo.get_watch_later_by_work_key(work_key)
     }
 
     // --- Download History ---
@@ -492,116 +228,55 @@ impl StorageEngine {
         error_message: Option<String>,
         payload_json: String,
     ) -> Result<DownloadHistoryRecord, StorageError> {
-        let mut conn = self.conn.lock();
-        let tx = conn.transaction()?;
-
-        let existing_payload_id: Option<i64> = tx
-            .query_row(
-                "SELECT ArtworkPayloadEntryId FROM DownloadHistoryEntry WHERE Destination = ?1",
-                params![destination],
-                |row| row.get(0),
-            )
-            .optional()?;
-
-        if let Some(payload_id) = existing_payload_id {
-            tx.execute("DELETE FROM DownloadHistoryEntry WHERE Destination = ?1", params![destination])?;
-            tx.execute("DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId = ?1", params![payload_id])?;
-        }
-
-        tx.execute(
-            "INSERT INTO ArtworkPayloadEntry (SerializedArtwork) VALUES (?1)",
-            params![payload_json],
-        )?;
-        let payload_id = tx.last_insert_rowid();
-
-        tx.execute(
-            "INSERT INTO DownloadHistoryEntry (ArtworkPayloadEntryId, SerializeKey, Destination, State, FormatToken, ErrorMessage)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            params![payload_id, serialize_key, destination, state, format_token, error_message],
-        )?;
-        let history_id = tx.last_insert_rowid();
-        tx.commit()?;
-
-        Ok(DownloadHistoryRecord {
-            history_entry_id: history_id,
+        self.download_repo.add_or_replace_download_history(
             id,
             serialize_key,
             destination,
             state,
             format_token,
             error_message,
-            payload_json: Some(payload_json),
-        })
+            payload_json,
+        )
+    }
+
+    pub fn update_download_history_state(
+        &self,
+        destination: String,
+        state: u32,
+        error_message: Option<String>,
+    ) -> Result<bool, StorageError> {
+        self.download_repo.update_download_history_state(destination, state, error_message)
     }
 
     pub fn try_delete_download_history_by_destination(&self, destination: String) -> Result<bool, StorageError> {
-        let mut conn = self.conn.lock();
-        let tx = conn.transaction()?;
-        let payload_id: Option<i64> = tx
-            .query_row(
-                "SELECT ArtworkPayloadEntryId FROM DownloadHistoryEntry WHERE Destination = ?1",
-                params![destination],
-                |row| row.get(0),
-            )
-            .optional()?;
-
-        if let Some(pid) = payload_id {
-            tx.execute("DELETE FROM DownloadHistoryEntry WHERE Destination = ?1", params![destination])?;
-            tx.execute("DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId = ?1", params![pid])?;
-            tx.commit()?;
-            Ok(true)
-        } else {
-            Ok(false)
-        }
+        self.download_repo.try_delete_download_history_by_destination(destination)
     }
 
     pub fn stream_download_history(&self, skip: u32, take: u32) -> Result<Vec<DownloadHistoryRecord>, StorageError> {
-        let conn = self.conn.lock();
-        let mut stmt = conn.prepare(
-            "SELECT d.HistoryEntryId, d.SerializeKey, d.Destination, d.State, d.FormatToken, d.ErrorMessage, p.SerializedArtwork
-             FROM DownloadHistoryEntry d
-             LEFT JOIN ArtworkPayloadEntry p ON d.ArtworkPayloadEntryId = p.ArtworkPayloadEntryId
-             ORDER BY d.HistoryEntryId DESC
-             LIMIT ?1 OFFSET ?2",
-        )?;
-        let rows = stmt.query_map(params![take, skip], |row| {
-            Ok(DownloadHistoryRecord {
-                history_entry_id: row.get(0)?,
-                id: String::new(),
-                serialize_key: row.get(1)?,
-                destination: row.get(2)?,
-                state: row.get(3)?,
-                format_token: row.get(4)?,
-                error_message: row.get(5)?,
-                payload_json: row.get(6)?,
-            })
-        })?;
-        let mut results = Vec::new();
-        for r in rows {
-            let record = r?;
-            if record.payload_json.is_some() {
-                results.push(record);
-            }
-        }
-        Ok(results)
+        self.download_repo.stream_download_history(skip, take)
+    }
+
+    pub fn stream_download_history_cursor(
+        &self,
+        cursor_id: Option<i64>,
+        take: u32,
+    ) -> Result<Vec<DownloadHistoryRecord>, StorageError> {
+        self.download_repo.stream_download_history_cursor(cursor_id, take)
     }
 
     pub fn clear_download_history(&self) -> Result<(), StorageError> {
-        let mut conn = self.conn.lock();
-        let tx = conn.transaction()?;
-        tx.execute(
-            "DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId IN (SELECT ArtworkPayloadEntryId FROM DownloadHistoryEntry)",
-            [],
-        )?;
-        tx.execute("DELETE FROM DownloadHistoryEntry", [])?;
-        tx.commit()?;
-        Ok(())
+        self.download_repo.clear_download_history()
     }
 
     pub fn count_download_history(&self) -> Result<i64, StorageError> {
-        let conn = self.conn.lock();
-        let count: i64 = conn.query_row("SELECT COUNT(*) FROM DownloadHistoryEntry", [], |row| row.get(0))?;
-        Ok(count)
+        self.download_repo.count_download_history()
+    }
+
+    pub fn get_download_history_by_destination(
+        &self,
+        destination: String,
+    ) -> Result<Option<DownloadHistoryRecord>, StorageError> {
+        self.download_repo.get_download_history_by_destination(destination)
     }
 
     // --- Subscription Download History ---
@@ -618,42 +293,7 @@ impl StorageEngine {
         artwork_id: String,
         payload_json: String,
     ) -> Result<SubscriptionDownloadHistoryRecord, StorageError> {
-        let mut conn = self.conn.lock();
-        let tx = conn.transaction()?;
-
-        let existing_payload_id: Option<i64> = tx
-            .query_row(
-                "SELECT ArtworkPayloadEntryId FROM SubscriptionDownloadHistoryEntry
-                 WHERE WorkSubscriptionId = ?1 AND ArtworkId = ?2 AND Destination = ?3",
-                params![work_subscription_id, artwork_id, destination],
-                |row| row.get(0),
-            )
-            .optional()?;
-
-        if let Some(payload_id) = existing_payload_id {
-            tx.execute(
-                "DELETE FROM SubscriptionDownloadHistoryEntry WHERE WorkSubscriptionId = ?1 AND ArtworkId = ?2 AND Destination = ?3",
-                params![work_subscription_id, artwork_id, destination],
-            )?;
-            tx.execute("DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId = ?1", params![payload_id])?;
-        }
-
-        tx.execute(
-            "INSERT INTO ArtworkPayloadEntry (SerializedArtwork) VALUES (?1)",
-            params![payload_json],
-        )?;
-        let payload_id = tx.last_insert_rowid();
-
-        tx.execute(
-            "INSERT INTO SubscriptionDownloadHistoryEntry (ArtworkPayloadEntryId, SerializeKey, Destination, WorkSubscriptionId, ArtworkId, State, FormatToken, ErrorMessage)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-            params![payload_id, serialize_key, destination, work_subscription_id, artwork_id, state, format_token, error_message],
-        )?;
-        let history_id = tx.last_insert_rowid();
-        tx.commit()?;
-
-        Ok(SubscriptionDownloadHistoryRecord {
-            history_entry_id: history_id,
+        self.download_repo.add_or_replace_subscription_download_history(
             id,
             serialize_key,
             destination,
@@ -662,54 +302,32 @@ impl StorageEngine {
             error_message,
             work_subscription_id,
             artwork_id,
-            payload_json: Some(payload_json),
-        })
+            payload_json,
+        )
     }
 
     pub fn add_or_replace_subscription_download_history_batch(
         &self,
         entries: Vec<SubscriptionDownloadHistoryRecord>,
     ) -> Result<(), StorageError> {
-        let mut conn = self.conn.lock();
-        let tx = conn.transaction()?;
+        self.download_repo.add_or_replace_subscription_download_history_batch(entries)
+    }
 
-        for entry in entries {
-            let payload_str = entry.payload_json.ok_or_else(|| StorageError::ConstraintViolation {
-                message: "Payload cannot be empty in batch insertion".to_string(),
-            })?;
-
-            let existing_payload_id: Option<i64> = tx
-                .query_row(
-                    "SELECT ArtworkPayloadEntryId FROM SubscriptionDownloadHistoryEntry
-                     WHERE WorkSubscriptionId = ?1 AND ArtworkId = ?2 AND Destination = ?3",
-                    params![entry.work_subscription_id, entry.artwork_id, entry.destination],
-                    |row| row.get(0),
-                )
-                .optional()?;
-
-            if let Some(payload_id) = existing_payload_id {
-                tx.execute(
-                    "DELETE FROM SubscriptionDownloadHistoryEntry WHERE WorkSubscriptionId = ?1 AND ArtworkId = ?2 AND Destination = ?3",
-                    params![entry.work_subscription_id, entry.artwork_id, entry.destination],
-                )?;
-                tx.execute("DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId = ?1", params![payload_id])?;
-            }
-
-            tx.execute(
-                "INSERT INTO ArtworkPayloadEntry (SerializedArtwork) VALUES (?1)",
-                params![payload_str],
-            )?;
-            let payload_id = tx.last_insert_rowid();
-
-            tx.execute(
-                "INSERT INTO SubscriptionDownloadHistoryEntry (ArtworkPayloadEntryId, SerializeKey, Destination, WorkSubscriptionId, ArtworkId, State, FormatToken, ErrorMessage)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-                params![payload_id, entry.serialize_key, entry.destination, entry.work_subscription_id, entry.artwork_id, entry.state, entry.format_token, entry.error_message],
-            )?;
-        }
-
-        tx.commit()?;
-        Ok(())
+    pub fn update_subscription_download_history_state(
+        &self,
+        work_subscription_id: i64,
+        artwork_id: String,
+        destination: String,
+        state: u32,
+        error_message: Option<String>,
+    ) -> Result<bool, StorageError> {
+        self.download_repo.update_subscription_download_history_state(
+            work_subscription_id,
+            artwork_id,
+            destination,
+            state,
+            error_message,
+        )
     }
 
     pub fn contains_subscription_download_identity(
@@ -718,13 +336,7 @@ impl StorageEngine {
         artwork_id: String,
         destination: String,
     ) -> Result<bool, StorageError> {
-        let conn = self.conn.lock();
-        let count: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM SubscriptionDownloadHistoryEntry WHERE WorkSubscriptionId = ?1 AND ArtworkId = ?2 AND Destination = ?3",
-            params![work_subscription_id, artwork_id, destination],
-            |row| row.get(0),
-        )?;
-        Ok(count > 0)
+        self.download_repo.contains_subscription_download_identity(work_subscription_id, artwork_id, destination)
     }
 
     pub fn try_delete_subscription_download_by_identity(
@@ -733,94 +345,25 @@ impl StorageEngine {
         artwork_id: String,
         destination: String,
     ) -> Result<bool, StorageError> {
-        let mut conn = self.conn.lock();
-        let tx = conn.transaction()?;
-        let payload_id: Option<i64> = tx
-            .query_row(
-                "SELECT ArtworkPayloadEntryId FROM SubscriptionDownloadHistoryEntry
-                 WHERE WorkSubscriptionId = ?1 AND ArtworkId = ?2 AND Destination = ?3",
-                params![work_subscription_id, artwork_id, destination],
-                |row| row.get(0),
-            )
-            .optional()?;
-
-        if let Some(pid) = payload_id {
-            tx.execute(
-                "DELETE FROM SubscriptionDownloadHistoryEntry WHERE WorkSubscriptionId = ?1 AND ArtworkId = ?2 AND Destination = ?3",
-                params![work_subscription_id, artwork_id, destination],
-            )?;
-            tx.execute("DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId = ?1", params![pid])?;
-            tx.commit()?;
-            Ok(true)
-        } else {
-            Ok(false)
-        }
+        self.download_repo.try_delete_subscription_download_by_identity(
+            work_subscription_id,
+            artwork_id,
+            destination,
+        )
     }
 
     pub fn delete_subscription_downloads_by_work_subscription_id(
         &self,
         work_subscription_id: i64,
     ) -> Result<i64, StorageError> {
-        let mut conn = self.conn.lock();
-        let tx = conn.transaction()?;
-
-        tx.execute(
-            "DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId IN (
-                SELECT ArtworkPayloadEntryId FROM SubscriptionDownloadHistoryEntry WHERE WorkSubscriptionId = ?1
-            )",
-            params![work_subscription_id],
-        )?;
-
-        let count = tx.execute(
-            "DELETE FROM SubscriptionDownloadHistoryEntry WHERE WorkSubscriptionId = ?1",
-            params![work_subscription_id],
-        )?;
-
-        tx.commit()?;
-        Ok(count as i64)
+        self.download_repo.delete_subscription_downloads_by_work_subscription_id(work_subscription_id)
     }
 
     pub fn delete_orphan_subscription_downloads(
         &self,
         valid_work_subscription_ids: Vec<i64>,
     ) -> Result<i64, StorageError> {
-        let mut conn = self.conn.lock();
-        let tx = conn.transaction()?;
-
-        let mut total_deleted = 0;
-        if valid_work_subscription_ids.is_empty() {
-            tx.execute(
-                "DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId IN (SELECT ArtworkPayloadEntryId FROM SubscriptionDownloadHistoryEntry)",
-                [],
-            )?;
-            total_deleted = tx.execute("DELETE FROM SubscriptionDownloadHistoryEntry", [])?;
-        } else {
-            // Find all work_subscription_ids in DB not in valid list
-            let mut stmt = tx.prepare("SELECT DISTINCT WorkSubscriptionId FROM SubscriptionDownloadHistoryEntry")?;
-            let ids: Vec<i64> = stmt
-                .query_map([], |row| row.get(0))?
-                .filter_map(Result::ok)
-                .filter(|id| !valid_work_subscription_ids.contains(id))
-                .collect();
-            drop(stmt);
-
-            for id in ids {
-                tx.execute(
-                    "DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId IN (
-                        SELECT ArtworkPayloadEntryId FROM SubscriptionDownloadHistoryEntry WHERE WorkSubscriptionId = ?1
-                    )",
-                    params![id],
-                )?;
-                let c = tx.execute(
-                    "DELETE FROM SubscriptionDownloadHistoryEntry WHERE WorkSubscriptionId = ?1",
-                    params![id],
-                )?;
-                total_deleted += c;
-            }
-        }
-
-        tx.commit()?;
-        Ok(total_deleted as i64)
+        self.download_repo.delete_orphan_subscription_downloads(valid_work_subscription_ids)
     }
 
     pub fn stream_subscription_download_history(
@@ -828,58 +371,23 @@ impl StorageEngine {
         skip: u32,
         take: u32,
     ) -> Result<Vec<SubscriptionDownloadHistoryRecord>, StorageError> {
-        let conn = self.conn.lock();
-        let mut stmt = conn.prepare(
-            "SELECT s.HistoryEntryId, s.ArtworkId, s.SerializeKey, s.Destination, s.WorkSubscriptionId, s.State, s.FormatToken, s.ErrorMessage, p.SerializedArtwork
-             FROM SubscriptionDownloadHistoryEntry s
-             LEFT JOIN ArtworkPayloadEntry p ON s.ArtworkPayloadEntryId = p.ArtworkPayloadEntryId
-             ORDER BY s.HistoryEntryId DESC
-             LIMIT ?1 OFFSET ?2",
-        )?;
-        let rows = stmt.query_map(params![take, skip], |row| {
-            let artwork_id: String = row.get(1)?;
-            let state: u32 = row.get::<_, Option<u32>>(5)?.unwrap_or(0);
-            let format_token: Option<String> = row.get(6)?;
-            let error_message: Option<String> = row.get(7)?;
-            Ok(SubscriptionDownloadHistoryRecord {
-                history_entry_id: row.get(0)?,
-                id: artwork_id.clone(),
-                artwork_id,
-                serialize_key: row.get(2)?,
-                destination: row.get(3)?,
-                state,
-                format_token,
-                error_message,
-                work_subscription_id: row.get(4)?,
-                payload_json: row.get(8)?,
-            })
-        })?;
-        let mut results = Vec::new();
-        for r in rows {
-            let record = r?;
-            if record.payload_json.is_some() {
-                results.push(record);
-            }
-        }
-        Ok(results)
+        self.download_repo.stream_subscription_download_history(skip, take)
+    }
+
+    pub fn stream_subscription_download_history_cursor(
+        &self,
+        cursor_id: Option<i64>,
+        take: u32,
+    ) -> Result<Vec<SubscriptionDownloadHistoryRecord>, StorageError> {
+        self.download_repo.stream_subscription_download_history_cursor(cursor_id, take)
     }
 
     pub fn clear_subscription_download_history(&self) -> Result<(), StorageError> {
-        let mut conn = self.conn.lock();
-        let tx = conn.transaction()?;
-        tx.execute(
-            "DELETE FROM ArtworkPayloadEntry WHERE ArtworkPayloadEntryId IN (SELECT ArtworkPayloadEntryId FROM SubscriptionDownloadHistoryEntry)",
-            [],
-        )?;
-        tx.execute("DELETE FROM SubscriptionDownloadHistoryEntry", [])?;
-        tx.commit()?;
-        Ok(())
+        self.download_repo.clear_subscription_download_history()
     }
 
     pub fn count_subscription_download_history(&self) -> Result<i64, StorageError> {
-        let conn = self.conn.lock();
-        let count: i64 = conn.query_row("SELECT COUNT(*) FROM SubscriptionDownloadHistoryEntry", [], |row| row.get(0))?;
-        Ok(count)
+        self.download_repo.count_subscription_download_history()
     }
 
     // --- Subscriptions ---
@@ -1146,22 +654,31 @@ impl StorageEngine {
             params![record.refresh_token, record.user_id],
         )?;
 
-        let existing: Option<i64> = conn
-            .query_row(
+        let existing: Option<i64> = if record.history_entry_id > 0 {
+            conn.query_row(
+                "SELECT HistoryEntryId FROM LoginUserEntry WHERE HistoryEntryId = ?1 OR UserId = ?2 LIMIT 1",
+                params![record.history_entry_id, record.user_id],
+                |row| row.get(0),
+            )
+            .optional()?
+        } else {
+            conn.query_row(
                 "SELECT HistoryEntryId FROM LoginUserEntry WHERE UserId = ?1",
                 params![record.user_id],
                 |row| row.get(0),
             )
-            .optional()?;
+            .optional()?
+        };
 
         let history_entry_id = if let Some(existing_id) = existing {
             conn.execute(
                 "UPDATE LoginUserEntry
-                 SET RefreshToken = ?1, Name = ?2, Account = ?3, MailAddress = ?4, IsPremium = ?5,
-                     XRestrict = ?6, IsMailAuthorized = ?7, RequirePolicyAgreement = ?8,
-                     Avatar16Url = ?9, Avatar50Url = ?10, Avatar170Url = ?11
-                 WHERE HistoryEntryId = ?12",
+                 SET UserId = ?1, RefreshToken = ?2, Name = ?3, Account = ?4, MailAddress = ?5, IsPremium = ?6,
+                     XRestrict = ?7, IsMailAuthorized = ?8, RequirePolicyAgreement = ?9,
+                     Avatar16Url = ?10, Avatar50Url = ?11, Avatar170Url = ?12
+                 WHERE HistoryEntryId = ?13",
                 params![
+                    record.user_id,
                     record.refresh_token,
                     record.name,
                     record.account,

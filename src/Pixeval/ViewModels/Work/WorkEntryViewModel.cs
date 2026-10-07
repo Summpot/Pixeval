@@ -3,13 +3,11 @@
 
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.Controls;
 using Pixeval.Models.Blocking;
-using Pixeval.Models.Database;
-using Pixeval.Models.Database.Managers;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.ViewModels;
 
@@ -18,7 +16,7 @@ public abstract partial class WorkEntryViewModel<T> : ThumbnailEntryViewModel<T>
     protected WorkEntryViewModel(T entry) : base(entry)
     {
         IsBookmarkedDisplay = IsFavorite ? HeartButtonState.Checked : HeartButtonState.Unchecked;
-        IsInWatchLater = GetHistoryPersistHelper()?.ContainsWatchLater(entry) is true;
+        IsInWatchLater = App.AppViewModel?.ContainsWatchLater(entry) is true;
     }
 
     public bool IsBlocked => BlockedContentHelper.IsBlockedPlaceholder(Entry);
@@ -42,8 +40,6 @@ public abstract partial class WorkEntryViewModel<T> : ThumbnailEntryViewModel<T>
     public override string? ThumbnailUrl => Entry.Thumbnails.PickClosestHeight(300)?.ImageUri.OriginalString;
 
     protected bool CanManageWatchLater => !IsBlocked
-                                          && GetHistoryPersistHelper() is not null
-                                          && WatchLaterEntry.TryCreateWorkKey(Entry, out _);
-
-    private static HistoryPersistHelper? GetHistoryPersistHelper() => App.AppViewModel?.AppServiceProvider?.GetService<HistoryPersistHelper>();
+                                          && App.AppViewModel is not null
+                                          && WatchLaterRecord.TryCreateWorkKey(Entry, out _);
 }

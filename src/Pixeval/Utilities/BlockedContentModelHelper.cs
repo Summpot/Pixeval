@@ -8,7 +8,6 @@ using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.I18N;
 using Pixeval.Models.Blocking;
-using Pixeval.Models.Database;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Mako;
 using Pixeval.Native.Storage;

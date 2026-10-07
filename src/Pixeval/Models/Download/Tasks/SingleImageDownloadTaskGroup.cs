@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.Extensions.Common.FormatProviders;
-using Pixeval.Models.Database;
 using Pixeval.Models.Extensions;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO;
 
@@ -17,7 +17,7 @@ namespace Pixeval.Models.Download.Tasks;
 
 public class SingleImageDownloadTaskGroup : SingleImageDownloadTaskGroupBase
 {
-    public ISingleImage Entry => (ISingleImage) DatabaseEntry.Entry;
+    public ISingleImage Entry => (ISingleImage) DatabaseEntry.Entry!;
 
     private IllustrationDownloadFormatToken DestinationIllustrationFormat { get; }
 
@@ -30,7 +30,7 @@ public class SingleImageDownloadTaskGroup : SingleImageDownloadTaskGroupBase
         DatabaseEntry.FormatToken = DestinationIllustrationFormat.Value;
     }
 
-    public SingleImageDownloadTaskGroup(DownloadHistoryEntryBase entry) : base(entry)
+    public SingleImageDownloadTaskGroup(IDownloadHistoryEntry entry) : base(entry)
     {
         DestinationIllustrationFormat = GetFormatToken(entry);
     }
@@ -58,7 +58,7 @@ public class SingleImageDownloadTaskGroup : SingleImageDownloadTaskGroupBase
         }
     }
 
-    private static IllustrationDownloadFormatToken GetFormatToken(DownloadHistoryEntryBase entry)
+    private static IllustrationDownloadFormatToken GetFormatToken(IDownloadHistoryEntry entry)
     {
         if (!string.IsNullOrWhiteSpace(entry.FormatToken))
             return IoHelper.GetAvailableIllustrationDownloadFormatToken(entry.FormatToken);

@@ -1,8 +1,6 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Models.Database.Managers;
 using Pixeval.Models.Options;
 using Pixeval.Native.Mako;
 using Pixeval.Native.Storage;
@@ -54,9 +52,8 @@ public static class WorkSubscriptionHelper
         if (subscription.Id is 0)
             return false;
 
-        var serviceProvider = App.AppViewModel.AppServiceProvider;
-        var subscriptionManager = serviceProvider.GetRequiredService<WorkSubscriptionPersistentManager>();
-        var saved = subscriptionManager.Upsert(subscription);
+        var storageEngine = App.AppViewModel.StorageEngine;
+        var saved = storageEngine.UpsertSubscription(subscription);
 
         App.AppViewModel.QueueWorkSubscriptionInitialSync(saved, sourceEngine);
         return true;
