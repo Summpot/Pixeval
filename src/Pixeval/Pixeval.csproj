@@ -78,9 +78,6 @@
 		<Compile Remove="Views\Settings\McpHelpSection.McpTools.cs" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<Compile Remove="AppManagement\Settings\LegacyAppSettingsMigration.cs" />
-	</ItemGroup>
 
 	<ItemGroup>
 		<!-- 字符串资源相关 -->

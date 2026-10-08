@@ -1,3 +1,4 @@
+use chrono::Datelike;
 use crate::ast::{
     FilterGroupNode, FilterLogicalOperator, FilterNode, FilterPredicateNode, FilterQuery,
 };
@@ -716,6 +717,7 @@ impl<'a> Parser<'a> {
             return None;
         }
 
+        let fallback_year = chrono::Utc::now().year();
         let (second, _) = self.try_read_u64()?;
         if self.try_consume_date_separator() {
             let (third, _) = self.try_read_u64()?;
@@ -724,7 +726,7 @@ impl<'a> Parser<'a> {
             let month = self.try_narrow(second)? as u32;
             let day = self.try_narrow(third)? as u32;
             let date_lit = FilterDateLiteral::new(Some(year), month, day);
-            if date_lit.to_naive_date(2024).is_none() {
+            if date_lit.to_naive_date(fallback_year).is_none() {
                 self.add_diagnostic(
                     FilterDiagnosticKind::InvalidDate,
                     span,
@@ -739,7 +741,7 @@ impl<'a> Parser<'a> {
         let month = self.try_narrow(first)? as u32;
         let day = self.try_narrow(second)? as u32;
         let date_lit = FilterDateLiteral::new(None, month, day);
-        if date_lit.to_naive_date(2024).is_none() {
+        if date_lit.to_naive_date(fallback_year).is_none() {
             self.add_diagnostic(
                 FilterDiagnosticKind::InvalidDate,
                 span,

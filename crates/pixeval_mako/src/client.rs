@@ -30,6 +30,16 @@ pub enum MakoError {
     ApiStatus { code: u16, message: String },
     #[error("Unauthorized")]
     Unauthorized,
+    #[error("Invalid parameter: {message}")]
+    InvalidParameter { message: String },
+    #[error("Rate limited: retry after {retry_after_secs}s")]
+    RateLimited { retry_after_secs: u64 },
+}
+
+#[uniffi::export(callback_interface)]
+pub trait MakoSessionCallback: Send + Sync {
+    fn on_auth_invalidated(&self, reason: String);
+    fn on_rate_limit_encountered(&self, retry_after_seconds: u64);
 }
 
 impl From<pixeval_maho::MahoError> for MakoError {
@@ -75,6 +85,7 @@ pub struct MakoClient {
     target_filter: Arc<parking_lot::RwLock<String>>,
     mirror_host: Arc<parking_lot::RwLock<Option<String>>>,
     web_cookie: Arc<parking_lot::RwLock<Option<String>>>,
+    session_callback: Arc<parking_lot::RwLock<Option<Box<dyn MakoSessionCallback>>>>,
 }
 
 #[uniffi::export(async_runtime = "tokio")]
@@ -94,7 +105,24 @@ impl MakoClient {
             target_filter: Arc::new(parking_lot::RwLock::new(target_filter)),
             mirror_host: Arc::new(parking_lot::RwLock::new(config.mirror_host)),
             web_cookie: Arc::new(parking_lot::RwLock::new(config.web_cookie)),
+            session_callback: Arc::new(parking_lot::RwLock::new(None)),
         }))
+    }
+
+    pub fn set_session_callback(&self, callback: Option<Box<dyn MakoSessionCallback>>) {
+        *self.session_callback.write() = callback;
+    }
+
+    pub fn notify_auth_invalidated(&self, reason: &str) {
+        if let Some(ref cb) = *self.session_callback.read() {
+            cb.on_auth_invalidated(reason.to_string());
+        }
+    }
+
+    pub fn notify_rate_limit_encountered(&self, retry_after_seconds: u64) {
+        if let Some(ref cb) = *self.session_callback.read() {
+            cb.on_rate_limit_encountered(retry_after_seconds);
+        }
     }
 
     pub fn update_configuration(&self, config: MakoConfigurationDto) -> Result<(), MakoError> {
@@ -149,7 +177,16 @@ impl MakoClient {
 
     pub async fn refresh_token(&self) -> Result<TokenResponse, MakoError> {
         let client = self.http_client.read().clone();
-        Ok(self.oauth.refresh(&client).await?)
+        match self.oauth.refresh(&client).await {
+            Ok(resp) => Ok(resp),
+            Err(e) => {
+                if matches!(&e, crate::auth::AuthError::NoRefreshToken | crate::auth::AuthError::AuthFailed(..)) {
+                    self.oauth.clear();
+                    self.notify_auth_invalidated(&e.to_string());
+                }
+                Err(e.into())
+            }
+        }
     }
 
     pub async fn exchange_code(
@@ -181,6 +218,11 @@ impl MakoClient {
     }
 
     pub async fn get_user_detail(&self, id: i64) -> Result<SingleUserResponse, MakoError> {
+        if id <= 0 {
+            return Err(MakoError::InvalidParameter {
+                message: "user_id must be greater than 0".to_string(),
+            });
+        }
         let filter = self.target_filter.read().clone();
         let url = format!("{APP_API_BASE_URL}/v1/user/detail?user_id={id}&filter={filter}");
         let resp = self.request_get(&url).await?;
@@ -316,13 +358,18 @@ impl MakoClient {
         restrict: String,
         tag: Option<String>,
     ) -> Arc<IllustrationFetchEngine> {
-        let mut initial_url = format!(
-            "{APP_API_BASE_URL}/v1/user/bookmarks/illust?user_id={user_id}&restrict={}",
-            url_encode(&restrict)
-        );
-        if let Some(t) = tag {
-            initial_url.push_str(&format!("&tag={}", url_encode(&t)));
-        }
+        let initial_url = if user_id <= 0 {
+            String::new()
+        } else {
+            let mut url = format!(
+                "{APP_API_BASE_URL}/v1/user/bookmarks/illust?user_id={user_id}&restrict={}",
+                url_encode(&restrict)
+            );
+            if let Some(t) = tag {
+                url.push_str(&format!("&tag={}", url_encode(&t)));
+            }
+            url
+        };
         let fetcher = Arc::new(IllustrationPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
@@ -588,10 +635,12 @@ impl MakoClient {
     }
 
     pub fn user_related(&self, seed_user_id: i64) -> Arc<UserFetchEngine> {
-        let filter = self.target_filter.read().clone();
-        let initial_url = format!(
-            "{APP_API_BASE_URL}/v1/user/related?seed_user_id={seed_user_id}&filter={filter}"
-        );
+        let initial_url = if seed_user_id <= 0 {
+            String::new()
+        } else {
+            let filter = self.target_filter.read().clone();
+            format!("{APP_API_BASE_URL}/v1/user/related?seed_user_id={seed_user_id}&filter={filter}")
+        };
         let fetcher = Arc::new(UserPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
@@ -603,10 +652,14 @@ impl MakoClient {
     }
 
     pub fn user_following(&self, user_id: i64, restrict: String) -> Arc<UserFetchEngine> {
-        let initial_url = format!(
-            "{APP_API_BASE_URL}/v1/user/following?user_id={user_id}&restrict={}",
-            url_encode(&restrict)
-        );
+        let initial_url = if user_id <= 0 {
+            String::new()
+        } else {
+            format!(
+                "{APP_API_BASE_URL}/v1/user/following?user_id={user_id}&restrict={}",
+                url_encode(&restrict)
+            )
+        };
         let fetcher = Arc::new(UserPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
@@ -618,9 +671,12 @@ impl MakoClient {
     }
 
     pub fn user_follower(&self, user_id: i64) -> Arc<UserFetchEngine> {
-        let filter = self.target_filter.read().clone();
-        let initial_url =
-            format!("{APP_API_BASE_URL}/v1/user/follower?user_id={user_id}&filter={filter}");
+        let initial_url = if user_id <= 0 {
+            String::new()
+        } else {
+            let filter = self.target_filter.read().clone();
+            format!("{APP_API_BASE_URL}/v1/user/follower?user_id={user_id}&filter={filter}")
+        };
         let fetcher = Arc::new(UserPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
@@ -632,7 +688,11 @@ impl MakoClient {
     }
 
     pub fn user_mypixiv(&self, user_id: i64) -> Arc<UserFetchEngine> {
-        let initial_url = format!("{APP_API_BASE_URL}/v1/user/mypixiv?user_id={user_id}");
+        let initial_url = if user_id <= 0 {
+            String::new()
+        } else {
+            format!("{APP_API_BASE_URL}/v1/user/mypixiv?user_id={user_id}")
+        };
         let fetcher = Arc::new(UserPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
@@ -648,6 +708,11 @@ impl MakoClient {
         user_id: i64,
         restrict: String,
     ) -> Result<BoolResult, MakoError> {
+        if user_id <= 0 {
+            return Err(MakoError::InvalidParameter {
+                message: "user_id must be greater than 0".to_string(),
+            });
+        }
         let url = format!("{APP_API_BASE_URL}/v1/user/follow/add");
         let id_str = user_id.to_string();
         let params = [
@@ -661,6 +726,11 @@ impl MakoClient {
     }
 
     pub async fn remove_follow_user(&self, user_id: i64) -> Result<BoolResult, MakoError> {
+        if user_id <= 0 {
+            return Err(MakoError::InvalidParameter {
+                message: "user_id must be greater than 0".to_string(),
+            });
+        }
         let url = format!("{APP_API_BASE_URL}/v1/user/follow/delete");
         let id_str = user_id.to_string();
         let params = [("user_id", id_str.as_str())];
@@ -723,11 +793,15 @@ impl MakoClient {
     }
 
     pub fn work_posted(&self, user_id: i64, work_type: String) -> Arc<IllustrationFetchEngine> {
-        let filter = self.target_filter.read().clone();
-        let initial_url = format!(
-            "{APP_API_BASE_URL}/v1/user/illusts?user_id={user_id}&type={}&filter={filter}",
-            url_encode(&work_type)
-        );
+        let initial_url = if user_id <= 0 {
+            String::new()
+        } else {
+            let filter = self.target_filter.read().clone();
+            format!(
+                "{APP_API_BASE_URL}/v1/user/illusts?user_id={user_id}&type={}&filter={filter}",
+                url_encode(&work_type)
+            )
+        };
         let fetcher = Arc::new(IllustrationPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
@@ -762,13 +836,18 @@ impl MakoClient {
         restrict: String,
         tag: Option<String>,
     ) -> Arc<NovelFetchEngine> {
-        let mut initial_url = format!(
-            "{APP_API_BASE_URL}/v1/user/bookmarks/novel?user_id={user_id}&restrict={}",
-            url_encode(&restrict)
-        );
-        if let Some(t) = tag {
-            initial_url.push_str(&format!("&tag={}", url_encode(&t)));
-        }
+        let initial_url = if user_id <= 0 {
+            String::new()
+        } else {
+            let mut url = format!(
+                "{APP_API_BASE_URL}/v1/user/bookmarks/novel?user_id={user_id}&restrict={}",
+                url_encode(&restrict)
+            );
+            if let Some(t) = tag {
+                url.push_str(&format!("&tag={}", url_encode(&t)));
+            }
+            url
+        };
         let fetcher = Arc::new(NovelPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
@@ -807,9 +886,12 @@ impl MakoClient {
     }
 
     pub fn novel_posted(&self, user_id: i64) -> Arc<NovelFetchEngine> {
-        let filter = self.target_filter.read().clone();
-        let initial_url =
-            format!("{APP_API_BASE_URL}/v1/user/novels?user_id={user_id}&filter={filter}");
+        let initial_url = if user_id <= 0 {
+            String::new()
+        } else {
+            let filter = self.target_filter.read().clone();
+            format!("{APP_API_BASE_URL}/v1/user/novels?user_id={user_id}&filter={filter}")
+        };
         let fetcher = Arc::new(NovelPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
@@ -854,6 +936,11 @@ impl MakoClient {
         user_id: i64,
         restrict: String,
     ) -> Result<Vec<BookmarkTag>, MakoError> {
+        if user_id <= 0 {
+            return Err(MakoError::InvalidParameter {
+                message: "user_id must be greater than 0".to_string(),
+            });
+        }
         let kind = if is_novel { "novel" } else { "illust" };
         let filter = self.target_filter.read().clone();
         let restrict_enc = url_encode(&restrict);
@@ -923,7 +1010,7 @@ impl MakoClient {
         let mut url = if is_novel {
             format!("{APP_API_BASE_URL}/v3/novel/comments?novel_id={work_id}&filter={filter}")
         } else {
-            format!("{APP_API_BASE_URL}/v1/illust/comments?illust_id={work_id}&filter={filter}")
+            format!("{APP_API_BASE_URL}/v3/illust/comments?illust_id={work_id}&filter={filter}")
         };
         if let Some(off) = offset {
             url.push_str(&format!("&offset={off}"));
@@ -946,7 +1033,7 @@ impl MakoClient {
             )
         } else {
             format!(
-                "{APP_API_BASE_URL}/v1/illust/comment/replies?comment_id={comment_id}&filter={filter}"
+                "{APP_API_BASE_URL}/v2/illust/comment/replies?comment_id={comment_id}&filter={filter}"
             )
         };
         if let Some(off) = offset {
@@ -1036,23 +1123,33 @@ impl MakoClient {
     ) -> Result<MangaSeriesContextResult, MakoError> {
         let filter = self.target_filter.read().clone();
         let url = format!(
-            "{APP_API_BASE_URL}/v1/illust/series/context?illust_id={illust_id}&filter={filter}"
+            "{APP_API_BASE_URL}/v1/illust-series/illust?illust_id={illust_id}&filter={filter}"
         );
         let resp = self.request_get(&url).await?;
         let raw: MangaSeriesContextResponseRaw = resp.json().await?;
         let series = raw.illust_series_detail.or(raw.series);
+        let (content_order, prev_illust, next_illust) = if let Some(ctx) = raw.illust_series_context {
+            (ctx.content_order.unwrap_or(0), ctx.prev, ctx.next)
+        } else {
+            (raw.content_order.unwrap_or(0), raw.prev, raw.next)
+        };
         Ok(MangaSeriesContextResult {
             series,
             context: MangaSeriesContextInfo {
-                content_order: raw.content_order.unwrap_or(0),
-                prev_illust: raw.prev,
-                next_illust: raw.next,
+                content_order,
+                prev_illust,
+                next_illust,
             },
         })
     }
 
-    pub async fn add_series_watchlist(&self, series_id: i64) -> Result<BoolResult, MakoError> {
-        let url = format!("{APP_API_BASE_URL}/v1/watchlist/add");
+    pub async fn add_series_watchlist(
+        &self,
+        is_novel: bool,
+        series_id: i64,
+    ) -> Result<BoolResult, MakoError> {
+        let kind = if is_novel { "novel" } else { "manga" };
+        let url = format!("{APP_API_BASE_URL}/v1/watchlist/{kind}/add");
         let id_str = series_id.to_string();
         let params = [("series_id", id_str.as_str())];
         let resp = self.request_post_form(&url, &params).await?;
@@ -1061,8 +1158,13 @@ impl MakoClient {
         })
     }
 
-    pub async fn delete_series_watchlist(&self, series_id: i64) -> Result<BoolResult, MakoError> {
-        let url = format!("{APP_API_BASE_URL}/v1/watchlist/delete");
+    pub async fn delete_series_watchlist(
+        &self,
+        is_novel: bool,
+        series_id: i64,
+    ) -> Result<BoolResult, MakoError> {
+        let kind = if is_novel { "novel" } else { "manga" };
+        let url = format!("{APP_API_BASE_URL}/v1/watchlist/{kind}/delete");
         let id_str = series_id.to_string();
         let params = [("series_id", id_str.as_str())];
         let resp = self.request_post_form(&url, &params).await?;
@@ -1180,7 +1282,7 @@ impl MakoClient {
     }
 
     pub async fn request_get(&self, url: &str) -> Result<MahoResponse, MakoError> {
-        self.throttler.throttle().await;
+        let _gate_guard = self.throttler.acquire_gate().await;
         let token = self.get_access_token_or_refresh().await?;
 
         let mirror = self.mirror_host.read().clone();
@@ -1216,7 +1318,14 @@ impl MakoClient {
 
         if resp.status() == http::StatusCode::UNAUTHORIZED {
             self.oauth.invalidate_access_token();
-            let new_token = self.refresh_token().await?.access_token;
+            let new_token = match self.refresh_token().await {
+                Ok(t) => t.access_token,
+                Err(e) => {
+                    self.oauth.clear();
+                    self.notify_auth_invalidated("refresh_token_failed");
+                    return Err(e);
+                }
+            };
             let mut retry_req = client
                 .get(&target_url)
                 .header("Authorization", format!("Bearer {new_token}"))
@@ -1230,6 +1339,28 @@ impl MakoClient {
                 }
             }
             let retry_resp = retry_req.send().await?;
+            if retry_resp.status() == http::StatusCode::UNAUTHORIZED {
+                self.oauth.clear();
+                self.notify_auth_invalidated("unauthorized");
+                return Err(MakoError::Unauthorized);
+            }
+            if retry_resp.status() == http::StatusCode::TOO_MANY_REQUESTS {
+                let retry_after_secs = if let Some(header) = retry_resp.headers().get("Retry-After") {
+                    if let Ok(val) = header.to_str() {
+                        let dur = RequestThrottler::parse_retry_after(val);
+                        self.throttler.update_rate_limit(dur);
+                        dur.as_secs()
+                    } else {
+                        self.throttler.update_rate_limit(std::time::Duration::from_secs(60));
+                        60
+                    }
+                } else {
+                    self.throttler.update_rate_limit(std::time::Duration::from_secs(60));
+                    60
+                };
+                self.notify_rate_limit_encountered(retry_after_secs);
+                return Err(MakoError::RateLimited { retry_after_secs });
+            }
             if !retry_resp.status().is_success() {
                 let status = retry_resp.status();
                 let text = retry_resp.text().await.unwrap_or_default();
@@ -1239,6 +1370,24 @@ impl MakoClient {
                 });
             }
             return Ok(retry_resp);
+        }
+
+        if resp.status() == http::StatusCode::TOO_MANY_REQUESTS {
+            let retry_after_secs = if let Some(header) = resp.headers().get("Retry-After") {
+                if let Ok(val) = header.to_str() {
+                    let dur = RequestThrottler::parse_retry_after(val);
+                    self.throttler.update_rate_limit(dur);
+                    dur.as_secs()
+                } else {
+                    self.throttler.update_rate_limit(std::time::Duration::from_secs(60));
+                    60
+                }
+            } else {
+                self.throttler.update_rate_limit(std::time::Duration::from_secs(60));
+                60
+            };
+            self.notify_rate_limit_encountered(retry_after_secs);
+            return Err(MakoError::RateLimited { retry_after_secs });
         }
 
         if !resp.status().is_success() {
@@ -1258,7 +1407,7 @@ impl MakoClient {
         url: &str,
         params: &[(&str, &str)],
     ) -> Result<MahoResponse, MakoError> {
-        self.throttler.throttle().await;
+        let _gate_guard = self.throttler.acquire_gate().await;
         let token = self.get_access_token_or_refresh().await?;
 
         let mirror = self.mirror_host.read().clone();
@@ -1295,7 +1444,14 @@ impl MakoClient {
 
         if resp.status() == http::StatusCode::UNAUTHORIZED {
             self.oauth.invalidate_access_token();
-            let new_token = self.refresh_token().await?.access_token;
+            let new_token = match self.refresh_token().await {
+                Ok(t) => t.access_token,
+                Err(e) => {
+                    self.oauth.clear();
+                    self.notify_auth_invalidated("refresh_token_failed");
+                    return Err(e);
+                }
+            };
             let mut retry_req = client
                 .post(&target_url)
                 .header("Authorization", format!("Bearer {new_token}"))
@@ -1310,6 +1466,28 @@ impl MakoClient {
                 }
             }
             let retry_resp = retry_req.send().await?;
+            if retry_resp.status() == http::StatusCode::UNAUTHORIZED {
+                self.oauth.clear();
+                self.notify_auth_invalidated("unauthorized");
+                return Err(MakoError::Unauthorized);
+            }
+            if retry_resp.status() == http::StatusCode::TOO_MANY_REQUESTS {
+                let retry_after_secs = if let Some(header) = retry_resp.headers().get("Retry-After") {
+                    if let Ok(val) = header.to_str() {
+                        let dur = RequestThrottler::parse_retry_after(val);
+                        self.throttler.update_rate_limit(dur);
+                        dur.as_secs()
+                    } else {
+                        self.throttler.update_rate_limit(std::time::Duration::from_secs(60));
+                        60
+                    }
+                } else {
+                    self.throttler.update_rate_limit(std::time::Duration::from_secs(60));
+                    60
+                };
+                self.notify_rate_limit_encountered(retry_after_secs);
+                return Err(MakoError::RateLimited { retry_after_secs });
+            }
             if !retry_resp.status().is_success() {
                 let status = retry_resp.status();
                 let text = retry_resp.text().await.unwrap_or_default();
@@ -1319,6 +1497,24 @@ impl MakoClient {
                 });
             }
             return Ok(retry_resp);
+        }
+
+        if resp.status() == http::StatusCode::TOO_MANY_REQUESTS {
+            let retry_after_secs = if let Some(header) = resp.headers().get("Retry-After") {
+                if let Ok(val) = header.to_str() {
+                    let dur = RequestThrottler::parse_retry_after(val);
+                    self.throttler.update_rate_limit(dur);
+                    dur.as_secs()
+                } else {
+                    self.throttler.update_rate_limit(std::time::Duration::from_secs(60));
+                    60
+                }
+            } else {
+                self.throttler.update_rate_limit(std::time::Duration::from_secs(60));
+                60
+            };
+            self.notify_rate_limit_encountered(retry_after_secs);
+            return Err(MakoError::RateLimited { retry_after_secs });
         }
 
         if !resp.status().is_success() {
@@ -1389,7 +1585,15 @@ impl PageFetcher<Illustration> for IllustrationPageFetcher {
         next_url: Option<&'a str>,
     ) -> Pin<Box<dyn Future<Output = PageFetchResult<Illustration>> + Send + 'a>> {
         Box::pin(async move {
-            let url = next_url.unwrap_or(&self.initial_url);
+            let url = match next_url {
+                Some(u) => u,
+                None => {
+                    if self.initial_url.is_empty() {
+                        return Ok((Vec::new(), None));
+                    }
+                    &self.initial_url
+                }
+            };
             let resp = self
                 .client
                 .request_get(url)
@@ -1412,7 +1616,15 @@ impl PageFetcher<Novel> for NovelPageFetcher {
         next_url: Option<&'a str>,
     ) -> Pin<Box<dyn Future<Output = PageFetchResult<Novel>> + Send + 'a>> {
         Box::pin(async move {
-            let url = next_url.unwrap_or(&self.initial_url);
+            let url = match next_url {
+                Some(u) => u,
+                None => {
+                    if self.initial_url.is_empty() {
+                        return Ok((Vec::new(), None));
+                    }
+                    &self.initial_url
+                }
+            };
             let resp = self
                 .client
                 .request_get(url)
@@ -1436,7 +1648,15 @@ impl PageFetcher<WorkEntry> for WorkEntryPageFetcher {
         next_url: Option<&'a str>,
     ) -> Pin<Box<dyn Future<Output = PageFetchResult<WorkEntry>> + Send + 'a>> {
         Box::pin(async move {
-            let url = next_url.unwrap_or(&self.initial_url);
+            let url = match next_url {
+                Some(u) => u,
+                None => {
+                    if self.initial_url.is_empty() {
+                        return Ok((Vec::new(), None));
+                    }
+                    &self.initial_url
+                }
+            };
             let resp = self
                 .client
                 .request_get(url)
@@ -1475,7 +1695,15 @@ impl PageFetcher<User> for UserPageFetcher {
         next_url: Option<&'a str>,
     ) -> Pin<Box<dyn Future<Output = PageFetchResult<User>> + Send + 'a>> {
         Box::pin(async move {
-            let url = next_url.unwrap_or(&self.initial_url);
+            let url = match next_url {
+                Some(u) => u,
+                None => {
+                    if self.initial_url.is_empty() {
+                        return Ok((Vec::new(), None));
+                    }
+                    &self.initial_url
+                }
+            };
             let resp = self
                 .client
                 .request_get(url)
@@ -1483,7 +1711,45 @@ impl PageFetcher<User> for UserPageFetcher {
                 .map_err(|e| e.to_string())?;
             let page: UserResponse = resp.json().await.map_err(|e| e.to_string())?;
             let users: Vec<User> = if !page.user_previews.is_empty() {
-                page.user_previews.into_iter().map(|p| p.user).collect()
+                page.user_previews
+                    .into_iter()
+                    .map(|p| {
+                        let mut user = p.user;
+                        let mut thumbs = Vec::new();
+                        for illust in &p.illusts {
+                            if let Some(thumb) = illust
+                                .image_urls
+                                .square_medium
+                                .as_ref()
+                                .or(illust.image_urls.medium.as_ref())
+                                .or(illust.image_urls.large.as_ref())
+                            {
+                                thumbs.push(thumb.clone());
+                                if thumbs.len() >= 3 {
+                                    break;
+                                }
+                            }
+                        }
+                        if thumbs.len() < 3 {
+                            for novel in &p.novels {
+                                if let Some(thumb) = novel
+                                    .image_urls
+                                    .square_medium
+                                    .as_ref()
+                                    .or(novel.image_urls.medium.as_ref())
+                                    .or(novel.image_urls.large.as_ref())
+                                {
+                                    thumbs.push(thumb.clone());
+                                    if thumbs.len() >= 3 {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        user.sample_work_thumbnails = thumbs;
+                        user
+                    })
+                    .collect()
             } else {
                 page.users
             };
@@ -1503,7 +1769,15 @@ impl PageFetcher<Series> for SeriesPageFetcher {
         next_url: Option<&'a str>,
     ) -> Pin<Box<dyn Future<Output = PageFetchResult<Series>> + Send + 'a>> {
         Box::pin(async move {
-            let url = next_url.unwrap_or(&self.initial_url);
+            let url = match next_url {
+                Some(u) => u,
+                None => {
+                    if self.initial_url.is_empty() {
+                        return Ok((Vec::new(), None));
+                    }
+                    &self.initial_url
+                }
+            };
             let resp = self
                 .client
                 .request_get(url)
@@ -1526,7 +1800,15 @@ impl PageFetcher<SpotlightArticle> for SpotlightPageFetcher {
         next_url: Option<&'a str>,
     ) -> Pin<Box<dyn Future<Output = PageFetchResult<SpotlightArticle>> + Send + 'a>> {
         Box::pin(async move {
-            let url = next_url.unwrap_or(&self.initial_url);
+            let url = match next_url {
+                Some(u) => u,
+                None => {
+                    if self.initial_url.is_empty() {
+                        return Ok((Vec::new(), None));
+                    }
+                    &self.initial_url
+                }
+            };
             let resp = self
                 .client
                 .request_get(url)

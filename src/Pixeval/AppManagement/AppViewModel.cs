@@ -105,6 +105,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
     {
         var makoConfig = AppSettings.ToMakoConfiguration();
         MakoClient = new MakoClient(makoConfig);
+        MakoClient.SetSessionCallback(new MakoSessionCallbackHandler(this, logger));
         var pixivService = new PixivArtworkService(MakoClient, MahoTransport, AppSettings.NetworkSettings);
         DownloadManager = new DownloadManager(pixivService.GetImageDownloadClient(), AppSettings.DownloadSettings.MaxDownloadTaskConcurrencyLevel);
 
@@ -763,6 +764,20 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         {
             // ignored
             // 保证退出时不出幺蛾子
+        }
+    }
+
+    private sealed class MakoSessionCallbackHandler(AppViewModel appViewModel, FileLogger logger) : IMakoSessionCallback
+    {
+        public void OnAuthInvalidated(string message)
+        {
+            logger.LogWarning($"Auth invalidated: {message}", null);
+            Dispatcher.UIThread.Post(() => appViewModel.OnTokenRefreshed(null));
+        }
+
+        public void OnRateLimitEncountered(ulong retryAfterSecs)
+        {
+            logger.LogWarning($"Rate limited by Pixiv API. Retry-After: {retryAfterSecs}s", null);
         }
     }
 }

@@ -111,8 +111,8 @@ public record MangaSeriesContextResponse
 public record MangaSeriesContext
 {
     public required int ContentOrder { get; set; }
-    public required Illustration Previous { get; set; }
-    public required Illustration Next { get; set; }
+    public Illustration? Previous { get; set; }
+    public Illustration? Next { get; set; }
 }
 
 

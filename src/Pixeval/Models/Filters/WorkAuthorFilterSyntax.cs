@@ -21,6 +21,7 @@ internal sealed class WorkAuthorFilterSyntax : FilterTextSyntax<IArtworkInfo>
     [
         FilterSyntaxPattern.PrefixOnly("@", "artist", I18NManager.GetResource(FilterResources.Completions.Author)),
         FilterSyntaxPattern.Keyword("a", exampleValue: "artist", description: I18NManager.GetResource(FilterResources.Completions.Author)),
-        FilterSyntaxPattern.Keyword("artist", exampleValue: "artist", description: I18NManager.GetResource(FilterResources.Completions.Author))
+        FilterSyntaxPattern.Keyword("artist", exampleValue: "artist", description: I18NManager.GetResource(FilterResources.Completions.Author)),
+        FilterSyntaxPattern.Keyword("author", exampleValue: "artist", description: I18NManager.GetResource(FilterResources.Completions.Author))
     ];
 }

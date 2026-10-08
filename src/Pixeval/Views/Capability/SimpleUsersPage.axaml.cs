@@ -93,6 +93,8 @@ public class UserFollowerPage : SimpleUsersPage
 
     protected override IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
     {
+        if (PixevalSettings.MyId <= 0)
+            return AsyncEnumerable.Empty<User>();
         return makoClient.UserFollower(PixevalSettings.MyId);
     }
 }
@@ -113,6 +115,8 @@ public class UserMyPixivPage : SimpleUsersPage
 
     protected override IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
     {
+        if (_userId <= 0)
+            return AsyncEnumerable.Empty<User>();
         return makoClient.UserMypixiv(_userId);
     }
 }
@@ -133,6 +137,8 @@ public class RelatedUsersPage : SimpleUsersPage
 
     protected override IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
     {
-        return makoClient.UserRecommended();
+        if (_userId <= 0)
+            return AsyncEnumerable.Empty<User>();
+        return makoClient.UserRelated(_userId);
     }
 }

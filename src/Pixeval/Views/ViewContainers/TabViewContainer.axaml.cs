@@ -342,6 +342,11 @@ public partial class TabViewContainer : ViewContainerBase
 
     private void OpenMyPage_OnClick(object? sender, RoutedEventArgs e)
     {
+        if (PixevalSettings.MyId <= 0)
+        {
+            TopLevel.GetTopLevel(this)?.ViewContainer?.NavigateTo(new LoginPage());
+            return;
+        }
         this.CreateUserPage(PixevalSettings.MyId);
     }
 

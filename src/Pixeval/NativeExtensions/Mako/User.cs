@@ -11,6 +11,11 @@ namespace Pixeval.Native.Mako;
 
 public partial record User : IUser, IIdEntry
 {
+    public User(long id, string name, string account, ProfileImageUrls profileImageUrls, bool isFollowed, string? comment)
+        : this(id, name, account, profileImageUrls, isFollowed, comment, [])
+    {
+    }
+
     private static readonly Dictionary<string, Uri> s_emptyContact = [];
     private static readonly Dictionary<string, object> s_emptyDict = [];
 

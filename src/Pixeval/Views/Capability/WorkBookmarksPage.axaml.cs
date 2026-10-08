@@ -29,7 +29,7 @@ public partial class WorkBookmarksPage : IconContentPage
     private static IWorkSubscriptionService SubscriptionService =>
         App.AppViewModel.AppServiceProvider.GetRequiredService<IWorkSubscriptionService>();
 
-    public WorkBookmarksPage() : this(PixevalSettings.MyUser!)
+    public WorkBookmarksPage() : this(PixevalSettings.MyUser ?? new User(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []))
     {
     }
 
@@ -41,10 +41,19 @@ public partial class WorkBookmarksPage : IconContentPage
         _initialTag = tag;
         SimpleWorkTypeComboBox.SelectedValue = simpleWorkType;
         PrivacyPolicyComboBox.SelectedValue = privacyPolicy;
-        if (_user.Id != PixevalSettings.MyId)
+        if (_user.Id <= 0 || _user.Id != PixevalSettings.MyId)
             PrivacyPolicyComboBox.IsEnabled = PrivacyPolicyComboBox.IsVisible = false;
 
-        FetchTags();
+        if (_user.Id > 0)
+            FetchTags();
+        else
+        {
+            _suppressChangeSource = true;
+            TagComboBox.ItemsSource = DefaultTags;
+            TagComboBox.SelectedItem = AllBookmarkTag.Instance;
+            _suppressChangeSource = false;
+        }
+
         if (viewModel is not null)
         {
             WorkContainer.SetViewModel(viewModel);
@@ -75,6 +84,15 @@ public partial class WorkBookmarksPage : IconContentPage
 
     public async void FetchTags()
     {
+        if (_user.Id <= 0)
+        {
+            _suppressChangeSource = true;
+            TagComboBox.ItemsSource = DefaultTags;
+            TagComboBox.SelectedItem = AllBookmarkTag.Instance;
+            _suppressChangeSource = false;
+            return;
+        }
+
         try
         {
             var tags = await MakoHelper.GetBookmarkTagsAsync(
@@ -135,11 +153,20 @@ public partial class WorkBookmarksPage : IconContentPage
             UpdateSubscriptionButtons);
     }
 
-    private void UpdateSubscriptionButtons() =>
+    private void UpdateSubscriptionButtons()
+    {
+        if (_user.Id <= 0)
+        {
+            AddSubscriptionButton.IsVisible = false;
+            RemoveSubscriptionButton.IsVisible = false;
+            return;
+        }
+
         WorkSubscriptionButtonHelper.UpdateVisibility(
             AddSubscriptionButton,
             RemoveSubscriptionButton,
             SubscriptionService.TryGetSubscription(_user.Id, WorkSubscriptionType.Bookmarks, GetSubscriptionWorkKind()) is not null);
+    }
 
     private async Task<bool> RemoveCurrentSubscriptionAsync()
     {

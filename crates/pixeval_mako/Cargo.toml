@@ -16,6 +16,7 @@ uniffi = { version = "0.32", features = ["tokio"] }
 url = "2"
 http = "1"
 bytes = "1"
+httpdate = "1.0"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

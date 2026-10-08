@@ -66,7 +66,19 @@ fn eval_predicate(predicate: &FilterPredicateNode, artwork: &ArtworkMetadata) ->
     match &predicate.value {
         FilterValue::Text(tv) => match key {
             "Title" => tv.matches(&artwork.title),
-            "Author" => tv.matches(&artwork.author_name) || tv.matches(&artwork.author_account),
+            "Author" => {
+                let author_trimmed = tv.content.trim();
+                if author_trimmed.is_empty() {
+                    true
+                } else if tv.is_exact {
+                    artwork.author_name.trim().eq_ignore_ascii_case(author_trimmed)
+                        || artwork.author_account.trim().eq_ignore_ascii_case(author_trimmed)
+                } else {
+                    let needle = author_trimmed.to_lowercase();
+                    artwork.author_name.to_lowercase().contains(&needle)
+                        || artwork.author_account.to_lowercase().contains(&needle)
+                }
+            }
             "Tag" => artwork.tags.iter().any(|t| {
                 tv.matches(&t.name)
                     || t.translated_name

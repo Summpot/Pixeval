@@ -132,7 +132,7 @@ public class WorkPostsPage : WorkTypeWorksPage
 {
     private readonly User _user;
 
-    public WorkPostsPage() : this(PixevalSettings.MyUser!)
+    public WorkPostsPage() : this(PixevalSettings.MyUser ?? new User(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []))
     {
     }
 
@@ -143,9 +143,10 @@ public class WorkPostsPage : WorkTypeWorksPage
     public WorkPostsPage(User user, WorkType workType, IWorkViewViewModel? viewModel = null)
     {
         _user = user;
-        EnableAddSubscriptionButton();
+        if (_user.Id > 0)
+            EnableAddSubscriptionButton();
         InitializeSource(workType, viewModel);
-        if (viewModel is not null)
+        if (viewModel is not null && _user.Id > 0)
             UpdateSubscriptionButtons(_user.Id, WorkSubscriptionType.Posts, GetSubscriptionWorkKind(workType));
     }
 
@@ -161,6 +162,8 @@ public class WorkPostsPage : WorkTypeWorksPage
 
     protected override void OnSourceChanged(IAsyncEnumerable<IWorkEntry> engine, WorkType workType)
     {
+        if (_user.Id <= 0)
+            return;
         var workKind = GetSubscriptionWorkKind(workType);
         App.AppViewModel.QueueWorkSubscriptionSyncCurrentSource(
             _user.Id,
@@ -202,8 +205,16 @@ public class WorkPostsPage : WorkTypeWorksPage
             WorkSubscriptionType.Posts,
             GetSubscriptionWorkKind(WorkTypeComboBox.GetSelectedValue<WorkType>()))?.HistoryEntryId;
 
-    private void UpdateSubscriptionButtons(WorkType workType) =>
+    private void UpdateSubscriptionButtons(WorkType workType)
+    {
+        if (_user.Id <= 0)
+        {
+            AddSubscriptionButton.IsVisible = false;
+            RemoveSubscriptionButton.IsVisible = false;
+            return;
+        }
         UpdateSubscriptionButtons(_user.Id, WorkSubscriptionType.Posts, GetSubscriptionWorkKind(workType));
+    }
 
     private static WorkSubscriptionWorkKind GetSubscriptionWorkKind(WorkType workType) => workType switch
     {

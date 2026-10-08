@@ -647,21 +647,21 @@ public static class MakoHelper
             Context = new MangaSeriesContext
             {
                 ContentOrder = res.Context.ContentOrder,
-                Previous = res.Context.PrevIllust!,
-                Next = res.Context.NextIllust!
+                Previous = res.Context.PrevIllust,
+                Next = res.Context.NextIllust
             }
         };
     }
 
     public static async Task<bool> PostWorkSeriesWatchlistAsync(this MakoClient client, SimpleWorkType type, long id, CancellationToken token = default)
     {
-        var res = await client.AddSeriesWatchlistAsync(id);
+        var res = await client.AddSeriesWatchlistAsync(type is SimpleWorkType.Novel, id);
         return res.Success;
     }
 
     public static async Task<bool> RemoveWorkSeriesWatchlistAsync(this MakoClient client, SimpleWorkType type, long id, CancellationToken token = default)
     {
-        var res = await client.DeleteSeriesWatchlistAsync(id);
+        var res = await client.DeleteSeriesWatchlistAsync(type is SimpleWorkType.Novel, id);
         return res.Success;
     }
 

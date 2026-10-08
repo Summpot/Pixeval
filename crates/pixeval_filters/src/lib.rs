@@ -65,6 +65,12 @@ mod tests {
                         Some("artist".to_string()),
                         Some("按画师搜索".to_string()),
                     ),
+                    FilterSyntaxPattern::keyword(
+                        "author",
+                        ":",
+                        Some("artist".to_string()),
+                        Some("按画师搜索".to_string()),
+                    ),
                 ],
             ),
             FilterSyntaxDefinition::new(
@@ -198,6 +204,25 @@ mod tests {
                     ),
                 ],
             ),
+            FilterSyntaxDefinition::new(
+                "StartDate",
+                FilterValueKind::Date,
+                Some("2024-01-01".to_string()),
+                vec![
+                    FilterSyntaxPattern::keyword(
+                        "start",
+                        ":",
+                        Some("2024-01-01".to_string()),
+                        Some("起始日期".to_string()),
+                    ),
+                    FilterSyntaxPattern::keyword(
+                        "s",
+                        ":",
+                        Some("01-01".to_string()),
+                        Some("起始日期".to_string()),
+                    ),
+                ],
+            ),
         ];
 
         FilterLanguage::new(syntaxes, None, None, None)
@@ -301,5 +326,63 @@ mod tests {
             ..artwork.clone()
         };
         assert!(matches_artwork(&q_ratio, &novel_art));
+    }
+
+    #[test]
+    fn test_author_search_and_case_insensitive() {
+        let lang = create_test_language();
+        let res = lang.analyze("author:Alice", -1, None);
+        assert!(res.is_success);
+        let q = res.query.unwrap();
+
+        let artwork = ArtworkMetadata {
+            id: "1".to_string(),
+            title: "Art".to_string(),
+            author_name: "alice".to_string(),
+            author_account: "alice_pixiv".to_string(),
+            tags: vec![],
+            total_bookmarks: 10,
+            create_date_timestamp: 1700000000,
+            width: 100,
+            height: 100,
+            x_restrict: 0,
+            ai_type: 0,
+            illustration_type: 0,
+        };
+        assert!(matches_artwork(&q, &artwork));
+
+        let res_exact = lang.analyze("author:ALICE$", -1, None);
+        assert!(res_exact.is_success);
+        let q_exact = res_exact.query.unwrap();
+        assert!(matches_artwork(&q_exact, &artwork));
+
+        let res_ws = lang.analyze("@ Alice ", -1, None);
+        assert!(res_ws.is_success);
+        let q_ws = res_ws.query.unwrap();
+        assert!(matches_artwork(&q_ws, &artwork));
+    }
+
+    #[test]
+    fn test_leap_day_validation() {
+        use chrono::Datelike;
+        let lang = create_test_language();
+        let current_year = chrono::Utc::now().year();
+        let is_leap_year = chrono::NaiveDate::from_ymd_opt(current_year, 2, 29).is_some();
+        let res = lang.analyze("s:2-29", -1, None);
+        if is_leap_year {
+            assert!(res.is_success);
+        } else {
+            assert!(!res.is_success);
+            assert!(res.diagnostics.iter().any(|d| d.kind == FilterDiagnosticKind::InvalidDate));
+        }
+
+        // Leap year explicitly specified (2024-2-29) should always succeed
+        let res_leap = lang.analyze("s:2024-2-29", -1, None);
+        assert!(res_leap.is_success);
+
+        // Non-leap year explicitly specified (2025-2-29) should always fail
+        let res_non_leap = lang.analyze("s:2025-2-29", -1, None);
+        assert!(!res_non_leap.is_success);
+        assert!(res_non_leap.diagnostics.iter().any(|d| d.kind == FilterDiagnosticKind::InvalidDate));
     }
 }

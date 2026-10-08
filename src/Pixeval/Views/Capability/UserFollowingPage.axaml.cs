@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Avalonia.Interactivity;
 using Pixeval.Controls;
 using Pixeval.Models.Pixiv;
@@ -24,7 +25,7 @@ public partial class UserFollowingPage : IconContentPage
         InitializeComponent();
         _userId = id;
         PrivacyPolicyComboBox.SelectedValue = privacyPolicy;
-        if (id != PixevalSettings.MyId)
+        if (id <= 0 || id != PixevalSettings.MyId)
             PrivacyPolicyComboBox.IsEnabled = PrivacyPolicyComboBox.IsVisible = false;
         if (viewModel is not null)
             UserContainer.UserView.SetViewModel(viewModel);
@@ -46,6 +47,11 @@ public partial class UserFollowingPage : IconContentPage
 
     private void ChangeSource()
     {
+        if (_userId <= 0)
+        {
+            ResetEngine(AsyncEnumerable.Empty<Pixeval.Native.Mako.User>());
+            return;
+        }
         var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>();
         ResetEngine(App.AppViewModel.MakoClient.UserFollowing(_userId, privacy));
     }

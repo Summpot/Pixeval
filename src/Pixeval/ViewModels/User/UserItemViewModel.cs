@@ -35,9 +35,9 @@ public partial class UserItemViewModel : EntryViewModel<User>, IFactory<User, Us
 
     public override Uri WebsiteUri => Entry.WebsiteUri;
 
-    public string? Banner0Url { get; }
+    public string? Banner0Url => Entry.SampleWorkThumbnails.Count > 0 ? Entry.SampleWorkThumbnails[0] : null;
 
-    public string? Banner1Url { get; }
+    public string? Banner1Url => Entry.SampleWorkThumbnails.Count > 1 ? Entry.SampleWorkThumbnails[1] : null;
 
-    public string? Banner2Url { get; }
+    public string? Banner2Url => Entry.SampleWorkThumbnails.Count > 2 ? Entry.SampleWorkThumbnails[2] : null;
 }

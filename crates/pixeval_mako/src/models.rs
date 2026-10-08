@@ -75,6 +75,8 @@ pub struct User {
     pub is_followed: bool,
     #[serde(default)]
     pub comment: Option<String>,
+    #[serde(default)]
+    pub sample_work_thumbnails: Vec<String>,
 }
 
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
@@ -369,12 +371,16 @@ pub struct TrendingTagResponse {
     pub trend_tags: Vec<TrendingTag>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub struct UserPreview {
     pub user: User,
+    #[serde(default)]
+    pub illusts: Vec<Illustration>,
+    #[serde(default)]
+    pub novels: Vec<Novel>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub struct UserResponse {
     #[serde(default)]
     pub user_previews: Vec<UserPreview>,
@@ -495,11 +501,23 @@ pub struct MangaSeriesContextResult {
 }
 
 #[derive(Deserialize, Default)]
+pub struct RawMangaSeriesContextInner {
+    #[serde(default)]
+    pub content_order: Option<i32>,
+    #[serde(default)]
+    pub prev: Option<Illustration>,
+    #[serde(default)]
+    pub next: Option<Illustration>,
+}
+
+#[derive(Deserialize, Default)]
 pub struct MangaSeriesContextResponseRaw {
     #[serde(default)]
     pub series: Option<Series>,
     #[serde(default)]
     pub illust_series_detail: Option<Series>,
+    #[serde(default)]
+    pub illust_series_context: Option<RawMangaSeriesContextInner>,
     #[serde(default)]
     pub prev: Option<Illustration>,
     #[serde(default)]
