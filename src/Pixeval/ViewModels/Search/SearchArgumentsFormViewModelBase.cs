@@ -10,7 +10,7 @@ namespace Pixeval.ViewModels.Search;
 
 public abstract partial class SearchArgumentsFormViewModelBase : ViewModelBase
 {
-    protected static readonly string CommonUnspecified = I18NManager.GetResource(SearchResources.Common.Unspecified);
+    public static readonly string CommonUnspecified = I18NManager.GetResource(SearchResources.Common.Unspecified);
 
     public OptionalDateSearchOptionViewModel StartDateOption { get; } = new();
 

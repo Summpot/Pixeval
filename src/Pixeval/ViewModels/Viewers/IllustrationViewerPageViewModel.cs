@@ -6,27 +6,22 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Controls;
-using Avalonia.Layout;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.AppManagement;
-using Pixeval.Models.Pixiv;
 using Pixeval.I18N;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Options;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
-using Pixeval.Views.Capability;
+using Pixeval.ViewModels;
 using Pixeval.Views.Viewers;
 
 namespace Pixeval.ViewModels.Viewers;
 
 public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewModel, IDisposable
 {
-    private readonly DispatcherTimer _autoPlayTimer = new();
-
     private readonly Dictionary<int, IWorkViewModel> _refreshedIllustrations = [];
 
     private readonly bool _needRefresh;
@@ -55,13 +50,11 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     {
         _needRefresh = needRefresh;
         CurrentIllustration = illustrationViewModel;
-        InitializeAutoPlayTimer();
         CurrentWorkIndex = 0;
     }
 
     public IllustrationViewerPageViewModel(IIdentityInfo info)
     {
-        InitializeAutoPlayTimer();
         _ = LoadSingleIllustrationAsync(info, _loadingCts.Token);
     }
 
@@ -87,39 +80,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     {
         _needRefresh = needRefresh;
         _sourceView = dataProvider;
-        InitializeAutoPlayTimer();
         CurrentWorkIndex = currentIllustrationIndex;
-    }
-
-    public IReadOnlyList<Page> PanePages => CreatePanePages(CurrentIllustration?.Entry);
-
-    private static IReadOnlyList<Page> CreatePanePages(IArtworkInfo? entry)
-    {
-        if (entry is not Illustration { Id: var id } illustration)
-            return [];
-
-        var pages = new List<Page>
-        {
-            new WorkInfoPage(illustration)
-            {
-                ActionZone = new Border
-                {
-                    Width = 32,
-                    Height = 32,
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    VerticalAlignment = VerticalAlignment.Top,
-                    IsHitTestVisible = false
-                }
-            }
-        };
-
-        if (!BlockedContentHelper.IsBlockedPlaceholder(illustration))
-        {
-            pages.Add(new CommentsPage(new CommentsViewViewModel(SimpleWorkType.Illustration, id)));
-            pages.Add(new WorkRelatedPage(illustration.Id, SimpleWorkType.Illustration) { IsCommandBarCollapsed = true });
-        }
-
-        return pages;
     }
 
     #region Current相关
@@ -353,7 +314,6 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     {
         OnPropertyChanged(nameof(CurrentIllustration));
         OnPropertyChanged(nameof(LogoUri));
-        OnPropertyChanged(nameof(PanePages));
     }
 
     private void NotifyPageNavigationChanged()
@@ -397,7 +357,6 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
             App.AppViewModel.AppSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayInterval = value;
             SaveAutoPlaySettings();
             OnPropertyChanged();
-            UpdateAutoPlayTimerInterval();
         }
     }
 
@@ -431,34 +390,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
     [ObservableProperty] public partial bool IsAutoPlaying { get; set; }
 
-    partial void OnIsAutoPlayingChanged(bool value)
-    {
-        if (value)
-            StartAutoPlay();
-        else
-            StopAutoPlay();
-        return;
-
-        void StartAutoPlay()
-        {
-            UpdateAutoPlayTimerInterval();
-            _autoPlayTimer.Start();
-        }
-
-        void StopAutoPlay() => _autoPlayTimer.Stop();
-    }
-
-    private void InitializeAutoPlayTimer()
-    {
-        _autoPlayTimer.Tick += AutoPlayTimerOnTick;
-        UpdateAutoPlayTimerInterval();
-    }
-
-    private void UpdateAutoPlayTimerInterval() => _autoPlayTimer.Interval = TimeSpan.FromSeconds(AutoPlayInterval);
-
-    private void AutoPlayTimerOnTick(object? sender, EventArgs e) => MoveAutoPlayNext();
-
-    private void MoveAutoPlayNext()
+    public void MoveAutoPlayNext()
     {
         switch (AutoPlayScope, AutoPlayMode)
         {

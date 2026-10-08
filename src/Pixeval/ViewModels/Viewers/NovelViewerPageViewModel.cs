@@ -3,17 +3,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using AutoSettingsPage;
-using AutoSettingsPage.Avalonia;
-using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Pixeval.AppManagement.Settings;
 using Pixeval.I18N;
@@ -22,9 +17,6 @@ using Pixeval.Models.Pixiv;
 using Pixeval.Models.Settings;
 using Pixeval.Native.Mako;
 using Pixeval.Utilities;
-using Pixeval.Views.Capability;
-using Pixeval.Views.Settings;
-using Pixeval.Views.Viewers;
 
 namespace Pixeval.ViewModels.Viewers;
 
@@ -44,18 +36,6 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
     [ObservableProperty]
     public partial WorkSeriesInfoViewModel? SeriesInfo { get; private set; }
-
-    public IReadOnlyList<Page> PanePages => CurrentNovel is not { } currentNovel
-        ? []
-        : BlockedContentHelper.IsBlockedPlaceholder(currentNovel.Entry)
-            ? [new WorkInfoPage(currentNovel.Entry)]
-            :
-            [
-                new WorkInfoPage(currentNovel.Entry),
-                new CommentsPage(new CommentsViewViewModel(SimpleWorkType.Novel, currentNovel.Entry.Id)),
-                new WorkRelatedPage(currentNovel.Entry.Id, SimpleWorkType.Novel) { IsCommandBarCollapsed = true },
-                SettingsPage
-            ];
 
     public NovelViewerPageViewModel(Novel novelViewModel, bool needRefresh)
     {
@@ -99,7 +79,6 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             field = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(NovelId));
-            OnPropertyChanged(nameof(PanePages));
         }
     }
 
@@ -121,7 +100,6 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             OnPropertyChanged();
             OnPropertyChanged(nameof(NovelId));
             OnPropertyChanged(nameof(CurrentNovel));
-            OnPropertyChanged(nameof(PanePages));
         }
         // 第一次赋值属性时会判断 value == field，如果是0则无法进入set方法体
         // ReSharper disable once MemberInitializerValueIgnored
@@ -156,32 +134,6 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
     #region Settings
 
-    private ObservableCollection<string>? _subscribedNovelFontFamily;
-
-    private SettingsSubView SettingsPage
-    {
-        get
-        {
-            LocalSettingsEntryHelper.Initialize();
-            return new SettingsSubView(
-                SettingsBuilder.CreateGroupList(App.AppViewModel.AppSettings)
-                    .NewGroup(t => t.NovelSettings, group => group
-                        .Color(t => t.NovelBackground, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelBackground)))
-                        .Color(t => t.NovelFontColor, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelFontColor)))
-                        .Font(t => t.NovelFontFamily, t =>
-                        {
-                            t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelFontFamilyObject));
-                            _subscribedNovelFontFamily = t.Value;
-                            _subscribedNovelFontFamily.CollectionChanged += OnNovelFontFamilyChanged;
-                        })
-                        .Enum(t => t.NovelFontWeight, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelFontWeight)))
-                        .Int(t => t.NovelFontSize, 5, 100, 1, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelFontSize)))
-                        .Int(t => t.NovelLineHeight, 0, 150, 1, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelLineHeight)))
-                        .Int(t => t.NovelMaxWidth, 50, 10000, 50, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelMaxWidth))))
-                    .Build()[0]);
-        }
-    }
-
     private static AppSettings Settings => App.AppViewModel.AppSettings;
 
     public uint NovelBackground => Settings.NovelSettings.NovelBackground;
@@ -198,8 +150,13 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
     public int NovelMaxWidth => Settings.NovelSettings.NovelMaxWidth;
 
-    private void OnNovelFontFamilyChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
-        OnPropertyChanged(nameof(NovelFontFamilyObject));
+    public void NotifyNovelBackgroundChanged() => OnPropertyChanged(nameof(NovelBackground));
+    public void NotifyNovelFontColorChanged() => OnPropertyChanged(nameof(NovelFontColor));
+    public void NotifyNovelFontFamilyChanged() => OnPropertyChanged(nameof(NovelFontFamilyObject));
+    public void NotifyNovelFontWeightChanged() => OnPropertyChanged(nameof(NovelFontWeight));
+    public void NotifyNovelFontSizeChanged() => OnPropertyChanged(nameof(NovelFontSize));
+    public void NotifyNovelLineHeightChanged() => OnPropertyChanged(nameof(NovelLineHeight));
+    public void NotifyNovelMaxWidthChanged() => OnPropertyChanged(nameof(NovelMaxWidth));
 
     #endregion
 
@@ -266,7 +223,6 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             OnPropertyChanged(nameof(IsMultiPage));
             OnPropertyChanged(nameof(CurrentNovel));
             OnPropertyChanged(nameof(NovelId));
-            OnPropertyChanged(nameof(PanePages));
         }
         catch (OperationCanceledException)
         {
@@ -286,19 +242,8 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
         static List<string> BuildPageMarkdowns(NovelContent content)
         {
-            var engine = new Pixeval.Native.Novel.NovelEngine();
-            var images = content.Images
-                .Select(x => new Pixeval.Native.Novel.NovelImageRenderDto(x.NovelImageId, x.ThumbnailUrl, ""))
-                .ToList();
-            var illusts = content.Illustrations
-                .Select(x => new Pixeval.Native.Novel.NovelIllustRenderDto(x.Id, x.Page, x.ThumbnailUrl, x.AppUri.OriginalString, x.WebsiteUri.OriginalString, ""))
-                .ToList();
-
-            var pages = engine.RenderPagesMarkdown(content.Text, images, illusts);
-            if (pages.Count is 0)
-                pages.Add("");
-
-            return pages;
+            var pages = content.RenderMarkdownPages();
+            return pages as List<string> ?? [.. pages];
         }
     }
 
@@ -372,11 +317,6 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         IsLoading = false;
         _loadingCts.Cancel();
         _loadingCts.Dispose();
-        if (_subscribedNovelFontFamily is { } novelFontFamily)
-        {
-            novelFontFamily.CollectionChanged -= OnNovelFontFamilyChanged;
-            _subscribedNovelFontFamily = null;
-        }
 
         _sourceView?.Dispose();
     }

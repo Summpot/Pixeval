@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Pixeval.Controls;
 using Pixeval.Download;
@@ -21,7 +20,6 @@ public sealed partial class DownloadFolderViewModel(WorkSubscriptionRecord subsc
     : ViewModelBase, IDownloadListEntryViewModel, IDisposable
 {
     private bool _isDisposed;
-    private DispatcherTimer? _rateLimitTimer;
 
     public WorkSubscriptionRecord Subscription { get; private set; } = subscription;
 
@@ -54,30 +52,85 @@ public sealed partial class DownloadFolderViewModel(WorkSubscriptionRecord subsc
     {
         get
         {
-            var states = Items.Select(t => t.CurrentState).ToArray();
-            return states switch
+            if (Items.Count is 0)
+                return DownloadState.Completed;
+
+            var hasError = false;
+            var hasCancelled = false;
+            var hasPaused = false;
+            var hasRunning = false;
+            var hasQueued = false;
+            var hasPending = false;
+
+            for (var i = 0; i < Items.Count; i++)
             {
-                [] => DownloadState.Completed,
-                _ when states.Any(t => t is DownloadState.Error) => DownloadState.Error,
-                _ when states.Any(t => t is DownloadState.Cancelled) => DownloadState.Cancelled,
-                _ when states.Any(t => t is DownloadState.Paused) => DownloadState.Paused,
-                _ when states.Any(t => t is DownloadState.Running) => DownloadState.Running,
-                _ when states.Any(t => t is DownloadState.Queued) => DownloadState.Queued,
-                _ when states.Any(t => t is DownloadState.Pending) => DownloadState.Pending,
-                _ => DownloadState.Completed
-            };
+                switch (Items[i].CurrentState)
+                {
+                    case DownloadState.Error: hasError = true; break;
+                    case DownloadState.Cancelled: hasCancelled = true; break;
+                    case DownloadState.Paused: hasPaused = true; break;
+                    case DownloadState.Running: hasRunning = true; break;
+                    case DownloadState.Queued: hasQueued = true; break;
+                    case DownloadState.Pending: hasPending = true; break;
+                }
+            }
+
+            if (hasError) return DownloadState.Error;
+            if (hasCancelled) return DownloadState.Cancelled;
+            if (hasPaused) return DownloadState.Paused;
+            if (hasRunning) return DownloadState.Running;
+            if (hasQueued) return DownloadState.Queued;
+            if (hasPending) return DownloadState.Pending;
+            return DownloadState.Completed;
         }
     }
 
-    public int ActiveCount => Items.Sum(t => t.DownloadTask.ActiveCount);
+    public int ActiveCount
+    {
+        get
+        {
+            var sum = 0;
+            for (var i = 0; i < Items.Count; i++)
+                sum += Items[i].DownloadTask.ActiveCount;
+            return sum;
+        }
+    }
 
-    public int CompletedCount => Items.Sum(t => t.DownloadTask.CompletedCount);
+    public int CompletedCount
+    {
+        get
+        {
+            var sum = 0;
+            for (var i = 0; i < Items.Count; i++)
+                sum += Items[i].DownloadTask.CompletedCount;
+            return sum;
+        }
+    }
 
-    public int ErrorCount => Items.Sum(t => t.DownloadTask.ErrorCount);
+    public int ErrorCount
+    {
+        get
+        {
+            var sum = 0;
+            for (var i = 0; i < Items.Count; i++)
+                sum += Items[i].DownloadTask.ErrorCount;
+            return sum;
+        }
+    }
 
-    public double ProgressPercentage => Items.Count is 0
-        ? 100
-        : Items.Average(t => t.DownloadTask.ProgressPercentage);
+    public double ProgressPercentage
+    {
+        get
+        {
+            if (Items.Count is 0)
+                return 100;
+
+            var sum = 0.0;
+            for (var i = 0; i < Items.Count; i++)
+                sum += Items[i].DownloadTask.ProgressPercentage;
+            return sum / Items.Count;
+        }
+    }
 
     public string StateBrushKey => CurrentState switch
     {
@@ -101,20 +154,7 @@ public sealed partial class DownloadFolderViewModel(WorkSubscriptionRecord subsc
 
     partial void OnFetchedCountChanged(int value) => OnPropertyChanged(nameof(Subtitle));
 
-    partial void OnRetryAtChanged(DateTimeOffset? value)
-    {
-        _rateLimitTimer?.Stop();
-        if (value > DateTimeOffset.UtcNow)
-        {
-            _rateLimitTimer ??= new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) =>
-            {
-                if (RetryAt <= DateTimeOffset.UtcNow)
-                    RetryAt = null;
-            });
-            _rateLimitTimer.Start();
-        }
-        OnPropertyChanged(nameof(Subtitle));
-    }
+    partial void OnRetryAtChanged(DateTimeOffset? value) => OnPropertyChanged(nameof(Subtitle));
 
     internal void UpdateFetchState(SubscriptionFetchState? state)
     {
@@ -200,7 +240,6 @@ public sealed partial class DownloadFolderViewModel(WorkSubscriptionRecord subsc
             return;
 
         _isDisposed = true;
-        _rateLimitTimer?.Stop();
         foreach (var item in Items)
             item.DownloadTask.PropertyChanged -= DownloadTaskOnPropertyChanged;
         Items.Clear();

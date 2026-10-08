@@ -71,20 +71,8 @@ public partial class SearchPageViewModel : ViewModelBase
     private async Task RefreshSearchOptionsAsync()
     {
         var options = await MakoClient.GetSearchOptionsAsync();
-        IllustrationForm.ToolItems =
-        [
-            .. IllustrationForm.ToolItems,
-            .. options.Illust.Tools
-        ];
-        NovelForm.LanguageItems =
-        [
-            .. NovelForm.LanguageItems,
-            .. options.Novel.Languages
-        ];
-        NovelForm.GenreItems =
-        [
-            .. NovelForm.GenreItems,
-            .. options.Novel.Genres
-        ];
+        IllustrationForm.ToolItems = [SearchArgumentsFormViewModelBase.CommonUnspecified, .. options.Illust.Tools];
+        NovelForm.LanguageItems = [new("", SearchArgumentsFormViewModelBase.CommonUnspecified), .. options.Novel.Languages];
+        NovelForm.GenreItems = [new(0, SearchArgumentsFormViewModelBase.CommonUnspecified), .. options.Novel.Genres];
     }
 }

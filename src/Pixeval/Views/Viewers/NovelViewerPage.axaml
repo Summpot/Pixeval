@@ -30,7 +30,7 @@
             <SplitView.Pane>
                 <DockPanel>
                     <local:WorkSeriesInfoPane DataContext="{Binding SeriesInfo}" DockPanel.Dock="Bottom" />
-                    <TabbedPage Pages="{Binding PanePages}" TabPlacement="Bottom" />
+                    <TabbedPage x:Name="NovelTabbedPage" TabPlacement="Bottom" />
                 </DockPanel>
             </SplitView.Pane>
 

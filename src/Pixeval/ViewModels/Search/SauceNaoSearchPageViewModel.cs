@@ -35,13 +35,20 @@ public sealed partial class SauceNaoSearchPageViewModel : ViewModelBase, IDispos
 
         try
         {
-            using var memoryStream = Streams.RentStream();
-            await stream.CopyToAsync(memoryStream);
-            File = memoryStream.ToArray();
+            if (stream is MemoryStream ms)
+            {
+                File = ms.ToArray();
+            }
+            else
+            {
+                using var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                File = memoryStream.ToArray();
+            }
             FileSelected = true;
-            memoryStream.Position = 0;
+            using var readStream = new MemoryStream(File.ToArray());
             Image?.Dispose();
-            Image = new Bitmap(memoryStream);
+            Image = new Bitmap(readStream);
         }
         catch (Exception)
         {
@@ -61,8 +68,8 @@ public sealed partial class SauceNaoSearchPageViewModel : ViewModelBase, IDispos
             {
                 Image?.Dispose();
                 Image = bitmap;
-                using var memoryStream = Streams.RentStream();
-                bitmap.Save(memoryStream, new PngBitmapEncoderOptions());
+                using var memoryStream = new MemoryStream();
+                bitmap.Save(memoryStream);
                 File = memoryStream.ToArray();
                 FileSelected = true;
             }
