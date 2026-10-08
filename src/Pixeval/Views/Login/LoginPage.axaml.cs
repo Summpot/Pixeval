@@ -2,13 +2,16 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Platform;
 using Microsoft.Extensions.DependencyInjection;
+using Pixeval.AppManagement;
 using Pixeval.I18N;
 using Pixeval.Native.Mako;
 using Pixeval.Utilities;
@@ -90,7 +93,38 @@ public partial class LoginPage : IconContentPage
                     new("pixiv://account/login"))
                 {
                     Mode = WebAuthenticatorMode.NativeWebDialog,
-                    NonPersistent = true
+                    NonPersistent = true,
+                    NativeWebDialogFactory = () =>
+                    {
+                        var dialog = new NativeWebDialog
+                        {
+                            Title = "Pixiv",
+                            CanUserResize = true
+                        };
+                        dialog.Resize(600, 700);
+                        dialog.EnvironmentRequested += (_, args) =>
+                        {
+                            if (args is WindowsWebView2EnvironmentRequestedEventArgs winArgs)
+                            {
+                                var userDataFolder = Path.Combine(AppInfo.CacheFolder, "WebView2");
+                                Directory.CreateDirectory(userDataFolder);
+                                winArgs.UserDataFolder = userDataFolder;
+                                // For System proxy, WebView2 natively uses Windows system proxy.
+                                // For Custom proxy, format host:port without trailing slash or internal quotes.
+                                if (App.AppViewModel?.AppSettings?.NetworkSettings?.ProxySettings is { ProxyType: Models.Options.ProxyType.Custom } proxySettings
+                                    && !string.IsNullOrWhiteSpace(proxySettings.Proxy))
+                                {
+                                    var normalized = MakoHelper.NormalizeProxyUri(proxySettings.Proxy);
+                                    if (normalized is not null && Uri.TryCreate(normalized, UriKind.Absolute, out var uri))
+                                    {
+                                        var cleanProxy = $"{uri.Scheme}://{uri.Authority}";
+                                        winArgs.AdditionalBrowserArguments = $"--proxy-server={cleanProxy}";
+                                    }
+                                }
+                            }
+                        };
+                        return dialog;
+                    }
                 });
 
             if (result.CallbackUri is not { } callbackUri)

@@ -6,7 +6,8 @@ edition = "2024"
 [dependencies]
 pixeval_maho = { path = "../pixeval_maho" }
 uniffi = { version = "0.32", features = ["tokio"] }
-tokio = { version = "1", features = ["sync", "time", "rt", "macros", "fs", "io-util"] }
+tokio = { version = "1", features = ["full"] }
+async-compat = { version = "0.2", features = ["multi-thread"] }
 futures-util = "0.3"
 semver = "1.0"
 sha2 = "0.10"

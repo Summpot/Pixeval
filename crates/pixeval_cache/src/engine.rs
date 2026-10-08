@@ -402,11 +402,12 @@ impl CacheEngine {
         referer: Option<String>,
         callback: Option<Box<dyn CachePreviewCallback>>,
     ) -> Result<Vec<u8>, CacheError> {
-        if url.trim().is_empty() {
-            return Err(CacheError::Io {
-                message: "Empty URL".to_string(),
-            });
-        }
+        async_compat::Compat::new(async move {
+            if url.trim().is_empty() {
+                return Err(CacheError::Io {
+                    message: "Empty URL".to_string(),
+                });
+            }
 
         if let Some(data) = self.get(url.clone()) {
             if let Some(cb) = &callback {
@@ -495,6 +496,8 @@ impl CacheEngine {
 
         let _ = self.put(url, buffer.clone());
         Ok(buffer)
+        })
+        .await
     }
 }
 

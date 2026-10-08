@@ -77,24 +77,27 @@ impl Stream for MahoByteStream {
     type Item = Result<Bytes, MahoError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        loop {
-            match Pin::new(&mut self.inner).poll_frame(cx) {
-                Poll::Ready(Some(Ok(frame))) => {
-                    if let Ok(data) = frame.into_data() {
-                        if !data.is_empty() {
-                            return Poll::Ready(Some(Ok(data)));
+        let mut fut = async_compat::Compat::new(std::future::poll_fn(|cx| {
+            loop {
+                match Pin::new(&mut self.inner).poll_frame(cx) {
+                    Poll::Ready(Some(Ok(frame))) => {
+                        if let Ok(data) = frame.into_data() {
+                            if !data.is_empty() {
+                                return Poll::Ready(Some(Ok(data)));
+                            }
                         }
                     }
+                    Poll::Ready(Some(Err(e))) => {
+                        return Poll::Ready(Some(Err(MahoError::Network {
+                            message: e.to_string(),
+                        })));
+                    }
+                    Poll::Ready(None) => return Poll::Ready(None),
+                    Poll::Pending => return Poll::Pending,
                 }
-                Poll::Ready(Some(Err(e))) => {
-                    return Poll::Ready(Some(Err(MahoError::Network {
-                        message: e.to_string(),
-                    })));
-                }
-                Poll::Ready(None) => return Poll::Ready(None),
-                Poll::Pending => return Poll::Pending,
             }
-        }
+        }));
+        Pin::new(&mut fut).poll(cx)
     }
 }
 
@@ -129,10 +132,13 @@ impl MahoResponse {
     }
 
     pub async fn bytes(self) -> Result<Bytes, MahoError> {
-        let collected = self.body.collect().await.map_err(|e| MahoError::Network {
-            message: e.to_string(),
-        })?;
-        Ok(collected.to_bytes())
+        async_compat::Compat::new(async move {
+            let collected = self.body.collect().await.map_err(|e| MahoError::Network {
+                message: e.to_string(),
+            })?;
+            Ok(collected.to_bytes())
+        })
+        .await
     }
 
     pub async fn text(self) -> Result<String, MahoError> {
@@ -220,9 +226,12 @@ impl MahoHttpClient {
             message: e.to_string(),
         })?;
 
-        let resp = self.inner.request(request).await?;
-        let (parts, body) = resp.into_parts();
-        Ok(MahoResponse::new(parts.status, parts.headers, body))
+        async_compat::Compat::new(async move {
+            let resp = self.inner.request(request).await?;
+            let (parts, body) = resp.into_parts();
+            Ok(MahoResponse::new(parts.status, parts.headers, body))
+        })
+        .await
     }
 }
 

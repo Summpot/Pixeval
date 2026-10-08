@@ -383,4 +383,38 @@ mod tests {
         assert_eq!(raw.novel.genre.options.len(), 1);
         assert_eq!(raw.novel.genre.options[0].label, "Romance");
     }
+
+    #[test]
+    fn test_async_compat_reactor_available_outside_tokio() {
+        use async_compat::CompatExt;
+        use std::future::Future;
+        use std::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
+
+        fn dummy_waker() -> Waker {
+            fn noop(_: *const ()) {}
+            fn clone(p: *const ()) -> RawWaker {
+                RawWaker::new(p, &VTABLE)
+            }
+            static VTABLE: RawWakerVTable = RawWakerVTable::new(clone, noop, noop, noop);
+            unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), &VTABLE)) }
+        }
+
+        let mut fut = std::pin::pin!(
+            async {
+                tokio::time::timeout(
+                    std::time::Duration::from_millis(50),
+                    async { 42 },
+                )
+                .await
+            }
+            .compat()
+        );
+
+        let waker = dummy_waker();
+        let mut cx = Context::from_waker(&waker);
+        // This will call poll on Compat, which enters TOKIO1.
+        // If TOKIO1 had no timer reactor, this would panic!
+        let poll = fut.as_mut().poll(&mut cx);
+        assert_eq!(poll, Poll::Ready(Ok(42)));
+    }
 }

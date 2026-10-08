@@ -8,7 +8,8 @@ crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 uniffi = { version = "0.32", features = ["tokio"] }
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
+tokio = { version = "1", features = ["full"] }
+async-compat = { version = "0.2", features = ["multi-thread"] }
 thiserror = "2"
 pixeval_filters = { path = "../pixeval_filters" }
 pixeval_cache = { path = "../pixeval_cache" }

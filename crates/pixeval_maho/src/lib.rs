@@ -265,4 +265,22 @@ mod tests {
         assert!(res2.is_completed);
         assert!(processor.is_completed());
     }
+
+    #[test]
+    fn test_compat_tcp_connect_and_timeout() {
+        // Run outside of any ambient Tokio runtime
+        std::thread::spawn(|| {
+            assert!(tokio::runtime::Handle::try_current().is_err());
+            let fut = async_compat::Compat::new(async {
+                let _ = tokio::time::timeout(
+                    std::time::Duration::from_millis(50),
+                    tokio::net::TcpStream::connect("127.0.0.1:54321"),
+                )
+                .await;
+            });
+            futures::executor::block_on(fut);
+        })
+        .join()
+        .expect("Thread panicked inside test_compat_tcp_connect_and_timeout");
+    }
 }

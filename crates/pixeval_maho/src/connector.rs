@@ -311,6 +311,8 @@ impl Service<Uri> for MahoConnector {
 
     fn call(&mut self, req: Uri) -> Self::Future {
         let this = self.clone();
-        Box::pin(async move { this.connect_internal(req).await })
+        Box::pin(async_compat::Compat::new(async move {
+            this.connect_internal(req).await
+        }))
     }
 }
