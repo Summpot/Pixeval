@@ -194,7 +194,7 @@ public partial class WorkContainer : UserControl
     {
         if (target is not null)
         {
-            await target.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, this));
+            await target.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, target));
             TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.AddedToBookmark));
             return;
         }
@@ -210,7 +210,7 @@ public partial class WorkContainer : UserControl
             return;
 
         foreach (var i in viewModel.SelectedEntries)
-            await i.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, this));
+            await i.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, i));
         if (viewModel.SelectedEntries.Count is var c and > 0)
             TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(I18NManager.GetResource(WorkContainerResources.AddedAllToBookmarkContentFormatted, c));
     }
@@ -228,7 +228,7 @@ public partial class WorkContainer : UserControl
             return;
 
         foreach (var i in viewModel.SelectedEntries)
-            i.SaveCommand.Execute(null);
+            i.SaveCommand.Execute(i);
 
         TopLevel.GetTopLevel(this)?.ViewContainer?.ShowInformation(
             I18NManager.GetResource(WorkContainerResources.DownloadItemsQueuedFormatted, viewModel.SelectedEntries.Count));

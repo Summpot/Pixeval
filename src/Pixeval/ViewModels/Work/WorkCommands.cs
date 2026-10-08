@@ -17,39 +17,63 @@ using Pixeval.Models.Download;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Mako;
 using Pixeval.Native.Storage;
+using System.Linq;
 using Pixeval.Utilities;
+using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.ViewContainers;
+using Pixeval.Views.Viewers;
 
 namespace Pixeval.ViewModels;
 
 public static class WorkCommands
 {
-    public static IAsyncRelayCommand<Control?> BookmarkCommand { get; } =
-        new AsyncRelayCommand<Control?>(ExecuteBookmarkAsync);
+    public static IAsyncRelayCommand<object?> BookmarkCommand { get; } =
+        new AsyncRelayCommand<object?>(ExecuteBookmarkAsync);
 
-    public static IAsyncRelayCommand<(IReadOnlyList<string>? Tags, bool IsPrivate, Control? Control)> AddToBookmarkCommand { get; } =
-        new AsyncRelayCommand<(IReadOnlyList<string>? Tags, bool IsPrivate, Control? Control)>(ExecuteAddToBookmarkAsync);
+    public static IAsyncRelayCommand<(IReadOnlyList<string>? Tags, bool IsPrivate, object? Parameter)> AddToBookmarkCommand { get; } =
+        new AsyncRelayCommand<(IReadOnlyList<string>? Tags, bool IsPrivate, object? Parameter)>(ExecuteAddToBookmarkAsync);
 
-    public static IRelayCommand<Control?> AddToWatchLaterCommand { get; } =
-        new RelayCommand<Control?>(ExecuteAddToWatchLater);
+    public static IRelayCommand<object?> AddToWatchLaterCommand { get; } =
+        new RelayCommand<object?>(ExecuteAddToWatchLater);
 
-    public static IAsyncRelayCommand<Control?> SaveCommand { get; } =
-        new AsyncRelayCommand<Control?>(ExecuteSaveAsync);
+    public static IAsyncRelayCommand<object?> SaveCommand { get; } =
+        new AsyncRelayCommand<object?>(ExecuteSaveAsync);
 
     public static IAsyncRelayCommand<Image?> CopyCommand { get; } =
         new AsyncRelayCommand<Image?>(ExecuteCopyAsync);
 
-    private static IWorkViewModel? ResolveWork(object? parameter)
+    internal static IWorkViewModel? ResolveWork(object? parameter)
     {
         return parameter switch
         {
             IWorkViewModel vm => vm,
-            Control control => control.DataContext as IWorkViewModel,
+            IllustrationViewerPageViewModel viewerVm => viewerVm.CurrentIllustration,
+            NovelViewerPageViewModel novelVm => novelVm.CurrentNovel,
+            IllustrationViewerInfoPane pane => pane.DataContext as IllustrationViewerPageViewModel is { CurrentIllustration: { } illust } ? illust : null,
+            NovelViewerPage page => page.DataContext as NovelViewerPageViewModel is { CurrentNovel: { } novel } ? novel : null,
+            Control { DataContext: IWorkViewModel vm } => vm,
+            Control { DataContext: IllustrationViewerPageViewModel viewerVm } => viewerVm.CurrentIllustration,
+            Control { DataContext: NovelViewerPageViewModel novelVm } => novelVm.CurrentNovel,
             _ => null
         };
     }
 
-    private static async Task ExecuteBookmarkAsync(Control? parameter)
+    private static ViewContainerBase? ResolveViewContainer(object? parameter)
+    {
+        if (parameter is Control control && TopLevel.GetTopLevel(control)?.ViewContainer is { } vc)
+            return vc;
+
+        if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            var activeWindow = desktop.Windows.FirstOrDefault(static w => w.IsActive) ?? desktop.MainWindow;
+            if (activeWindow?.Content is ViewContainerBase windowVc)
+                return windowVc;
+        }
+
+        return null;
+    }
+
+    private static async Task ExecuteBookmarkAsync(object? parameter)
     {
         if (ResolveWork(parameter) is not { } work)
             return;
@@ -58,45 +82,65 @@ public static class WorkCommands
             return;
 
         work.IsBookmarkedDisplay |= HeartButtonState.Pending;
-        var target = !work.Entry.IsFavorite;
-        var result = await MakoHelper.SetWorkBookmarkAsync((IWorkEntry) work.Entry, target);
-        if (result)
+        try
         {
-            if (work.Entry is Illustration illust)
-                illust.IsFavorite = target;
-            else if (work.Entry is Novel novel)
-                novel.IsFavorite = target;
-        }
+            var target = !work.Entry.IsFavorite;
+            var result = await MakoHelper.SetWorkBookmarkAsync((IWorkEntry) work.Entry, target);
+            if (result)
+            {
+                if (work.Entry is Illustration illust)
+                    illust.IsFavorite = target;
+                else if (work.Entry is Novel novel)
+                    novel.IsFavorite = target;
+            }
 
-        work.IsBookmarkedDisplay = (result ? target : work.Entry.IsFavorite)
-            ? HeartButtonState.Checked
-            : HeartButtonState.Unchecked;
+            work.IsBookmarkedDisplay = (result ? target : work.Entry.IsFavorite)
+                ? HeartButtonState.Checked
+                : HeartButtonState.Unchecked;
+        }
+        catch
+        {
+            work.IsBookmarkedDisplay = work.Entry.IsFavorite
+                ? HeartButtonState.Checked
+                : HeartButtonState.Unchecked;
+            throw;
+        }
     }
 
-    private static async Task ExecuteAddToBookmarkAsync((IReadOnlyList<string>? Tags, bool IsPrivate, Control? Control) parameter)
+    private static async Task ExecuteAddToBookmarkAsync((IReadOnlyList<string>? Tags, bool IsPrivate, object? Parameter) parameter)
     {
-        if (ResolveWork(parameter.Control) is not { } work)
+        if (ResolveWork(parameter.Parameter) is not { } work)
             return;
 
         if (!work.IsBookmarkSupported || (work.IsBookmarkedDisplay & HeartButtonState.Pending) is not 0)
             return;
 
         work.IsBookmarkedDisplay |= HeartButtonState.Pending;
-        var result = await MakoHelper.SetWorkBookmarkAsync((IWorkEntry) work.Entry, true, parameter.IsPrivate, parameter.Tags);
-        if (result)
+        try
         {
-            if (work.Entry is Illustration illust)
-                illust.IsFavorite = true;
-            else if (work.Entry is Novel novel)
-                novel.IsFavorite = true;
-        }
+            var result = await MakoHelper.SetWorkBookmarkAsync((IWorkEntry) work.Entry, true, parameter.IsPrivate, parameter.Tags);
+            if (result)
+            {
+                if (work.Entry is Illustration illust)
+                    illust.IsFavorite = true;
+                else if (work.Entry is Novel novel)
+                    novel.IsFavorite = true;
+            }
 
-        work.IsBookmarkedDisplay = (result || work.Entry.IsFavorite)
-            ? HeartButtonState.Checked
-            : HeartButtonState.Unchecked;
+            work.IsBookmarkedDisplay = (result || work.Entry.IsFavorite)
+                ? HeartButtonState.Checked
+                : HeartButtonState.Unchecked;
+        }
+        catch
+        {
+            work.IsBookmarkedDisplay = work.Entry.IsFavorite
+                ? HeartButtonState.Checked
+                : HeartButtonState.Unchecked;
+            throw;
+        }
     }
 
-    private static void ExecuteAddToWatchLater(Control? parameter)
+    private static void ExecuteAddToWatchLater(object? parameter)
     {
         if (ResolveWork(parameter) is not { } work)
             return;
@@ -116,11 +160,11 @@ public static class WorkCommands
         }
 
         work.IsInWatchLater = target;
-        TopLevel.GetTopLevel(parameter)?.ViewContainer?.ShowSuccess(
+        ResolveViewContainer(parameter)?.ShowSuccess(
             I18NManager.GetResource(target ? MiscResources.AddedToWatchLater : MiscResources.RemovedFromWatchLater));
     }
 
-    private static async Task ExecuteSaveAsync(Control? parameter)
+    private static async Task ExecuteSaveAsync(object? parameter)
     {
         if (ResolveWork(parameter) is not { } work)
             return;
@@ -128,7 +172,7 @@ public static class WorkCommands
         if (BlockedContentHelper.IsBlockedPlaceholder(work.Entry))
             return;
 
-        var viewContainer = TopLevel.GetTopLevel(parameter)?.ViewContainer;
+        var viewContainer = ResolveViewContainer(parameter);
         switch (work.Entry)
         {
             case Illustration illustration:
@@ -140,13 +184,13 @@ public static class WorkCommands
         }
     }
 
-    public static async Task SaveImageAsync(IArtworkInfo entry, Control? parameter, int setIndex)
+    public static async Task SaveImageAsync(IArtworkInfo entry, object? parameter, int setIndex)
     {
         if (BlockedContentHelper.IsBlockedPlaceholder(entry))
             return;
 
         if (entry is Illustration illustration)
-            await SaveIllustrationAsync(TopLevel.GetTopLevel(parameter)?.ViewContainer, illustration, setIndex);
+            await SaveIllustrationAsync(ResolveViewContainer(parameter), illustration, setIndex);
     }
 
     public static async ValueTask SaveIllustrationAsync(ViewContainerBase? viewContainerBase, Illustration entry, int setIndex)

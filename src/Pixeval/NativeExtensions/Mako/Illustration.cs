@@ -95,16 +95,16 @@ public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISi
     public Illustration Entry => this;
 
     [JsonIgnore]
-    public IAsyncRelayCommand<(IReadOnlyList<string>? Tags, bool IsPrivate, Control? Control)> AddToBookmarkCommand => WorkCommands.AddToBookmarkCommand;
+    public IAsyncRelayCommand<(IReadOnlyList<string>? Tags, bool IsPrivate, object? Parameter)> AddToBookmarkCommand => WorkCommands.AddToBookmarkCommand;
 
     [JsonIgnore]
-    public IAsyncRelayCommand<Control?> BookmarkCommand => WorkCommands.BookmarkCommand;
+    public IAsyncRelayCommand<object?> BookmarkCommand => WorkCommands.BookmarkCommand;
 
     [JsonIgnore]
-    public IRelayCommand<Control?> AddToWatchLaterCommand => WorkCommands.AddToWatchLaterCommand;
+    public IRelayCommand<object?> AddToWatchLaterCommand => WorkCommands.AddToWatchLaterCommand;
 
     [JsonIgnore]
-    public IAsyncRelayCommand<Control?> SaveCommand => WorkCommands.SaveCommand;
+    public IAsyncRelayCommand<object?> SaveCommand => WorkCommands.SaveCommand;
 
     [JsonIgnore]
     public IAsyncRelayCommand<Image?> CopyCommand => WorkCommands.CopyCommand;
@@ -117,7 +117,15 @@ public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISi
     public bool IsFavorite
     {
         get => _isFavorite ?? IsBookmarked;
-        set => _isFavorite = value;
+        set
+        {
+            if (_isFavorite != value)
+            {
+                _isFavorite = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsBookmarkedDisplay));
+            }
+        }
     }
 
     [JsonIgnore]

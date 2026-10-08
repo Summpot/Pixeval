@@ -116,13 +116,7 @@ public static class MakoHelper
                     break;
             }
         }
-        return entry switch
-        {
-            Illustration i => i.IsFavorite,
-            Novel n => n.IsFavorite,
-            WorkEntry w => w.IsFavorite,
-            _ => favorite
-        };
+        return result.Success;
     }
 
     public static string? ToMakoProxy(ProxyType type, string? proxy) =>

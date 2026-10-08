@@ -141,7 +141,7 @@ public partial class NovelViewerPage : IconContentPage
     {
         if (ViewModel.CurrentNovel is { } current)
         {
-            await current.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, this));
+            await current.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, current));
             TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
                 I18NManager.GetResource(MiscResources.AddedToBookmark));
         }

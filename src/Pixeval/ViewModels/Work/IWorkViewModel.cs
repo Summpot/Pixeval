@@ -46,13 +46,13 @@ public interface IWorkViewModel : INotifyPropertyChanged
 
     Uri WebsiteUri { get; }
 
-    IAsyncRelayCommand<(IReadOnlyList<string>? Tags, bool IsPrivate, Control? Control)> AddToBookmarkCommand => WorkCommands.AddToBookmarkCommand;
+    IAsyncRelayCommand<(IReadOnlyList<string>? Tags, bool IsPrivate, object? Parameter)> AddToBookmarkCommand => WorkCommands.AddToBookmarkCommand;
 
-    IAsyncRelayCommand<Control?> BookmarkCommand => WorkCommands.BookmarkCommand;
+    IAsyncRelayCommand<object?> BookmarkCommand => WorkCommands.BookmarkCommand;
 
-    IRelayCommand<Control?> AddToWatchLaterCommand => WorkCommands.AddToWatchLaterCommand;
+    IRelayCommand<object?> AddToWatchLaterCommand => WorkCommands.AddToWatchLaterCommand;
 
-    IAsyncRelayCommand<Control?> SaveCommand => WorkCommands.SaveCommand;
+    IAsyncRelayCommand<object?> SaveCommand => WorkCommands.SaveCommand;
 
     IAsyncRelayCommand<Image?> CopyCommand => WorkCommands.CopyCommand;
 
