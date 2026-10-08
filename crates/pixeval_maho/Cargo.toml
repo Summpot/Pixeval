@@ -4,24 +4,24 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
-bytes = "1"
-thiserror = "2"
-uniffi = { version = "0.32", features = ["tokio"] }
-http = "1"
-hyper = { version = "1", features = ["client", "http1", "http2"] }
-hyper-util = { version = "0.1", features = ["client-legacy", "tokio", "http1", "http2"] }
-http-body-util = "0.1"
-tokio-rustls = { version = "0.26", default-features = false, features = ["ring"] }
-rustls-pki-types = "1"
-webpki-roots = "1"
-tower-service = "0.3"
-futures-util = "0.3"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-url = "2"
-async-compat = { version = "0.2", features = ["multi-thread"] }
+tokio = { workspace = true, features = ["full"] }
+bytes.workspace = true
+thiserror.workspace = true
+uniffi = { workspace = true, features = ["tokio"] }
+http.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+http-body-util.workspace = true
+tokio-rustls.workspace = true
+rustls-pki-types.workspace = true
+webpki-roots.workspace = true
+tower-service.workspace = true
+futures-util.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+url.workspace = true
+async-compat.workspace = true
 
 [dev-dependencies]
-tokio = { version = "1", features = ["full"] }
-futures = "0.3"
+tokio = { workspace = true, features = ["full"] }
+futures.workspace = true

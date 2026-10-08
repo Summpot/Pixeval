@@ -4,22 +4,22 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-foyer = "0.22"
-foyer-common = "0.22"
-lz4 = "1.28"
-image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
-parking_lot = "0.12"
-thiserror = "2"
-uuid = { version = "1", features = ["v4"] }
-uniffi = { version = "0.32", features = ["tokio"] }
-tokio = { version = "1", features = ["full"] }
-async-compat = { version = "0.2", features = ["multi-thread"] }
-futures-util = { version = "0.3", default-features = false, features = ["std"] }
-flate2 = "1.0"
-pixeval_maho = { path = "../pixeval_maho" }
-bytes = "1"
-http = "1"
+foyer.workspace = true
+foyer-common.workspace = true
+lz4.workspace = true
+image = { workspace = true, features = ["png", "jpeg", "webp", "gif"] }
+parking_lot.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+uniffi = { workspace = true, features = ["tokio"] }
+tokio = { workspace = true, features = ["full"] }
+async-compat.workspace = true
+futures-util = { workspace = true, default-features = false, features = ["std"] }
+flate2.workspace = true
+pixeval_maho.workspace = true
+bytes.workspace = true
+http.workspace = true
 
 [dev-dependencies]
-tempfile = "3"
-tokio = { version = "1", features = ["full"] }
+tempfile.workspace = true
+tokio = { workspace = true, features = ["full"] }
