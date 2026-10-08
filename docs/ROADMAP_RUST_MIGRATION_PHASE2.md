@@ -284,7 +284,7 @@ flowchart TD
 
 ### 阶段 4：表现层极致瘦身与跨平台交付 (Phase 4)
 
-#### 4.1 ViewModel 彻底去业务化 (纯 Reactive Binding)
+#### 4.1 ViewModel 彻底去业务化 (纯 Reactive Binding) (已完成)
 - **功能目标**：
   - 终结表现层实体过度包装与逻辑碎片化，将所有 ViewModel 彻底蜕变为纯粹的**声明式响应式绑定器**。
   - 集合直接以原生强类型驱动：`ListBox.ItemsSource` 直连 `ObservableCollection<Illustration>`、`ObservableCollection<Novel>`、`ObservableCollection<User>`，彻底废除二次包装层。
