@@ -9,6 +9,8 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:views="using:Pixeval.Views"
     xmlns:vm="using:Pixeval.ViewModels"
+    xmlns:mako="using:Pixeval.Native.Mako"
+    xmlns:booru="using:Pixeval.Native.Booru"
     x:DataType="{x:Type vm:IOperableViewViewModel}"
     DataContextChanged="StyledElement_OnDataContextChanged"
     mc:Ignorable="d"
@@ -33,10 +35,13 @@
                 <controls:ItemsViewListBoxStyles />
             </ListBox.Styles>
             <ListBox.DataTemplates>
-                <DataTemplate x:DataType="{x:Type vm:NovelItemViewModel}">
+                <DataTemplate x:DataType="{x:Type mako:Novel}">
                     <local:NovelItem RequestAddToBookmark="WorkItem_OnRequestAddToBookmark" RequestOpenUserInfoPage="WorkItem_OnRequestOpenUserInfoPage" />
                 </DataTemplate>
-                <DataTemplate x:DataType="{x:Type vm:IllustrationItemViewModel}">
+                <DataTemplate x:DataType="{x:Type mako:Illustration}">
+                    <local:IllustrationItem RequestAddToBookmark="WorkItem_OnRequestAddToBookmark" RequestOpenUserInfoPage="WorkItem_OnRequestOpenUserInfoPage" />
+                </DataTemplate>
+                <DataTemplate x:DataType="{x:Type booru:BooruPost}">
                     <local:IllustrationItem RequestAddToBookmark="WorkItem_OnRequestAddToBookmark" RequestOpenUserInfoPage="WorkItem_OnRequestOpenUserInfoPage" />
                 </DataTemplate>
             </ListBox.DataTemplates>

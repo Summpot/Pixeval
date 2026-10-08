@@ -2,19 +2,32 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using Misaki;
 using Pixeval.Models.Pixiv;
 
 namespace Pixeval.Native.Mako;
 
-public partial record SpotlightArticle : IIdEntry
+public partial record SpotlightArticle : IIdEntry, INotifyPropertyChanged
 {
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    private void OnPropertyChanged([CallerMemberName] string? name = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
     long IIdEntry.Id => Id;
 
     string IIdentityInfo.Id => Id == 0 ? "" : Id.ToString();
 
     string IPlatformInfo.Platform => IPlatformInfo.Pixiv;
+
+    [JsonIgnore]
+    public SpotlightArticle Entry => this;
+
+    [JsonIgnore]
+    public string? ThumbnailUrl => Thumbnail;
 
     [JsonIgnore]
     public string EffectivePureTitle => string.IsNullOrWhiteSpace(PureTitle) ? Title : PureTitle;

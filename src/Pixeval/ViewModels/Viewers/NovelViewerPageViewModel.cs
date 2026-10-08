@@ -20,6 +20,7 @@ using Pixeval.I18N;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
 using Pixeval.Models.Settings;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.Views.Capability;
 using Pixeval.Views.Settings;
@@ -29,11 +30,11 @@ namespace Pixeval.ViewModels.Viewers;
 
 public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDisposable
 {
-    private readonly Dictionary<int, NovelItemViewModel> _refreshedNovels = [];
+    private readonly Dictionary<int, Novel> _refreshedNovels = [];
 
     private readonly bool _needRefresh;
 
-    private readonly ISourceView<NovelItemViewModel>? _sourceView;
+    private readonly ISourceView<Novel>? _sourceView;
 
     [ObservableProperty]
     public partial bool IsLoading { get; private set; }
@@ -56,7 +57,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
                 SettingsPage
             ];
 
-    public NovelViewerPageViewModel(NovelItemViewModel novelViewModel, bool needRefresh)
+    public NovelViewerPageViewModel(Novel novelViewModel, bool needRefresh)
     {
         _needRefresh = needRefresh;
         CurrentNovel = novelViewModel;
@@ -68,16 +69,16 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         _ = LoadSingleNovelAsync(id, _loadingCts.Token);
     }
 
-    public NovelViewerPageViewModel(ISourceView<NovelItemViewModel> dataProvider, int currentNovelIndex, bool needRefresh)
+    public NovelViewerPageViewModel(ISourceView<Novel> dataProvider, int currentNovelIndex, bool needRefresh)
     {
         _needRefresh = needRefresh;
         _sourceView = dataProvider;
         CurrentWorkIndex = currentNovelIndex;
     }
 
-    public IReadOnlyList<NovelItemViewModel>? Novels => _sourceView?.View;
+    public IReadOnlyList<Novel>? Novels => _sourceView?.View;
 
-    public NovelItemViewModel? CurrentNovel
+    public Novel? CurrentNovel
     {
         get
         {
@@ -301,7 +302,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         }
     }
 
-    private async Task<NovelItemViewModel?> GetCurrentNovelAsync(int index, CancellationToken token)
+    private async Task<Novel?> GetCurrentNovelAsync(int index, CancellationToken token)
     {
         if (!_needRefresh)
             return CurrentNovel;
@@ -333,7 +334,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         return _loadingCts.Token;
     }
 
-    private async Task<NovelItemViewModel?> LoadNovelAsync(long id, Action<NovelItemViewModel> onLoaded, CancellationToken token)
+    private async Task<Novel?> LoadNovelAsync(long id, Action<Novel> onLoaded, CancellationToken token)
     {
         IsLoading = true;
         LoadErrorMessage = null;
@@ -342,9 +343,8 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             var novel = BlockedContentHelper.Replace(
                 await App.AppViewModel.MakoClient.GetNovelFromIdAsync(id, token));
             token.ThrowIfCancellationRequested();
-            var viewModel = NovelItemViewModel.CreateInstance(novel);
-            onLoaded(viewModel);
-            return viewModel;
+            onLoaded(novel);
+            return novel;
         }
         catch (OperationCanceledException)
         {

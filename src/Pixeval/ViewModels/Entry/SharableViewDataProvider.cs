@@ -18,7 +18,7 @@ namespace Pixeval.ViewModels;
 public sealed class SharableViewDataProvider<T, TViewModel>
     : ViewModelBase, IDataProvider<T, TViewModel>, IRefCloneable<SharableViewDataProvider<T, TViewModel>>
     where T : class, IIdentityInfo
-    where TViewModel : EntryViewModel<T>
+    where TViewModel : class
 {
     private bool _isDisposed;
 
@@ -56,12 +56,13 @@ public sealed class SharableViewDataProvider<T, TViewModel>
         View.Dispose();
     }
 
-    public void ResetEngine(IAsyncEnumerable<T>? fetchEngine, Func<T, int, TViewModel> factory, int itemsPerPage = 20, int limit = -1)
+    public void ResetEngine(IAsyncEnumerable<T>? fetchEngine, Func<T, int, TViewModel>? factory = null, int itemsPerPage = 20, int limit = -1)
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
         DisposeEntrySourceRef();
 
-        EntrySourceRef = new(new(new IncrementalSource<T, TViewModel>(fetchEngine!, factory, limit), itemsPerPage), this);
+        var effectiveFactory = factory ?? ((entry, _) => (TViewModel) (object) entry);
+        EntrySourceRef = new(new(new IncrementalSource<T, TViewModel>(fetchEngine!, effectiveFactory, limit), itemsPerPage), this);
     }
 
     public SharableViewDataProvider<T, TViewModel> CloneRef()

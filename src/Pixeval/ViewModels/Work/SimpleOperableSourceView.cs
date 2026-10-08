@@ -36,18 +36,12 @@ public sealed class SimpleOperableSourceView<TViewModel>(IReadOnlyCollection<IAr
         View.Dispose();
     }
 
-    private static IWorkViewModel CreateWorkViewModel(IArtworkInfo info) => info is Pixeval.Native.Mako.Novel novel ? new NovelItemViewModel(novel) : new IllustrationItemViewModel(info);
+    private static IWorkViewModel CreateWorkViewModel(IArtworkInfo info) => (IWorkViewModel) info;
 
     private static ObservableCollection<IArtworkInfo> CreateSource(IReadOnlyCollection<IArtworkInfo> source) =>
         [.. source.Select(static entry => BlockedContentHelper.Replace(entry))];
 
-    private static TViewModel CloneItem(TViewModel viewModel)
-        => viewModel switch
-        {
-            IllustrationItemViewModel illustration => (TViewModel) (IWorkViewModel) IllustrationItemViewModel.CreateInstance(illustration.Entry),
-            NovelItemViewModel novel => (TViewModel) (IWorkViewModel) NovelItemViewModel.CreateInstance(novel.Entry),
-            _ => throw new NotSupportedException($"Unsupported simple work view model type: {typeof(TViewModel)}")
-        };
+    private static TViewModel CloneItem(TViewModel viewModel) => viewModel;
 
     private sealed class SnapshotSourceView<TSnapshotViewModel>(IEnumerable<TSnapshotViewModel> source) : ViewModelBase, ISourceView<TSnapshotViewModel>
         where TSnapshotViewModel : class

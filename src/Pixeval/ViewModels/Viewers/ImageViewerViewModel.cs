@@ -13,23 +13,22 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
 {
     private bool _isDisposed;
 
-    public ImageViewerViewModel(IllustrationItemViewModel thumbnailViewModel)
+    public ImageViewerViewModel(IWorkViewModel thumbnailViewModel)
     {
         ThumbnailViewModel = thumbnailViewModel;
-        var platform = thumbnailViewModel.Entry.Platform;
-
         var entry = thumbnailViewModel.Entry;
+        var platform = entry.Platform;
 
         Images = entry is not IImageSet set
-            ? [new(platform, entry, 0, thumbnailViewModel.SaveImageAsync)]
-            : set.Pages.Select((t, i) => new SingleViewerViewModel(platform, t, i, thumbnailViewModel.SaveImageAsync)).ToArray();
+            ? [new(platform, entry, 0, (ctrl, idx) => WorkCommands.SaveImageAsync(entry, ctrl, idx))]
+            : set.Pages.Select((t, i) => new SingleViewerViewModel(platform, t, i, (ctrl, idx) => WorkCommands.SaveImageAsync(entry, ctrl, idx))).ToArray();
 
         PageCount = Images.Count;
 
         App.AppViewModel.AddBrowseHistory(thumbnailViewModel.Entry);
     }
 
-    public IllustrationItemViewModel ThumbnailViewModel { get; set; }
+    public IWorkViewModel ThumbnailViewModel { get; set; }
 
     public IReadOnlyList<SingleViewerViewModel> Images { get; }
 

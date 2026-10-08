@@ -3,16 +3,54 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Misaki;
+using Pixeval.Controls;
+using Pixeval.ViewModels;
 
 namespace Pixeval.Native.Booru;
 
-public partial record BooruPost : IArtworkInfo, ISingleImage, IImageFrame, IImageSize, IIdentityInfo, ISerializable
+public partial record BooruPost : IArtworkInfo, ISingleImage, IImageFrame, IImageSize, IIdentityInfo, ISerializable, IWorkViewModel, INotifyPropertyChanged
 {
     private static readonly Dictionary<string, object> s_emptyDict = [];
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    private HeartButtonState? _isBookmarkedDisplay;
+
+    [JsonIgnore]
+    public HeartButtonState IsBookmarkedDisplay
+    {
+        get => _isBookmarkedDisplay ?? (IsFavorite ? HeartButtonState.Checked : HeartButtonState.Unchecked);
+        set
+        {
+            _isBookmarkedDisplay = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsBookmarkedDisplay)));
+        }
+    }
+
+    [JsonIgnore]
+    public bool IsInWatchLater { get => false; set { } }
+
+    [JsonIgnore]
+    public bool IsBookmarkSupported => false;
+
+    [JsonIgnore]
+    public bool HasSeries => false;
+
+    [JsonIgnore]
+    public double AspectRatio => Width > 0 && Height > 0 ? (double) Width / Height : 1;
+
+    [JsonIgnore]
+    public string? ThumbnailUrl => SampleUrl ?? PreviewUrl ?? OriginalUrl;
+
+    [JsonIgnore]
+    public string Tooltip => Title;
+
+    IArtworkInfo IWorkViewModel.Entry => this;
 
     [JsonIgnore]
     public int SetIndex => -1;

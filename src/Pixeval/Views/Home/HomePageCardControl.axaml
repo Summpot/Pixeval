@@ -1,4 +1,4 @@
-﻿<UserControl
+<UserControl
     x:Class="Pixeval.Views.Home.HomePageCardControl"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -7,6 +7,7 @@
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:homeViewModels="using:Pixeval.ViewModels.Home"
     xmlns:local="using:Pixeval.Views.Home"
+    xmlns:mako="using:Pixeval.Native.Mako"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
@@ -165,7 +166,7 @@
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.DataTemplates>
-                            <DataTemplate x:DataType="{x:Type viewModels:IllustrationItemViewModel}">
+                            <DataTemplate x:DataType="{x:Type mako:Illustration}">
                                 <Button
                                     Classes="preview-item"
                                     Command="{Binding $parent[local:HomePageCardControl].OpenPreviewItemCommand}"
@@ -176,7 +177,7 @@
                                 </Button>
                             </DataTemplate>
 
-                            <DataTemplate x:DataType="{x:Type viewModels:NovelItemViewModel}">
+                            <DataTemplate x:DataType="{x:Type mako:Novel}">
                                 <Button
                                     Classes="preview-item"
                                     Command="{Binding $parent[local:HomePageCardControl].OpenPreviewItemCommand}"
@@ -196,7 +197,7 @@
                                 </Button>
                             </DataTemplate>
 
-                            <DataTemplate x:DataType="{x:Type viewModels:UserItemViewModel}">
+                            <DataTemplate x:DataType="{x:Type mako:User}">
                                 <Button
                                     Classes="preview-item"
                                     Command="{Binding $parent[local:HomePageCardControl].OpenPreviewItemCommand}"
@@ -205,7 +206,7 @@
                                 </Button>
                             </DataTemplate>
 
-                            <DataTemplate x:DataType="{x:Type viewModels:SpotlightItemViewModel}">
+                            <DataTemplate x:DataType="{x:Type mako:SpotlightArticle}">
                                 <Button
                                     Classes="preview-item"
                                     Command="{Binding $parent[local:HomePageCardControl].OpenPreviewItemCommand}"

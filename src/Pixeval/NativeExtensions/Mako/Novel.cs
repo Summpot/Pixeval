@@ -3,16 +3,126 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
+using Avalonia.Controls;
+using CommunityToolkit.Mvvm.Input;
 using Misaki;
+using Pixeval.Controls;
+using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
+using Pixeval.Utilities;
+using Pixeval.ViewModels;
 
 namespace Pixeval.Native.Mako;
 
-public partial record Novel : IArtworkInfo, IWorkEntry, INovelEntry, ISerializable
+public partial record Novel : IArtworkInfo, IWorkEntry, INovelEntry, ISerializable, IWorkViewModel, INotifyPropertyChanged
 {
     private static readonly Dictionary<string, object> s_emptyDict = [];
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    private void OnPropertyChanged([CallerMemberName] string? name = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+    private HeartButtonState? _isBookmarkedDisplay;
+
+    [JsonIgnore]
+    public HeartButtonState IsBookmarkedDisplay
+    {
+        get => _isBookmarkedDisplay ?? (IsFavorite ? HeartButtonState.Checked : HeartButtonState.Unchecked);
+        set
+        {
+            if (_isBookmarkedDisplay != value)
+            {
+                _isBookmarkedDisplay = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private bool? _isInWatchLater;
+
+    [JsonIgnore]
+    public bool IsInWatchLater
+    {
+        get => _isInWatchLater ?? (App.AppViewModel?.ContainsWatchLater(this) is true);
+        set
+        {
+            if (_isInWatchLater != value)
+            {
+                _isInWatchLater = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public bool IsBookmarkSupported => !BlockedContentHelper.IsBlockedPlaceholder(this) && Platform is IPlatformInfo.Pixiv;
+
+    [JsonIgnore]
+    public bool HasSeries => Series is not null;
+
+    [JsonIgnore]
+    public double AspectRatio => 1;
+
+    [JsonIgnore]
+    public string? ThumbnailUrl => Thumbnails.FirstOrDefault()?.ImageUri.OriginalString ?? "";
+
+    [JsonIgnore]
+    public string Tooltip => Title;
+
+    [JsonIgnore]
+    public Novel Entry => this;
+
+    [JsonIgnore]
+    public IAsyncRelayCommand<(IReadOnlyList<string>? Tags, bool IsPrivate, Control? Control)> AddToBookmarkCommand => WorkCommands.AddToBookmarkCommand;
+
+    [JsonIgnore]
+    public IAsyncRelayCommand<Control?> BookmarkCommand => WorkCommands.BookmarkCommand;
+
+    [JsonIgnore]
+    public IRelayCommand<Control?> AddToWatchLaterCommand => WorkCommands.AddToWatchLaterCommand;
+
+    [JsonIgnore]
+    public IAsyncRelayCommand<Control?> SaveCommand => WorkCommands.SaveCommand;
+
+    IArtworkInfo IWorkViewModel.Entry => this;
+
+    private readonly Lazy<Task<NovelContent>> _contentAsync = new(async () =>
+    {
+        if (BlockedContentHelper.IsBlockedPlaceholder(App.AppViewModel?.MakoClient is null ? null : (IArtworkInfo) (object) null!))
+            return BlockedContentModelHelper.CreateBlockedNovelContent(null!);
+
+        return null!;
+    });
+
+    private Task<NovelContent>? _loadedContentTask;
+
+    public Task<NovelContent> GetContentAsync()
+    {
+        return _loadedContentTask ??= LoadContentInternalAsync();
+    }
+
+    private async Task<NovelContent> LoadContentInternalAsync()
+    {
+        if (BlockedContentHelper.IsBlockedPlaceholder(this))
+            return BlockedContentModelHelper.CreateBlockedNovelContent(BlockedContentHelper.Replace(this));
+
+        var content = await App.AppViewModel.MakoClient.GetNovelContentStructuredAsync(RawId);
+        return content with
+        {
+            Title = string.IsNullOrWhiteSpace(content.Title) ? Title : content.Title,
+            CoverUrl = string.IsNullOrWhiteSpace(content.CoverUrl) ? (Thumbnails.FirstOrDefault()?.ImageUri.OriginalString ?? "") : content.CoverUrl,
+            UserId = content.UserId == 0 ? Author.Id : content.UserId
+        };
+    }
+
+    [JsonIgnore]
+    public Task<NovelContent> ContentAsync => GetContentAsync();
 
     private bool? _isFavorite;
 

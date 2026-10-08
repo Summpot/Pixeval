@@ -13,7 +13,7 @@
     xmlns:utilities="using:Pixeval.Utilities"
     xmlns:viewModels="using:Pixeval.ViewModels"
     xmlns:work="using:Pixeval.Views.Work"
-    x:DataType="{x:Type viewModels:IllustrationItemViewModel}"
+    x:DataType="{x:Type viewModels:IWorkViewModel}"
     Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
     Design.DataContext="{x:Static utilities:DesignHelper.DesignIllustrationViewModel}"
     RenderTransformOrigin="50%,50%"

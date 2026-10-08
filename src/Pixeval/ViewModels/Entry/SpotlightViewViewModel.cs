@@ -3,12 +3,12 @@
 
 using SpotlightViewDataProvider = Pixeval.ViewModels.SharableViewDataProvider<
     Pixeval.Native.Mako.SpotlightArticle,
-    Pixeval.ViewModels.SpotlightItemViewModel>;
+    Pixeval.Native.Mako.SpotlightArticle>;
 
 namespace Pixeval.ViewModels;
 
 public sealed class SpotlightViewViewModel
-    : EntryViewViewModel<Pixeval.Native.Mako.SpotlightArticle, SpotlightItemViewModel>, IRefCloneable<SpotlightViewViewModel>
+    : EntryViewViewModel<Pixeval.Native.Mako.SpotlightArticle, Pixeval.Native.Mako.SpotlightArticle>, IRefCloneable<SpotlightViewViewModel>
 {
     public SpotlightViewViewModel() : this(new SpotlightViewDataProvider())
     {

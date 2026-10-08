@@ -47,7 +47,7 @@ public partial class WorkSeriesInfoPane : UserControl
         if (viewModel.WorkType is SimpleWorkType.Novel)
             viewContainer.CreateNovelPage(navigation.Id);
         else if (navigation.Illustration is { } illustration)
-            viewContainer.CreateIllustrationPage(new IllustrationItemViewModel(illustration));
+            viewContainer.CreateIllustrationPage(illustration);
         else
             viewContainer.CreateIllustrationPage(
                 navigation.Id.ToString(),

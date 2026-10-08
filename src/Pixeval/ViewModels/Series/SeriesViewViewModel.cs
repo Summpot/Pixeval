@@ -4,12 +4,12 @@
 using Series = Pixeval.Native.Mako.Series;
 using SeriesViewDataProvider = Pixeval.ViewModels.SharableViewDataProvider<
     Pixeval.Native.Mako.Series,
-    Pixeval.ViewModels.SeriesItemViewModel>;
+    Pixeval.Native.Mako.Series>;
 
 namespace Pixeval.ViewModels;
 
 public sealed class SeriesViewViewModel
-    : EntryViewViewModel<Series, SeriesItemViewModel>, IRefCloneable<SeriesViewViewModel>
+    : EntryViewViewModel<Series, Series>, IRefCloneable<SeriesViewViewModel>
 {
     public SeriesViewViewModel() : this(new SeriesViewDataProvider())
     {
@@ -23,7 +23,11 @@ public sealed class SeriesViewViewModel
     public override SeriesViewDataProvider DataProvider { get; }
 
     public void ResetEngine(IFetchEngine<Series> fetchEngine, SimpleWorkType workType) =>
-        base.ResetEngine(fetchEngine, (series, _) => new(series, workType));
+        base.ResetEngine(fetchEngine, (series, _) =>
+        {
+            series.WorkType = workType;
+            return series;
+        });
 
     public SeriesViewViewModel CloneRef() => new(DataProvider.CloneRef());
 }

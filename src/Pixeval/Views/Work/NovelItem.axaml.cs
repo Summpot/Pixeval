@@ -35,7 +35,7 @@ public partial class NovelItem : WorkItem
 
     private void AuthorButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Control { DataContext: NovelItemViewModel vm })
+        if (sender is not Control { DataContext: Novel vm })
             return;
         if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
             return;

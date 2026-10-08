@@ -16,13 +16,13 @@ public static class DesignHelper
 {
     public static UserViewerPageViewModel DesignUserViewerPageViewModel => field ??= new(123456);
 
-    public static UserItemViewModel DesignUserViewModel => field ??= new(DesignUser);
+    public static User DesignUserViewModel => DesignUser;
 
-    public static IllustrationItemViewModel DesignIllustrationViewModel => field ??= new(DesignIllustration);
+    public static Illustration DesignIllustrationViewModel => DesignIllustration;
 
-    public static NovelItemViewModel DesignNovelViewModel => field ??= new(DesignNovel);
+    public static Novel DesignNovelViewModel => DesignNovel;
 
-    public static SeriesItemViewModel DesignSeriesViewModel => field ??= new(DesignSeries, SimpleWorkType.Illustration);
+    public static Series DesignSeriesViewModel => DesignSeries;
 
     public static WorkSeriesInfoViewModel DesignWorkSeriesInfoViewModel => field ??= new(SimpleWorkType.Illustration, 123456, "Title", new(12345, "PrevTitle"), new(1234567, "NextTitle"), "2/3");
 

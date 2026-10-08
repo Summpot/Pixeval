@@ -17,5 +17,5 @@ public interface IDataProvider<T, TViewModel>
 
     IAdvancedObservableView<TViewModel> ISourceView<TViewModel>.View => View;
 
-    void ResetEngine(IAsyncEnumerable<T>? fetchEngine, Func<T, int, TViewModel> factory, int itemsPerPage = 20, int limit = -1);
+    void ResetEngine(IAsyncEnumerable<T>? fetchEngine, Func<T, int, TViewModel>? factory = null, int itemsPerPage = 20, int limit = -1);
 }

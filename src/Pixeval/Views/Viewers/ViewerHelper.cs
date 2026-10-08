@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
@@ -39,10 +40,9 @@ public static class ViewerHelper
         /// <summary>
         /// 此方法无法加载更多插画
         /// </summary>
-        /// <typeparam name="T">为了方便协变采用泛型</typeparam>
         /// <param name="illustrationViewModel">指定的插画ViewModel</param>
         /// <param name="needRefresh"></param>
-        public void CreateIllustrationPage<T>(T illustrationViewModel, bool needRefresh = false) where T : IllustrationItemViewModel
+        public void CreateIllustrationPage(IWorkViewModel illustrationViewModel, bool needRefresh = false)
         {
             control.NavigateTo(new IllustrationViewerPage(new(illustrationViewModel, needRefresh)));
         }
@@ -53,7 +53,7 @@ public static class ViewerHelper
         /// <param name="illustrationViewModel">指定的插画ViewModel</param>
         /// <param name="sourceView">指定的插画ViewModel所在的SourceView</param>
         /// <param name="needRefresh">是否需要刷新插画（如从数据库中加载的则需要刷新）</param>
-        public void CreateIllustrationPage(IllustrationItemViewModel illustrationViewModel, ISourceView<IllustrationItemViewModel> sourceView, bool needRefresh = false)
+        public void CreateIllustrationPage(IWorkViewModel illustrationViewModel, ISourceView<IWorkViewModel> sourceView, bool needRefresh = false)
         {
             var index = sourceView.View.IndexOf(illustrationViewModel);
             control.NavigateTo(new IllustrationViewerPage(new(sourceView, index, needRefresh)));
@@ -74,23 +74,22 @@ public static class ViewerHelper
         /// <summary>
         /// 此方法无法加载更多小说
         /// </summary>
-        /// <typeparam name="T">为了方便协变采用泛型</typeparam>
-        /// <param name="novelViewModel">指定的小说ViewModel</param>
+        /// <param name="novel">指定的小说实体</param>
         /// <param name="needRefresh">是否需要刷新小说（如从数据库中加载的则需要刷新）</param>
-        public void CreateNovelPage<T>(T novelViewModel, bool needRefresh = false) where T : NovelItemViewModel
+        public void CreateNovelPage(Novel novel, bool needRefresh = false)
         {
-            control.NavigateTo(new NovelViewerPage(new(novelViewModel, needRefresh)));
+            control.NavigateTo(new NovelViewerPage(new(novel, needRefresh)));
         }
 
         /// <summary>
         /// 此方法可以使用<paramref name="sourceView"/>来加载更多小说
         /// </summary>
-        /// <param name="novelViewModel">指定的小说ViewModel</param>
-        /// <param name="sourceView">指定的小说ViewModel所在的SourceView</param>
+        /// <param name="novel">指定的小说实体</param>
+        /// <param name="sourceView">指定的小说所在的SourceView</param>
         /// <param name="needRefresh">是否需要刷新小说（如从数据库中加载的则需要刷新）</param>
-        public void CreateNovelPage(NovelItemViewModel novelViewModel, ISourceView<NovelItemViewModel> sourceView, bool needRefresh = false)
+        public void CreateNovelPage(Novel novel, ISourceView<Novel> sourceView, bool needRefresh = false)
         {
-            var index = sourceView.View.IndexOf(novelViewModel);
+            var index = sourceView.View.IndexOf(novel);
             control.NavigateTo(new NovelViewerPage(new(sourceView, index, needRefresh)));
         }
 

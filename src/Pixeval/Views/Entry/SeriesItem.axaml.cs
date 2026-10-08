@@ -18,11 +18,11 @@ public partial class SeriesItem : EntryItem
 
     private void LatestContentButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Control { DataContext: SeriesItemViewModel viewModel }
+        if (sender is not Control { DataContext: Series viewModel }
             || TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
             return;
 
-        if (viewModel.Entry.LatestContentId is not { } latestContentId)
+        if (viewModel.LatestContentId is not { } latestContentId)
             return;
 
         if (viewModel.WorkType is SimpleWorkType.Novel)
@@ -35,12 +35,12 @@ public partial class SeriesItem : EntryItem
 
     private void AuthorButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Control { DataContext: SeriesItemViewModel viewModel })
+        if (sender is not Control { DataContext: Series viewModel })
             return;
         if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
             return;
 
-        if (viewModel.Entry.User is { } user)
+        if (viewModel.User is { } user)
             viewContainer.CreateUserPage(user.Id);
     }
 }

@@ -178,7 +178,7 @@ public partial class WorkContainer : UserControl
             return;
 
         var id = target is { Entry.Id: { } idStr } && long.TryParse(idStr, out var idLong) ? idLong : 0;
-        var type = target is NovelItemViewModel || DataContext is NovelViewViewModel or SimpleOperableViewViewModel<NovelItemViewModel>
+        var type = target is Novel || target?.Entry is INovelEntry || DataContext is NovelViewViewModel or SimpleOperableViewViewModel<Novel>
             ? SimpleWorkType.Novel
             : SimpleWorkType.Illustration;
 

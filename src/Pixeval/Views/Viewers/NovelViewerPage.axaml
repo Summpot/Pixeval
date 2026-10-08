@@ -6,6 +6,7 @@
     xmlns:converters="using:Pixeval.Views.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Pixeval.Views.Viewers"
+    xmlns:mako="using:Pixeval.Native.Mako"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -135,7 +136,7 @@
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="{x:Type novel:NovelItemViewModel}">
+                <DataTemplate x:DataType="{x:Type mako:Novel}">
                     <Image
                         Width="80"
                         Height="80"

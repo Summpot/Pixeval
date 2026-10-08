@@ -5,6 +5,7 @@
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:entry="using:Pixeval.Views.Entry"
+    xmlns:mako="using:Pixeval.Native.Mako"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewModels="using:Pixeval.ViewModels"
     x:DataType="{x:Type viewModels:SeriesViewViewModel}"
@@ -34,7 +35,7 @@
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="{x:Type viewModels:SeriesItemViewModel}">
+                <DataTemplate x:DataType="{x:Type mako:Series}">
                     <entry:SeriesItem />
                 </DataTemplate>
             </ListBox.ItemTemplate>

@@ -6,6 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:entry="using:Pixeval.Views.Entry"
     xmlns:local="using:Pixeval.ViewModels"
+    xmlns:mako="using:Pixeval.Native.Mako"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     x:DataType="{x:Type local:SpotlightViewViewModel}"
     mc:Ignorable="d"
@@ -34,7 +35,7 @@
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="{x:Type local:SpotlightItemViewModel}">
+                <DataTemplate x:DataType="{x:Type mako:SpotlightArticle}">
                     <entry:SpotlightItem />
                 </DataTemplate>
             </ListBox.ItemTemplate>

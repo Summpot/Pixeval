@@ -3,18 +3,113 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Controls;
+using CommunityToolkit.Mvvm.Input;
 using Misaki;
+using Pixeval.Controls;
+using Pixeval.I18N;
+using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
+using Pixeval.ViewModels;
 
 namespace Pixeval.Native.Mako;
 
-public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISingleAnimatedImage, IImageSet, IImageSize, ISerializable
+public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISingleAnimatedImage, IImageSet, IImageSize, ISerializable, IWorkViewModel, INotifyPropertyChanged
 {
     private static readonly Dictionary<string, object> s_emptyDict = [];
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    private void OnPropertyChanged([CallerMemberName] string? name = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+    private HeartButtonState? _isBookmarkedDisplay;
+
+    [JsonIgnore]
+    public HeartButtonState IsBookmarkedDisplay
+    {
+        get => _isBookmarkedDisplay ?? (IsFavorite ? HeartButtonState.Checked : HeartButtonState.Unchecked);
+        set
+        {
+            if (_isBookmarkedDisplay != value)
+            {
+                _isBookmarkedDisplay = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private bool? _isInWatchLater;
+
+    [JsonIgnore]
+    public bool IsInWatchLater
+    {
+        get => _isInWatchLater ?? (App.AppViewModel?.ContainsWatchLater(this) is true);
+        set
+        {
+            if (_isInWatchLater != value)
+            {
+                _isInWatchLater = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public bool IsBookmarkSupported => !BlockedContentHelper.IsBlockedPlaceholder(this) && Platform is IPlatformInfo.Pixiv;
+
+    [JsonIgnore]
+    public bool HasSeries => Series is not null;
+
+    [JsonIgnore]
+    public double AspectRatio => Width > 0 && Height > 0 ? (double) Width / Height : 1;
+
+    [JsonIgnore]
+    public string? SizeText => Width > 0 && Height > 0 ? $"{Width} x {Height}" : null;
+
+    [JsonIgnore]
+    public string? ThumbnailUrl => Thumbnails.PickClosestHeight(300)?.ImageUri.OriginalString;
+
+    [JsonIgnore]
+    public string Tooltip
+    {
+        get
+        {
+            var sb = new StringBuilder(Title);
+            if (IsPicGif)
+                sb.AppendLine().Append(I18NManager.GetResource(EntryItemResources.TheIllustrationIsAnUgoira));
+            else if (IsPicSet)
+                sb.AppendLine().Append(string.Format(I18NManager.GetResource(EntryItemResources.TheIllustrationIsAMangaFormatted), PageCount));
+            return sb.ToString();
+        }
+    }
+
+    [JsonIgnore]
+    public Illustration Entry => this;
+
+    [JsonIgnore]
+    public IAsyncRelayCommand<(IReadOnlyList<string>? Tags, bool IsPrivate, Control? Control)> AddToBookmarkCommand => WorkCommands.AddToBookmarkCommand;
+
+    [JsonIgnore]
+    public IAsyncRelayCommand<Control?> BookmarkCommand => WorkCommands.BookmarkCommand;
+
+    [JsonIgnore]
+    public IRelayCommand<Control?> AddToWatchLaterCommand => WorkCommands.AddToWatchLaterCommand;
+
+    [JsonIgnore]
+    public IAsyncRelayCommand<Control?> SaveCommand => WorkCommands.SaveCommand;
+
+    [JsonIgnore]
+    public IAsyncRelayCommand<Image?> CopyCommand => WorkCommands.CopyCommand;
+
+    IArtworkInfo IWorkViewModel.Entry => this;
 
     private bool? _isFavorite;
 
@@ -89,6 +184,9 @@ public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISi
 
     [JsonIgnore]
     public bool IsPicSet => PageCount > 1 || SetIndex > -1;
+
+    [JsonIgnore]
+    public bool IsPicOne => !IsPicSet && !IsPicGif;
 
     [JsonIgnore]
     public ImageType ImageType => IsPicSet

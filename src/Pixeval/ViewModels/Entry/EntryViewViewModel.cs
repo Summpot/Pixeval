@@ -14,7 +14,7 @@ namespace Pixeval.ViewModels;
 public abstract class EntryViewViewModel<T, TViewModel>
     : ViewModelBase, ISimpleViewViewModel, IDisposable
     where T : class, IIdentityInfo
-    where TViewModel : ViewModelBase
+    where TViewModel : class, INotifyPropertyChanged
 {
     private bool _isDisposed;
 
@@ -34,12 +34,16 @@ public abstract class EntryViewViewModel<T, TViewModel>
         DataProvider.Dispose();
     }
 
-    public void ResetEngine(IAsyncEnumerable<T>? newEngine, Func<T, int, TViewModel> factory, int itemsPerPage = 20, int itemLimit = -1)
+    public void ResetEngine(IAsyncEnumerable<T>? newEngine, Func<T, int, TViewModel>? factory = null, int itemsPerPage = 20, int itemLimit = -1)
     {
         var snapshot = BlockedContentHelper.CaptureSnapshot();
         DataProvider.ResetEngine(
             newEngine,
-            (entry, index) => factory(BlockedContentHelper.ReplaceEntry(entry, snapshot), index),
+            (entry, index) =>
+            {
+                var replaced = BlockedContentHelper.ReplaceEntry(entry, snapshot);
+                return factory is not null ? factory(replaced, index) : (TViewModel) (object) replaced;
+            },
             itemsPerPage,
             itemLimit);
     }

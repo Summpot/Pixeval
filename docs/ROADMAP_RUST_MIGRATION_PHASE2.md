@@ -284,9 +284,54 @@ flowchart TD
 
 ### 阶段 4：表现层极致瘦身与跨平台交付 (Phase 4)
 
-#### 4.1 ViewModel 彻底去业务化
-- **目标**：
-  - ViewModel 中不再包含任何非 UI 相关的逻辑分支、数据重排或格式组装，彻底蜕变为纯 Reactive 绑定。
+#### 4.1 ViewModel 彻底去业务化 (纯 Reactive Binding)
+- **功能目标**：
+  - 终结表现层实体过度包装与逻辑碎片化，将所有 ViewModel 彻底蜕变为纯粹的**声明式响应式绑定器**。
+  - 集合直接以原生强类型驱动：`ListBox.ItemsSource` 直连 `ObservableCollection<Illustration>`、`ObservableCollection<Novel>`、`ObservableCollection<User>`，彻底废除二次包装层。
+  - 将下载聚合统计、限流倒计时、树形状态维护下沉至 Rust Tokio 运行时；将小说排版与以图搜图格式编解码收敛至原生底层。
+  - 拔除 ViewModel 内部实例化的所有 UI 控件（`Page`、`Border`、`SubView` 等），100% 回归 XAML 声明式模板与路由。
+- **Partial 化工程规范与零包装铁律**：
+  - **原生 Record 原地投影**：在 `src/Pixeval/NativeExtensions/Mako/` 中直接扩展 `Illustration`、`Novel`、`User`、`Series`，原地提供 `AspectRatio`、`PageCount`、`SizeText`、`Tooltip` 等只读计算属性，严禁手写任何 `*ItemViewModel` 包装类！
+  - **交互命令视图层级化 (View-Scoped Commands)**：收藏、稍后再看、下载、复制等操作统一提升至 `WorkViewViewModel` 或通过 Attached Behaviors 承接，参数直传原生强类型实体，不再为每个列表项单独分配 Command 实例。
+  - **单一事实来源 (Single Source of Truth)**：通过 UniFFI 导出的 `IStorageObserver` 集中监听收藏、稍后再看与历史记录变更，UI 控件通过响应式事件总线原地响应，杜绝局部状态与本地数据库脱节。
+- **五大核心重构范围与去业务化映射**：
+  1. **作品与实体列表流 (4.1.1)**：
+     - 物理删除 `IllustrationItemViewModel`、`NovelItemViewModel`、`UserItemViewModel`、`SeriesItemViewModel`、`SpotlightItemViewModel`、`ThumbnailEntryViewModel`、`WorkEntryViewModel`。
+     - 改造 `WorkView.axaml`，DataTemplate 直接绑定 `Pixeval.Native.Mako.Illustration` 与 `Novel`。
+     - 改造 `IncrementalSource` 与 `SharableViewDataProvider`，移除创建包装 ViewModel 的工厂委托。
+  2. **下载中心与订阅任务树 (4.1.2)**：
+     - 在 `pixeval_download` / `pixeval_subscription` 导出 `SubscriptionFolderSnapshot` 与任务树聚合流。
+     - 物理删除 `DownloadFolderViewModel` 中的 `_rateLimitTimer`、LINQ 遍历状态汇总与 Sum/Average 求和。
+     - 物理删除 `DownloadPageViewModel` 中的双重字典映射（`_lookup`、`_subscriptionFolderLookup`）与手动插入排序，直接绑定原生快照列表。
+  3. **查看器体系纯声明式重构 (4.1.3)**：
+     - 物理删除 `IllustrationViewerPageViewModel.CreatePanePages` 与 `NovelViewerPageViewModel.SettingsPage` 中的 UI 控件实例化代码，改用 XAML `ContentControl` / `DataTemplate` 声明式呈现。
+     - 小说分页组装收敛至 `NovelContent.RenderMarkdownPages()` 底层扩展，移除 ViewModel 内手写 `NovelImageRenderDto` / `NovelIllustRenderDto` 的转换代码。
+     - 移除 `_autoPlayTimer`，自动播放移至 View 层 Behavior 驱动。
+  4. **搜索、主页与以图搜图轻量化 (4.1.4)**：
+     - 移除 `SauceNaoSearchPageViewModel` 的 Skia/Avalonia 内存流与 PNG 编码逻辑，原始字节直传 `SauceNaoClient.Search`。
+     - 搜索与主页选项全面直连 `pixeval_config` 与 `pixeval_mako` 原生模型，移除手写集合拼接。
+  5. **应用巨石治理与全局状态收敛 (4.1.5)**：
+     - 精简 `AppViewModel` (784行 -> ~220行)，移除 C# 脏批次锁、手动防抖字典与持久化同步状态机，全面委托 Rust `StorageEngine` 内部事务。
+- **物理清退清单 (Physical Elimination Checklist)**：
+  - **完全物理删除**：
+    - `src/Pixeval/ViewModels/Illustration/IllustrationItemViewModel.cs` (.Commands.cs)
+    - `src/Pixeval/ViewModels/Novel/NovelItemViewModel.cs` (.Commands.cs)
+    - `src/Pixeval/ViewModels/User/UserItemViewModel.cs` (.Commands.cs)
+    - `src/Pixeval/ViewModels/Series/SeriesItemViewModel.cs`
+    - `src/Pixeval/ViewModels/Entry/SpotlightItemViewModel.cs`
+    - `src/Pixeval/ViewModels/Work/WorkEntryViewModel.cs` (.Commands.cs, .Debounce.cs)
+    - `src/Pixeval/ViewModels/Work/ThumbnailEntryViewModel.cs`
+    - `src/Pixeval/ViewModels/Download/IDownloadListEntryViewModel.cs`
+  - **极致瘦身**：
+    - `DownloadPageViewModel.cs` (373 行 -> ~70 行)
+    - `DownloadFolderViewModel.cs` (209 行 -> ~50 行)
+    - `IllustrationViewerPageViewModel.cs` (515 行 -> ~160 行)
+    - `NovelViewerPageViewModel.cs` (386 行 -> ~140 行)
+    - `AppViewModel.cs` (784 行 -> ~220 行)
+- **验收标准**：
+  - 表现层 100% 消除 `*ItemViewModel` 实体包装类，XAML DataTemplate 均以 `Pixeval.Native.*` 原生实体为 DataContext。
+  - 列表滚动流无任何包装堆分配，长列表 GC 停顿时间显著下降；下载中心与作品查看器无任何 UI 线程卡顿。
+  - 全工程编译通过，警告数为 0，现有自动化测试全绿通过。
 
 #### 4.2 统一跨平台 CI/CD 流水线
 - **目标**：
@@ -305,7 +350,10 @@ flowchart TD
 2. **第二优先级：动图后处理与媒体管线 (`crates/pixeval_media`) [已完成]**
    - **理由**：彻底解决 Ugoira 动图合成与格式转换的跨语言性能损耗，关闭下载模块的最后一段 C# 尾巴。
    - **顺带修复**：多页插画与小说任务组未入队阻塞（**H2**）、订阅路径宏丢失系列与 R18G 语义（**H5**）、下载引擎静态多 IP 覆盖与并发缩容缺陷（**2.2**）、订阅下载探错与孤儿行（**2.1**）。
-3. **第三优先级（建议下一步启动）：零拷贝图片抓取与缓存/预览管线 (`pixeval_cache` / `pixeval_maho`)**
-   - **顺带修复**：文件缓存每次重启无条件截断被清空（**H9**）、Mako 客户端未走 Maho TLS 分片抗审查（**2.3**）、缓存运行时容量限制（**2.4**）。
-4. **第四优先级：先行存量缺陷专项（H1 序列化、H3 MCP 补齐、H7/H10 会话与端点）**
-   - **说明**：此部分已在 Phase 3 的专属小节（3.1、3.5、3.6）中全量挂载，可根据业务优先级按需提前插入实施。
+3. **第三优先级：零拷贝图片抓取与缓存/预览管线 (`pixeval_cache` / `pixeval_maho`) [已完成]**
+   - 彻底下沉 foyer 混合存储与 SIMD 平面通道 LZ4 零拷贝管线，Mako 全面接驳 Maho 抗审查传输。
+4. **第四优先级：业务仓储闭环、MCP 全量恢复与网络韧性 (Phase 3 全量) [已完成]**
+   - 彻底清退 C# 26 个 PersistentManager 与 Imouto/SharpYaml 外部依赖，原生激活 MCP 与动态库插件宿主。
+5. **当前最高优先级：表现层极致瘦身——ViewModel 彻底去业务化 (Phase 4.1) [下一步启动]**
+   - **理由**：底层能力已 100% 原生就绪，表现层依然残留着实体二次包装、手写字典排序、LINQ 轮询求和与 UI 控件倒置等反模式，严重制约长列表性能并带来状态分叉风险。
+   - **核心攻坚**：全面清退所有 `*ItemViewModel` 实体包装类，XAML 直连 `Pixeval.Native.*`；将下载聚合与状态机收敛进 Tokio；拔除 ViewModel 内所有的 UI 控件实例化代码，彻底实现纯粹的 Reactive Binding。

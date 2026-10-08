@@ -192,18 +192,18 @@ public static class HomeCardDefinitions
     {
         switch (parameter, vm)
         {
-            case (NovelItemViewModel viewModel, NovelViewViewModel viewViewModel):
-                topLevel.ViewContainer?.CreateNovelPage(viewModel, viewViewModel.DataProvider.CloneRef());
+            case (Novel novel, NovelViewViewModel viewViewModel):
+                topLevel.ViewContainer?.CreateNovelPage(novel, viewViewModel.DataProvider.CloneRef());
                 break;
-            case (IllustrationItemViewModel viewModel, IllustrationViewViewModel viewViewModel):
-                topLevel.ViewContainer?.CreateIllustrationPage(viewModel, viewViewModel.DataProvider.CloneRef());
+            case (IWorkViewModel work, IllustrationViewViewModel viewViewModel):
+                topLevel.ViewContainer?.CreateIllustrationPage(work, viewViewModel.DataProvider.CloneRef());
                 break;
-            case (UserItemViewModel viewModel, _):
-                topLevel.ViewContainer?.CreateUserPage(viewModel.UserId);
+            case (User user, _):
+                topLevel.ViewContainer?.CreateUserPage(user.RawId);
                 break;
-            case (SpotlightItemViewModel viewModel, _):
+            case (SpotlightArticle article, _):
                 if (topLevel.Launcher is { } launcher)
-                    _ = launcher.LaunchUriAsync(new(viewModel.Entry.ArticleUrl));
+                    _ = launcher.LaunchUriAsync(new(article.ArticleUrl));
                 break;
         }
     }
@@ -276,14 +276,14 @@ public static class HomeCardDefinitions
     private static UserViewViewModel CreateUserViewModel(IFetchEngine<User> engine)
     {
         var viewModel = new UserViewViewModel();
-        viewModel.ResetEngine(engine, static (user, _) => new(user));
+        viewModel.ResetEngine(engine);
         return viewModel;
     }
 
     private static SpotlightViewViewModel CreateSpotlightViewModel(IFetchEngine<SpotlightArticle> engine)
     {
         var viewModel = new SpotlightViewViewModel();
-        viewModel.ResetEngine(engine, static (spotlight, _) => new(spotlight));
+        viewModel.ResetEngine(engine);
         return viewModel;
     }
 

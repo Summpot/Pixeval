@@ -14,14 +14,17 @@ using Pixeval.Models.Options;
 
 namespace Pixeval.ViewModels;
 
-public sealed class DownloadItemViewModel : ThumbnailEntryViewModel<IArtworkInfo>, IDownloadListEntryViewModel, IDisposable
+public sealed class DownloadItemViewModel : ViewModelBase, IDownloadListEntryViewModel, IDisposable
 {
     private bool _isDisposed;
 
     public IDownloadTaskGroup DownloadTask { get; }
 
+    public IArtworkInfo Entry => DownloadTask.DatabaseEntry.Entry;
+
+    public string Id => Entry.Id;
+
     public DownloadItemViewModel(IDownloadTaskGroup downloadTask)
-        : base(downloadTask.DatabaseEntry.Entry)
     {
         DownloadTask = downloadTask;
         DownloadTask.PropertyChanged += DownloadTaskOnPropertyChanged;
@@ -29,9 +32,9 @@ public sealed class DownloadItemViewModel : ThumbnailEntryViewModel<IArtworkInfo
 
     public string AuthorsText => string.Join(", ", Entry.Authors.Select(t => t.Name));
 
-    public override Uri AppUri => Entry.AppUri;
+    public Uri AppUri => Entry.AppUri;
 
-    public override Uri WebsiteUri => Entry.WebsiteUri;
+    public Uri WebsiteUri => Entry.WebsiteUri;
 
     public bool ShowGroupStats => DownloadTask.Count > 1;
 
@@ -111,7 +114,11 @@ public sealed class DownloadItemViewModel : ThumbnailEntryViewModel<IArtworkInfo
         }
     }
 
-    public override string ThumbnailUrl => Entry.Thumbnails.PickMax()?.ImageUri.OriginalString ?? "";
+    public string ThumbnailUrl => Entry.Thumbnails.PickMax()?.ImageUri.OriginalString ?? "";
+
+    public override bool Equals(object? obj) => obj is DownloadItemViewModel viewModel && Entry.Equals(viewModel.Entry);
+
+    public override int GetHashCode() => Entry.GetHashCode();
 
     public string? ErrorMessage => DownloadTask.ErrorMessage;
 

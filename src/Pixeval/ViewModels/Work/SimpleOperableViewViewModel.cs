@@ -76,7 +76,7 @@ public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelB
     public IReadOnlyCollection<IWorkViewModel> Source => SourceView.Source;
 
     /// <inheritdoc />
-    public bool RequireAdaptiveGrid => typeof(TViewModel) == typeof(NovelItemViewModel);
+    public bool RequireAdaptiveGrid => typeof(TViewModel) == typeof(Pixeval.Native.Mako.Novel) || typeof(INovelEntry).IsAssignableFrom(typeof(TViewModel));
 
     public void Dispose()
     {

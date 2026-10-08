@@ -31,5 +31,5 @@ public partial class SpotlightPage : IconContentPage
     }
 
     private void ResetEngine(IFetchEngine<SpotlightArticle> fetchEngine) =>
-        (SpotlightView.DataContext as SpotlightViewViewModel)?.ResetEngine(fetchEngine, static (spotlight, _) => new(spotlight));
+        (SpotlightView.DataContext as SpotlightViewViewModel)?.ResetEngine(fetchEngine);
 }

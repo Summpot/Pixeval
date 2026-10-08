@@ -35,7 +35,7 @@ public abstract partial class SimpleUsersPage : IconContentPage
     }
 
     private void ResetEngine(IAsyncEnumerable<User> fetchEngine) =>
-        (UserContainer.UserView.DataContext as UserViewViewModel)?.ResetEngine(fetchEngine, static (user, _) => new(user));
+        (UserContainer.UserView.DataContext as UserViewViewModel)?.ResetEngine(fetchEngine);
 
     protected abstract IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient);
 }

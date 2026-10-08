@@ -5,12 +5,12 @@ using System.Collections.Frozen;
 using Misaki;
 using IllustrationViewDataProvider = Pixeval.ViewModels.SharableViewDataProvider<
     Misaki.IArtworkInfo,
-    Pixeval.ViewModels.IllustrationItemViewModel>;
+    Pixeval.ViewModels.IWorkViewModel>;
 
 namespace Pixeval.ViewModels;
 
 public sealed class IllustrationViewViewModel
-    : WorkViewViewModelBase<IArtworkInfo, IllustrationItemViewModel>, IRefCloneable<IllustrationViewViewModel>
+    : WorkViewViewModelBase<IArtworkInfo, IWorkViewModel>, IRefCloneable<IllustrationViewViewModel>
 {
     public IllustrationViewViewModel() : this(new IllustrationViewDataProvider(), null)
     {

@@ -72,7 +72,7 @@
                         </ItemsPanelTemplate>
                     </ListBox.ItemsPanel>
                     <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="{x:Type viewModels:IllustrationItemViewModel}">
+                        <DataTemplate x:DataType="{x:Type viewModels:IWorkViewModel}">
                             <Border
                                 Width="80"
                                 Height="80"

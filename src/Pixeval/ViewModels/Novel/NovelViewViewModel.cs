@@ -6,12 +6,12 @@ using Pixeval.Models.Pixiv;
 using Pixeval.Native.Mako;
 using NovelViewDataProvider = Pixeval.ViewModels.SharableViewDataProvider<
     Pixeval.Native.Mako.Novel,
-    Pixeval.ViewModels.NovelItemViewModel>;
+    Pixeval.Native.Mako.Novel>;
 
 namespace Pixeval.ViewModels;
 
 public sealed class NovelViewViewModel
-    : WorkViewViewModelBase<Novel, NovelItemViewModel>, IRefCloneable<NovelViewViewModel>
+    : WorkViewViewModelBase<Novel, Novel>, IRefCloneable<NovelViewViewModel>
 {
     public NovelViewViewModel() : this(new NovelViewDataProvider(), null)
     {

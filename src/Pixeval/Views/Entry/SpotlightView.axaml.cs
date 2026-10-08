@@ -5,6 +5,7 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 
@@ -26,8 +27,8 @@ public partial class SpotlightView : UserControl
 
     private async void SpotlightItem_OnTapped(object? sender, TappedEventArgs e)
     {
-        if (sender is Control { DataContext: SpotlightItemViewModel vm } control)
-            TopLevel.GetTopLevel(control)?.Launcher.LaunchUriAsync(new Uri(vm.Entry.ArticleUrl));
+        if (sender is Control { DataContext: SpotlightArticle vm } control)
+            TopLevel.GetTopLevel(control)?.Launcher.LaunchUriAsync(new Uri(vm.ArticleUrl));
     }
 
     private void ListBox_OnContainerPrepared(object? sender, ContainerPreparedEventArgs e)

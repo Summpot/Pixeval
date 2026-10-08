@@ -14,7 +14,7 @@ namespace Pixeval.ViewModels;
 
 public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<string>? blockedTags) : EntryViewViewModel<T, TViewModel>, IWorkViewViewModel
     where T : class, IArtworkInfo
-    where TViewModel : EntryViewModel<T>, IFactory<T, TViewModel>, IWorkViewModel
+    where TViewModel : class, IWorkViewModel
 {
     public FrozenSet<string> CachedBlockedTags { get; private set; } = blockedTags ?? App.AppViewModel.AppSettings.BrowsingExperienceSettings.BlockedTags.ToFrozenSet();
 
@@ -64,7 +64,7 @@ public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<str
     public void ResetEngine(IAsyncEnumerable<IArtworkInfo>? newEngine, int itemsPerPage = 20, int itemLimit = -1)
     {
         CachedBlockedTags = [.. App.AppViewModel.AppSettings.BrowsingExperienceSettings.BlockedTags.ToFrozenSet()];
-        ResetEngine((IAsyncEnumerable<T>?) newEngine, (info, _) => TViewModel.CreateInstance(info), itemsPerPage, itemLimit);
+        ResetEngine((IAsyncEnumerable<T>?) newEngine, static (info, _) => (TViewModel) (object) info, itemsPerPage, itemLimit);
         SetFilters();
     }
 }

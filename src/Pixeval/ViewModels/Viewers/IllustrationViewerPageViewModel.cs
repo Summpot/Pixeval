@@ -27,13 +27,13 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 {
     private readonly DispatcherTimer _autoPlayTimer = new();
 
-    private readonly Dictionary<int, IllustrationItemViewModel> _refreshedIllustrations = [];
+    private readonly Dictionary<int, IWorkViewModel> _refreshedIllustrations = [];
 
     private readonly bool _needRefresh;
 
     private CancellationTokenSource _loadingCts = new();
 
-    private readonly ISourceView<IllustrationItemViewModel>? _sourceView;
+    private readonly ISourceView<IWorkViewModel>? _sourceView;
 
     [ObservableProperty]
     public partial bool IsLoading { get; private set; }
@@ -51,7 +51,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// </summary>
     /// <param name="illustrationViewModel"></param>
     /// <param name="needRefresh"></param>
-    public IllustrationViewerPageViewModel(IllustrationItemViewModel illustrationViewModel, bool needRefresh)
+    public IllustrationViewerPageViewModel(IWorkViewModel illustrationViewModel, bool needRefresh)
     {
         _needRefresh = needRefresh;
         CurrentIllustration = illustrationViewModel;
@@ -83,7 +83,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// illustrations should contain only one item if the illustration is a single
     /// otherwise it contains the entire manga data
     /// </remarks>
-    public IllustrationViewerPageViewModel(ISourceView<IllustrationItemViewModel> dataProvider, int currentIllustrationIndex, bool needRefresh)
+    public IllustrationViewerPageViewModel(ISourceView<IWorkViewModel> dataProvider, int currentIllustrationIndex, bool needRefresh)
     {
         _needRefresh = needRefresh;
         _sourceView = dataProvider;
@@ -127,7 +127,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// <summary>
     /// 当前插画
     /// </summary>
-    public IllustrationItemViewModel? CurrentIllustration
+    public IWorkViewModel? CurrentIllustration
     {
         get
         {
@@ -217,7 +217,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
         return;
 
-        async ValueTask<IllustrationItemViewModel?> GetCurrentIllustrationAsync(int workIndex)
+        async ValueTask<IWorkViewModel?> GetCurrentIllustrationAsync(int workIndex)
         {
             if (!_needRefresh)
             {
@@ -284,7 +284,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         return _loadingCts.Token;
     }
 
-    private async Task<IllustrationItemViewModel?> LoadIllustrationAsync(IIdentityInfo info, Action<IllustrationItemViewModel> onLoaded, CancellationToken token)
+    private async Task<IWorkViewModel?> LoadIllustrationAsync(IIdentityInfo info, Action<IWorkViewModel> onLoaded, CancellationToken token)
     {
         IsLoading = true;
         LoadErrorMessage = null;
@@ -298,7 +298,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
                 return null;
             }
 
-            var item = IllustrationItemViewModel.CreateInstance(BlockedContentHelper.Replace(entry));
+            var item = (IWorkViewModel) BlockedContentHelper.Replace(entry);
             onLoaded(item);
             return item;
         }
@@ -379,7 +379,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// <summary>
     /// 插画列表
     /// </summary>
-    public IReadOnlyList<IllustrationItemViewModel>? Illustrations => _sourceView?.View;
+    public IReadOnlyList<IWorkViewModel>? Illustrations => _sourceView?.View;
 
     #endregion
 

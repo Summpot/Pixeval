@@ -14,7 +14,7 @@
     xmlns:pixeval="using:Pixeval"
     xmlns:utilities="using:Pixeval.Utilities"
     xmlns:work="using:Pixeval.Views.Work"
-    x:DataType="{x:Type novel:NovelItemViewModel}"
+    x:DataType="{x:Type mako:Novel}"
     Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
     Design.DataContext="{x:Static utilities:DesignHelper.DesignNovelViewModel}"
     Theme="{StaticResource RoundedButtonStyle}"

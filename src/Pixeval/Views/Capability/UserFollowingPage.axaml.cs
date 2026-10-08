@@ -57,5 +57,5 @@ public partial class UserFollowingPage : IconContentPage
     }
 
     private void ResetEngine(IAsyncEnumerable<Pixeval.Native.Mako.User> fetchEngine) =>
-        (UserContainer.UserView.DataContext as UserViewViewModel)?.ResetEngine(fetchEngine, static (user, _) => new(user));
+        (UserContainer.UserView.DataContext as UserViewViewModel)?.ResetEngine(fetchEngine);
 }

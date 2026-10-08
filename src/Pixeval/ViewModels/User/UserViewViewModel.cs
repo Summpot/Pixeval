@@ -5,12 +5,12 @@ using Pixeval.Models.Pixiv;
 using Pixeval.Native.Mako;
 using UserViewDataProvider = Pixeval.ViewModels.SharableViewDataProvider<
     Pixeval.Native.Mako.User,
-    Pixeval.ViewModels.UserItemViewModel>;
+    Pixeval.Native.Mako.User>;
 
 namespace Pixeval.ViewModels;
 
 public sealed class UserViewViewModel
-    : EntryViewViewModel<User, UserItemViewModel>, IRefCloneable<UserViewViewModel>
+    : EntryViewViewModel<User, User>, IRefCloneable<UserViewViewModel>
 {
     public UserViewViewModel() : this(new UserViewDataProvider())
     {

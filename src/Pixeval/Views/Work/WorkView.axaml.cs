@@ -99,23 +99,23 @@ public sealed partial class WorkView : UserControl, IDisposable
 
         switch (vm, DataContext)
         {
-            case (NovelItemViewModel viewModel, NovelViewViewModel viewViewModel):
-                viewContainer.CreateNovelPage(viewModel, viewViewModel.DataProvider.CloneRef());
+            case (Novel novel, NovelViewViewModel viewViewModel):
+                viewContainer.CreateNovelPage(novel, viewViewModel.DataProvider.CloneRef());
                 break;
-            case (NovelItemViewModel viewModel, SimpleOperableViewViewModel<NovelItemViewModel> viewViewModel):
-                viewContainer.CreateNovelPage(viewModel, viewViewModel.SourceView.CloneSourceView(), viewViewModel.NeedRefreshOnOpen);
+            case (Novel novel, SimpleOperableViewViewModel<Novel> viewViewModel):
+                viewContainer.CreateNovelPage(novel, viewViewModel.SourceView.CloneSourceView(), viewViewModel.NeedRefreshOnOpen);
                 break;
-            case (IllustrationItemViewModel viewModel, IllustrationViewViewModel viewViewModel):
-                viewContainer.CreateIllustrationPage(viewModel, viewViewModel.DataProvider.CloneRef());
+            case (Illustration illustration, IllustrationViewViewModel viewViewModel):
+                viewContainer.CreateIllustrationPage(illustration, viewViewModel.DataProvider.CloneRef());
                 break;
-            case (IllustrationItemViewModel viewModel, SimpleOperableViewViewModel<IllustrationItemViewModel> viewViewModel):
-                viewContainer.CreateIllustrationPage(viewModel, viewViewModel.SourceView.CloneSourceView(), viewViewModel.NeedRefreshOnOpen);
+            case (Illustration illustration, SimpleOperableViewViewModel<IWorkViewModel> viewViewModel):
+                viewContainer.CreateIllustrationPage(illustration, viewViewModel.SourceView.CloneSourceView(), viewViewModel.NeedRefreshOnOpen);
                 break;
-            case (NovelItemViewModel { Entry.Id: var id }, _):
+            case (Novel { Id: var id }, _):
                 viewContainer.CreateNovelPage(id);
                 break;
-            case (IllustrationItemViewModel illustrationViewModel, _):
-                viewContainer.CreateIllustrationPage(illustrationViewModel);
+            case (Illustration illustration, _):
+                viewContainer.CreateIllustrationPage(illustration);
                 break;
         }
     }
@@ -144,8 +144,8 @@ public sealed partial class WorkView : UserControl, IDisposable
     public void SetSource(IReadOnlyCollection<IArtworkInfo> source, SimpleWorkType workType, bool needRefreshOnOpen = false)
     {
         IOperableViewViewModel viewModel = workType is SimpleWorkType.Novel
-            ? new SimpleOperableViewViewModel<NovelItemViewModel>(source, needRefreshOnOpen)
-            : new SimpleOperableViewViewModel<IllustrationItemViewModel>(source, needRefreshOnOpen);
+            ? new SimpleOperableViewViewModel<Novel>(source, needRefreshOnOpen)
+            : new SimpleOperableViewViewModel<IWorkViewModel>(source, needRefreshOnOpen);
         SetOwnedViewModel(viewModel);
     }
 
