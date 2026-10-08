@@ -47,14 +47,14 @@
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
 		<PackageReference Include="Markdown.Avalonia" Version="12.0.0-a3" />
 		<!--<PackageReference Include="SmoothScroll.Avalonia" Version="12.0.0.12" />-->
-		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.17" />
+		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.12" />
 		<PackageReference Include="TabView.Avalonia" Version="1.0.0" />
 		<PackageReference Include="Velopack" Version="1.2.158" />
         
-        <PackageReference Include="SkiaSharp" Version="4.152.1" />
-		<PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.152.1" />
-		<PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" Version="4.152.1" />
-		<PackageReference Include="UniFFISharp" Version="0.2.9" />
+        <PackageReference Include="SkiaSharp" Version="3.119.4" />
+		<PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" />
+		<PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" Version="3.119.4" />
+		<PackageReference Include="UniFFISharp" Version="0.2.10" />
 		<PackageReference Include="Misaki" Version="1.0.0.6" />
 	</ItemGroup>
 
