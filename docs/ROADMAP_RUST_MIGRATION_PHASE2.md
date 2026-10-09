@@ -89,28 +89,37 @@ Phase 1 成功构建了跨语言基础底座并下沉了底层密集型子系统
 
 ```mermaid
 flowchart TD
-    subgraph Phase2 ["Phase 2: 内容计算与媒体管线原生化 (高收益/零 UI 耦合)"]
-        P2_1["2.1 小说解析与排版引擎 (pixeval_novel) [已完成]<br/>【附带修复】H6(正文插图/前后篇), H7(小说端点), 2.4(ratio谓词误判), 高级搜索参数丢失<br/>【Partial规范】NovelArticle/NovelContent 在 NativeExtensions/Novel 原地实现接口"]
-        P2_2["2.2 媒体后处理与动图转码 (pixeval_media) [已完成]<br/>【附带修复】H2(任务组入队), H5(系列宏与R18G), 2.1(订阅下载探错与孤儿行), 2.2(下载并发缩容/多IP/取消感知)<br/>【Partial规范】DownloadManager 原地扩展，严禁手写任务包装类"]
-        P2_3["2.3 零拷贝图片抓取与流式预览管线<br/>【附带修复】H9(缓存重启清空与持久索引), 2.3(Mako全面接驳Maho抗审查/超时), 2.4(缓存实时限额/内存对齐)<br/>【Partial规范】维持 CacheEngine 在 NativeExtensions/Cache 原地扩展"]
+    subgraph Phase2 ["Phase 2: 内容计算与媒体管线原生化 (高收益/零 UI 耦合) [已完成]"]
+        P2_1["2.1 小说解析与排版引擎 (pixeval_novel) [已完成]<br/>【附带修复】H6(正文插图/前后篇), H7(小说端点), 2.4(ratio谓词误判), 高级搜索参数丢失<br/>【Partial规范】Novel/NovelContent 在 NativeExtensions/Mako 原地实现扩展"]
+        P2_2["2.2 媒体后处理与动图转码 (pixeval_media) [已完成]<br/>【附带修复】H2(任务组入队), H5(系列宏与R18G), 2.1(订阅下载探错与孤儿行), 2.2(下载并发缩容/多IP/取消感知)<br/>【Partial规范】DownloadManager 原地扩展，支持系统原生 API MP4 导出"]
+        P2_3["2.3 零拷贝图片抓取与流式预览管线 [已完成]<br/>【附带修复】H9(缓存跨进程持久化), 2.3(Mako全面接驳Maho抗审查/超时), 2.4(缓存实时限额/内存对齐)<br/>【现代架构】升级为 Foyer 混合缓存与 SIMD 平面通道 LZ4 零拷贝"]
     end
 
-    subgraph Phase3 ["Phase 3: 业务仓储闭环与辅助服务下沉 (去胶水/去依赖)"]
-        P3_1["3.1 领域仓储与状态机闭环 [已完成]<br/>【吸收修复】H1(JSON大小写与老数据水合兼容), 2.5(存储枚举错位/稳定ID/唯一索引)<br/>【Partial规范】仓储实体在 NativeExtensions/Storage 原地扩展，清退 26 个 Manager"]
-        P3_2["3.2 多图站聚合与 SauceNao 搜图 (清退 Imouto.BooruParser)<br/>【Partial规范】Booru/SauceNao 模型在 NativeExtensions 原地实现 IArtworkInfo"]
+    subgraph Phase3 ["Phase 3: 业务仓储闭环与辅助服务下沉 (去胶水/去依赖) [已完成]"]
+        P3_1["3.1 领域仓储与状态机闭环 [已完成]<br/>【吸收修复】H1(JSON大小写与老数据水合兼容), 2.5(存储枚举错位/稳定ID/唯一索引)<br/>【Partial规范】仓储实体在 NativeExtensions/Storage 原地扩展，彻底清退 26 个 Manager"]
+        P3_2["3.2 多图站聚合与 SauceNao 搜图 (清退 Imouto.BooruParser) [已完成]<br/>【Partial规范】Booru/SauceNao 模型在 NativeExtensions 原地实现接口"]
         P3_3["3.3 导航 YAML 诊断与主页网格算法 (清退 SharpYaml) [已完成]"]
-        P3_4["3.4 原生应用更新与 GitHub 代理引擎 (pixeval_update)"]
-        P3_5["3.5 [专项] MCP 协议服务器全量恢复与插件宿主激活<br/>【吸收修复】H3(补齐49工具与游标分页), H4(生产激活插件宿主), 2.6(信号量释放)"]
-        P3_6["3.6 [专项] 网络韧性与会话安全防护<br/>【吸收修复】H7(通用API端点), H8(用户横幅), H10(鉴权失效同步), H11(MyId防护), 2.3(429限流串行化)"]
+        P3_4["3.4 原生应用更新与 GitHub 代理引擎 (pixeval_update) [已完成]"]
+        P3_5["3.5 [专项] MCP 协议服务器全量恢复与插件宿主激活 [已完成]<br/>【吸收修复】H3(补齐49工具与游标分页), H4(生产激活插件宿主), 2.6(信号量释放)"]
+        P3_6["3.6 [专项] 网络韧性与会话安全防护 [已完成]<br/>【吸收修复】H7(通用API端点), H8(用户横幅), H10(鉴权失效同步), H11(MyId防护), 2.3(429限流串行化)"]
     end
 
     subgraph Phase4 ["Phase 4: 表现层极致瘦身与跨平台交付 (Thin UI 终局)"]
-        P4_1["4.1 ViewModel 彻底去业务化 (纯 Reactive Binding)"]
-        P4_2["4.2 统一跨平台 CI/CD (Windows / Linux / macOS)"]
+        P4_1["4.1 ViewModel 彻底去业务化 (纯 Reactive Binding) [已完成]<br/>【物理清退】删除 8 个 *ItemViewModel 包装类；XAML 直绑原生模型；快照计算下沉至 Rust"]
+        P4_2["4.2 统一跨平台 CI/CD (Windows / Linux / macOS) [待启动]"]
+    end
+
+    subgraph Phase5 ["Phase 5: C# 表现层现代化与架构重构 (消除迁移过渡期坏味道) [待启动]"]
+        P5_1["5.1 领域契约与 UI 状态彻底解耦<br/>• 移除 Record 上的 INotifyPropertyChanged 与可变私有字段<br/>• 建立轻量 UI State Store 或 View-Scoped Behaviors"]
+        P5_2["5.2 彻底清退 Misaki 外部依赖与历史抽象<br/>• 物理移除 Misaki NuGet 包与 IArtworkInfo 等复杂接口链<br/>• 视图 DataTemplate 直绑原生实体并多态分发"]
+        P5_3["5.3 静态巨石解体与规范化标准 DI<br/>• MakoHelper / IoHelper 拆解为高内聚领域服务<br/>• 拔除 App.AppViewModel / PixevalSettings 静态穿透，推行构造注入"]
+        P5_4["5.4 集合管道与数据流极大化精简<br/>• 清退沉重的 DataProvider / IRefCloneable 体系<br/>• 直连 Rust 增量流与极简 ObservableCollection"]
+        P5_5["5.5 View Code-Behind 极致瘦身与声明式路由<br/>• WorkContainer / TabViewContainer 视图逻辑抽取<br/>• 规范化 NavigationService 统一路由跳转"]
     end
 
     Phase2 --> Phase3
     Phase3 --> Phase4
+    Phase4 --> Phase5
 ```
 
 ---
@@ -218,7 +227,7 @@ flowchart TD
 - **验收标准**：
   - 彻底清退 C# `Models/Database/Managers/` 中的所有 PersistentManager 及 `HistoryPersistHelper` 繁杂逻辑。
 
-#### 3.2 多图站聚合与 SauceNao 搜图引擎 (`crates/pixeval_booru` / `crates/pixeval_saucenao`)
+#### 3.2 多图站聚合与 SauceNao 搜图引擎 (`crates/pixeval_booru` / `crates/pixeval_saucenao`) (已完成)
 - **功能目标**：
   - 新建 `crates/pixeval_saucenao`：原生承揽 SauceNao 搜图请求、错误重试与结果类型映射。
   - 新建 `crates/pixeval_booru`：统一主流 Booru 图站（Danbooru/Gelbooru/Yandere/Sankaku/Rule34）的 API 抓取与模型解析。
@@ -228,7 +237,7 @@ flowchart TD
   - 彻底移除 `src/lib/Imouto` C# 项目及相关引用。
   - C# 搜图页面直接调用原生 `SauceNaoClient.search(file_bytes)`。
 
-#### 3.3 导航 YAML 解析诊断与主页网格算法 [已完成]
+#### 3.3 导航 YAML 解析诊断与主页网格算法 (已完成)
 - **功能目标**：
   - 将导航 YAML 解析、Schema 严格校验、行列光标诊断与格式化下沉至 `pixeval_config`。
   - 将主页卡片网格算法（2D Bin-Packing、碰撞检测、重叠修正）下沉至 Rust。
@@ -241,7 +250,7 @@ flowchart TD
 - **验收标准**：
   - C# 仅暴露轻量 UI 进度通知，版本检测与资产下载全部由 Rust 驱动。
 
-#### 3.5 [专项] MCP 协议服务器全量恢复与插件宿主激活 (`crates/pixeval_mcp` / `crates/pixeval_plugin`)
+#### 3.5 [专项] MCP 协议服务器全量恢复与插件宿主激活 (`crates/pixeval_mcp` / `crates/pixeval_plugin`) (已完成)
 - **Partial 化工程规范**：
   - 直接消费原生 `McpServer` 与 `PluginHostEngine`，通过 partial 或静态方法扩展，严禁在 C# 建立二次代理类！
 - **吸收修复审查缺陷**：
@@ -333,29 +342,89 @@ flowchart TD
   - 列表滚动流无任何包装堆分配，长列表 GC 停顿时间显著下降；下载中心与作品查看器无任何 UI 线程卡顿。
   - 全工程编译通过，警告数为 0，现有自动化测试全绿通过。
 
-#### 4.2 统一跨平台 CI/CD 流水线
+#### 4.2 统一跨平台 CI/CD 流水线 (待启动)
 - **目标**：
   - 配置 GitHub Actions 原生矩阵编译：Windows (`x86_64-pc-windows-msvc`), Linux (`x86_64-unknown-linux-gnu`), macOS (`aarch64-apple-darwin`, `x86_64-apple-darwin`)，实现全平台 Native 动态库与 Avalonia 前端的一键交叉编译与分发。
 
 ---
 
+### 阶段 5：C# 表现层现代化与架构重构 (Phase 5: Presentation Clean Architecture) (待启动)
+
+在 Phase 1 ~ 4.1 的“绞杀者（Strangler Fig）”演进过程中，为了在每一步保持全功能可用，表现层积累了大量逐步迁移而非从头设计的**架构技术债与过渡期坏味道**。
+Phase 5 的核心目标是：**在 Rust Core 已稳定承担 100% 领域计算的前提下，对 C# 表现层进行彻底的正规化与轻量化重塑，消除历史胶水与伪抽象，建立现代化、低耦合、强响应式的纯声明式 UI 架构。**
+
+#### 5.1 领域契约与 UI 状态彻底解耦 (Decouple Native Extensions from UI State)
+- **痛点与坏味道**：
+  - 在 Phase 4.1 消除 `*ItemViewModel` 过程中，`NativeExtensions`（如 `Illustration.cs`、`Novel.cs`、`BooruPost.cs`）被塞入了大量原本属于 ViewModel 的职责：实现了 `INotifyPropertyChanged`、`IWorkViewModel`，持有了 `_isBookmarkedDisplay`、`_isInWatchLater`、`_isFavorite` 等私有可变字段，绑定了 UI 命令（`AddToBookmarkCommand`）乃至持有并发锁执行网络懒加载。
+  - 这破坏了 UniFFI 生成的 `record` 的不可变值契约与纯净性，导致领域模型充当微型状态机。
+- **重构方案**：
+  - **还原本色**：将 `Illustration`、`Novel`、`BooruPost` 剥离 `INotifyPropertyChanged` 及所有私有可变字段，使其回归为 100% 纯净、不可变的数据契约（Data Contracts）。
+  - **状态外置与响应式总线**：作品的高频交互状态（收藏 `IsBookmarked`、稍后再看 `IsInWatchLater` 等）统一收敛至集中式 UI 状态仓（`ArtworkUiStateStore`）或直接监听 Rust `IStorageObserver` 事件。
+  - **命令层级化 (View-Scoped Commands)**：列表项不再挂载独立 Command 实例，交互操作通过 XAML Attached Behavior 或页面级（如 `WorkViewViewModel` / `WorkContainer`）路由命令统一派发，参数直传不可变原生模型。
+- **验收标准**：
+  - `NativeExtensions` 中的 Record 没有任何私有可变字段，不实现 `INotifyPropertyChanged`，不直接持有 UI 命令。
+
+#### 5.2 彻底清退 `Misaki` 外部依赖与历史抽象包袱 (Eliminate Misaki Legacy Abstractions)
+- **痛点与坏味道**：
+  - 工程仍保留远古多平台抽象包 `Misaki`（`PackageReference Include="Misaki" Version="1.0.0.6"`），强行要求原生模型实现 `IArtworkInfo`、`IWorkEntry`、`ISingleImage`、`IImageSet`、`ISingleAnimatedImage`、`IIdentityInfo`。
+  - 为此手写了数十个无意义的只读投影属性（如 `Author => User`、`TotalFavorite => (int)TotalBookmarks`、`IPreloadableList<IUser> Uploaders => []`），污染了代码库。
+- **重构方案**：
+  - 物理卸载 `Misaki` NuGet 依赖包。
+  - 表现层 Views 与 ViewModels 直面原生强类型实体（`Illustration`、`Novel`、`BooruPost`、`SauceNaoItem`），利用 Avalonia 强类型 `DataTemplate` 进行多态渲染，彻底废除多重接口包装。
+  - 清理所有无用的投影属性与空集合桩代码。
+- **验收标准**：
+  - `Pixeval.csproj` 物理移除 `Misaki` 引用，项目中完全消除 `using Misaki;`。
+
+#### 5.3 静态巨石解体与规范化标准依赖注入 (Deconstruct Static God Helpers & Standardize DI)
+- **痛点与坏味道**：
+  - 充斥着伪依赖注入与上帝单例：任何地方均能静态访问 `App.AppViewModel.*`、`AppInfo.*`、`PixevalSettings.*`。
+  - 存在 765 行的 `MakoHelper.cs`、多文件拼凑的 `IoHelper.cs`、以及弱类型运行期强转的 `WorkCommands.cs`。
+- **重构方案**：
+  - 将 `MakoHelper` 与 `IoHelper` 拆解为单一职责的标准服务并注册至 DI 容器：
+    - `IPixivApiService`：原生 Mako API 薄包装与端点调度。
+    - `IArtworkActionService`：统一的收藏、点赞、关注操作与状态同步中心。
+    - `IImageProviderService`：接驳 `CacheEngine` 的统一图像解析与供给服务。
+  - 拔除 `App.AppViewModel`、`PixevalSettings` 等静态穿透路径，全面推行构造函数注入（Constructor Injection）与 XAML 标记扩展解析。
+  - 消除弱类型 `WorkCommands`，替换为强类型、类型安全的交互命令系统。
+- **验收标准**：
+  - 彻底删除 `MakoHelper.cs` 与静态全局弱类型命令集，无任何未经 DI 托管的上帝单例访问。
+
+#### 5.4 集合管道与数据流极大化精简 (Streamline Data Providers & Collection Pipelines)
+- **痛点与坏味道**：
+  - 保留了旧版复杂的 `SharableViewDataProvider<T, TViewModel>`、`SimpleViewDataProvider`、`IncrementalLoadingCollection`、`AdvancedObservableCollection`、`CompositeObservableCollection`、`IRefCloneable` 轮子。
+  - 在 C# 端维护了沉重的排序、多级过滤、多视图克隆与引用计数。
+- **重构方案**：
+  - 鉴于 Rust Core（`pixeval_storage`、`pixeval_filters`、增量引擎）已原生承担高性能过滤、排序与分页，C# 废除冗余的动态重排序和复杂克隆机制。
+  - 将集合管道精简为标准的 `ObservableCollection<T>` 与极简的异步流分页驱动器（如基于 `IAsyncEnumerable<T>` 的薄层 Behavior）。
+- **验收标准**：
+  - 物理删除 `SharableViewDataProvider.cs`、`SimpleViewDataProvider.cs` 等过度包装的数据提供者，消除多层集合中转。
+
+#### 5.5 View Code-Behind 极致瘦身与声明式路由体系 (View Code-Behind Decoupling & Modern Navigation)
+- **痛点与坏味道**：
+  - `Views/` 目录下累积超过 400KB 的 Code-Behind 代码，`WorkContainer.axaml.cs`（404行）、`TabViewContainer.axaml.cs`（431行）等充当了事实上的巨石 Presenter。
+  - 页面导航依赖容器控件间的直接硬编码跳转和实例化。
+- **重构方案**：
+  - 对大视图执行严格的 MVVM 剥离：将筛选自动补全、选择状态控制、工具栏动态组装等逻辑提取为专用 ViewModel、Attached Behavior 或自定义 Control。
+  - 建立统一的声明式应用导航服务（`INavigationService`），支持视图间解耦的路由跳转与参数传递，废止在 Code-Behind 中直接 `new Page()`。
+- **验收标准**：
+  - 核心 View 的 Code-Behind 仅保留 XAML 初始化与必需的纯 UI 交互动画，行数缩减 60% 以上；页面跳转完全由导航路由驱动。
+
+---
+
 ## 4. 下一步行动建议 (Recommended Next Steps)
 
-建议按照**“高解耦、高收益、零 UI 阻抗、顺带修复核心阻塞”**的原则分步启动：
+在 Phase 1、Phase 2、Phase 3 以及 Phase 4.1 的全量攻坚下，**Pixeval 几乎所有业务计算、网络传输、媒体转码、存储与状态机已 100% 成功下沉至 Rust Core**，并全量修复了 H1~H11 等 17 个既有存量缺陷。
 
-1. **第一优先级：小说解析与排版引擎 (`crates/pixeval_novel`) [已完成]**
-   - **理由**：输入为纯文本小说字符串，输出为结构化 AST 与 Markdown/HTML/EPUB，**完全没有 UI 依赖，测试边界极其清晰**。
-   - **顺带修复**：小说结构化正文插图与前后篇导航失效（**H6**）、小说评论回复与相关作品端点（**H7**）、DSL 比例过滤对小说的误排除（**2.4**）、高级搜索参数透传（**2.3**）。
-   - **严守铁律**：`NovelArticle` / `NovelChapter` / `NovelContent` 必须在 `src/Pixeval/NativeExtensions/Novel/` 中直接通过 `public partial record` 补齐接口，严禁创建包装类！
-2. **第二优先级：动图后处理与媒体管线 (`crates/pixeval_media`) [已完成]**
-   - **理由**：彻底解决 Ugoira 动图合成与格式转换的跨语言性能损耗，关闭下载模块的最后一段 C# 尾巴。
-   - **顺带修复**：多页插画与小说任务组未入队阻塞（**H2**）、订阅路径宏丢失系列与 R18G 语义（**H5**）、下载引擎静态多 IP 覆盖与并发缩容缺陷（**2.2**）、订阅下载探错与孤儿行（**2.1**）。
-3. **第三优先级：零拷贝图片抓取与缓存/预览管线 (`pixeval_cache` / `pixeval_maho`) [已完成]**
-   - 彻底下沉 foyer 混合存储与 SIMD 平面通道 LZ4 零拷贝管线，Mako 全面接驳 Maho 抗审查传输。
-4. **第四优先级：业务仓储闭环、MCP 全量恢复与网络韧性 (Phase 3 全量) [已完成]**
-   - 彻底清退 C# 26 个 PersistentManager 与 Imouto/SharpYaml 外部依赖，原生激活 MCP 与动态库插件宿主。
-5. **表现层极致瘦身——ViewModel 彻底去业务化 (Phase 4.1) [已完成]**
-   - **成果**：底层 Rust 原生导出 `SubscriptionFolderSnapshot` 聚合快照；物理删除 `IDownloadListEntryViewModel`；`DownloadFolderViewModel` 移除所有 LINQ/Sum 循环；`DownloadPageViewModel` 清退双重字典与手动排序；`AppViewModel` 清退 26 个持久化双向监听器、脏批次锁与防抖集合 (784行 -> 286行)；通过 UniFFI 原生接口全面闭环。
-6. **最终阶段：统一跨平台 CI/CD 流水线 (Phase 4.2) [待启动]**
-   - **目标**：配置 GitHub Actions 原生矩阵交叉编译与分发。
+在此坚实的底层基石之上，后续建议按照**“先去历史抽象与状态解耦，再解体静态巨石，最后精简管道与路由”**的顺序推进 Phase 5 C# 表现层现代化重塑：
+
+1. **第一优先级：模型契约还原与清退 Misaki 依赖 (Phase 5.1 & 5.2)**
+   - **理由**：拔除 `Misaki` 并解耦 `NativeExtensions` 中的可变状态，是理清整个 C# 表现层数据流动的第一步，彻底切断领域实体与 UI 状态机的反模式耦合。
+   - **成果**：彻底移除 `Misaki` 包；原生 Record 恢复纯净不可变契约；XAML 依托强类型 DataTemplate 纯粹直连。
+2. **第二优先级：静态巨石解体与标准 DI 落地 (Phase 5.3)**
+   - **理由**：消灭 `MakoHelper`、`IoHelper` 与 `App.AppViewModel` 静态穿透，建立正规的 Service 服务层，为后续视图与集合重构铺平依赖路径。
+3. **第三优先级：集合管道精简与 View Code-Behind 瘦身 (Phase 5.4 & 5.5)**
+   - **理由**：废除复杂的 `SharableViewDataProvider` 历史轮子，解耦 `WorkContainer` / `TabViewContainer`，完成 Avalonia 表现层极致轻量化的终局重构。
+4. **最终交付：统一跨平台 CI/CD 流水线 (Phase 4.2)**
+   - **目标**：配置 GitHub Actions 原生矩阵交叉编译与多架构分发。
+
 
