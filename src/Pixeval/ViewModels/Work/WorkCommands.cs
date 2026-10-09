@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
@@ -17,7 +18,7 @@ using Pixeval.Models.Download;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Mako;
 using Pixeval.Native.Storage;
-using System.Linq;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.ViewContainers;
@@ -42,18 +43,34 @@ public static class WorkCommands
     public static IAsyncRelayCommand<Image?> CopyCommand { get; } =
         new AsyncRelayCommand<Image?>(ExecuteCopyAsync);
 
-    internal static IWorkViewModel? ResolveWork(object? parameter)
+    public static IAsyncRelayCommand<object?> FollowUserCommand { get; } =
+        new AsyncRelayCommand<object?>(ExecuteFollowUserAsync);
+
+    public static IRelayCommand<object?> BlockUserCommand { get; } =
+        new RelayCommand<object?>(ExecuteBlockUser);
+
+    internal static IArtworkInfo? ResolveWork(object? parameter)
     {
         return parameter switch
         {
-            IWorkViewModel vm => vm,
+            IArtworkInfo info => info,
             IllustrationViewerPageViewModel viewerVm => viewerVm.CurrentIllustration,
             NovelViewerPageViewModel novelVm => novelVm.CurrentNovel,
             IllustrationViewerInfoPane pane => pane.DataContext as IllustrationViewerPageViewModel is { CurrentIllustration: { } illust } ? illust : null,
             NovelViewerPage page => page.DataContext as NovelViewerPageViewModel is { CurrentNovel: { } novel } ? novel : null,
-            Control { DataContext: IWorkViewModel vm } => vm,
+            Control { DataContext: IArtworkInfo info } => info,
             Control { DataContext: IllustrationViewerPageViewModel viewerVm } => viewerVm.CurrentIllustration,
             Control { DataContext: NovelViewerPageViewModel novelVm } => novelVm.CurrentNovel,
+            _ => null
+        };
+    }
+
+    internal static User? ResolveUser(object? parameter)
+    {
+        return parameter switch
+        {
+            User u => u,
+            Control { DataContext: User u } => u,
             _ => null
         };
     }
@@ -78,31 +95,32 @@ public static class WorkCommands
         if (ResolveWork(parameter) is not { } work)
             return;
 
-        if (!work.IsBookmarkSupported || (work.IsBookmarkedDisplay & HeartButtonState.Pending) is not 0)
+        if (BlockedContentHelper.IsBlockedPlaceholder(work) || work.Platform is not IPlatformInfo.Pixiv)
             return;
 
-        work.IsBookmarkedDisplay |= HeartButtonState.Pending;
+        var state = ArtworkUiStateStore.GetOrCreate(work);
+        if ((state.BookmarkState & HeartButtonState.Pending) is not 0)
+            return;
+
+        var currentIsFavorite = (state.BookmarkState & HeartButtonState.Checked) is not 0;
+        var target = !currentIsFavorite;
+
+        ArtworkUiStateStore.SetBookmarkPending(work);
         try
         {
-            var target = !work.Entry.IsFavorite;
-            var result = await MakoHelper.SetWorkBookmarkAsync((IWorkEntry) work.Entry, target);
+            var result = await MakoHelper.SetWorkBookmarkAsync((IWorkEntry) work, target);
             if (result)
             {
-                if (work.Entry is Illustration illust)
-                    illust.IsFavorite = target;
-                else if (work.Entry is Novel novel)
-                    novel.IsFavorite = target;
+                ArtworkUiStateStore.SetBookmarkState(work, target);
             }
-
-            work.IsBookmarkedDisplay = (result ? target : work.Entry.IsFavorite)
-                ? HeartButtonState.Checked
-                : HeartButtonState.Unchecked;
+            else
+            {
+                ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
+            }
         }
         catch
         {
-            work.IsBookmarkedDisplay = work.Entry.IsFavorite
-                ? HeartButtonState.Checked
-                : HeartButtonState.Unchecked;
+            ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
             throw;
         }
     }
@@ -112,30 +130,31 @@ public static class WorkCommands
         if (ResolveWork(parameter.Parameter) is not { } work)
             return;
 
-        if (!work.IsBookmarkSupported || (work.IsBookmarkedDisplay & HeartButtonState.Pending) is not 0)
+        if (BlockedContentHelper.IsBlockedPlaceholder(work) || work.Platform is not IPlatformInfo.Pixiv)
             return;
 
-        work.IsBookmarkedDisplay |= HeartButtonState.Pending;
+        var state = ArtworkUiStateStore.GetOrCreate(work);
+        if ((state.BookmarkState & HeartButtonState.Pending) is not 0)
+            return;
+
+        var currentIsFavorite = (state.BookmarkState & HeartButtonState.Checked) is not 0;
+
+        ArtworkUiStateStore.SetBookmarkPending(work);
         try
         {
-            var result = await MakoHelper.SetWorkBookmarkAsync((IWorkEntry) work.Entry, true, parameter.IsPrivate, parameter.Tags);
+            var result = await MakoHelper.SetWorkBookmarkAsync((IWorkEntry) work, true, parameter.IsPrivate, parameter.Tags);
             if (result)
             {
-                if (work.Entry is Illustration illust)
-                    illust.IsFavorite = true;
-                else if (work.Entry is Novel novel)
-                    novel.IsFavorite = true;
+                ArtworkUiStateStore.SetBookmarkState(work, true);
             }
-
-            work.IsBookmarkedDisplay = (result || work.Entry.IsFavorite)
-                ? HeartButtonState.Checked
-                : HeartButtonState.Unchecked;
+            else
+            {
+                ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
+            }
         }
         catch
         {
-            work.IsBookmarkedDisplay = work.Entry.IsFavorite
-                ? HeartButtonState.Checked
-                : HeartButtonState.Unchecked;
+            ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
             throw;
         }
     }
@@ -145,21 +164,22 @@ public static class WorkCommands
         if (ResolveWork(parameter) is not { } work)
             return;
 
-        if (App.AppViewModel is not { } app || !WatchLaterRecord.TryCreateWorkKey(work.Entry, out _))
+        if (App.AppViewModel is not { } app || !WatchLaterRecord.TryCreateWorkKey(work, out _))
             return;
 
-        var target = !work.IsInWatchLater;
+        var state = ArtworkUiStateStore.GetOrCreate(work);
+        var target = !state.IsInWatchLater;
         if (target)
         {
-            if (!app.AddWatchLater(work.Entry))
+            if (!app.AddWatchLater(work))
                 return;
         }
-        else if (!app.RemoveWatchLater(work.Entry))
+        else if (!app.RemoveWatchLater(work))
         {
             return;
         }
 
-        work.IsInWatchLater = target;
+        ArtworkUiStateStore.SetWatchLater(work, target);
         ResolveViewContainer(parameter)?.ShowSuccess(
             I18NManager.GetResource(target ? MiscResources.AddedToWatchLater : MiscResources.RemovedFromWatchLater));
     }
@@ -169,11 +189,11 @@ public static class WorkCommands
         if (ResolveWork(parameter) is not { } work)
             return;
 
-        if (BlockedContentHelper.IsBlockedPlaceholder(work.Entry))
+        if (BlockedContentHelper.IsBlockedPlaceholder(work))
             return;
 
         var viewContainer = ResolveViewContainer(parameter);
-        switch (work.Entry)
+        switch (work)
         {
             case Illustration illustration:
                 await SaveIllustrationAsync(viewContainer, illustration, -1);
@@ -208,7 +228,7 @@ public static class WorkCommands
     public static async ValueTask SaveNovelAsync(ViewContainerBase? viewContainerBase, Novel entry)
     {
         var path = App.AppViewModel.AppSettings.DownloadSettings.DownloadPathMacro;
-        var content = await entry.GetContentAsync();
+        var content = await App.AppViewModel.MakoClient.GetNovelContentStructuredAsync(entry.RawId);
         var factory = App.AppViewModel.AppServiceProvider.GetRequiredService<NovelDownloadTaskFactory>();
         var task = factory.Create(entry, path, content);
         App.AppViewModel.DownloadManager.QueueTask(task);
@@ -226,5 +246,41 @@ public static class WorkCommands
         await clipboard.SetBitmapAsync(bitmap);
         await clipboard.FlushAsync();
         topLevel.ViewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+    }
+
+    private static async Task ExecuteFollowUserAsync(object? parameter)
+    {
+        if (ResolveUser(parameter) is not { } user)
+            return;
+
+        var state = UserUiStateStore.GetOrCreate(user);
+        if ((state.FollowState & HeartButtonState.Pending) is not 0)
+            return;
+
+        var currentFollow = (state.FollowState & HeartButtonState.Checked) is not 0;
+        var target = !currentFollow;
+
+        UserUiStateStore.SetFollowPending(user);
+        try
+        {
+            var result = await MakoHelper.SetFollowAsync(user, target);
+            if (result)
+                UserUiStateStore.SetFollowState(user, target);
+            else
+                UserUiStateStore.RevertFollowPending(user, currentFollow);
+        }
+        catch
+        {
+            UserUiStateStore.RevertFollowPending(user, currentFollow);
+            throw;
+        }
+    }
+
+    private static void ExecuteBlockUser(object? parameter)
+    {
+        if (ResolveUser(parameter) is not { } user)
+            return;
+
+        _ = BlockedContentHelper.TryAddOrUpdateBlockedUser(user);
     }
 }

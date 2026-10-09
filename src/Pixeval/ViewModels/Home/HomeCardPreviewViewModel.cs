@@ -29,7 +29,7 @@ public sealed partial class HomeCardPreviewViewModel(
     [ObservableProperty]
     public partial ISimpleViewViewModel? ViewModel { get; private set; }
 
-    public IReadOnlyCollection<INotifyPropertyChanged> Items => ViewModel?.View ?? [];
+    public IReadOnlyCollection<object> Items => ViewModel?.View ?? [];
 
     [ObservableProperty]
     public partial string? PlaceholderText { get; private set; } = I18NManager.GetResource(HomePageResources.CardPreview.LoadingTextBlock.Text);

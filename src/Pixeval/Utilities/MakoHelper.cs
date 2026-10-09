@@ -79,18 +79,18 @@ public static class MakoHelper
         };
     }
 
-    public static IEnumerable<ISortDescription<IWorkViewModel>> GetSortDescription(LocalSortOption sortOption)
+    public static IEnumerable<ISortDescription<IArtworkInfo>> GetSortDescription(LocalSortOption sortOption)
     {
         if (sortOption is LocalSortOption.DoNotSort)
             yield break;
         yield return sortOption switch
         {
-            LocalSortOption.PopularityDescending => ISortDescription<IWorkViewModel>.Create(t => t.Entry.TotalFavorite, true),
-            LocalSortOption.PublishDateDescending => ISortDescription<IWorkViewModel>.Create(t => t.Entry.CreateDate, true),
-            LocalSortOption.PublishDateAscending => ISortDescription<IWorkViewModel>.Create(t => t.Entry.CreateDate),
+            LocalSortOption.PopularityDescending => ISortDescription<IArtworkInfo>.Create(t => t.TotalFavorite, true),
+            LocalSortOption.PublishDateDescending => ISortDescription<IArtworkInfo>.Create(t => t.CreateDate, true),
+            LocalSortOption.PublishDateAscending => ISortDescription<IArtworkInfo>.Create(t => t.CreateDate),
             LocalSortOption.DoNotSort or _ => throw new ArgumentOutOfRangeException(nameof(sortOption))
         };
-        yield return ISortDescription<IWorkViewModel>.Create(t => t.Entry.Id);
+        yield return ISortDescription<IArtworkInfo>.Create(t => t.Id);
     }
 
     public static async Task<bool> SetWorkBookmarkAsync(IWorkEntry entry, bool favorite, bool privately = false, IReadOnlyCollection<string>? tags = null, CancellationToken token = default)
@@ -101,20 +101,9 @@ public static class MakoHelper
         var result = await (favorite
             ? App.AppViewModel.MakoClient.PostBookmarkAsync(isNovel, entry.RawId, policyStr, tagList)
             : App.AppViewModel.MakoClient.RemoveBookmarkAsync(isNovel, entry.RawId));
-        if (result.Success)
+        if (result.Success && entry is IArtworkInfo artwork)
         {
-            switch (entry)
-            {
-                case Illustration i:
-                    i.IsFavorite = favorite;
-                    break;
-                case Novel n:
-                    n.IsFavorite = favorite;
-                    break;
-                case WorkEntry w:
-                    w.IsFavorite = favorite;
-                    break;
-            }
+            Pixeval.Services.ArtworkUiStateStore.SetBookmarkState(artwork, favorite);
         }
         return result.Success;
     }
@@ -457,8 +446,13 @@ public static class MakoHelper
         return res.Success;
     }
 
-    public static Task<bool> SetFollowAsync(User user, bool isFollowed, bool privately = false, CancellationToken token = default) =>
-        SetFollowAsync(user.Id, isFollowed, privately, token);
+    public static async Task<bool> SetFollowAsync(User user, bool isFollowed, bool privately = false, CancellationToken token = default)
+    {
+        var result = await SetFollowAsync(user.Id, isFollowed, privately, token);
+        if (result)
+            Pixeval.Services.UserUiStateStore.SetFollowState(user, isFollowed);
+        return result;
+    }
 
     public static IAsyncEnumerable<Comment> WorkComments(this MakoClient client, SimpleWorkType type, long id) =>
         client.FetchWorkCommentsAsync(type is SimpleWorkType.Novel, id);

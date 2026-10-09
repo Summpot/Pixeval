@@ -137,7 +137,8 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
         if (!await App.AppViewModel.MakoClient.PostWorkSeriesWatchlistAsync(WorkType, Id))
             return;
 
-        SeriesDetail!.WatchlistAdded = true;
+        if (SeriesDetail is not null)
+            SeriesDetail = SeriesDetail with { WatchlistAdded = true };
         IsWatchlistAdded = true;
     }
 
@@ -147,7 +148,8 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
         if (!await App.AppViewModel.MakoClient.RemoveWorkSeriesWatchlistAsync(WorkType, Id))
             return;
 
-        SeriesDetail!.WatchlistAdded = false;
+        if (SeriesDetail is not null)
+            SeriesDetail = SeriesDetail with { WatchlistAdded = false };
         IsWatchlistAdded = false;
     }
 

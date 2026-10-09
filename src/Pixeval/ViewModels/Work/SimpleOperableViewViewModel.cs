@@ -12,7 +12,7 @@ using Pixeval.Utilities;
 namespace Pixeval.ViewModels;
 
 public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelBase, IOperableViewViewModel, IDisposable
-    where TViewModel : class, IWorkViewModel
+    where TViewModel : class, IArtworkInfo
 {
     private bool _isDisposed;
 
@@ -27,16 +27,16 @@ public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelB
 
     public bool NeedRefreshOnOpen { get; }
 
-    private static IFilter<IWorkViewModel> TypeFilter { get; } = IFilter<IWorkViewModel>.Create(entry => entry is TViewModel, false);
+    private static IFilter<IArtworkInfo> TypeFilter { get; } = IFilter<IArtworkInfo>.Create(entry => entry is TViewModel, false);
 
     /// <inheritdoc />
     [ObservableProperty]
     public partial bool IsSelecting { get; set; }
 
     /// <inheritdoc />
-    public AvaloniaList<IWorkViewModel> SelectedEntries { get; } = [];
+    public AvaloniaList<IArtworkInfo> SelectedEntries { get; } = [];
 
-    public void SetSortDescriptions(params IEnumerable<ISortDescription<IWorkViewModel>> descriptions)
+    public void SetSortDescriptions(params IEnumerable<ISortDescription<IArtworkInfo>> descriptions)
     {
         using (SourceView.View.DeferSortDescriptionsChange())
         {
@@ -56,7 +56,7 @@ public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelB
         }
     }
 
-    public IFilter<IWorkViewModel>? UserFilter
+    public IFilter<IArtworkInfo>? UserFilter
     {
         get;
         set
@@ -70,10 +70,10 @@ public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelB
     }
 
     /// <inheritdoc />
-    IReadOnlyCollection<IWorkViewModel> IOperableViewViewModel.View => SourceView.View;
+    IReadOnlyCollection<IArtworkInfo> IOperableViewViewModel.View => SourceView.View;
 
     /// <inheritdoc />
-    public IReadOnlyCollection<IWorkViewModel> Source => SourceView.Source;
+    public IReadOnlyCollection<IArtworkInfo> Source => SourceView.Source;
 
     /// <inheritdoc />
     public bool RequireAdaptiveGrid => typeof(TViewModel) == typeof(Pixeval.Native.Mako.Novel) || typeof(INovelEntry).IsAssignableFrom(typeof(TViewModel));

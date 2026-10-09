@@ -8,21 +8,20 @@ using System.Linq;
 using Misaki;
 using Pixeval.Collections;
 using Pixeval.Models.Blocking;
-using Pixeval.Models.Pixiv;
 
 namespace Pixeval.ViewModels;
 
 public sealed class SimpleOperableSourceView<TViewModel>(IReadOnlyCollection<IArtworkInfo> source)
-    : ViewModelBase, ISourceView<IWorkViewModel>
-    where TViewModel : class, IWorkViewModel
+    : ViewModelBase, ISourceView<IArtworkInfo>
+    where TViewModel : class, IArtworkInfo
 {
     private bool _isDisposed;
 
-    public AdvancedObservableAdaptor<IArtworkInfo, IWorkViewModel> View { get; } = new(CreateSource(source), CreateWorkViewModel);
+    public AdvancedObservableAdaptor<IArtworkInfo, IArtworkInfo> View { get; } = new(CreateSource(source), CreateArtwork);
 
-    IAdvancedObservableView<IWorkViewModel> ISourceView<IWorkViewModel>.View => View;
+    IAdvancedObservableView<IArtworkInfo> ISourceView<IArtworkInfo>.View => View;
 
-    public ObservableCollection<IWorkViewModel> Source => View.MappedSource;
+    public ObservableCollection<IArtworkInfo> Source => View.MappedSource;
 
     public ISourceView<TViewModel> CloneSourceView()
         => new SnapshotSourceView<TViewModel>(View.OfType<TViewModel>().Select(CloneItem));
@@ -36,7 +35,7 @@ public sealed class SimpleOperableSourceView<TViewModel>(IReadOnlyCollection<IAr
         View.Dispose();
     }
 
-    private static IWorkViewModel CreateWorkViewModel(IArtworkInfo info) => (IWorkViewModel) info;
+    private static IArtworkInfo CreateArtwork(IArtworkInfo info) => info;
 
     private static ObservableCollection<IArtworkInfo> CreateSource(IReadOnlyCollection<IArtworkInfo> source) =>
         [.. source.Select(static entry => BlockedContentHelper.Replace(entry))];

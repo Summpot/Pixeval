@@ -16,6 +16,7 @@ using Avalonia.Interactivity;
 using Misaki;
 using Pixeval.Collections;
 using Pixeval.Controls;
+using Pixeval.Filters;
 using Pixeval.Filters.Analysis;
 using Pixeval.I18N;
 using Pixeval.Models.Filters;
@@ -34,7 +35,7 @@ public partial class WorkContainer : UserControl
 {
     private const string FilterDiagnosticResourcePrefix = "Filter.Diagnostics.";
 
-    private IReadOnlyCollection<IWorkViewModel>? _filterCompletionSource;
+    private IReadOnlyCollection<IArtworkInfo>? _filterCompletionSource;
     private int _filterCompletionSourceCount = -1;
     private IReadOnlyList<FilterCompletionDefinition> _tagValueCompletions = [];
     private IReadOnlyList<FilterCompletionDefinition> _authorValueCompletions = [];
@@ -167,18 +168,18 @@ public partial class WorkContainer : UserControl
         await ShowBookmarkTagSelectorAsync(AddAllToBookmarkButton, null).ConfigureAwait(false);
     }
 
-    private async void WorkView_OnRequestAddToBookmark(Control sender, IWorkViewModel e)
+    private async void WorkView_OnRequestAddToBookmark(Control sender, IArtworkInfo e)
     {
         await ShowBookmarkTagSelectorAsync(sender, e).ConfigureAwait(false);
     }
 
-    private async Task ShowBookmarkTagSelectorAsync(Control placementTarget, IWorkViewModel? target)
+    private async Task ShowBookmarkTagSelectorAsync(Control placementTarget, IArtworkInfo? target)
     {
         if (target is null && DataContext is not IOperableViewViewModel { SelectedEntries.Count: > 0 })
             return;
 
-        var id = target is { Entry.Id: { } idStr } && long.TryParse(idStr, out var idLong) ? idLong : 0;
-        var type = target is Novel || target?.Entry is INovelEntry || DataContext is NovelViewViewModel or SimpleOperableViewViewModel<Novel>
+        var id = target is { Id: { } idStr } && long.TryParse(idStr, out var idLong) ? idLong : 0;
+        var type = target is Novel || target is INovelEntry || DataContext is NovelViewViewModel or SimpleOperableViewViewModel<Novel>
             ? SimpleWorkType.Novel
             : SimpleWorkType.Illustration;
 
@@ -190,11 +191,11 @@ public partial class WorkContainer : UserControl
             PlacementMode.Bottom);
     }
 
-    private async Task AddToBookmarkAsync(IWorkViewModel? target, (bool IsPrivate, IReadOnlyList<string>? Tags) e)
+    private async Task AddToBookmarkAsync(IArtworkInfo? target, (bool IsPrivate, IReadOnlyList<string>? Tags) e)
     {
         if (target is not null)
         {
-            await target.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, target));
+            await WorkCommands.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, target));
             TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.AddedToBookmark));
             return;
         }
@@ -210,7 +211,7 @@ public partial class WorkContainer : UserControl
             return;
 
         foreach (var i in viewModel.SelectedEntries)
-            await i.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, i));
+            await WorkCommands.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, i));
         if (viewModel.SelectedEntries.Count is var c and > 0)
             TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(I18NManager.GetResource(WorkContainerResources.AddedAllToBookmarkContentFormatted, c));
     }
@@ -228,7 +229,7 @@ public partial class WorkContainer : UserControl
             return;
 
         foreach (var i in viewModel.SelectedEntries)
-            i.SaveCommand.Execute(i);
+            WorkCommands.SaveCommand.Execute(i);
 
         TopLevel.GetTopLevel(this)?.ViewContainer?.ShowInformation(
             I18NManager.GetResource(WorkContainerResources.DownloadItemsQueuedFormatted, viewModel.SelectedEntries.Count));
@@ -248,7 +249,7 @@ public partial class WorkContainer : UserControl
 
         foreach (var selectedEntry in viewModel.SelectedEntries)
         {
-            _ = await TopLevel.GetTopLevel(this)!.Launcher.LaunchUriAsync(selectedEntry.Entry.WebsiteUri);
+            _ = await TopLevel.GetTopLevel(this)!.Launcher.LaunchUriAsync(selectedEntry.WebsiteUri);
         }
     }
 
@@ -291,7 +292,7 @@ public partial class WorkContainer : UserControl
         }
 
         viewModel.UserFilter = query.HasPredicates()
-            ? IFilter<IWorkViewModel>.Create(o => o.Filter(query), false)
+            ? IFilter<IArtworkInfo>.Create(o => query.MatchesArtwork(o.ToArtworkMetadata()), false)
             : null;
         WorkFilterAutoSuggestBox.ClearSelection();
     }
@@ -313,7 +314,7 @@ public partial class WorkContainer : UserControl
         };
     }
 
-    private void EnsureFilterValueCompletions(IReadOnlyCollection<IWorkViewModel> source)
+    private void EnsureFilterValueCompletions(IReadOnlyCollection<IArtworkInfo> source)
     {
         if (ReferenceEquals(_filterCompletionSource, source) && _filterCompletionSourceCount == source.Count)
             return;
@@ -322,10 +323,10 @@ public partial class WorkContainer : UserControl
         var authors = new HashSet<IUser>();
         foreach (var work in source)
         {
-            foreach (var author in work.Entry.Authors)
+            foreach (var author in work.Authors)
                 _ = authors.Add(author);
 
-            foreach (var tagGroup in work.Entry.Tags)
+            foreach (var tagGroup in work.Tags)
             {
                 foreach (var tag in tagGroup)
                 {

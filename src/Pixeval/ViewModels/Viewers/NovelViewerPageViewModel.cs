@@ -16,6 +16,7 @@ using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
 using Pixeval.Models.Settings;
 using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 
 namespace Pixeval.ViewModels.Viewers;
@@ -79,10 +80,13 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             field = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(NovelId));
+            OnPropertyChanged(nameof(CurrentUiState));
         }
     }
 
-    public long NovelId => CurrentNovel?.Entry.Id ?? 0;
+    public ArtworkUiState? CurrentUiState => CurrentNovel is { } nov ? ArtworkUiStateStore.GetOrCreate(nov) : null;
+
+    public long NovelId => CurrentNovel?.Id ?? 0;
 
     public override int CurrentWorkIndex
     {
@@ -230,18 +234,18 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             if (currentNovel is null || index != CurrentWorkIndex || _disposed)
                 return;
 
-            if (BlockedContentHelper.IsBlockedPlaceholder(currentNovel.Entry))
+            if (BlockedContentHelper.IsBlockedPlaceholder(currentNovel))
                 _pageMarkdowns = [I18NManager.GetResource(BlockedContentResources.Work)];
             else
             {
-                SeriesInfo = WorkSeriesInfoViewModel.Create(currentNovel.Entry, SimpleWorkType.Novel);
-                var content = await currentNovel.ContentAsync;
+                SeriesInfo = WorkSeriesInfoViewModel.Create(currentNovel, SimpleWorkType.Novel);
+                var content = await App.AppViewModel.MakoClient.GetNovelContentStructuredAsync(currentNovel.Id);
                 token.ThrowIfCancellationRequested();
                 if (index != CurrentWorkIndex || _disposed)
                     return;
 
-                SeriesInfo = WorkSeriesInfoViewModel.Create(content, currentNovel.Entry.Series);
-                App.AppViewModel.AddBrowseHistory(currentNovel.Entry);
+                SeriesInfo = WorkSeriesInfoViewModel.Create(content, currentNovel.Series);
+                App.AppViewModel.AddBrowseHistory(currentNovel);
                 var markdowns = await Task.Run(() => BuildPageMarkdowns(content), token);
                 token.ThrowIfCancellationRequested();
                 if (index != CurrentWorkIndex || _disposed)
@@ -261,12 +265,12 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
                         try
                         {
                             var markers = await App.AppViewModel.MakoClient.GetNovelMarkersAsync();
-                            var match = markers.MarkedNovels.FirstOrDefault(x => x.Novel.Id == currentNovel.Entry.Id);
+                            var match = markers.MarkedNovels.FirstOrDefault(x => x.Novel.Id == currentNovel.Id);
                             if (match is { NovelMarker: { Page: > 0 and var page } } && page <= _pageMarkdowns.Count)
                             {
                                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
                                 {
-                                    if (!_disposed && CurrentNovel?.Entry.Id == currentNovel.Entry.Id && CurrentPageIndex == 0)
+                                    if (!_disposed && CurrentNovel?.Id == currentNovel.Id && CurrentPageIndex == 0)
                                     {
                                         _suppressMarkerSync = true;
                                         CurrentPageIndex = page - 1;
@@ -322,7 +326,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         if (_sourceView is not null && _refreshedNovels.TryGetValue(index, out var cached))
             return cached;
 
-        if (CurrentNovel is not { Entry.Id: var id })
+        if (CurrentNovel is not { Id: var id })
             return null;
 
         return await LoadNovelAsync(

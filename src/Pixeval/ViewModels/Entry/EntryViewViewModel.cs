@@ -14,7 +14,7 @@ namespace Pixeval.ViewModels;
 public abstract class EntryViewViewModel<T, TViewModel>
     : ViewModelBase, ISimpleViewViewModel, IDisposable
     where T : class, IIdentityInfo
-    where TViewModel : class, INotifyPropertyChanged
+    where TViewModel : class
 {
     private bool _isDisposed;
 
@@ -49,8 +49,8 @@ public abstract class EntryViewViewModel<T, TViewModel>
     }
 
     /// <inheritdoc />
-    IReadOnlyCollection<INotifyPropertyChanged> ISimpleViewViewModel.View => View;
+    IReadOnlyCollection<object> ISimpleViewViewModel.View => View;
 
     /// <inheritdoc />
-    IReadOnlyCollection<INotifyPropertyChanged> ISimpleViewViewModel.Source => Source;
+    IReadOnlyCollection<object> ISimpleViewViewModel.Source => Source;
 }

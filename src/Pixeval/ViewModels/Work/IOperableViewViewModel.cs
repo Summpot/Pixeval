@@ -4,34 +4,35 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using Avalonia.Collections;
+using Misaki;
 using Pixeval.Collections;
 
 namespace Pixeval.ViewModels;
 
 public interface ISimpleViewViewModel : INotifyPropertyChanged
 {
-    IReadOnlyCollection<INotifyPropertyChanged> View { get; }
+    IReadOnlyCollection<object> View { get; }
 
-    IReadOnlyCollection<INotifyPropertyChanged> Source { get; }
+    IReadOnlyCollection<object> Source { get; }
 }
 
 public interface IOperableViewViewModel : ISimpleViewViewModel
 {
     bool IsSelecting { get; set; }
 
-    AvaloniaList<IWorkViewModel> SelectedEntries { get; }
+    AvaloniaList<IArtworkInfo> SelectedEntries { get; }
 
-    void SetSortDescriptions(params IEnumerable<ISortDescription<IWorkViewModel>> descriptions);
+    void SetSortDescriptions(params IEnumerable<ISortDescription<IArtworkInfo>> descriptions);
 
-    IFilter<IWorkViewModel>? UserFilter { get; set; }
+    IFilter<IArtworkInfo>? UserFilter { get; set; }
 
     bool RequireAdaptiveGrid { get; }
 
-    new IReadOnlyCollection<IWorkViewModel> View { get; }
+    new IReadOnlyCollection<IArtworkInfo> View { get; }
 
-    new IReadOnlyCollection<IWorkViewModel> Source { get; }
+    new IReadOnlyCollection<IArtworkInfo> Source { get; }
 
-    IReadOnlyCollection<INotifyPropertyChanged> ISimpleViewViewModel.View => View;
+    IReadOnlyCollection<object> ISimpleViewViewModel.View => View;
 
-    IReadOnlyCollection<INotifyPropertyChanged> ISimpleViewViewModel.Source => Source;
+    IReadOnlyCollection<object> ISimpleViewViewModel.Source => Source;
 }

@@ -70,17 +70,17 @@ public partial class NovelViewerPage : IconContentPage
             return;
         }
 
-        if (BlockedContentHelper.IsBlockedPlaceholder(currentNovel.Entry))
+        if (BlockedContentHelper.IsBlockedPlaceholder(currentNovel))
         {
-            NovelTabbedPage.Pages = [new WorkInfoPage(currentNovel.Entry)];
+            NovelTabbedPage.Pages = [new WorkInfoPage(currentNovel)];
             return;
         }
 
         NovelTabbedPage.Pages =
         [
-            new WorkInfoPage(currentNovel.Entry),
-            new CommentsPage(new CommentsViewViewModel(SimpleWorkType.Novel, currentNovel.Entry.Id)),
-            new WorkRelatedPage(currentNovel.Entry.Id, SimpleWorkType.Novel) { IsCommandBarCollapsed = true },
+            new WorkInfoPage(currentNovel),
+            new CommentsPage(new CommentsViewViewModel(SimpleWorkType.Novel, currentNovel.Id)),
+            new WorkRelatedPage(currentNovel.Id, SimpleWorkType.Novel) { IsCommandBarCollapsed = true },
             CreateSettingsPage()
         ];
     }
@@ -128,7 +128,7 @@ public partial class NovelViewerPage : IconContentPage
 
     private async void AddToBookmarkButton_OnClick(object? sender, ContextRequestedEventArgs e)
     {
-        if (sender is Control c && ViewModel.CurrentNovel is { Entry.Id: var id })
+        if (sender is Control c && ViewModel.CurrentNovel is { Id: var id })
             await BookmarkTagSelectorFlyoutHelper.ShowAsync(
                 c,
                 SimpleWorkType.Novel,
@@ -141,7 +141,7 @@ public partial class NovelViewerPage : IconContentPage
     {
         if (ViewModel.CurrentNovel is { } current)
         {
-            await current.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, current));
+            await WorkCommands.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, current));
             TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
                 I18NManager.GetResource(MiscResources.AddedToBookmark));
         }

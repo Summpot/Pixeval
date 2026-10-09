@@ -16,7 +16,7 @@
     xmlns:views="using:Pixeval.Views"
     x:DataType="{x:Type viewers:IllustrationViewerPageViewModel}"
     x:Name="Root"
-    Header="{Binding CurrentIllustration.Entry.Title, FallbackValue={x:Null}}"
+    Header="{Binding CurrentIllustration.Title, FallbackValue={x:Null}}"
     mc:Ignorable="d"
     d:DesignHeight="450"
     d:DesignWidth="800">
@@ -255,7 +255,7 @@
                                         Label="{I18N {x:Static pixeval:MiscResources.Play}}">
                                         <CommandBarToggleButton.IsVisible>
                                             <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                                <Binding FallbackValue="False" Path="CurrentIllustration.IsPicGif" />
+                                                <Binding FallbackValue="False" Path="IsPicGif" />
                                                 <Binding Mode="OneTime" Path="#I.IsSwipeMode" />
                                             </MultiBinding>
                                         </CommandBarToggleButton.IsVisible>

@@ -14,6 +14,8 @@ using Pixeval.I18N;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Viewers;
@@ -22,13 +24,13 @@ namespace Pixeval.ViewModels.Viewers;
 
 public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewModel, IDisposable
 {
-    private readonly Dictionary<int, IWorkViewModel> _refreshedIllustrations = [];
+    private readonly Dictionary<int, IArtworkInfo> _refreshedIllustrations = [];
 
     private readonly bool _needRefresh;
 
     private CancellationTokenSource _loadingCts = new();
 
-    private readonly ISourceView<IWorkViewModel>? _sourceView;
+    private readonly ISourceView<IArtworkInfo>? _sourceView;
 
     [ObservableProperty]
     public partial bool IsLoading { get; private set; }
@@ -39,14 +41,20 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     [ObservableProperty]
     public partial WorkSeriesInfoViewModel? SeriesInfo { get; private set; }
 
-    public string? LogoUri => CurrentIllustration?.Entry.Platform is { } platform ? $"avares://Pixeval/Assets/Platforms/{platform}.png" : null;
+    public string? LogoUri => CurrentIllustration?.Platform is { } platform ? $"avares://Pixeval/Assets/Platforms/{platform}.png" : null;
+
+    public ArtworkUiState? CurrentUiState => CurrentIllustration is { } ill ? ArtworkUiStateStore.GetOrCreate(ill) : null;
+
+    public bool IsBookmarkSupported => CurrentIllustration is Illustration ill ? ill.IsBookmarkSupported : CurrentIllustration?.Platform is IPlatformInfo.Pixiv;
+
+    public bool IsPicGif => CurrentIllustration is Illustration { IsPicGif: true };
 
     /// <summary>
     /// 
     /// </summary>
     /// <param name="illustrationViewModel"></param>
     /// <param name="needRefresh"></param>
-    public IllustrationViewerPageViewModel(IWorkViewModel illustrationViewModel, bool needRefresh)
+    public IllustrationViewerPageViewModel(IArtworkInfo illustrationViewModel, bool needRefresh)
     {
         _needRefresh = needRefresh;
         CurrentIllustration = illustrationViewModel;
@@ -76,7 +84,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// illustrations should contain only one item if the illustration is a single
     /// otherwise it contains the entire manga data
     /// </remarks>
-    public IllustrationViewerPageViewModel(ISourceView<IWorkViewModel> dataProvider, int currentIllustrationIndex, bool needRefresh)
+    public IllustrationViewerPageViewModel(ISourceView<IArtworkInfo> dataProvider, int currentIllustrationIndex, bool needRefresh)
     {
         _needRefresh = needRefresh;
         _sourceView = dataProvider;
@@ -88,7 +96,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// <summary>
     /// 当前插画
     /// </summary>
-    public IWorkViewModel? CurrentIllustration
+    public IArtworkInfo? CurrentIllustration
     {
         get
         {
@@ -173,12 +181,12 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
             && index == CurrentWorkIndex)
         {
             CurrentImage = new ImageViewerViewModel(currentIllustration);
-            await LoadSeriesInfoAsync(currentIllustration.Entry, index, token);
+            await LoadSeriesInfoAsync(currentIllustration, index, token);
         }
 
         return;
 
-        async ValueTask<IWorkViewModel?> GetCurrentIllustrationAsync(int workIndex)
+        async ValueTask<IArtworkInfo?> GetCurrentIllustrationAsync(int workIndex)
         {
             if (!_needRefresh)
             {
@@ -193,7 +201,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
             }
 
             // 需刷新
-            if (CurrentIllustration is not { Entry: IIdentityInfo info })
+            if (CurrentIllustration is not IIdentityInfo info)
             {
                 IsLoading = false;
                 return null;
@@ -245,7 +253,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         return _loadingCts.Token;
     }
 
-    private async Task<IWorkViewModel?> LoadIllustrationAsync(IIdentityInfo info, Action<IWorkViewModel> onLoaded, CancellationToken token)
+    private async Task<IArtworkInfo?> LoadIllustrationAsync(IIdentityInfo info, Action<IArtworkInfo> onLoaded, CancellationToken token)
     {
         IsLoading = true;
         LoadErrorMessage = null;
@@ -259,7 +267,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
                 return null;
             }
 
-            var item = (IWorkViewModel) BlockedContentHelper.Replace(entry);
+            var item = BlockedContentHelper.Replace(entry);
             onLoaded(item);
             return item;
         }
@@ -313,6 +321,9 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     private void NotifyCurrentIllustrationChanged()
     {
         OnPropertyChanged(nameof(CurrentIllustration));
+        OnPropertyChanged(nameof(CurrentUiState));
+        OnPropertyChanged(nameof(IsBookmarkSupported));
+        OnPropertyChanged(nameof(IsPicGif));
         OnPropertyChanged(nameof(LogoUri));
     }
 
@@ -339,7 +350,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// <summary>
     /// 插画列表
     /// </summary>
-    public IReadOnlyList<IWorkViewModel>? Illustrations => _sourceView?.View;
+    public IReadOnlyList<IArtworkInfo>? Illustrations => _sourceView?.View;
 
     #endregion
 

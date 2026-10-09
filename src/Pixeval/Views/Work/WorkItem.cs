@@ -8,7 +8,9 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Rendering.Composition;
+using Misaki;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Entry;
@@ -33,24 +35,28 @@ public class WorkItem : EntryItem, IWorkAnimatable
         DataContext = null;
     }
 
-    public event EventHandler<Control, IWorkViewModel>? RequestOpenUserInfoPage;
+    public event EventHandler<Control, IArtworkInfo>? RequestOpenUserInfoPage;
 
-    public event EventHandler<Control, IWorkViewModel>? RequestAddToBookmark;
+    public event EventHandler<Control, IArtworkInfo>? RequestAddToBookmark;
 
     protected void AddToBookmark_OnRightClick(object sender, ContextRequestedEventArgs e)
     {
-        RequestAddToBookmark?.Invoke(this, (IWorkViewModel) DataContext!);
+        RequestAddToBookmark?.Invoke(this, (IArtworkInfo) DataContext!);
     }
 
     protected void OpenUserInfoPage_OnClicked(object sender, RoutedEventArgs e)
     {
-        RequestOpenUserInfoPage?.Invoke(this, (IWorkViewModel) DataContext!);
+        RequestOpenUserInfoPage?.Invoke(this, (IArtworkInfo) DataContext!);
     }
 
     protected void OpenSeriesPage_OnClicked(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Control { DataContext: IWorkViewModel { Entry: IWorkEntry { Series: { } series } work } }
+        if (sender is not Control { DataContext: IArtworkInfo work }
             || TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
+            return;
+
+        var series = (work as IWorkEntry)?.Series;
+        if (series is not { Id: > 0 })
             return;
 
         viewContainer.CreateSeriesPage(

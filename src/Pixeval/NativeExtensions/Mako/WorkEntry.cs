@@ -63,18 +63,7 @@ public abstract partial record WorkEntry : IArtworkInfo, IWorkEntry
     public bool IsFavorite
     {
         get => AsWorkEntry.IsFavorite;
-        set
-        {
-            switch (this)
-            {
-                case Illust i:
-                    i.Illustration.IsFavorite = value;
-                    break;
-                case NovelWork n:
-                    n.Novel.IsFavorite = value;
-                    break;
-            }
-        }
+        set { }
     }
 
     public bool IsAiGenerated => AsWorkEntry.IsAiGenerated;

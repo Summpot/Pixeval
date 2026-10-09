@@ -8,9 +8,11 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Pixeval.Controls;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.Views;
 using Pixeval.Views.Capability;
@@ -132,7 +134,7 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         if (result)
         {
             if (UserDetail?.User is { } user)
-                user.IsFollowedState = true;
+                UserUiStateStore.UpdateFollow(user, HeartButtonState.Checked);
             IsFollowed = true;
         }
     }
@@ -144,7 +146,7 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         if (result)
         {
             if (UserDetail?.User is { } user)
-                user.IsFollowedState = true;
+                UserUiStateStore.UpdateFollow(user, HeartButtonState.Checked);
             IsFollowed = true;
         }
     }
@@ -156,7 +158,7 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         if (result)
         {
             if (UserDetail?.User is { } user)
-                user.IsFollowedState = false;
+                UserUiStateStore.UpdateFollow(user, HeartButtonState.Unchecked);
             IsFollowed = false;
         }
     }

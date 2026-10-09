@@ -5,7 +5,6 @@ using System;
 using Misaki;
 using Pixeval.Native.Booru;
 using Pixeval.Native.SauceNao;
-using Pixeval.Utilities;
 using MakoIllustration = Pixeval.Native.Mako.Illustration;
 using MakoNovel = Pixeval.Native.Mako.Novel;
 
@@ -27,7 +26,7 @@ public static class ArtworkPayloadHydrator
                     || serializeKey.Equals("Pixeval.Models.Pixiv.PixivIllustration", StringComparison.OrdinalIgnoreCase)
                     || serializeKey.StartsWith("Illustration", StringComparison.OrdinalIgnoreCase))
                 {
-                    return MakoIllustration.Deserialize(payloadJson).Apply(t => t.IsFavorite = false);
+                    return MakoIllustration.Deserialize(payloadJson);
                 }
 
                 if (serializeKey.Equals(MakoNovel.LegacyNovelToken, StringComparison.OrdinalIgnoreCase)
@@ -35,7 +34,7 @@ public static class ArtworkPayloadHydrator
                     || serializeKey.Equals("Pixeval.Models.Pixiv.PixivNovel", StringComparison.OrdinalIgnoreCase)
                     || serializeKey.StartsWith("Novel", StringComparison.OrdinalIgnoreCase))
                 {
-                    return MakoNovel.Deserialize(payloadJson).Apply(t => t.IsFavorite = false);
+                    return MakoNovel.Deserialize(payloadJson);
                 }
 
                 if (serializeKey.Equals(BooruPost.LegacyPostToken, StringComparison.OrdinalIgnoreCase)
@@ -60,7 +59,7 @@ public static class ArtworkPayloadHydrator
             {
                 var illust = MakoIllustration.Deserialize(payloadJson);
                 if (illust.Id != 0 || illust.ImageUrls != null)
-                    return illust.Apply(t => t.IsFavorite = false);
+                    return illust;
             }
             catch
             {
@@ -71,7 +70,7 @@ public static class ArtworkPayloadHydrator
             {
                 var novel = MakoNovel.Deserialize(payloadJson);
                 if (novel.Id != 0)
-                    return novel.Apply(t => t.IsFavorite = false);
+                    return novel;
             }
             catch
             {

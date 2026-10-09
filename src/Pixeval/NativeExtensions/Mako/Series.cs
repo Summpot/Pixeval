@@ -2,21 +2,14 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using Misaki;
 using Pixeval.Models.Pixiv;
 
 namespace Pixeval.Native.Mako;
 
-public partial record Series : IIdEntry, INotifyPropertyChanged
+public partial record Series : IIdEntry
 {
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    private void OnPropertyChanged([CallerMemberName] string? name = null) =>
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-
     long IIdEntry.Id => Id;
 
     string IIdentityInfo.Id => Id.ToString();
@@ -27,7 +20,7 @@ public partial record Series : IIdEntry, INotifyPropertyChanged
     public Series Entry => this;
 
     [JsonIgnore]
-    public SimpleWorkType WorkType { get; set; } = SimpleWorkType.Illustration;
+    public SimpleWorkType WorkType { get; init; } = SimpleWorkType.Illustration;
 
     [JsonIgnore]
     public string? ThumbnailUrl => CoverUrl ?? "";
@@ -51,5 +44,5 @@ public partial record Series : IIdEntry, INotifyPropertyChanged
     public string Caption => MaskText ?? "";
 
     [JsonIgnore]
-    public bool WatchlistAdded { get; set; }
+    public bool WatchlistAdded { get; init; }
 }

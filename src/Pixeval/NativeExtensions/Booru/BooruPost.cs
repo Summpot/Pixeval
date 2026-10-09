@@ -13,27 +13,9 @@ using Pixeval.ViewModels;
 
 namespace Pixeval.Native.Booru;
 
-public partial record BooruPost : IArtworkInfo, ISingleImage, IImageFrame, IImageSize, IIdentityInfo, ISerializable, IWorkViewModel, INotifyPropertyChanged
+public partial record BooruPost : IArtworkInfo, ISingleImage, IImageFrame, IImageSize, IIdentityInfo, ISerializable
 {
     private static readonly Dictionary<string, object> s_emptyDict = [];
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    private HeartButtonState? _isBookmarkedDisplay;
-
-    [JsonIgnore]
-    public HeartButtonState IsBookmarkedDisplay
-    {
-        get => _isBookmarkedDisplay ?? (IsFavorite ? HeartButtonState.Checked : HeartButtonState.Unchecked);
-        set
-        {
-            _isBookmarkedDisplay = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsBookmarkedDisplay)));
-        }
-    }
-
-    [JsonIgnore]
-    public bool IsInWatchLater { get => false; set { } }
 
     [JsonIgnore]
     public bool IsBookmarkSupported => false;
@@ -49,8 +31,6 @@ public partial record BooruPost : IArtworkInfo, ISingleImage, IImageFrame, IImag
 
     [JsonIgnore]
     public string Tooltip => Title;
-
-    IArtworkInfo IWorkViewModel.Entry => this;
 
     [JsonIgnore]
     public int SetIndex => -1;
@@ -82,7 +62,7 @@ public partial record BooruPost : IArtworkInfo, ISingleImage, IImageFrame, IImag
     int IArtworkInfo.TotalView => TotalViewCount;
 
     [JsonIgnore]
-    public bool IsFavorite { get; set; }
+    public bool IsFavorite => false;
 
     [JsonIgnore]
     public bool IsAiGenerated => false;

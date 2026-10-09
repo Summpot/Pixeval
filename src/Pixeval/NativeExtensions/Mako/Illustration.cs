@@ -3,64 +3,19 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using Avalonia.Controls;
-using CommunityToolkit.Mvvm.Input;
 using Misaki;
-using Pixeval.Controls;
 using Pixeval.I18N;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
-using Pixeval.ViewModels;
 
 namespace Pixeval.Native.Mako;
 
-public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISingleAnimatedImage, IImageSet, IImageSize, ISerializable, IWorkViewModel, INotifyPropertyChanged
+public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISingleAnimatedImage, IImageSet, IImageSize, ISerializable
 {
     private static readonly Dictionary<string, object> s_emptyDict = [];
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    private void OnPropertyChanged([CallerMemberName] string? name = null) =>
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-
-    private HeartButtonState? _isBookmarkedDisplay;
-
-    [JsonIgnore]
-    public HeartButtonState IsBookmarkedDisplay
-    {
-        get => _isBookmarkedDisplay ?? (IsFavorite ? HeartButtonState.Checked : HeartButtonState.Unchecked);
-        set
-        {
-            if (_isBookmarkedDisplay != value)
-            {
-                _isBookmarkedDisplay = value;
-                OnPropertyChanged();
-            }
-        }
-    }
-
-    private bool? _isInWatchLater;
-
-    [JsonIgnore]
-    public bool IsInWatchLater
-    {
-        get => _isInWatchLater ?? (App.AppViewModel?.ContainsWatchLater(this) is true);
-        set
-        {
-            if (_isInWatchLater != value)
-            {
-                _isInWatchLater = value;
-                OnPropertyChanged();
-            }
-        }
-    }
 
     [JsonIgnore]
     public bool IsBookmarkSupported => !BlockedContentHelper.IsBlockedPlaceholder(this) && Platform is IPlatformInfo.Pixiv;
@@ -95,38 +50,7 @@ public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISi
     public Illustration Entry => this;
 
     [JsonIgnore]
-    public IAsyncRelayCommand<(IReadOnlyList<string>? Tags, bool IsPrivate, object? Parameter)> AddToBookmarkCommand => WorkCommands.AddToBookmarkCommand;
-
-    [JsonIgnore]
-    public IAsyncRelayCommand<object?> BookmarkCommand => WorkCommands.BookmarkCommand;
-
-    [JsonIgnore]
-    public IRelayCommand<object?> AddToWatchLaterCommand => WorkCommands.AddToWatchLaterCommand;
-
-    [JsonIgnore]
-    public IAsyncRelayCommand<object?> SaveCommand => WorkCommands.SaveCommand;
-
-    [JsonIgnore]
-    public IAsyncRelayCommand<Image?> CopyCommand => WorkCommands.CopyCommand;
-
-    IArtworkInfo IWorkViewModel.Entry => this;
-
-    private bool? _isFavorite;
-
-    [JsonIgnore]
-    public bool IsFavorite
-    {
-        get => _isFavorite ?? IsBookmarked;
-        set
-        {
-            if (_isFavorite != value)
-            {
-                _isFavorite = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(IsBookmarkedDisplay));
-            }
-        }
-    }
+    public bool IsFavorite => IsBookmarked;
 
     [JsonIgnore]
     public long RawId => Id;
@@ -272,14 +196,7 @@ public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISi
     public Uri? SingleImageUri => null;
 
     [JsonIgnore]
-    public UgoiraMetadata? UgoiraMetadata { get; set; }
-
-    public async Task<UgoiraMetadata> LoadUgoiraMetadataAsync(MakoClient client, CancellationToken token = default)
-    {
-        if (!IsPicGif)
-            throw new InvalidOperationException("Not Ugoira");
-        return this.UgoiraMetadata ??= await client.GetUgoiraMetadataAsync(Id);
-    }
+    public UgoiraMetadata? UgoiraMetadata { get; init; }
 
     [JsonIgnore]
     public IPreloadableList<int>? ZipImageDelays => UgoiraMetadata is { } u ? [.. u.Frames.Select(f => f.Delay)] : null;

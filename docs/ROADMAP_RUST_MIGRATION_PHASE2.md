@@ -456,7 +456,7 @@ Phase 5 的核心目标是：**将所有残留在 C# 中的流式图像解码、
 在 Phase 5 彻底完成系统与领域底层逻辑 100% 下沉后，C# 表现层将不再承担任何协议编排、二进制解析、媒体解码或状态守护职责。
 Phase 6 的核心目标是：**全面清理在逐步演进过程中积累的过渡期技术债与伪抽象，还原纯净不可变领域契约，彻底清退 Misaki 依赖，重构依赖注入与导航路由，打造极致现代化、高响应性的 Thin Avalonia UI。**
 
-#### 6.1 领域契约与 UI 状态彻底解耦 (Decouple Native Extensions from UI State)
+#### 6.1 领域契约与 UI 状态彻底解耦 (Decouple Native Extensions from UI State) (已完成)
 - **痛点与坏味道**：
   - 在 Phase 4.1 消除 `*ItemViewModel` 过程中，`NativeExtensions`（如 `Illustration.cs`、`Novel.cs`、`BooruPost.cs`）被塞入了大量原本属于 ViewModel 的职责：实现了 `INotifyPropertyChanged`、`IWorkViewModel`，持有了 `_isBookmarkedDisplay`、`_isInWatchLater`、`_isFavorite` 等私有可变字段，绑定了 UI 命令（`AddToBookmarkCommand`）乃至持有并发锁执行网络懒加载。
   - 这破坏了 UniFFI 生成的 `record` 的不可变值契约与纯净性，导致领域模型充当微型状态机。

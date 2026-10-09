@@ -14,6 +14,8 @@
     xmlns:utilities="using:Pixeval.Utilities"
     xmlns:viewModels="using:Pixeval.ViewModels"
     xmlns:viewers="using:Pixeval.ViewModels.Viewers"
+    xmlns:mako="using:Pixeval.Native.Mako"
+    xmlns:booru="using:Pixeval.Native.Booru"
     x:DataType="{x:Type viewers:IllustrationViewerPageViewModel}"
     Name="InfoPaneRoot"
     mc:Ignorable="d"
@@ -71,8 +73,8 @@
                             <controls:VirtualizingStackPanel Orientation="Horizontal" Spacing="5" />
                         </ItemsPanelTemplate>
                     </ListBox.ItemsPanel>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="{x:Type viewModels:IWorkViewModel}">
+                    <ListBox.DataTemplates>
+                        <DataTemplate x:DataType="{x:Type mako:Illustration}">
                             <Border
                                 Width="80"
                                 Height="80"
@@ -81,7 +83,16 @@
                                 <Image controls:Source.Cache="{Binding ThumbnailUrl}" Stretch="UniformToFill" />
                             </Border>
                         </DataTemplate>
-                    </ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="{x:Type booru:BooruPost}">
+                            <Border
+                                Width="80"
+                                Height="80"
+                                ClipToBounds="True"
+                                CornerRadius="{StaticResource ControlCornerRadius}">
+                                <Image controls:Source.Cache="{Binding ThumbnailUrl}" Stretch="UniformToFill" />
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.DataTemplates>
                 </ListBox>
                 <CommandBar
                     x:Name="BottomActionBar"
@@ -91,25 +102,25 @@
                     DefaultLabelPosition="Collapsed"
                     IsDynamicOverflowEnabled="False">
                     <CommandBarButton
-                        Command="{Binding CurrentIllustration.BookmarkCommand, FallbackValue={x:Null}}"
-                        CommandParameter="{Binding $self, Mode=OneTime}"
+                        Command="{x:Static viewModels:WorkCommands.AddToBookmarkCommand}"
+                        CommandParameter="{Binding CurrentIllustration}"
                         ContextRequested="AddToBookmarkButton_OnRightClick"
                         Icon="{markup1:SymbolIconEx Heart,
-                                                    IconVariant={Binding CurrentIllustration.IsBookmarkedDisplay,
+                                                    IconVariant={Binding CurrentUiState.BookmarkState,
                                                                          Converter={x:Static converters:PixevalConverters.StateToIconVariant}}}"
-                        IsVisible="{Binding CurrentIllustration.IsBookmarkSupported, FallbackValue={x:False}}"
+                        IsVisible="{Binding IsBookmarkSupported, FallbackValue={x:False}}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}" />
                     <CommandBarButton
-                        Command="{Binding CurrentIllustration.SaveCommand, FallbackValue={x:Null}}"
-                        CommandParameter="{Binding $self, Mode=OneTime}"
+                        Command="{x:Static viewModels:WorkCommands.SaveCommand}"
+                        CommandParameter="{Binding CurrentIllustration}"
                         Icon="{markup:SymbolIcon SaveMultiple}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.Save}}" />
                     <CommandBarSeparator />
                     <CommandBarButton
-                        Command="{Binding CurrentIllustration.AddToWatchLaterCommand, FallbackValue={x:Null}}"
-                        CommandParameter="{Binding $self, Mode=OneTime}"
+                        Command="{x:Static viewModels:WorkCommands.AddToWatchLaterCommand}"
+                        CommandParameter="{Binding CurrentIllustration}"
                         Icon="{markup1:SymbolIconEx Clock,
-                                                    IconVariant={Binding CurrentIllustration.IsInWatchLater,
+                                                    IconVariant={Binding CurrentUiState.IsInWatchLater,
                                                                          Converter={x:Static converters:PixevalConverters.BoolToIconVariant}}}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}" />
                     <!--<CommandBarButton
@@ -133,7 +144,7 @@
             <DockPanel VerticalAlignment="Stretch" ClipToBounds="True">
                 <local:WorkSeriesInfoPane DataContext="{Binding SeriesInfo}" DockPanel.Dock="Bottom" />
                 <Panel>
-                    <local:WorkInfoPane Name="InfoPaneSection" ArtworkInfo="{Binding CurrentIllustration.Entry, FallbackValue={x:Null}}">
+                    <local:WorkInfoPane Name="InfoPaneSection" ArtworkInfo="{Binding CurrentIllustration, FallbackValue={x:Null}}">
                         <local:WorkInfoPane.ActionZone>
                             <Border
                                 Width="32"

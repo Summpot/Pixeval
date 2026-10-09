@@ -22,7 +22,7 @@ public sealed partial class WorkView : UserControl, IDisposable
 {
     private bool _isDisposed;
 
-    public event EventHandler<Control, IWorkViewModel>? RequestAddToBookmark;
+    public event EventHandler<Control, IArtworkInfo>? RequestAddToBookmark;
 
     public ThumbnailLayoutType LayoutType
     {
@@ -53,7 +53,7 @@ public sealed partial class WorkView : UserControl, IDisposable
 
     private async void WorkItem_OnTapped(object? sender, TappedEventArgs tappedEventArgs)
     {
-        if (sender is not ListBoxItem { DataContext: IWorkViewModel vm } lbi)
+        if (sender is not ListBoxItem { DataContext: IArtworkInfo vm } lbi)
             return;
 
         if (WorkListBox.SelectionMode.HasFlag(SelectionMode.Multiple))
@@ -83,7 +83,7 @@ public sealed partial class WorkView : UserControl, IDisposable
 
     private async void WorkItem_OnDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (sender is not ListBoxItem { DataContext: IWorkViewModel vm })
+        if (sender is not ListBoxItem { DataContext: IArtworkInfo vm })
             return;
 
         if (WorkListBox.SelectionMode.HasFlag(SelectionMode.Single))
@@ -92,7 +92,7 @@ public sealed partial class WorkView : UserControl, IDisposable
         await CreateWorkViewerPage(vm);
     }
 
-    private async Task CreateWorkViewerPage(IWorkViewModel vm)
+    private async Task CreateWorkViewerPage(IArtworkInfo vm)
     {
         if (TopLevel.GetTopLevel(this) is not { ViewContainer: { } viewContainer })
             return;
@@ -105,16 +105,16 @@ public sealed partial class WorkView : UserControl, IDisposable
             case (Novel novel, SimpleOperableViewViewModel<Novel> viewViewModel):
                 viewContainer.CreateNovelPage(novel, viewViewModel.SourceView.CloneSourceView(), viewViewModel.NeedRefreshOnOpen);
                 break;
-            case (Illustration illustration, IllustrationViewViewModel viewViewModel):
+            case (IArtworkInfo illustration, IllustrationViewViewModel viewViewModel):
                 viewContainer.CreateIllustrationPage(illustration, viewViewModel.DataProvider.CloneRef());
                 break;
-            case (Illustration illustration, SimpleOperableViewViewModel<IWorkViewModel> viewViewModel):
+            case (IArtworkInfo illustration, SimpleOperableViewViewModel<IArtworkInfo> viewViewModel):
                 viewContainer.CreateIllustrationPage(illustration, viewViewModel.SourceView.CloneSourceView(), viewViewModel.NeedRefreshOnOpen);
                 break;
             case (Novel { Id: var id }, _):
                 viewContainer.CreateNovelPage(id);
                 break;
-            case (Illustration illustration, _):
+            case (IArtworkInfo illustration, _):
                 viewContainer.CreateIllustrationPage(illustration);
                 break;
         }
@@ -145,7 +145,7 @@ public sealed partial class WorkView : UserControl, IDisposable
     {
         IOperableViewViewModel viewModel = workType is SimpleWorkType.Novel
             ? new SimpleOperableViewViewModel<Novel>(source, needRefreshOnOpen)
-            : new SimpleOperableViewViewModel<IWorkViewModel>(source, needRefreshOnOpen);
+            : new SimpleOperableViewViewModel<IArtworkInfo>(source, needRefreshOnOpen);
         SetOwnedViewModel(viewModel);
     }
 
@@ -165,11 +165,11 @@ public sealed partial class WorkView : UserControl, IDisposable
         oldViewModel?.Dispose();
     }
 
-    private void WorkItem_OnRequestAddToBookmark(Control sender, IWorkViewModel e) => RequestAddToBookmark?.Invoke(sender, e);
+    private void WorkItem_OnRequestAddToBookmark(Control sender, IArtworkInfo e) => RequestAddToBookmark?.Invoke(sender, e);
 
-    public void WorkItem_OnRequestOpenUserInfoPage(Control sender, IWorkViewModel e)
+    public void WorkItem_OnRequestOpenUserInfoPage(Control sender, IArtworkInfo e)
     {
-        if (e is { Entry: IWorkEntry { User.Id: var id } })
+        if (e is IWorkEntry { User.Id: var id })
         {
             if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
                 viewContainer.CreateUserPage(id);

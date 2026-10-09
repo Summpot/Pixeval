@@ -58,7 +58,7 @@ public partial class IllustrationViewerInfoPane : UserControl
         if (ViewModel is not null)
         {
             ViewModel.PropertyChanged += ViewModel_OnPropertyChanged;
-            UpdatePanePages(ViewModel.CurrentIllustration?.Entry);
+            UpdatePanePages(ViewModel.CurrentIllustration);
         }
     }
 
@@ -75,7 +75,7 @@ public partial class IllustrationViewerInfoPane : UserControl
     {
         if (e.PropertyName == nameof(IllustrationViewerPageViewModel.CurrentIllustration))
         {
-            UpdatePanePages(ViewModel?.CurrentIllustration?.Entry);
+            UpdatePanePages(ViewModel?.CurrentIllustration);
         }
     }
 
@@ -133,10 +133,10 @@ public partial class IllustrationViewerInfoPane : UserControl
 
     private async Task AddToBookmarkAsync((bool IsPrivate, IReadOnlyList<string>? Tags) e)
     {
-        if (ViewModel?.CurrentIllustration is not IWorkViewModel current)
+        if (ViewModel?.CurrentIllustration is not IArtworkInfo current)
             return;
 
-        await current.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, current));
+        await WorkCommands.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, current));
         TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
             I18NManager.GetResource(MiscResources.AddedToBookmark));
     }

@@ -13,10 +13,10 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
 {
     private bool _isDisposed;
 
-    public ImageViewerViewModel(IWorkViewModel thumbnailViewModel)
+    public ImageViewerViewModel(IArtworkInfo thumbnailViewModel)
     {
         ThumbnailViewModel = thumbnailViewModel;
-        var entry = thumbnailViewModel.Entry;
+        var entry = thumbnailViewModel;
         var platform = entry.Platform;
 
         Images = entry is not IImageSet set
@@ -25,10 +25,10 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
 
         PageCount = Images.Count;
 
-        App.AppViewModel.AddBrowseHistory(thumbnailViewModel.Entry);
+        App.AppViewModel.AddBrowseHistory(thumbnailViewModel);
     }
 
-    public IWorkViewModel ThumbnailViewModel { get; set; }
+    public IArtworkInfo ThumbnailViewModel { get; set; }
 
     public IReadOnlyList<SingleViewerViewModel> Images { get; }
 

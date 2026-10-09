@@ -195,7 +195,7 @@ public static class HomeCardDefinitions
             case (Novel novel, NovelViewViewModel viewViewModel):
                 topLevel.ViewContainer?.CreateNovelPage(novel, viewViewModel.DataProvider.CloneRef());
                 break;
-            case (IWorkViewModel work, IllustrationViewViewModel viewViewModel):
+            case (IArtworkInfo work, IllustrationViewViewModel viewViewModel):
                 topLevel.ViewContainer?.CreateIllustrationPage(work, viewViewModel.DataProvider.CloneRef());
                 break;
             case (User user, _):

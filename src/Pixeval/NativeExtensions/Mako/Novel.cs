@@ -3,62 +3,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-using Avalonia.Controls;
-using CommunityToolkit.Mvvm.Input;
 using Misaki;
-using Pixeval.Controls;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
-using Pixeval.Utilities;
-using Pixeval.ViewModels;
 
 namespace Pixeval.Native.Mako;
 
-public partial record Novel : IArtworkInfo, IWorkEntry, INovelEntry, ISerializable, IWorkViewModel, INotifyPropertyChanged
+public partial record Novel : IArtworkInfo, IWorkEntry, INovelEntry, ISerializable
 {
     private static readonly Dictionary<string, object> s_emptyDict = [];
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    private void OnPropertyChanged([CallerMemberName] string? name = null) =>
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-
-    private HeartButtonState? _isBookmarkedDisplay;
-
-    [JsonIgnore]
-    public HeartButtonState IsBookmarkedDisplay
-    {
-        get => _isBookmarkedDisplay ?? (IsFavorite ? HeartButtonState.Checked : HeartButtonState.Unchecked);
-        set
-        {
-            if (_isBookmarkedDisplay != value)
-            {
-                _isBookmarkedDisplay = value;
-                OnPropertyChanged();
-            }
-        }
-    }
-
-    private bool? _isInWatchLater;
-
-    [JsonIgnore]
-    public bool IsInWatchLater
-    {
-        get => _isInWatchLater ?? (App.AppViewModel?.ContainsWatchLater(this) is true);
-        set
-        {
-            if (_isInWatchLater != value)
-            {
-                _isInWatchLater = value;
-                OnPropertyChanged();
-            }
-        }
-    }
 
     [JsonIgnore]
     public bool IsBookmarkSupported => !BlockedContentHelper.IsBlockedPlaceholder(this) && Platform is IPlatformInfo.Pixiv;
@@ -79,59 +34,7 @@ public partial record Novel : IArtworkInfo, IWorkEntry, INovelEntry, ISerializab
     public Novel Entry => this;
 
     [JsonIgnore]
-    public IAsyncRelayCommand<(IReadOnlyList<string>? Tags, bool IsPrivate, object? Parameter)> AddToBookmarkCommand => WorkCommands.AddToBookmarkCommand;
-
-    [JsonIgnore]
-    public IAsyncRelayCommand<object?> BookmarkCommand => WorkCommands.BookmarkCommand;
-
-    [JsonIgnore]
-    public IRelayCommand<object?> AddToWatchLaterCommand => WorkCommands.AddToWatchLaterCommand;
-
-    [JsonIgnore]
-    public IAsyncRelayCommand<object?> SaveCommand => WorkCommands.SaveCommand;
-
-    IArtworkInfo IWorkViewModel.Entry => this;
-
-    private Task<NovelContent>? _loadedContentTask;
-
-    public Task<NovelContent> GetContentAsync()
-    {
-        return _loadedContentTask ??= LoadContentInternalAsync();
-    }
-
-    private async Task<NovelContent> LoadContentInternalAsync()
-    {
-        if (BlockedContentHelper.IsBlockedPlaceholder(this))
-            return BlockedContentModelHelper.CreateBlockedNovelContent(BlockedContentHelper.Replace(this));
-
-        var content = await App.AppViewModel.MakoClient.GetNovelContentStructuredAsync(RawId);
-        return content with
-        {
-            Title = string.IsNullOrWhiteSpace(content.Title) ? Title : content.Title,
-            CoverUrl = string.IsNullOrWhiteSpace(content.CoverUrl) ? (Thumbnails.FirstOrDefault()?.ImageUri.OriginalString ?? "") : content.CoverUrl,
-            UserId = content.UserId == 0 ? Author.Id : content.UserId
-        };
-    }
-
-    [JsonIgnore]
-    public Task<NovelContent> ContentAsync => GetContentAsync();
-
-    private bool? _isFavorite;
-
-    [JsonIgnore]
-    public bool IsFavorite
-    {
-        get => _isFavorite ?? IsBookmarked;
-        set
-        {
-            if (_isFavorite != value)
-            {
-                _isFavorite = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(IsBookmarkedDisplay));
-            }
-        }
-    }
+    public bool IsFavorite => IsBookmarked;
 
     [JsonIgnore]
     public long RawId => Id;

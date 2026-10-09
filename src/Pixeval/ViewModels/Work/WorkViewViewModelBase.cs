@@ -3,6 +3,7 @@
 
 using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Linq;
 using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Misaki;
@@ -14,21 +15,21 @@ namespace Pixeval.ViewModels;
 
 public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<string>? blockedTags) : EntryViewViewModel<T, TViewModel>, IWorkViewViewModel
     where T : class, IArtworkInfo
-    where TViewModel : class, IWorkViewModel
+    where TViewModel : class, IArtworkInfo
 {
     public FrozenSet<string> CachedBlockedTags { get; private set; } = blockedTags ?? App.AppViewModel.AppSettings.BrowsingExperienceSettings.BlockedTags.ToFrozenSet();
 
     [ObservableProperty]
     public partial bool IsSelecting { get; set; }
 
-    public AvaloniaList<IWorkViewModel> SelectedEntries { get; } = [];
+    public AvaloniaList<IArtworkInfo> SelectedEntries { get; } = [];
 
-    public void SetSortDescriptions(params IEnumerable<ISortDescription<IWorkViewModel>> descriptions)
+    public void SetSortDescriptions(params IEnumerable<ISortDescription<IArtworkInfo>> descriptions)
     {
         using (View.DeferSortDescriptionsChange())
         {
             View.SortDescriptions.Clear();
-            View.SortDescriptions.AddRange(descriptions);
+            View.SortDescriptions.AddRange(descriptions.Cast<ISortDescription<TViewModel>>());
         }
     }
 
@@ -38,11 +39,11 @@ public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<str
         {
             View.Filters.Clear();
             if (UserFilter is not null)
-                View.Filters.Add(UserFilter);
+                View.Filters.Add(IFilter<TViewModel>.Create(o => UserFilter.Predicate(o), false));
         }
     }
 
-    public IFilter<IWorkViewModel>? UserFilter
+    public IFilter<IArtworkInfo>? UserFilter
     {
         get;
         set
@@ -55,9 +56,9 @@ public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<str
         }
     }
 
-    IReadOnlyCollection<IWorkViewModel> IOperableViewViewModel.View => View;
+    IReadOnlyCollection<IArtworkInfo> IOperableViewViewModel.View => View;
 
-    IReadOnlyCollection<IWorkViewModel> IOperableViewViewModel.Source => Source;
+    IReadOnlyCollection<IArtworkInfo> IOperableViewViewModel.Source => Source;
 
     public abstract bool RequireAdaptiveGrid { get; }
 

@@ -23,11 +23,7 @@ public sealed class SeriesViewViewModel
     public override SeriesViewDataProvider DataProvider { get; }
 
     public void ResetEngine(IFetchEngine<Series> fetchEngine, SimpleWorkType workType) =>
-        base.ResetEngine(fetchEngine, (series, _) =>
-        {
-            series.WorkType = workType;
-            return series;
-        });
+        base.ResetEngine(fetchEngine, (series, _) => series with { WorkType = workType });
 
     public SeriesViewViewModel CloneRef() => new(DataProvider.CloneRef());
 }

@@ -42,7 +42,7 @@ public static class ViewerHelper
         /// </summary>
         /// <param name="illustrationViewModel">指定的插画ViewModel</param>
         /// <param name="needRefresh"></param>
-        public void CreateIllustrationPage(IWorkViewModel illustrationViewModel, bool needRefresh = false)
+        public void CreateIllustrationPage(IArtworkInfo illustrationViewModel, bool needRefresh = false)
         {
             control.NavigateTo(new IllustrationViewerPage(new(illustrationViewModel, needRefresh)));
         }
@@ -53,7 +53,7 @@ public static class ViewerHelper
         /// <param name="illustrationViewModel">指定的插画ViewModel</param>
         /// <param name="sourceView">指定的插画ViewModel所在的SourceView</param>
         /// <param name="needRefresh">是否需要刷新插画（如从数据库中加载的则需要刷新）</param>
-        public void CreateIllustrationPage(IWorkViewModel illustrationViewModel, ISourceView<IWorkViewModel> sourceView, bool needRefresh = false)
+        public void CreateIllustrationPage(IArtworkInfo illustrationViewModel, ISourceView<IArtworkInfo> sourceView, bool needRefresh = false)
         {
             var index = sourceView.View.IndexOf(illustrationViewModel);
             control.NavigateTo(new IllustrationViewerPage(new(sourceView, index, needRefresh)));

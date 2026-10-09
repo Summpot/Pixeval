@@ -3,44 +3,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
-using CommunityToolkit.Mvvm.Input;
 using Misaki;
-using Pixeval.Controls;
-using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
-using Pixeval.Utilities;
 
 namespace Pixeval.Native.Mako;
 
-public partial record User : IUser, IIdEntry, INotifyPropertyChanged
+public partial record User : IUser, IIdEntry
 {
     public User(long id, string name, string account, ProfileImageUrls profileImageUrls, bool isFollowed, string? comment)
         : this(id, name, account, profileImageUrls, isFollowed, comment, [])
     {
-    }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    private void OnPropertyChanged([CallerMemberName] string? name = null) =>
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-
-    private HeartButtonState? _isFollowedDisplay;
-
-    [JsonIgnore]
-    public HeartButtonState IsFollowedDisplay
-    {
-        get => _isFollowedDisplay ?? (IsFollowedState ? HeartButtonState.Checked : HeartButtonState.Unchecked);
-        set
-        {
-            if (_isFollowedDisplay != value)
-            {
-                _isFollowedDisplay = value;
-                OnPropertyChanged();
-            }
-        }
     }
 
     [JsonIgnore]
@@ -61,31 +34,8 @@ public partial record User : IUser, IIdEntry, INotifyPropertyChanged
     [JsonIgnore]
     public string? Banner2Url => SampleWorkThumbnails.Count > 2 ? SampleWorkThumbnails[2] : null;
 
-    [JsonIgnore]
-    public IAsyncRelayCommand FollowCommand => field ??= new AsyncRelayCommand(async () =>
-    {
-        if ((IsFollowedDisplay & HeartButtonState.Pending) is not 0)
-            return;
-
-        IsFollowedDisplay |= HeartButtonState.Pending;
-        var target = !IsFollowedState;
-        var result = await MakoHelper.SetFollowAsync(this, target);
-        if (result)
-            IsFollowedState = target;
-
-        IsFollowedDisplay = (result ? target : IsFollowedState) ? HeartButtonState.Checked : HeartButtonState.Unchecked;
-    });
-
-    [JsonIgnore]
-    public IRelayCommand BlockUserCommand => field ??= new RelayCommand(() =>
-    {
-        _ = BlockedContentHelper.TryAddOrUpdateBlockedUser(this);
-    });
-
     private static readonly Dictionary<string, Uri> s_emptyContact = [];
     private static readonly Dictionary<string, object> s_emptyDict = [];
-
-    private bool? _isFollowed;
 
     [JsonIgnore]
     public long RawId => Id;
@@ -125,13 +75,6 @@ public partial record User : IUser, IIdEntry, INotifyPropertyChanged
 
     [JsonIgnore]
     public Uri AppUri => new($"pixeval://user/{Id}");
-
-    [JsonIgnore]
-    public bool IsFollowedState
-    {
-        get => _isFollowed ?? IsFollowed;
-        set => _isFollowed = value;
-    }
 }
 
 public partial record TokenUser : IUser, IIdEntry
@@ -173,12 +116,4 @@ public partial record TokenUser : IUser, IIdEntry
 
     [JsonIgnore]
     public Uri AppUri => new($"pixeval://user/{Id}");
-
-    public static implicit operator User(TokenUser u) => new(
-        long.TryParse(u.Id, out var id) ? id : 0,
-        u.Name,
-        u.Account,
-        u.ProfileImageUrls,
-        false,
-        null);
 }

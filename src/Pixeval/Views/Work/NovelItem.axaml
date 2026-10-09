@@ -26,21 +26,19 @@
             <Grid.ContextMenu>
                 <ContextMenu>
                     <MenuItem
-                        Command="{Binding BookmarkCommand}"
+                        controls:ArtworkStateBehavior.TrackBookmark="True"
+                        Command="{x:Static novel:WorkCommands.AddToBookmarkCommand}"
                         CommandParameter="{Binding $self, Mode=OneTime}"
                         ContextRequested="AddToBookmark_OnRightClick"
                         Header="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
-                        Icon="{markup1:SymbolIconEx Heart,
-                                                    IconVariant={Binding IsBookmarkedDisplay,
-                                                                         Converter={x:Static converters:PixevalConverters.StateToIconVariant}}}"
+                        Icon="{markup1:SymbolIconEx Heart}"
                         IsVisible="{Binding IsBookmarkSupported}" />
                     <MenuItem
-                        Command="{Binding AddToWatchLaterCommand}"
+                        controls:ArtworkStateBehavior.TrackWatchLater="True"
+                        Command="{x:Static novel:WorkCommands.AddToWatchLaterCommand}"
                         CommandParameter="{Binding $self, Mode=OneTime}"
                         Header="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}"
-                        Icon="{markup1:SymbolIconEx Clock,
-                                                    IconVariant={Binding IsInWatchLater,
-                                                                         Converter={x:Static converters:PixevalConverters.BoolToIconVariant}}}" />
+                        Icon="{markup1:SymbolIconEx Clock}" />
                     <MenuItem
                         Click="OpenUserInfoPage_OnClicked"
                         Header="{I18N {x:Static pixeval:EntryItemResources.OpenUserInfoPage}}"
@@ -52,7 +50,7 @@
                         IsVisible="{Binding HasSeries}" />
                     <Separator />
                     <MenuItem
-                        Command="{Binding SaveCommand}"
+                        Command="{x:Static novel:WorkCommands.SaveCommand}"
                         CommandParameter="{Binding $self, Mode=OneTime}"
                         Header="{I18N {x:Static pixeval:EntryItemResources.Save}}"
                         Icon="{markup:SymbolIcon Save}" />
@@ -117,9 +115,10 @@
                 Height="30"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
-                Command="{Binding BookmarkCommand}"
+                controls:ArtworkStateBehavior.TrackBookmark="True"
+                Command="{x:Static novel:WorkCommands.AddToBookmarkCommand}"
                 CommandParameter="{Binding $self, Mode=OneTime}"
-                State="{Binding IsBookmarkedDisplay}">
+                IsVisible="{Binding IsBookmarkSupported}">
                 
                 <controls:HeartButton.CacheMode>
                     <BitmapCache SnapsToDevicePixels="False" RenderAtScale="1"/>

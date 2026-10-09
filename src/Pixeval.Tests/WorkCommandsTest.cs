@@ -4,7 +4,9 @@
 using System.Collections.Generic;
 using Avalonia.Controls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Pixeval.Controls;
 using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
@@ -52,28 +54,36 @@ public sealed class WorkCommandsTest
     }
 
     [TestMethod]
-    public void IllustrationIsFavoriteRaisesPropertyChangedForIsFavoriteAndIsBookmarkedDisplay()
+    public void ArtworkUiStateStoreTracksBookmarkAndRaisesPropertyChanged()
     {
+        ArtworkUiStateStore.Clear();
         var illust = DesignHelper.DesignIllustration;
+        var state = ArtworkUiStateStore.GetOrCreate(illust);
+        Assert.AreEqual(HeartButtonState.Checked, state.BookmarkState);
+
         var changedProperties = new List<string?>();
-        illust.PropertyChanged += (_, e) => changedProperties.Add(e.PropertyName);
+        state.PropertyChanged += (_, e) => changedProperties.Add(e.PropertyName);
 
-        illust.IsFavorite = !illust.IsFavorite;
+        ArtworkUiStateStore.UpdateBookmark(illust, HeartButtonState.Unchecked);
 
-        CollectionAssert.Contains(changedProperties, nameof(Illustration.IsFavorite));
-        CollectionAssert.Contains(changedProperties, nameof(Illustration.IsBookmarkedDisplay));
+        Assert.AreEqual(HeartButtonState.Unchecked, state.BookmarkState);
+        CollectionAssert.Contains(changedProperties, nameof(ArtworkUiState.BookmarkState));
     }
 
     [TestMethod]
-    public void NovelIsFavoriteRaisesPropertyChangedForIsFavoriteAndIsBookmarkedDisplay()
+    public void UserUiStateStoreTracksFollowAndRaisesPropertyChanged()
     {
-        var novel = DesignHelper.DesignNovel;
+        UserUiStateStore.Clear();
+        var user = DesignHelper.DesignUser;
+        var state = UserUiStateStore.GetOrCreate(user);
+        Assert.AreEqual(HeartButtonState.Checked, state.FollowState);
+
         var changedProperties = new List<string?>();
-        novel.PropertyChanged += (_, e) => changedProperties.Add(e.PropertyName);
+        state.PropertyChanged += (_, e) => changedProperties.Add(e.PropertyName);
 
-        novel.IsFavorite = !novel.IsFavorite;
+        UserUiStateStore.UpdateFollow(user, HeartButtonState.Unchecked);
 
-        CollectionAssert.Contains(changedProperties, nameof(Novel.IsFavorite));
-        CollectionAssert.Contains(changedProperties, nameof(Novel.IsBookmarkedDisplay));
+        Assert.AreEqual(HeartButtonState.Unchecked, state.FollowState);
+        CollectionAssert.Contains(changedProperties, nameof(UserUiState.FollowState));
     }
 }

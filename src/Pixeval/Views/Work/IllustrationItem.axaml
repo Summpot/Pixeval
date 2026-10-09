@@ -8,12 +8,13 @@
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
+    xmlns:mako="using:Pixeval.Native.Mako"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
     xmlns:utilities="using:Pixeval.Utilities"
     xmlns:viewModels="using:Pixeval.ViewModels"
     xmlns:work="using:Pixeval.Views.Work"
-    x:DataType="{x:Type viewModels:IWorkViewModel}"
+    x:DataType="{x:Type mako:Illustration}"
     Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
     Design.DataContext="{x:Static utilities:DesignHelper.DesignIllustrationViewModel}"
     RenderTransformOrigin="50%,50%"
@@ -25,21 +26,19 @@
         <ContentControl.ContextMenu>
             <ContextMenu>
                 <MenuItem
-                    Command="{Binding BookmarkCommand}"
+                    controls:ArtworkStateBehavior.TrackBookmark="True"
+                    Command="{x:Static viewModels:WorkCommands.AddToBookmarkCommand}"
                     CommandParameter="{Binding $self, Mode=OneTime}"
                     ContextRequested="AddToBookmark_OnRightClick"
                     Header="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
-                    Icon="{markup1:SymbolIconEx Heart,
-                                                IconVariant={Binding IsBookmarkedDisplay,
-                                                                     Converter={x:Static converters:PixevalConverters.StateToIconVariant}}}"
+                    Icon="{markup1:SymbolIconEx Heart}"
                     IsVisible="{Binding IsBookmarkSupported}" />
                 <MenuItem
-                    Command="{Binding AddToWatchLaterCommand}"
+                    controls:ArtworkStateBehavior.TrackWatchLater="True"
+                    Command="{x:Static viewModels:WorkCommands.AddToWatchLaterCommand}"
                     CommandParameter="{Binding $self, Mode=OneTime}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}"
-                    Icon="{markup1:SymbolIconEx Clock,
-                                                IconVariant={Binding IsInWatchLater,
-                                                                     Converter={x:Static converters:PixevalConverters.BoolToIconVariant}}}" />
+                    Icon="{markup1:SymbolIconEx Clock}" />
                 <MenuItem
                     Click="OpenUserInfoPage_OnClicked"
                     Header="{I18N {x:Static pixeval:EntryItemResources.OpenUserInfoPage}}"
@@ -51,13 +50,13 @@
                     IsVisible="{Binding HasSeries}" />
                 <Separator />
                 <MenuItem
-                    Command="{Binding CopyCommand}"
+                    Command="{x:Static viewModels:WorkCommands.CopyCommand}"
                     CommandParameter="{Binding #ThumbnailImage, Mode=OneTime}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.Copy}}"
                     Icon="{markup:SymbolIcon Copy}"
                     IsEnabled="{Binding #ThumbnailImage.(controls:Source.Loaded)}" />
                 <MenuItem
-                    Command="{Binding SaveCommand}"
+                    Command="{x:Static viewModels:WorkCommands.SaveCommand}"
                     CommandParameter="{Binding $self, Mode=OneTime}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.Save}}"
                     Icon="{markup:SymbolIcon Save}" />
@@ -93,10 +92,10 @@
                     Height="30"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
-                    Command="{Binding BookmarkCommand}"
+                    controls:ArtworkStateBehavior.TrackBookmark="True"
+                    Command="{x:Static viewModels:WorkCommands.AddToBookmarkCommand}"
                     CommandParameter="{Binding $self, Mode=OneTime}"
-                    IsVisible="{Binding IsBookmarkSupported}"
-                    State="{Binding IsBookmarkedDisplay}">
+                    IsVisible="{Binding IsBookmarkSupported}">
                     
                     <controls:HeartButton.CacheMode>
                         <BitmapCache SnapsToDevicePixels="False" RenderAtScale="1"/>
@@ -122,9 +121,9 @@
                     LastChildFill="False">
                     <controls:PixevalBadge
                         DockPanel.Dock="Left"
-                        IsVisible="{Binding Entry.IsAiGenerated}"
+                        IsVisible="{Binding IsAiGenerated}"
                         Mode="Ai" />
-                    <controls:PixevalBadge DockPanel.Dock="Left" Mode="{Binding Entry.SafeRating, Converter={x:Static converters:PixevalConverters.SafeBadgeModeConverter}}" />
+                    <controls:PixevalBadge DockPanel.Dock="Left" Mode="{Binding SafeRating, Converter={x:Static converters:PixevalConverters.SafeBadgeModeConverter}}" />
                 </DockPanel>
                 <Border
                     Margin="5"

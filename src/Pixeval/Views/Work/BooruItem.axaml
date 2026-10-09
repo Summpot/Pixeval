@@ -1,0 +1,77 @@
+<work:WorkItem
+    x:Class="Pixeval.Views.Work.BooruItem"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Pixeval.Controls"
+    xmlns:converters="using:Pixeval.Views.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:markup="using:FluentIcons.Avalonia.Markup"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:booru="using:Pixeval.Native.Booru"
+    xmlns:pixeval="using:Pixeval"
+    xmlns:utilities="using:Pixeval.Utilities"
+    xmlns:viewModels="using:Pixeval.ViewModels"
+    xmlns:work="using:Pixeval.Views.Work"
+    x:DataType="{x:Type booru:BooruPost}"
+    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+    RenderTransformOrigin="50%,50%"
+    Theme="{StaticResource RoundedButtonStyle}"
+    mc:Ignorable="d"
+    d:DesignHeight="250"
+    d:DesignWidth="300">
+    <ContentControl ClipToBounds="True">
+        <ContentControl.ContextMenu>
+            <ContextMenu>
+                <MenuItem
+                    Command="{x:Static viewModels:WorkCommands.CopyCommand}"
+                    CommandParameter="{Binding #ThumbnailImage, Mode=OneTime}"
+                    Header="{I18N {x:Static pixeval:EntryItemResources.Copy}}"
+                    Icon="{markup:SymbolIcon Copy}"
+                    IsEnabled="{Binding #ThumbnailImage.(controls:Source.Loaded)}" />
+                <MenuItem
+                    Command="{x:Static viewModels:WorkCommands.SaveCommand}"
+                    CommandParameter="{Binding $self, Mode=OneTime}"
+                    Header="{I18N {x:Static pixeval:EntryItemResources.Save}}"
+                    Icon="{markup:SymbolIcon Save}" />
+                <Separator />
+                <MenuItem
+                    Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                    Header="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
+                    Icon="{markup:SymbolIcon GlobeArrowUp}"
+                    Tag="{Binding WebsiteUri}" />
+                <MenuItem
+                    Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                    Header="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
+                    Icon="{markup:SymbolIcon LinkMultiple}"
+                    Tag="{Binding WebsiteUri}" />
+                <MenuItem
+                    Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                    Header="{I18N {x:Static pixeval:EntryItemResources.GenerateLink}}"
+                    Icon="{markup:SymbolIcon Link}"
+                    Tag="{Binding AppUri}" />
+            </ContextMenu>
+        </ContentControl.ContextMenu>
+        <Border HorizontalAlignment="Stretch">
+            <Panel>
+                <controls:ConstrainedBox AspectRatio="{Binding AspectRatio, Converter={x:Static converters:PixevalConverters.ToAspectRatio}}" RestrictArrange="False">
+                    <Image
+                        x:Name="ThumbnailImage"
+                        controls:Source.Cache="{Binding ThumbnailUrl}"
+                        Stretch="UniformToFill" />
+                </controls:ConstrainedBox>
+                <controls:Skeleton IsVisible="{Binding !#ThumbnailImage.(controls:Source.Loaded)}" />
+                <DockPanel
+                    Margin="10"
+                    VerticalAlignment="Bottom"
+                    HorizontalSpacing="3"
+                    LastChildFill="False">
+                    <controls:PixevalBadge
+                        DockPanel.Dock="Left"
+                        IsVisible="{Binding IsAiGenerated}"
+                        Mode="Ai" />
+                    <controls:PixevalBadge DockPanel.Dock="Left" Mode="{Binding SafeRating, Converter={x:Static converters:PixevalConverters.SafeBadgeModeConverter}}" />
+                </DockPanel>
+            </Panel>
+        </Border>
+    </ContentControl>
+</work:WorkItem>
