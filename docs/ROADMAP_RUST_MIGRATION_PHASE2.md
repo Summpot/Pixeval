@@ -425,19 +425,26 @@ Phase 5 的核心目标是：**将所有残留在 C# 中的流式图像解码、
   - [x] 物理移除 `ExtensionService.cs` 中的二进制扫描与解压文件 IO 代码，`ExtensionService` 缩减至 144 行（< 150 行）的纯状态服务。
   - [x] Rust 单元测试（8 项）与 .NET 测试（311 项）全部通过，全工程 0 警告 0 错误编译通过。
 
-#### 5.5 DSL 动态建议生成与光标上下文感知下沉 (Filter DSL Completion & Syntax Intelligence)
+#### 5.5 DSL 动态建议生成与光标上下文感知下沉 (Filter DSL Completion & Syntax Intelligence) [已完成]
 - **痛点与现状**：
   - 尽管 `pixeval_filters` 已经实现了 AST 解析和执行引擎，但在 `WorkFilterLanguage.cs` 和 `WorkFilterAutoSuggestBox.axaml.cs` 中，仍有数百行 C# 代码在负责：
     - 基于光标位置的正则分词与语法推断。
     - 关键字（`tag:`, `author:`, `sanity:`, `date:` 等）与比较运算符的自动补全候选集匹配。
     - 标签与作者历史候选数据的本地混合过滤。
-- **下沉方案**：
+    - C# 端维护了 11 个独立的语法类（`WorkAiFilterSyntax.cs` ~ `WorkTitleFilterSyntax.cs`）及 Roslyn Source Generator（`FilterSyntaxGenerator.cs`）。
+- **下沉方案与落地成果**：
   - 在 `pixeval_filters` 中新增 `FilterCompletionEngine`：
-    - 输入当前查询字符串与光标位置，输出语义化的补全建议列表（包含 token 类型、建议值、光标替换范围）。
-    - 接驳 `pixeval_storage` 历史标签与常用作者数据，原生完成补全匹配与排序。
-  - C# 端 `WorkFilterAutoSuggestBox` 仅作为纯表现层，光标变动时将 `(text, cursor)` 抛给 Rust 并绑定结果列表。
-- **验收标准**：
-  - 物理清退 `WorkFilterLanguage.cs` 中的分词与建议算法，DSL 语法补全由 Rust 统一保证语法规则单点真相。
+    - 内置作品全套标准过滤语法规则（Title, Author, Tag, Bookmark, Ratio, StartDate, EndDate, Ai, R18, R18G, Gif）、逻辑算子（`and`/`or`/`!`）、正反约束（`+ai`/`-ai`）以及各种值类型 Hint。
+    - 原生根据光标所在 span 计算输出开箱即用的完整替换后文本 `completed_text` 与语义类型 `FilterCompletionKind`，彻底消除了 C# 端 `ApplyCompletion` 手写 UTF-16 边界切片计算。
+    - 抽象 `IFilterStorageProvider` 原生回调契约，统一结合当前屏幕会话候选集（Session Candidates）与 SQLite 历史搜索词、关注作者执行模糊/前缀匹配与排序。
+  - C# 端纯声明式重构：
+    - 物理删除 11 个语法类（`WorkAiFilterSyntax.cs` ~ `WorkTitleFilterSyntax.cs`）及 `FilterSyntaxGenerator.cs`。
+    - `WorkFilterLanguage.cs` 缩减为极简门面；`WorkContainer.axaml.cs` 剔除所有本地候选字典提取与排序代码。
+    - `WorkFilterAutoSuggestBox.axaml.cs` 剔除 `ApplyCompletion` 字符串拼接，直接绑定 native `CompletedText`。
+- **验收标准与完成状态**：
+  - [x] 物理清退 `WorkFilterLanguage.cs` 中的分词与建议算法，DSL 语法补全由 Rust 统一保证语法规则单点真相。
+  - [x] 物理删除 11 个 `Work*FilterSyntax.cs` 及 `FilterSyntaxGenerator.cs`。
+  - [x] Rust 单元测试（9 项）与 .NET 测试（314 项）全部通过，全工程 0 错误编译通过。
 
 #### 5.6 主页卡片配置持久化与布局状态机下沉 (Home Card Layout State Machine & Metadata Sinking)
 - **痛点与现状**：

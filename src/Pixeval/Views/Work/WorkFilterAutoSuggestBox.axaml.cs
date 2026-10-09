@@ -171,7 +171,7 @@ public partial class WorkFilterAutoSuggestBox : UserControl
         if (completion is null)
             return false;
 
-        var insertText = completion.InsertText;
+        var completedText = completion.CompletedText;
         _isCommittingFilterCompletion = true;
         try
         {
@@ -181,7 +181,7 @@ public partial class WorkFilterAutoSuggestBox : UserControl
             FilterAutoSuggestBox.ItemsSource = Array.Empty<FilterCompletionItem>();
             FilterAutoSuggestBox.IsDropDownOpen = false;
             if (!completion.IsHintOnly)
-                Text = insertText;
+                Text = completedText;
         }
         finally
         {
@@ -199,7 +199,7 @@ public partial class WorkFilterAutoSuggestBox : UserControl
         if (GetFilterTextBox() is { } textBox)
         {
             _ = textBox.Focus();
-            textBox.CaretIndex = insertText.Length;
+            textBox.CaretIndex = completedText.Length;
             textBox.SelectionStart = textBox.CaretIndex;
             textBox.SelectionEnd = textBox.CaretIndex;
         }
@@ -230,8 +230,7 @@ public partial class WorkFilterAutoSuggestBox : UserControl
         var normalized = text ?? "";
         analysis ??= Analyze(normalized, GetCaretIndex(normalized));
         var suggestions = analysis.Completions
-            .Select(completion => completion with { InsertText = ApplyCompletion(normalized, completion) })
-            .Where(completion => completion.IsHintOnly || !string.Equals(completion.InsertText, normalized, StringComparison.Ordinal))
+            .Where(completion => completion.IsHintOnly || !string.Equals(completion.CompletedText, normalized, StringComparison.Ordinal))
             .ToArray();
 
         var suggestionsChanged = !_filterCompletionItems.SequenceEqual(suggestions);
@@ -265,13 +264,6 @@ public partial class WorkFilterAutoSuggestBox : UserControl
     private FilterCompletionItem? GetActiveFilterCompletion()
         => FilterAutoSuggestBox.SelectedItem as FilterCompletionItem
            ?? _filterSuggestionItemsControl?.SelectedItem as FilterCompletionItem;
-
-    private static string ApplyCompletion(string source, FilterCompletionItem completion)
-    {
-        var start = int.Clamp(completion.ReplacementSpan.Start, 0, source.Length);
-        var end = int.Clamp(completion.ReplacementSpan.End(), start, source.Length);
-        return string.Concat(source.AsSpan(0, start), completion.InsertText, source.AsSpan(end));
-    }
 
     private TextBox? GetFilterTextBox()
         => _filterTextBox ??= FilterAutoSuggestBox.GetVisualDescendants().OfType<TextBox>().FirstOrDefault();

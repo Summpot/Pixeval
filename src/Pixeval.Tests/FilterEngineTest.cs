@@ -102,4 +102,94 @@ public sealed class FilterEngineTest
         Assert.IsNotNull(result.Query);
         Assert.AreEqual(0, result.Diagnostics.Count);
     }
+
+    private sealed class MockFilterStorageProvider : IFilterStorageProvider
+    {
+        public List<TagCandidate> QuerySearchHistoryTags(string pattern, uint limit)
+        {
+            if ("genshin".Contains(pattern.ToLowerInvariant()))
+                return [new TagCandidate("genshin", "原神")];
+            return [];
+        }
+
+        public List<AuthorCandidate> QuerySubscriptionAuthors(string pattern, uint limit)
+        {
+            if ("artist".Contains(pattern.ToLowerInvariant()))
+                return [new AuthorCandidate("artist_one", "art_acc")];
+            return [];
+        }
+    }
+
+    [TestMethod]
+    public void FilterCompletionEngineShouldProvideContextAwareCompletionsAndCompletedText()
+    {
+        var engine = new FilterCompletionEngine();
+        engine.SetSessionCandidates(
+            tags: [new ArtworkTag("touhou", "东方"), new ArtworkTag("genshin", null)],
+            authors: [new AuthorCandidate("Alice", "alice_acc"), new AuthorCandidate("Bob", null)]);
+
+        // 1. Tag prefix completion
+        var tagResult = engine.Analyze("#tou", 4);
+        Assert.IsTrue(tagResult.Completions.Count > 0);
+        var touhouItem = tagResult.Completions.Find(c => c.DisplayText == "touhou");
+        Assert.IsNotNull(touhouItem);
+        Assert.AreEqual("touhou", touhouItem.InsertText);
+        Assert.AreEqual("#touhou", touhouItem.CompletedText);
+        Assert.AreEqual(FilterCompletionKind.Value, touhouItem.Kind);
+
+        // 2. Author prefix completion
+        var authorResult = engine.Analyze("@Al", 3);
+        Assert.IsTrue(authorResult.Completions.Count > 0);
+        var aliceItem = authorResult.Completions.Find(c => c.DisplayText == "Alice");
+        Assert.IsNotNull(aliceItem);
+        Assert.AreEqual("Alice", aliceItem.InsertText);
+        Assert.AreEqual("@Alice", aliceItem.CompletedText);
+        Assert.AreEqual(FilterCompletionKind.Value, aliceItem.Kind);
+
+        // 3. Empty input suggestions
+        var emptyResult = engine.Analyze("", 0);
+        Assert.IsTrue(emptyResult.Completions.Count > 0);
+        Assert.IsTrue(emptyResult.Completions.Exists(c => c.DisplayText == "and"));
+        Assert.IsTrue(emptyResult.Completions.Exists(c => c.DisplayText == "+ai"));
+    }
+
+    [TestMethod]
+    public void FilterCompletionEngineShouldIntegrateStorageProvider()
+    {
+        var provider = new MockFilterStorageProvider();
+        var engine = FilterCompletionEngine.WithProvider(provider, null);
+
+        var result = engine.Analyze("#gen", 4);
+        Assert.IsTrue(result.Completions.Count > 0);
+        var item = result.Completions.Find(c => c.DisplayText == "genshin");
+        Assert.IsNotNull(item);
+        Assert.AreEqual("genshin", item.InsertText);
+        Assert.AreEqual("#genshin", item.CompletedText);
+        Assert.AreEqual("原神", item.Description);
+    }
+
+    [TestMethod]
+    public void FilterCompletionEngineShouldFilterArtworksBatch()
+    {
+        var engine = new FilterCompletionEngine();
+        var matchingWork = new ArtworkMetadata(
+            Id: "1",
+            Title: "Blue Sky",
+            AuthorName: "Alice",
+            AuthorAccount: "alice",
+            Tags: [new ArtworkTag("sky", "天空")],
+            TotalBookmarks: 200,
+            CreateDateTimestamp: 1700000000,
+            Width: 1920,
+            Height: 1080,
+            XRestrict: 0,
+            AiType: 1,
+            IllustrationType: 0);
+        var nonMatchingWork = matchingWork with { AiType = 0 };
+
+        var matches = engine.FilterArtworks("#sky +ai", [matchingWork, nonMatchingWork]);
+        Assert.AreEqual(2, matches.Count);
+        Assert.IsTrue(matches[0]);
+        Assert.IsFalse(matches[1]);
+    }
 }

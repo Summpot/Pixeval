@@ -7,4 +7,5 @@ edition = "2024"
 thiserror.workspace = true
 chrono.workspace = true
 regex.workspace = true
+parking_lot.workspace = true
 uniffi.workspace = true

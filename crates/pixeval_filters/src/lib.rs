@@ -1,8 +1,10 @@
 uniffi::setup_scaffolding!();
 
 pub mod ast;
+pub mod builtin;
 pub mod completions;
 pub mod diagnostics;
+pub mod engine;
 pub mod eval;
 pub mod language;
 pub mod parser;
@@ -11,8 +13,10 @@ pub mod text;
 pub mod values;
 
 pub use ast::*;
+pub use builtin::*;
 pub use completions::*;
 pub use diagnostics::*;
+pub use engine::*;
 pub use eval::*;
 pub use language::*;
 pub use parser::*;
@@ -384,5 +388,100 @@ mod tests {
         let res_non_leap = lang.analyze("s:2025-2-29", -1, None);
         assert!(!res_non_leap.is_success);
         assert!(res_non_leap.diagnostics.iter().any(|d| d.kind == FilterDiagnosticKind::InvalidDate));
+    }
+
+    #[test]
+    fn test_filter_completion_engine_builtin_syntax() {
+        let engine = FilterCompletionEngine::new();
+        let res = engine.analyze("#sky @Alice +ai".to_string(), -1);
+        assert!(res.is_success);
+        assert!(res.has_query);
+        assert!(res.query_handle.is_some());
+
+        let work = ArtworkMetadata {
+            id: "1".to_string(),
+            title: "Blue Sky".to_string(),
+            author_name: "Alice".to_string(),
+            author_account: "alice01".to_string(),
+            tags: vec![ArtworkTag::new("sky", Some("空".to_string()))],
+            total_bookmarks: 150,
+            create_date_timestamp: 1704067200,
+            width: 1920,
+            height: 1080,
+            x_restrict: 0,
+            ai_type: 1,
+            illustration_type: 0,
+        };
+
+        let filter_res = engine.filter_artworks("#sky @Alice +ai".to_string(), vec![work.clone()]);
+        assert_eq!(filter_res, vec![true]);
+    }
+
+    #[test]
+    fn test_filter_completion_engine_context_and_completed_text() {
+        let engine = FilterCompletionEngine::new();
+        engine.set_session_candidates(
+            vec![
+                ArtworkTag::new("touhou", Some("东方".to_string())),
+                ArtworkTag::new("vocaloid", Some("初音未来".to_string())),
+            ],
+            vec![
+                AuthorCandidate::new("Alice", Some("alice_account".to_string())),
+            ],
+        );
+
+        // Caret on "#to" -> should complete to "#touhou"
+        let res = engine.analyze("#to".to_string(), 3);
+        assert!(!res.completions.is_empty());
+        let touhou_item = res.completions.iter().find(|c| c.display_text == "touhou");
+        assert!(touhou_item.is_some());
+        let item = touhou_item.unwrap();
+        assert_eq!(item.insert_text, "touhou");
+        assert_eq!(item.completed_text, "#touhou");
+        assert_eq!(item.kind, FilterCompletionKind::Value);
+
+        // Caret on "@Al" -> should complete to "@Alice"
+        let res_author = engine.analyze("@Al".to_string(), 3);
+        assert!(!res_author.completions.is_empty());
+        let alice_item = res_author.completions.iter().find(|c| c.display_text == "Alice");
+        assert!(alice_item.is_some());
+        let a_item = alice_item.unwrap();
+        assert_eq!(a_item.insert_text, "Alice");
+        assert_eq!(a_item.completed_text, "@Alice");
+        assert_eq!(a_item.kind, FilterCompletionKind::Value);
+
+        // Empty input -> keywords and operators
+        let res_empty = engine.analyze("".to_string(), 0);
+        assert!(!res_empty.completions.is_empty());
+        assert!(res_empty.completions.iter().any(|c| c.display_text == "and"));
+        assert!(res_empty.completions.iter().any(|c| c.display_text == "+ai"));
+    }
+
+    struct MockStorageProvider;
+    impl FilterStorageProvider for MockStorageProvider {
+        fn query_search_history_tags(&self, pattern: String, _limit: u32) -> Vec<TagCandidate> {
+            if "genshin".contains(&pattern.to_lowercase()) {
+                vec![TagCandidate::new("genshin", Some("原神".to_string()))]
+            } else {
+                vec![]
+            }
+        }
+
+        fn query_subscription_authors(&self, _pattern: String, _limit: u32) -> Vec<AuthorCandidate> {
+            vec![]
+        }
+    }
+
+    #[test]
+    fn test_filter_completion_engine_storage_history() {
+        let engine = FilterCompletionEngine::with_provider(Some(Box::new(MockStorageProvider)), None);
+        let res = engine.analyze("#gen".to_string(), 4);
+        assert!(!res.completions.is_empty());
+        let genshin_item = res.completions.iter().find(|c| c.display_text == "genshin");
+        assert!(genshin_item.is_some());
+        let g = genshin_item.unwrap();
+        assert_eq!(g.insert_text, "genshin");
+        assert_eq!(g.completed_text, "#genshin");
+        assert_eq!(g.description.as_deref(), Some("原神"));
     }
 }

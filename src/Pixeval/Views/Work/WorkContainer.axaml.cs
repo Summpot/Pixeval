@@ -17,7 +17,7 @@ using Misaki;
 using Pixeval.Collections;
 using Pixeval.Controls;
 using Pixeval.Filters;
-using Pixeval.Filters.Analysis;
+using Pixeval.Native.Filters;
 using Pixeval.I18N;
 using Pixeval.Models.Filters;
 using Pixeval.Models.Options;
@@ -37,8 +37,6 @@ public partial class WorkContainer : UserControl
 
     private IReadOnlyCollection<IArtworkInfo>? _filterCompletionSource;
     private int _filterCompletionSourceCount = -1;
-    private IReadOnlyList<FilterCompletionDefinition> _tagValueCompletions = [];
-    private IReadOnlyList<FilterCompletionDefinition> _authorValueCompletions = [];
 
     public static readonly DirectProperty<WorkContainer, bool> IsRefreshEnabledProperty = AvaloniaProperty.RegisterDirect<WorkContainer, bool>(
         nameof(IsRefreshEnabled),
@@ -298,20 +296,11 @@ public partial class WorkContainer : UserControl
     }
 
     private FilterAnalysisResult AnalyzeFilter(string? text, int caret)
-        => WorkFilterLanguage.Instance.Analyze(text ?? string.Empty, caret, GetFilterValueCompletions);
-
-    private IReadOnlyList<FilterCompletionDefinition> GetFilterValueCompletions(FilterValueCompletionContext context)
     {
-        if (DataContext is not IOperableViewViewModel { Source.Count: > 0 } viewModel)
-            return [];
+        if (DataContext is IOperableViewViewModel { Source.Count: > 0 } viewModel)
+            EnsureFilterValueCompletions(viewModel.Source);
 
-        EnsureFilterValueCompletions(viewModel.Source);
-        return context.MatchSyntaxKey switch
-        {
-            WorkTagFilterSyntax.KeyConst => _tagValueCompletions,
-            WorkAuthorFilterSyntax.KeyConst => _authorValueCompletions,
-            _ => []
-        };
+        return WorkFilterLanguage.CompletionEngine.Analyze(text ?? string.Empty, caret);
     }
 
     private void EnsureFilterValueCompletions(IReadOnlyCollection<IArtworkInfo> source)
@@ -319,42 +308,16 @@ public partial class WorkContainer : UserControl
         if (ReferenceEquals(_filterCompletionSource, source) && _filterCompletionSourceCount == source.Count)
             return;
 
-        var tags = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        var authors = new HashSet<IUser>();
-        foreach (var work in source)
-        {
-            foreach (var author in work.Authors)
-                _ = authors.Add(author);
-
-            foreach (var tagGroup in work.Tags)
-            {
-                foreach (var tag in tagGroup)
-                {
-                    if (string.IsNullOrWhiteSpace(tag.Name))
-                        continue;
-
-                    if (tags.TryGetValue(tag.Name, out var description) && !string.IsNullOrWhiteSpace(description))
-                        continue;
-
-                    tags[tag.Name] = string.IsNullOrWhiteSpace(tag.TranslatedName) || string.Equals(tag.Name, tag.TranslatedName, StringComparison.OrdinalIgnoreCase)
-                        ? null
-                        : tag.TranslatedName;
-                }
-            }
-        }
-
-        _tagValueCompletions = [.. tags.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase).Select(pair => new FilterCompletionDefinition($"tag:{pair.Key}", pair.Key, pair.Key, pair.Value))];
-        _authorValueCompletions = [.. authors.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase).Select(a => new FilterCompletionDefinition($"author:{a.Name}", a.Name, a.Name, (a as User)?.Account ?? (a as TokenUser)?.Account))];
         _filterCompletionSource = source;
         _filterCompletionSourceCount = source.Count;
+        WorkFilterLanguage.CompletionEngine.SetSessionArtworks(source.Select(w => w.ToArtworkMetadata()).ToList());
     }
 
     private void ResetFilterValueCompletions()
     {
         _filterCompletionSource = null;
         _filterCompletionSourceCount = -1;
-        _tagValueCompletions = [];
-        _authorValueCompletions = [];
+        WorkFilterLanguage.CompletionEngine.ClearSessionCandidates();
     }
 
     private static string FormatDiagnosticMessage(FilterAnalysisResult analysis)
