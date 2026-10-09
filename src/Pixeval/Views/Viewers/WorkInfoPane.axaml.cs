@@ -13,6 +13,7 @@ using Pixeval.AppManagement;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
+using Pixeval.Views.Capability;
 using Pixeval.Views.Search;
 
 namespace Pixeval.Views.Viewers;
@@ -54,12 +55,29 @@ public class WorkInfoPane : TemplatedControl
 
     public IRelayCommand<IUser?> BlockUserCommand { get; }
 
+    public IRelayCommand ViewLikedUsersCommand { get; }
+
     public WorkInfoPane()
     {
         OpenAuthorCommand = new AsyncRelayCommand<IUser?>(OpenAuthorAsync);
         OpenTagCommand = new RelayCommand<ITag?>(OpenTag);
         BlockTagCommand = new RelayCommand<ITag?>(BlockTag);
         BlockUserCommand = new RelayCommand<IUser?>(BlockUser);
+        ViewLikedUsersCommand = new RelayCommand(ViewLikedUsers);
+    }
+
+    private void ViewLikedUsers()
+    {
+        if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer
+            || ArtworkInfo is not IWorkEntry entry)
+            return;
+
+        var id = entry.Id;
+        if (id <= 0)
+            return;
+
+        var isNovel = entry is Pixeval.Native.Mako.Novel;
+        viewContainer.NavigateTo(new BookmarkUsersPage(id, isNovel, entry.Title));
     }
 
     private async Task OpenAuthorAsync(IUser? user)

@@ -155,7 +155,15 @@
 
                         <StackPanel Orientation="Horizontal" Spacing="20">
                             <controls:IconText Symbol="Eye" Text="{Binding TotalView, Converter={x:Static converters:PixevalConverters.IntToString}}" />
-                            <controls:IconText Symbol="Heart" Text="{Binding TotalFavorite, Converter={x:Static converters:PixevalConverters.IntToString}}" />
+                            <Button
+                                Padding="0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Command="{Binding $parent[viewers:WorkInfoPane].ViewLikedUsersCommand}"
+                                Cursor="Hand"
+                                ToolTip.Tip="查看收藏用户 / Liked Users">
+                                <controls:IconText Symbol="Heart" Text="{Binding TotalFavorite, Converter={x:Static converters:PixevalConverters.IntToString}}" />
+                            </Button>
                             <controls:IconText Symbol="Clock" Text="{Binding CreateDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}" />
                         </StackPanel>
 
@@ -271,7 +279,15 @@
 
                         <StackPanel Orientation="Horizontal" Spacing="20">
                             <controls:IconText Symbol="Eye" Text="{Binding TotalView, Converter={x:Static converters:PixevalConverters.IntToString}}" />
-                            <controls:IconText Symbol="Heart" Text="{Binding TotalFavorite, Converter={x:Static converters:PixevalConverters.IntToString}}" />
+                            <Button
+                                Padding="0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Command="{Binding $parent[viewers:WorkInfoPane].ViewLikedUsersCommand}"
+                                Cursor="Hand"
+                                ToolTip.Tip="查看收藏用户 / Liked Users">
+                                <controls:IconText Symbol="Heart" Text="{Binding TotalFavorite, Converter={x:Static converters:PixevalConverters.IntToString}}" />
+                            </Button>
                             <controls:IconText Symbol="Clock" Text="{Binding CreateDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}" />
                         </StackPanel>
 

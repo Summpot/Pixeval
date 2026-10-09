@@ -443,7 +443,7 @@ impl CacheEngine {
             req = req.header("Referer", "https://app-api.pixiv.net/");
         }
         if url.contains("pximg.net") || url.contains("pixiv.net") {
-            req = req.header("User-Agent", "PixivAndroidApp/6.140.2 (Android 15.0)");
+            req = req.header("User-Agent", "PixivAndroidApp/6.199.0 (Android 15.0; Pixel 8)");
         }
 
         let resp = req.send().await.map_err(|e| CacheError::Network {

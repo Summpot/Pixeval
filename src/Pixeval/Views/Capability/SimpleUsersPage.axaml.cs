@@ -142,3 +142,30 @@ public class RelatedUsersPage : SimpleUsersPage
         return makoClient.UserRelated(_userId);
     }
 }
+
+public class BookmarkUsersPage : SimpleUsersPage
+{
+    private readonly long _workId;
+    private readonly bool _isNovel;
+
+    public BookmarkUsersPage(long workId, bool isNovel, string workTitle)
+    {
+        _workId = workId;
+        _isNovel = isNovel;
+        Header = string.IsNullOrWhiteSpace(workTitle) ? "收藏用户" : $"{workTitle} - 收藏用户";
+        ChangeSource();
+    }
+
+    protected override async IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
+    {
+        if (_workId <= 0)
+            yield break;
+
+        var resp = _isNovel
+            ? await makoClient.GetNovelBookmarkUsersAsync(_workId)
+            : await makoClient.GetIllustBookmarkUsersAsync(_workId);
+
+        foreach (var user in resp.Users)
+            yield return user;
+    }
+}

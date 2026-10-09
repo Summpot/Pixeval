@@ -105,6 +105,9 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         // ReSharper disable once MemberInitializerValueIgnored
     } = -1;
 
+    private bool _suppressMarkerSync;
+    private CancellationTokenSource? _syncMarkerCts;
+
     public override int CurrentPageIndex
     {
         get;
@@ -120,7 +123,36 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             PrevCommand.NotifyCanExecuteChanged();
             NextWorkCommand.NotifyCanExecuteChanged();
             PrevWorkCommand.NotifyCanExecuteChanged();
+
+            if (!_suppressMarkerSync && CurrentNovel is { Entry.Id: var novelId } && novelId > 0 && PageCount > 0)
+            {
+                SyncMarkerDebounced(novelId, value);
+            }
         }
+    }
+
+    private void SyncMarkerDebounced(long novelId, int pageIndex)
+    {
+        _syncMarkerCts?.Cancel();
+        _syncMarkerCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        _syncMarkerCts = cts;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(1500, cts.Token);
+                if (cts.Token.IsCancellationRequested || _disposed)
+                    return;
+
+                await App.AppViewModel.MakoClient.AddNovelMarkerAsync(novelId, pageIndex + 1);
+            }
+            catch
+            {
+                // Silent cloud sync - non-intrusive
+            }
+        }, cts.Token);
     }
 
     public override int PageCount => _pageMarkdowns.Count;
@@ -216,9 +248,44 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
                     return;
 
                 _pageMarkdowns = markdowns;
-            }
 
-            CurrentPageIndex = 0;
+                var targetPage = 0;
+                if (content.Marker is { Page: > 0 } marker && marker.Page <= markdowns.Count)
+                {
+                    targetPage = marker.Page - 1;
+                }
+                else
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var markers = await App.AppViewModel.MakoClient.GetNovelMarkersAsync();
+                            var match = markers.MarkedNovels.FirstOrDefault(x => x.Novel.Id == currentNovel.Entry.Id);
+                            if (match is { NovelMarker: { Page: > 0 and var page } } && page <= _pageMarkdowns.Count)
+                            {
+                                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                                {
+                                    if (!_disposed && CurrentNovel?.Entry.Id == currentNovel.Entry.Id && CurrentPageIndex == 0)
+                                    {
+                                        _suppressMarkerSync = true;
+                                        CurrentPageIndex = page - 1;
+                                        _suppressMarkerSync = false;
+                                    }
+                                });
+                            }
+                        }
+                        catch
+                        {
+                            // Silent
+                        }
+                    });
+                }
+
+                _suppressMarkerSync = true;
+                CurrentPageIndex = targetPage;
+                _suppressMarkerSync = false;
+            }
             OnPropertyChanged(nameof(PageCount));
             OnPropertyChanged(nameof(IsMultiPage));
             OnPropertyChanged(nameof(CurrentNovel));
@@ -315,6 +382,8 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
         _disposed = true;
         IsLoading = false;
+        _syncMarkerCts?.Cancel();
+        _syncMarkerCts?.Dispose();
         _loadingCts.Cancel();
         _loadingCts.Dispose();
 

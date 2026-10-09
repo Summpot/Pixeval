@@ -5,6 +5,8 @@
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:enum="using:Pixeval.Models.Pixiv"
+    xmlns:mako="using:Pixeval.Native.Mako"
+    xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:views="using:Pixeval.Views"
@@ -12,15 +14,116 @@
     mc:Ignorable="d"
     d:DesignHeight="450"
     d:DesignWidth="800">
-    <work:WorkContainer x:Name="WorkContainer" IsRefreshEnabled="False">
-        <work:WorkContainer.CommandBarElements>
-            <controls:SymbolComboBox
-                x:Name="SimpleWorkTypeComboBox"
-                IsEnabled="False"
-                IsVisible="False"
-                ItemsSource="{markup1:EnumResources x:TypeArguments=enum:SimpleWorkType}"
-                SelectedValue="{x:Static views:PixevalSettings.SimpleWorkType}"
-                SelectionChanged="WorkTypeComboBox_OnSelectionChanged" />
-        </work:WorkContainer.CommandBarElements>
-    </work:WorkContainer>
+    <Grid RowDefinitions="Auto,*">
+        <!-- Top Horizontal Popular Preview Strip -->
+        <Border
+            x:Name="PopularPreviewContainer"
+            Grid.Row="0"
+            IsVisible="False"
+            Margin="10,6,10,6"
+            Padding="10,8"
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="8">
+            <DockPanel>
+                <StackPanel
+                    DockPanel.Dock="Top"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    Margin="2,0,0,8">
+                    <ContentControl
+                        Content="{markup:SymbolIcon Sparkle, FontSize=16, IconVariant=Color}"
+                        VerticalAlignment="Center" />
+                    <TextBlock
+                        Text="热门预览 (Popular Preview)"
+                        FontWeight="SemiBold"
+                        FontSize="13"
+                        VerticalAlignment="Center" />
+                </StackPanel>
+                <ScrollViewer
+                    HorizontalScrollBarVisibility="Auto"
+                    VerticalScrollBarVisibility="Disabled">
+                    <ItemsControl x:Name="PopularPreviewItemsControl">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="10" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.DataTemplates>
+                            <DataTemplate x:DataType="{x:Type mako:Illustration}">
+                                <Button
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Click="PopularPreviewItem_OnClick"
+                                    Cursor="Hand"
+                                    Theme="{StaticResource TransparentButtonStyle}">
+                                    <StackPanel Width="110" Spacing="4">
+                                        <Border
+                                            Width="110"
+                                            Height="110"
+                                            CornerRadius="6"
+                                            ClipToBounds="True"
+                                            Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                            <Image
+                                                controls:Source.Cache="{Binding ThumbnailUrl}"
+                                                Stretch="UniformToFill" />
+                                        </Border>
+                                        <TextBlock
+                                            Text="{Binding Title}"
+                                            FontSize="12"
+                                            MaxLines="1"
+                                            TextTrimming="CharacterEllipsis"
+                                            HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+
+                            <DataTemplate x:DataType="{x:Type mako:Novel}">
+                                <Button
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Click="PopularPreviewItem_OnClick"
+                                    Cursor="Hand"
+                                    Theme="{StaticResource TransparentButtonStyle}">
+                                    <StackPanel Width="110" Spacing="4">
+                                        <Border
+                                            Width="110"
+                                            Height="110"
+                                            CornerRadius="6"
+                                            ClipToBounds="True"
+                                            Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                            <Image
+                                                controls:Source.Cache="{Binding ThumbnailUrl}"
+                                                Stretch="UniformToFill" />
+                                        </Border>
+                                        <TextBlock
+                                            Text="{Binding Title}"
+                                            FontSize="12"
+                                            MaxLines="1"
+                                            TextTrimming="CharacterEllipsis"
+                                            HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.DataTemplates>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <work:WorkContainer Grid.Row="1" x:Name="WorkContainer" IsRefreshEnabled="False">
+            <work:WorkContainer.CommandBarElements>
+                <controls:SymbolComboBox
+                    x:Name="SimpleWorkTypeComboBox"
+                    IsEnabled="False"
+                    IsVisible="False"
+                    ItemsSource="{markup1:EnumResources x:TypeArguments=enum:SimpleWorkType}"
+                    SelectedValue="{x:Static views:PixevalSettings.SimpleWorkType}"
+                    SelectionChanged="WorkTypeComboBox_OnSelectionChanged" />
+            </work:WorkContainer.CommandBarElements>
+        </work:WorkContainer>
+    </Grid>
 </views:IconContentPage>

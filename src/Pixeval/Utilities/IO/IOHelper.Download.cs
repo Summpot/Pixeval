@@ -46,7 +46,7 @@ public static partial class IoHelper
                 request.Headers.Referrer ??= new Uri("https://app-api.pixiv.net/");
                 if (request.Headers.UserAgent.Count == 0)
                 {
-                    request.Headers.TryAddWithoutValidation("User-Agent", "PixivAndroidApp/6.140.2 (Android 15.0)");
+                    request.Headers.TryAddWithoutValidation("User-Agent", "PixivAndroidApp/6.199.0 (Android 15.0; Pixel 8)");
                 }
             }
 

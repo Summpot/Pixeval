@@ -78,7 +78,7 @@ public sealed class PixivArtworkService : IGetArtworkService, IDownloadHttpClien
         var settings = _networkSettings ?? App.AppViewModel?.AppSettings?.NetworkSettings;
         var client = _mahoTransport.CreateHttpClient(networkSettings: settings);
         client.DefaultRequestHeaders.Referrer = new Uri("https://app-api.pixiv.net/");
-        client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "PixivAndroidApp/6.140.2 (Android 15.0)");
+        client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "PixivAndroidApp/6.199.0 (Android 15.0; Pixel 8)");
         return client;
     }
 

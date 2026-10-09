@@ -178,7 +178,7 @@ impl MahoHttpClient {
         Self {
             inner,
             config,
-            default_user_agent: "PixivAndroidApp/6.140.2 (Android 15.0)".to_string(),
+            default_user_agent: "PixivAndroidApp/6.199.0 (Android 15.0; Pixel 8)".to_string(),
         }
     }
 

@@ -167,7 +167,7 @@ impl DownloadManager {
                 let send_future = client
                     .get(&url)
                     .header("Referer", "https://app-api.pixiv.net/")
-                    .header("User-Agent", "PixivAndroidApp/6.140.2 (Android 15.0)")
+                    .header("User-Agent", "PixivAndroidApp/6.199.0 (Android 15.0; Pixel 8)")
                     .send();
 
                 let response = tokio::select! {

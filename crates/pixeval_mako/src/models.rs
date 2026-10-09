@@ -1017,6 +1017,106 @@ pub struct NovelSearchParams {
     pub end_date: Option<String>,
 }
 
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
+pub struct SearchPopularPreviewIllustsResponse {
+    #[serde(default)]
+    pub illusts: Vec<Illustration>,
+}
 
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
+pub struct SearchPopularPreviewNovelsResponse {
+    #[serde(default)]
+    pub novels: Vec<Novel>,
+}
 
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
+pub struct MarkedNovel {
+    pub novel: Novel,
+    pub novel_marker: NovelMarker,
+}
 
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
+pub struct MarkedNovelsResponse {
+    #[serde(default)]
+    pub marked_novels: Vec<MarkedNovel>,
+    pub next_url: Option<String>,
+}
+
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct LikedWorkUsersResponse {
+    #[serde(default)]
+    pub users: Vec<User>,
+    pub next_url: Option<String>,
+}
+
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct MutedTagItem {
+    pub tag: Tag,
+    #[serde(default)]
+    pub is_premium_slot: bool,
+}
+
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct MutedUserItem {
+    pub user: User,
+}
+
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct MuteListResponse {
+    #[serde(default)]
+    pub muted_tags: Vec<MutedTagItem>,
+    #[serde(default)]
+    pub muted_users: Vec<MutedUserItem>,
+    #[serde(default)]
+    pub mute_limit_count: i32,
+}
+
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct StampItem {
+    pub stamp_id: i32,
+    pub stamp_url: String,
+}
+
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct StampListResponse {
+    #[serde(default)]
+    pub stamps: Vec<StampItem>,
+}
+
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct EmojiItem {
+    pub id: i32,
+    pub slug: String,
+    pub image_url_medium: String,
+}
+
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct EmojiResponse {
+    #[serde(default)]
+    pub emoji_definitions: Vec<EmojiItem>,
+}
+
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
+pub struct IllustBrowsingHistoryResponse {
+    #[serde(default)]
+    pub illusts: Vec<Illustration>,
+    pub next_url: Option<String>,
+}
+
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
+pub struct NovelBrowsingHistoryResponse {
+    #[serde(default)]
+    pub novels: Vec<Novel>,
+    pub next_url: Option<String>,
+}
+
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct FollowDetail {
+    pub is_followed: bool,
+    pub restrict: Option<String>,
+}
+
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct FollowUserDetailResponse {
+    pub follow_detail: FollowDetail,
+}

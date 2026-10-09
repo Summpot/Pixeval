@@ -708,6 +708,26 @@ public static class MakoHelper
         foreach (var tag in tags)
             yield return tag;
     }
+
+    public static IFetchEngine<IArtworkInfo> SearchBookmarkWorks(
+        this MakoClient client,
+        SimpleWorkType type,
+        PrivacyPolicy policy = PrivacyPolicy.Public,
+        string? bookmarkTag = null,
+        string? workTag = null,
+        string? bookmarkPeriod = null,
+        string? order = null)
+    {
+        var restrict = policy is PrivacyPolicy.Private ? "private" : "public";
+        return (type is SimpleWorkType.Novel
+            ? (IAsyncEnumerable<IArtworkInfo>) client.SearchBookmarkNovel(restrict, bookmarkTag, workTag, bookmarkPeriod, order)
+            : client.SearchBookmarkIllust(restrict, bookmarkTag, workTag, bookmarkPeriod, order)).ToFetchEngine();
+    }
+
+    public static IFetchEngine<IArtworkInfo> WorkBrowsingHistory(this MakoClient client, SimpleWorkType type) =>
+        (type is SimpleWorkType.Novel
+            ? (IAsyncEnumerable<IArtworkInfo>) client.BrowsingHistoryNovels()
+            : client.BrowsingHistoryIllusts()).ToFetchEngine();
 }
 
 public record AddNewBookmarkTag() : BookmarkTag("", 0, false)

@@ -168,9 +168,12 @@ impl OAuthManager {
             ("include_policy", "true"),
         ];
 
+        let (client_time, client_hash) = crate::client::compute_client_hash();
         let resp = client
             .post(OAUTH_URL)
-            .header("User-Agent", "PixivAndroidApp/6.140.2 (Android 15.0)")
+            .header("User-Agent", "PixivAndroidApp/6.199.0 (Android 15.0; Pixel 8)")
+            .header("X-Client-Time", client_time)
+            .header("X-Client-Hash", client_hash)
             .form(&params)
             .send()
             .await?;
@@ -203,9 +206,12 @@ impl OAuthManager {
             ("include_policy", "true"),
         ];
 
+        let (client_time, client_hash) = crate::client::compute_client_hash();
         let resp = client
             .post(OAUTH_URL)
-            .header("User-Agent", "PixivAndroidApp/6.140.2 (Android 15.0)")
+            .header("User-Agent", "PixivAndroidApp/6.199.0 (Android 15.0; Pixel 8)")
+            .header("X-Client-Time", client_time)
+            .header("X-Client-Hash", client_hash)
             .form(&params)
             .send()
             .await?;
