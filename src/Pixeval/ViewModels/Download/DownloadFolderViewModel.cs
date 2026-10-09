@@ -6,32 +6,30 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using CommunityToolkit.Mvvm.ComponentModel;
 using Pixeval.Controls;
 using Pixeval.Download;
 using Pixeval.I18N;
 using Pixeval.Models.Options;
 using Pixeval.Models.Subscriptions;
 using Pixeval.Native.Storage;
+using Pixeval.Native.Subscription;
 
 namespace Pixeval.ViewModels;
 
-public sealed partial class DownloadFolderViewModel(WorkSubscriptionRecord subscription)
-    : ViewModelBase, IDownloadListEntryViewModel, IDisposable
+public sealed partial class DownloadFolderViewModel : ViewModelBase, IDisposable
 {
     private bool _isDisposed;
 
-    public WorkSubscriptionRecord Subscription { get; private set; } = subscription;
-
+    public WorkSubscriptionRecord Subscription { get; private set; }
     public ObservableCollection<DownloadItemViewModel> Items { get; } = [];
-
     public IReadOnlyList<DownloadItemViewModel> DownloadItems => Items;
+    public SubscriptionFolderSnapshot Snapshot { get; private set; }
 
-    [ObservableProperty] public partial bool IsFetching { get; private set; }
-
-    [ObservableProperty] public partial int FetchedCount { get; private set; }
-
-    [ObservableProperty] public partial DateTimeOffset? RetryAt { get; private set; }
+    public DownloadFolderViewModel(WorkSubscriptionRecord subscription)
+    {
+        Subscription = subscription;
+        Snapshot = PixevalSubscriptionMethods.ComputeSubscriptionFolderSnapshot(subscription.HistoryEntryId, [], false, 0, null);
+    }
 
     public string Title => GetDisplayName(Subscription);
 
@@ -40,97 +38,21 @@ public sealed partial class DownloadFolderViewModel(WorkSubscriptionRecord subsc
         $"{SymbolComboBoxItem.GetResource(subscription.Type)} · " +
         $"{SymbolComboBoxItem.GetResource(subscription.Kind)}";
 
-    public string Subtitle => IsFetching
+    public string Subtitle => Snapshot.IsFetching
         ? RetryAt is { } retryAt && retryAt > DateTimeOffset.UtcNow
-            ? I18NManager.GetResource(DownloadPageResources.RateLimitedFolderSubtitleFormatted, FetchedCount, retryAt.ToLocalTime())
-            : I18NManager.GetResource(DownloadPageResources.FetchingFolderSubtitleFormatted, FetchedCount)
+            ? I18NManager.GetResource(DownloadPageResources.RateLimitedFolderSubtitleFormatted, (int)Snapshot.FetchedCount, retryAt.ToLocalTime())
+            : I18NManager.GetResource(DownloadPageResources.FetchingFolderSubtitleFormatted, (int)Snapshot.FetchedCount)
         : I18NManager.GetResource(DownloadPageResources.FolderSubtitleFormatted, Items.Count);
 
     public bool HasItems => Items.Count is not 0;
-
-    public DownloadState CurrentState
-    {
-        get
-        {
-            if (Items.Count is 0)
-                return DownloadState.Completed;
-
-            var hasError = false;
-            var hasCancelled = false;
-            var hasPaused = false;
-            var hasRunning = false;
-            var hasQueued = false;
-            var hasPending = false;
-
-            for (var i = 0; i < Items.Count; i++)
-            {
-                switch (Items[i].CurrentState)
-                {
-                    case DownloadState.Error: hasError = true; break;
-                    case DownloadState.Cancelled: hasCancelled = true; break;
-                    case DownloadState.Paused: hasPaused = true; break;
-                    case DownloadState.Running: hasRunning = true; break;
-                    case DownloadState.Queued: hasQueued = true; break;
-                    case DownloadState.Pending: hasPending = true; break;
-                }
-            }
-
-            if (hasError) return DownloadState.Error;
-            if (hasCancelled) return DownloadState.Cancelled;
-            if (hasPaused) return DownloadState.Paused;
-            if (hasRunning) return DownloadState.Running;
-            if (hasQueued) return DownloadState.Queued;
-            if (hasPending) return DownloadState.Pending;
-            return DownloadState.Completed;
-        }
-    }
-
-    public int ActiveCount
-    {
-        get
-        {
-            var sum = 0;
-            for (var i = 0; i < Items.Count; i++)
-                sum += Items[i].DownloadTask.ActiveCount;
-            return sum;
-        }
-    }
-
-    public int CompletedCount
-    {
-        get
-        {
-            var sum = 0;
-            for (var i = 0; i < Items.Count; i++)
-                sum += Items[i].DownloadTask.CompletedCount;
-            return sum;
-        }
-    }
-
-    public int ErrorCount
-    {
-        get
-        {
-            var sum = 0;
-            for (var i = 0; i < Items.Count; i++)
-                sum += Items[i].DownloadTask.ErrorCount;
-            return sum;
-        }
-    }
-
-    public double ProgressPercentage
-    {
-        get
-        {
-            if (Items.Count is 0)
-                return 100;
-
-            var sum = 0.0;
-            for (var i = 0; i < Items.Count; i++)
-                sum += Items[i].DownloadTask.ProgressPercentage;
-            return sum / Items.Count;
-        }
-    }
+    public DownloadState CurrentState => (DownloadState)Snapshot.CurrentState;
+    public int ActiveCount => (int)Snapshot.ActiveCount;
+    public int CompletedCount => (int)Snapshot.CompletedCount;
+    public int ErrorCount => (int)Snapshot.ErrorCount;
+    public double ProgressPercentage => Snapshot.ProgressPercentage;
+    public bool IsFetching => Snapshot.IsFetching;
+    public int FetchedCount => (int)Snapshot.FetchedCount;
+    public DateTimeOffset? RetryAt => Snapshot.RetryAtTimestamp is { } ts ? DateTimeOffset.FromUnixTimeSeconds(ts) : null;
 
     public string StateBrushKey => CurrentState switch
     {
@@ -143,36 +65,36 @@ public sealed partial class DownloadFolderViewModel(WorkSubscriptionRecord subsc
         Title.Contains(key, StringComparison.OrdinalIgnoreCase)
         || Items.Any(t => t.MatchesSearch(key));
 
-    public bool MatchesOption(DownloadListOption option, ISet<IDownloadListEntryViewModel>? customSearchResult) => option switch
+    public bool MatchesOption(DownloadListOption option, ISet<DownloadItemViewModel>? customSearchResult) => option switch
     {
         DownloadListOption.AllQueued => true,
-        DownloadListOption.CustomSearch => customSearchResult?.Contains(this) ?? true,
+        DownloadListOption.CustomSearch => customSearchResult?.Any(t => Items.Contains(t)) ?? true,
         _ => Items.Any(t => t.MatchesOption(option, null))
     };
 
-    partial void OnIsFetchingChanged(bool value) => OnPropertyChanged(nameof(Subtitle));
+    private void RecomputeSnapshot(bool? isFetching = null, uint? fetchedCount = null, long? retryAtTimestamp = null)
+    {
+        var fetch = isFetching ?? Snapshot.IsFetching;
+        var count = fetchedCount ?? Snapshot.FetchedCount;
+        var retry = retryAtTimestamp ?? Snapshot.RetryAtTimestamp;
 
-    partial void OnFetchedCountChanged(int value) => OnPropertyChanged(nameof(Subtitle));
+        var dtos = Items.Select(i => new FolderTaskItemState(
+            (uint)i.CurrentState,
+            i.DownloadTask.ProgressPercentage,
+            (uint)i.DownloadTask.ActiveCount,
+            (uint)i.DownloadTask.CompletedCount,
+            (uint)i.DownloadTask.ErrorCount)).ToList();
 
-    partial void OnRetryAtChanged(DateTimeOffset? value) => OnPropertyChanged(nameof(Subtitle));
+        Snapshot = PixevalSubscriptionMethods.ComputeSubscriptionFolderSnapshot(Subscription.HistoryEntryId, dtos, fetch, count, retry);
+        OnPropertyChanged(string.Empty);
+    }
 
     internal void UpdateFetchState(SubscriptionFetchState? state)
     {
-        if (state is not
-            {
-                IsFetching: true,
-                WorkSubscriptionId: var workSubscriptionId
-            } || workSubscriptionId != Subscription.HistoryEntryId)
-        {
-            IsFetching = false;
-            FetchedCount = 0;
-            RetryAt = null;
-            return;
-        }
-
-        FetchedCount = state.FetchedCount;
-        RetryAt = state.RetryAt;
-        IsFetching = true;
+        if (state is { IsFetching: true, WorkSubscriptionId: var id } && id == Subscription.HistoryEntryId)
+            RecomputeSnapshot(true, (uint)state.FetchedCount, state.RetryAt?.ToUnixTimeSeconds());
+        else
+            RecomputeSnapshot(false, 0, null);
     }
 
     internal void UpdateSubscription(WorkSubscriptionRecord subscription)
@@ -184,64 +106,30 @@ public sealed partial class DownloadFolderViewModel(WorkSubscriptionRecord subsc
 
     public void Add(DownloadItemViewModel item, bool insertAtFront)
     {
-        if (insertAtFront)
-            Items.Insert(0, item);
-        else
-            Items.Add(item);
+        if (insertAtFront) Items.Insert(0, item); else Items.Add(item);
         item.DownloadTask.PropertyChanged += DownloadTaskOnPropertyChanged;
-        OnItemsChanged();
+        RecomputeSnapshot();
     }
 
     public bool Remove(DownloadItemViewModel item)
     {
-        if (!Items.Remove(item))
-            return false;
-
+        if (!Items.Remove(item)) return false;
         item.DownloadTask.PropertyChanged -= DownloadTaskOnPropertyChanged;
-        OnItemsChanged();
+        RecomputeSnapshot();
         return true;
     }
 
     private void DownloadTaskOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (_isDisposed)
-            return;
-
-        if (e.PropertyName is nameof(IDownloadTaskBase.CurrentState))
-        {
-            OnPropertyChanged(nameof(CurrentState));
-            OnPropertyChanged(nameof(StateBrushKey));
-            OnPropertyChanged(nameof(ActiveCount));
-            OnPropertyChanged(nameof(CompletedCount));
-            OnPropertyChanged(nameof(ErrorCount));
-        }
-
-        if (e.PropertyName is nameof(IDownloadTaskBase.CurrentState)
-            or nameof(IDownloadTaskBase.ProgressPercentage))
-            OnPropertyChanged(nameof(ProgressPercentage));
-    }
-
-    private void OnItemsChanged()
-    {
-        OnPropertyChanged(nameof(DownloadItems));
-        OnPropertyChanged(nameof(Subtitle));
-        OnPropertyChanged(nameof(HasItems));
-        OnPropertyChanged(nameof(CurrentState));
-        OnPropertyChanged(nameof(StateBrushKey));
-        OnPropertyChanged(nameof(ActiveCount));
-        OnPropertyChanged(nameof(CompletedCount));
-        OnPropertyChanged(nameof(ErrorCount));
-        OnPropertyChanged(nameof(ProgressPercentage));
+        if (!_isDisposed && e.PropertyName is nameof(IDownloadTaskBase.CurrentState) or nameof(IDownloadTaskBase.ProgressPercentage))
+            RecomputeSnapshot();
     }
 
     public void Dispose()
     {
-        if (_isDisposed)
-            return;
-
+        if (_isDisposed) return;
         _isDisposed = true;
-        foreach (var item in Items)
-            item.DownloadTask.PropertyChanged -= DownloadTaskOnPropertyChanged;
+        foreach (var item in Items) item.DownloadTask.PropertyChanged -= DownloadTaskOnPropertyChanged;
         Items.Clear();
     }
 }

@@ -243,18 +243,17 @@ public partial class DownloadItemView : ContentPage, IDisposable
         _subscribedItemsSource = null;
     }
 
-    private IReadOnlyList<IDownloadListEntryViewModel> GetSelectedEntries() =>
-        [.. ListBox.SelectedItems?.OfType<IDownloadListEntryViewModel>() ?? []];
+    private IReadOnlyList<DownloadItemViewModel> GetSelectedEntries() =>
+        [.. ListBox.SelectedItems?.OfType<DownloadItemViewModel>() ?? []];
 
     private void ExecuteForSelectedDownloadTasks(Action<DownloadItemViewModel> action)
     {
         foreach (var item in GetSelectedEntries())
-        foreach (var downloadItem in item.DownloadItems)
-            action(downloadItem);
+            action(item);
     }
 
     private void ListBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e) =>
-        SelectedCount = ListBox.SelectedItems?.OfType<IDownloadListEntryViewModel>().Count() ?? 0;
+        SelectedCount = ListBox.SelectedItems?.OfType<DownloadItemViewModel>().Count() ?? 0;
 
     /// <inheritdoc />
     public void Dispose()

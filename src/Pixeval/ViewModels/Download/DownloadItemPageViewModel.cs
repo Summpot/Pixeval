@@ -63,9 +63,7 @@ public sealed partial class DownloadItemPageViewModel : ViewModelBase, IDisposab
         if (_isDisposed)
             return;
 
-        var filterSource = customSearchResult?
-            .Cast<IDownloadListEntryViewModel>()
-            .ToHashSet();
+        var filterSource = customSearchResult?.ToHashSet();
         using (View.DeferFiltersChange())
         {
             View.Filters.Clear();

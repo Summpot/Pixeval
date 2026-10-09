@@ -354,6 +354,8 @@ flowchart TD
    - 彻底下沉 foyer 混合存储与 SIMD 平面通道 LZ4 零拷贝管线，Mako 全面接驳 Maho 抗审查传输。
 4. **第四优先级：业务仓储闭环、MCP 全量恢复与网络韧性 (Phase 3 全量) [已完成]**
    - 彻底清退 C# 26 个 PersistentManager 与 Imouto/SharpYaml 外部依赖，原生激活 MCP 与动态库插件宿主。
-5. **当前最高优先级：表现层极致瘦身——ViewModel 彻底去业务化 (Phase 4.1) [下一步启动]**
-   - **理由**：底层能力已 100% 原生就绪，表现层依然残留着实体二次包装、手写字典排序、LINQ 轮询求和与 UI 控件倒置等反模式，严重制约长列表性能并带来状态分叉风险。
-   - **核心攻坚**：全面清退所有 `*ItemViewModel` 实体包装类，XAML 直连 `Pixeval.Native.*`；将下载聚合与状态机收敛进 Tokio；拔除 ViewModel 内所有的 UI 控件实例化代码，彻底实现纯粹的 Reactive Binding。
+5. **表现层极致瘦身——ViewModel 彻底去业务化 (Phase 4.1) [已完成]**
+   - **成果**：底层 Rust 原生导出 `SubscriptionFolderSnapshot` 聚合快照；物理删除 `IDownloadListEntryViewModel`；`DownloadFolderViewModel` 移除所有 LINQ/Sum 循环；`DownloadPageViewModel` 清退双重字典与手动排序；`AppViewModel` 清退 26 个持久化双向监听器、脏批次锁与防抖集合 (784行 -> 286行)；通过 UniFFI 原生接口全面闭环。
+6. **最终阶段：统一跨平台 CI/CD 流水线 (Phase 4.2) [待启动]**
+   - **目标**：配置 GitHub Actions 原生矩阵交叉编译与分发。
+

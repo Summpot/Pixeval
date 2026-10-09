@@ -43,6 +43,29 @@ pub enum SyncRequestKind {
     Single { subscription_id: i64 },
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, uniffi::Record)]
+pub struct FolderTaskItemState {
+    pub state: u32,
+    pub progress_percentage: f64,
+    pub active_count: u32,
+    pub completed_count: u32,
+    pub error_count: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct SubscriptionFolderSnapshot {
+    pub subscription_id: i64,
+    pub total_count: u32,
+    pub active_count: u32,
+    pub completed_count: u32,
+    pub error_count: u32,
+    pub progress_percentage: f64,
+    pub current_state: u32,
+    pub is_fetching: bool,
+    pub fetched_count: u32,
+    pub retry_at_timestamp: Option<i64>,
+}
+
 #[uniffi::export(callback_interface)]
 pub trait SubscriptionProgressCallback: Send + Sync {
     fn on_fetch_state_changed(&self, state: SubscriptionFetchState);
@@ -51,3 +74,4 @@ pub trait SubscriptionProgressCallback: Send + Sync {
     fn on_duplicate_stopped(&self, subscription_id: i64, duplicate_count: u32);
     fn on_sync_finished(&self);
 }
+

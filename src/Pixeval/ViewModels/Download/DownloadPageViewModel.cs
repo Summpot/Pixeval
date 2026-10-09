@@ -2,13 +2,10 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Threading;
 using Pixeval.Download;
 using Pixeval.Models.Download.Tasks;
@@ -20,26 +17,15 @@ namespace Pixeval.ViewModels;
 public sealed class DownloadPageViewModel : ViewModelBase, IDisposable
 {
     private readonly ObservableCollection<IDownloadTaskGroupBase> _source;
-
-    private readonly Dictionary<DownloadTaskKey, DownloadItemViewModel> _lookup = [];
-
-    private readonly Dictionary<long, DownloadFolderViewModel> _subscriptionFolderLookup = [];
-
     private readonly StorageEngine _storageEngine;
-
     private readonly IWorkSubscriptionService _workSubscriptionService;
-
-    private readonly CancellationTokenSource _subscriptionFolderLoadCancellationTokenSource = new();
-
-    private readonly bool _createdOnUiThread;
-
-    public Task SubscriptionFoldersLoadTask { get; }
-
     private bool _isDisposed;
 
-    public ObservableCollection<DownloadItemViewModel> OrdinaryItems { get; } = [];
+    private readonly bool _createdOnUiThread = Dispatcher.UIThread.CheckAccess();
 
+    public ObservableCollection<DownloadItemViewModel> OrdinaryItems { get; } = [];
     public ObservableCollection<DownloadFolderViewModel> SubscriptionFolders { get; } = [];
+    public Task SubscriptionFoldersLoadTask { get; } = Task.CompletedTask;
 
     public DownloadPageViewModel(
         ObservableCollection<IDownloadTaskGroupBase> source,
@@ -49,32 +35,73 @@ public sealed class DownloadPageViewModel : ViewModelBase, IDisposable
         _source = source;
         _storageEngine = storageEngine;
         _workSubscriptionService = workSubscriptionService;
-        _createdOnUiThread = Dispatcher.UIThread.CheckAccess() && Application.Current is not null;
-        _workSubscriptionService.FetchStateChanged += WorkSubscriptionServiceOnFetchStateChanged;
-        _workSubscriptionService.SubscriptionUpdated += WorkSubscriptionServiceOnSubscriptionUpdated;
-        _workSubscriptionService.SubscriptionRemoved += WorkSubscriptionServiceOnSubscriptionRemoved;
+
+        foreach (var sub in _storageEngine.GetAllSubscriptions().OrderByDescending(s => s.HistoryEntryId))
+        {
+            var folder = new DownloadFolderViewModel(sub);
+            folder.UpdateFetchState(_workSubscriptionService.CurrentFetchState);
+            SubscriptionFolders.Add(folder);
+        }
+
         foreach (var task in _source)
             AddTask(task, false);
 
         _source.CollectionChanged += SourceOnCollectionChanged;
-        SubscriptionFoldersLoadTask = LoadSubscriptionFoldersAsync(_subscriptionFolderLoadCancellationTokenSource.Token);
+        _workSubscriptionService.FetchStateChanged += OnFetchStateChanged;
+        _workSubscriptionService.SubscriptionUpdated += OnSubscriptionUpdated;
+        _workSubscriptionService.SubscriptionRemoved += OnSubscriptionRemoved;
     }
 
-    /// <inheritdoc />
-    public void Dispose()
+    private void RunOnUiThread(Action action)
     {
-        GC.SuppressFinalize(this);
         if (_isDisposed)
             return;
 
-        _isDisposed = true;
-        _source.CollectionChanged -= SourceOnCollectionChanged;
-        _workSubscriptionService.FetchStateChanged -= WorkSubscriptionServiceOnFetchStateChanged;
-        _workSubscriptionService.SubscriptionUpdated -= WorkSubscriptionServiceOnSubscriptionUpdated;
-        _workSubscriptionService.SubscriptionRemoved -= WorkSubscriptionServiceOnSubscriptionRemoved;
-        _subscriptionFolderLoadCancellationTokenSource.Cancel();
-        _subscriptionFolderLoadCancellationTokenSource.Dispose();
-        DisposeEntries();
+        if (!_createdOnUiThread || Dispatcher.UIThread.CheckAccess())
+        {
+            action();
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!_isDisposed)
+                action();
+        });
+    }
+
+    private DownloadFolderViewModel? GetFolder(long id) =>
+        SubscriptionFolders.FirstOrDefault(f => f.Subscription.HistoryEntryId == id);
+
+    private DownloadFolderViewModel AddSubscriptionFolder(WorkSubscriptionRecord subscription)
+    {
+        var folder = new DownloadFolderViewModel(subscription);
+        folder.UpdateFetchState(_workSubscriptionService.CurrentFetchState);
+        SubscriptionFolders.Insert(0, folder);
+        return folder;
+    }
+
+    private void MoveTaskToFront(IDownloadTaskGroupBase task)
+    {
+        if (task is not IDownloadTaskGroup group)
+            return;
+
+        if (OrdinaryItems.FirstOrDefault(i => i.DownloadTask.Key == group.Key) is { } ordinary)
+        {
+            var idx = OrdinaryItems.IndexOf(ordinary);
+            if (idx > 0)
+                OrdinaryItems.Move(idx, 0);
+        }
+
+        foreach (var folder in SubscriptionFolders)
+        {
+            if (folder.Items.FirstOrDefault(i => i.DownloadTask.Key == group.Key) is { } item)
+            {
+                var idx = folder.Items.IndexOf(item);
+                if (idx > 0)
+                    folder.Items.Move(idx, 0);
+            }
+        }
     }
 
     private void AddTask(IDownloadTaskGroupBase task, bool insertAtFront)
@@ -82,291 +109,143 @@ public sealed class DownloadPageViewModel : ViewModelBase, IDisposable
         if (_isDisposed || task is not IDownloadTaskGroup group)
             return;
 
-        if (_lookup.ContainsKey(group.Key))
-            return;
-
-        var vm = new DownloadItemViewModel(group);
-        _lookup[group.Key] = vm;
-        switch (group.DatabaseEntry)
+        if (group.DatabaseEntry is SubscriptionDownloadHistoryRecord subEntry)
         {
-            case DownloadHistoryRecord:
-                Insert(OrdinaryItems, vm, insertAtFront);
-                break;
-            case SubscriptionDownloadHistoryRecord subscriptionEntry
-                when GetOrCreateFolder(subscriptionEntry.WorkSubscriptionId) is { } folder:
-                folder.Add(vm, insertAtFront);
-                break;
-            case SubscriptionDownloadHistoryRecord:
-                vm.Dispose();
-                _ = _lookup.Remove(group.Key);
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(group.DatabaseEntry));
+            var folder = GetFolder(subEntry.WorkSubscriptionId)
+                ?? (_storageEngine.GetSubscriptionByHistoryId(subEntry.WorkSubscriptionId) is { } sub
+                    ? AddSubscriptionFolder(sub)
+                    : null);
+
+            if (folder is not null)
+            {
+                if (folder.Items.FirstOrDefault(i => i.DownloadTask.Key == group.Key) is { } existing)
+                {
+                    folder.Remove(existing);
+                    existing.Dispose();
+                }
+                folder.Add(new DownloadItemViewModel(group), insertAtFront);
+            }
         }
-
-        return;
-
-        static void Insert(
-            ObservableCollection<DownloadItemViewModel> target,
-            DownloadItemViewModel item,
-            bool insertAtFront)
+        else
         {
+            if (OrdinaryItems.FirstOrDefault(i => i.DownloadTask.Key == group.Key) is { } existing)
+            {
+                OrdinaryItems.Remove(existing);
+                existing.Dispose();
+            }
+            var vm = new DownloadItemViewModel(group);
             if (insertAtFront)
-                target.Insert(0, item);
+                OrdinaryItems.Insert(0, vm);
             else
-                target.Add(item);
+                OrdinaryItems.Add(vm);
         }
-    }
-
-    private DownloadFolderViewModel? GetOrCreateFolder(long subscriptionEntryId)
-    {
-        if (subscriptionEntryId <= 0)
-            return null;
-
-        if (_subscriptionFolderLookup.TryGetValue(subscriptionEntryId, out var folder))
-            return folder;
-
-        if (_storageEngine.GetSubscriptionByHistoryId(subscriptionEntryId) is not { } subscription)
-            return null;
-
-        return AddSubscriptionFolder(subscription);
-    }
-
-    private DownloadFolderViewModel AddSubscriptionFolder(WorkSubscriptionRecord subscription)
-    {
-        if (_subscriptionFolderLookup.TryGetValue(subscription.HistoryEntryId, out var existing))
-            return existing;
-
-        var folder = new DownloadFolderViewModel(subscription);
-        folder.UpdateFetchState(_workSubscriptionService.CurrentFetchState);
-        _subscriptionFolderLookup[subscription.HistoryEntryId] = folder;
-        var index = 0;
-        while (index < SubscriptionFolders.Count
-               && SubscriptionFolders[index].Subscription.HistoryEntryId > subscription.HistoryEntryId)
-            index++;
-        SubscriptionFolders.Insert(index, folder);
-        return folder;
     }
 
     private void RemoveTask(IDownloadTaskGroupBase task)
     {
-        if (_isDisposed || !_lookup.Remove(task.Key, out var vm))
-            return;
-
-        if (vm.DownloadTask.DatabaseEntry is SubscriptionDownloadHistoryRecord subscriptionEntry
-            && GetFolder(subscriptionEntry.WorkSubscriptionId) is { } folder)
+        if (_isDisposed || task is not IDownloadTaskGroup group) return;
+        if (OrdinaryItems.FirstOrDefault(i => i.DownloadTask.Key == group.Key) is { } ordinary)
         {
-            _ = folder.Remove(vm);
+            OrdinaryItems.Remove(ordinary);
+            ordinary.Dispose();
         }
-        else
+        foreach (var folder in SubscriptionFolders)
         {
-            _ = OrdinaryItems.Remove(vm);
+            if (folder.Items.FirstOrDefault(i => i.DownloadTask.Key == group.Key) is { } item)
+            {
+                folder.Remove(item);
+                item.Dispose();
+            }
         }
-
-        vm.Dispose();
-    }
-
-    private void MoveTaskToFront(IDownloadTaskGroupBase task)
-    {
-        if (task is not IDownloadTaskGroup group
-            || !_lookup.TryGetValue(group.Key, out var vm))
-            return;
-
-        if (group.DatabaseEntry is SubscriptionDownloadHistoryRecord subscriptionEntry
-            && GetFolder(subscriptionEntry.WorkSubscriptionId) is { } folder)
-        {
-            var itemIndex = folder.Items.IndexOf(vm);
-            if (itemIndex > 0)
-                folder.Items.Move(itemIndex, 0);
-            var folderIndex = SubscriptionFolders.IndexOf(folder);
-            if (folderIndex > 0)
-                SubscriptionFolders.Move(folderIndex, 0);
-            return;
-        }
-
-        var viewIndex = OrdinaryItems.IndexOf(vm);
-        if (viewIndex > 0)
-            OrdinaryItems.Move(viewIndex, 0);
-    }
-
-    private DownloadFolderViewModel? GetFolder(long subscriptionEntryId) =>
-        _subscriptionFolderLookup.GetValueOrDefault(subscriptionEntryId);
-
-    private void WorkSubscriptionServiceOnFetchStateChanged(
-        object? sender,
-        SubscriptionFetchState state)
-    {
-        if (_isDisposed)
-            return;
-
-        if (!_createdOnUiThread || Dispatcher.UIThread.CheckAccess())
-        {
-            ApplyFetchState(state);
-            return;
-        }
-
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (!_isDisposed)
-                ApplyFetchState(state);
-        });
-    }
-
-    private void ApplyFetchState(SubscriptionFetchState state) =>
-        (state.IsFetching
-            ? GetOrCreateFolder(state.WorkSubscriptionId)
-            : GetFolder(state.WorkSubscriptionId))
-        ?.UpdateFetchState(state);
-
-    private void WorkSubscriptionServiceOnSubscriptionRemoved(object? sender, long workSubscriptionId)
-    {
-        if (_isDisposed)
-            return;
-
-        if (!_createdOnUiThread || Dispatcher.UIThread.CheckAccess())
-        {
-            RemoveSubscriptionFolder(workSubscriptionId);
-            return;
-        }
-
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (!_isDisposed)
-                RemoveSubscriptionFolder(workSubscriptionId);
-        });
-    }
-
-    private void WorkSubscriptionServiceOnSubscriptionUpdated(
-        object? sender,
-        WorkSubscriptionRecord subscription)
-    {
-        if (_isDisposed)
-            return;
-
-        if (!_createdOnUiThread || Dispatcher.UIThread.CheckAccess())
-        {
-            GetFolder(subscription.HistoryEntryId)?.UpdateSubscription(subscription);
-            return;
-        }
-
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (!_isDisposed)
-                GetFolder(subscription.HistoryEntryId)?.UpdateSubscription(subscription);
-        });
-    }
-
-    private void RemoveSubscriptionFolder(long workSubscriptionId)
-    {
-        if (!_subscriptionFolderLookup.Remove(workSubscriptionId, out var folder))
-            return;
-
-        _ = SubscriptionFolders.Remove(folder);
-        folder.Dispose();
     }
 
     private void SourceOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (_isDisposed)
-            return;
+        if (_isDisposed) return;
 
         switch (e.Action)
         {
-            case NotifyCollectionChangedAction.Add when e.NewItems is { } newItems:
-                foreach (IDownloadTaskGroupBase item in newItems)
+            case NotifyCollectionChangedAction.Add when e.NewItems is { } added:
+                foreach (IDownloadTaskGroupBase item in added)
                 {
                     AddTask(item, e.NewStartingIndex is 0);
                     if (e.NewStartingIndex is 0)
                         MoveTaskToFront(item);
                 }
+                break;
 
-                break;
-            case NotifyCollectionChangedAction.Remove when e.OldItems is { } oldItems:
-                foreach (IDownloadTaskGroupBase item in oldItems)
+            case NotifyCollectionChangedAction.Remove when e.OldItems is { } removed:
+                foreach (IDownloadTaskGroupBase item in removed)
                     RemoveTask(item);
                 break;
-            case NotifyCollectionChangedAction.Reset:
-                ClearTaskEntries();
-                foreach (var task in _source)
-                    AddTask(task, false);
-                break;
-            case NotifyCollectionChangedAction.Replace
-                when e is { OldItems: { } replacedItems, NewItems: { } replacementItems }:
-                foreach (IDownloadTaskGroupBase item in replacedItems)
+
+            case NotifyCollectionChangedAction.Replace when e is { OldItems: { } replaced, NewItems: { } replacements }:
+                foreach (IDownloadTaskGroupBase item in replaced)
                     RemoveTask(item);
-                foreach (IDownloadTaskGroupBase item in replacementItems)
+                foreach (IDownloadTaskGroupBase item in replacements)
                 {
                     AddTask(item, e.NewStartingIndex is 0);
                     if (e.NewStartingIndex is 0)
                         MoveTaskToFront(item);
                 }
-
                 break;
-            case NotifyCollectionChangedAction.Move when e.NewItems is { } movedItems:
+
+            case NotifyCollectionChangedAction.Move when e.NewItems is { } moved:
                 if (e.NewStartingIndex is 0)
-                    foreach (IDownloadTaskGroupBase item in movedItems)
+                {
+                    foreach (IDownloadTaskGroupBase item in moved)
                         MoveTaskToFront(item);
+                }
+                break;
+
+            case NotifyCollectionChangedAction.Reset:
+                foreach (var item in OrdinaryItems) item.Dispose();
+                OrdinaryItems.Clear();
+                foreach (var folder in SubscriptionFolders)
+                {
+                    foreach (var item in folder.Items.ToArray()) { folder.Remove(item); item.Dispose(); }
+                }
+                foreach (var task in _source) AddTask(task, false);
                 break;
         }
     }
 
-    private void ClearTaskEntries()
-    {
-        foreach (var item in _lookup.Values)
-            item.Dispose();
-
-        OrdinaryItems.Clear();
-        foreach (var folder in SubscriptionFolders)
+    private void OnFetchStateChanged(object? sender, SubscriptionFetchState state) =>
+        RunOnUiThread(() =>
         {
-            foreach (var item in folder.Items.ToArray())
-                _ = folder.Remove(item);
-        }
-
-        _lookup.Clear();
-    }
-
-    private void DisposeEntries()
-    {
-        ClearTaskEntries();
-        foreach (var folder in SubscriptionFolders)
-            folder.Dispose();
-        SubscriptionFolders.Clear();
-        _subscriptionFolderLookup.Clear();
-    }
-
-    private Task LoadSubscriptionFoldersAsync(CancellationToken token)
-    {
-        try
-        {
-            foreach (var subscription in _storageEngine.GetAllSubscriptions())
-            {
-                if (_isDisposed)
-                    return Task.CompletedTask;
-
-                _ = AddSubscriptionFolderAsync(subscription, token);
-            }
-        }
-        catch (OperationCanceledException) when (token.IsCancellationRequested)
-        {
-        }
-        return Task.CompletedTask;
-    }
-
-    private async Task AddSubscriptionFolderAsync(WorkSubscriptionRecord subscription, CancellationToken token)
-    {
-        if (!_createdOnUiThread || Dispatcher.UIThread.CheckAccess())
-        {
-            if (_storageEngine.GetSubscriptionByHistoryId(subscription.HistoryEntryId) is not null)
-                _ = AddSubscriptionFolder(subscription);
-            return;
-        }
-
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            token.ThrowIfCancellationRequested();
-            if (!_isDisposed
-                && _storageEngine.GetSubscriptionByHistoryId(subscription.HistoryEntryId) is not null)
-                _ = AddSubscriptionFolder(subscription);
+            var folder = state.IsFetching
+                ? (GetFolder(state.WorkSubscriptionId)
+                    ?? (_storageEngine.GetSubscriptionByHistoryId(state.WorkSubscriptionId) is { } sub
+                        ? AddSubscriptionFolder(sub)
+                        : null))
+                : GetFolder(state.WorkSubscriptionId);
+            folder?.UpdateFetchState(state);
         });
+
+    private void OnSubscriptionUpdated(object? sender, WorkSubscriptionRecord sub) =>
+        RunOnUiThread(() => GetFolder(sub.HistoryEntryId)?.UpdateSubscription(sub));
+
+    private void OnSubscriptionRemoved(object? sender, long id) =>
+        RunOnUiThread(() =>
+        {
+            if (GetFolder(id) is { } folder)
+            {
+                SubscriptionFolders.Remove(folder);
+                folder.Dispose();
+            }
+        });
+
+    public void Dispose()
+    {
+        if (_isDisposed) return;
+        _isDisposed = true;
+        _source.CollectionChanged -= SourceOnCollectionChanged;
+        _workSubscriptionService.FetchStateChanged -= OnFetchStateChanged;
+        _workSubscriptionService.SubscriptionUpdated -= OnSubscriptionUpdated;
+        _workSubscriptionService.SubscriptionRemoved -= OnSubscriptionRemoved;
+        foreach (var item in OrdinaryItems) item.Dispose();
+        OrdinaryItems.Clear();
+        foreach (var folder in SubscriptionFolders) folder.Dispose();
+        SubscriptionFolders.Clear();
     }
 }

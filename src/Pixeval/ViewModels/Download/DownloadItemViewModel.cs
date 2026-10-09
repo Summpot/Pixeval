@@ -14,7 +14,7 @@ using Pixeval.Models.Options;
 
 namespace Pixeval.ViewModels;
 
-public sealed class DownloadItemViewModel : ViewModelBase, IDownloadListEntryViewModel, IDisposable
+public sealed class DownloadItemViewModel : ViewModelBase, IDisposable
 {
     private bool _isDisposed;
 
@@ -126,7 +126,7 @@ public sealed class DownloadItemViewModel : ViewModelBase, IDownloadListEntryVie
         Entry.Title.Contains(key, StringComparison.OrdinalIgnoreCase)
         || DownloadTask.Id.Contains(key, StringComparison.OrdinalIgnoreCase);
 
-    public bool MatchesOption(DownloadListOption option, ISet<IDownloadListEntryViewModel>? customSearchResult) => option switch
+    public bool MatchesOption(DownloadListOption option, ISet<DownloadItemViewModel>? customSearchResult) => option switch
     {
         DownloadListOption.AllQueued => true,
         DownloadListOption.Running => CurrentState is DownloadState.Running,
