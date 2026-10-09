@@ -91,6 +91,20 @@ public sealed class NovelContext(NovelContent novelContent) : INovelContext<Stre
         return new StringBuilder(html);
     }
 
+    public byte[] BuildEpubBytes(Dictionary<string, byte[]> images, string? author = null)
+    {
+        var engine = new Pixeval.Native.Novel.NovelEngine();
+        var metadata = new Pixeval.Native.Novel.NovelEpubMetadataDto(
+            NovelContent.Id,
+            NovelContent.Title,
+            author ?? (NovelContent.UserId != 0 ? NovelContent.UserId.ToString() : "Pixiv"),
+            NovelContent.Caption ?? "",
+            string.IsNullOrWhiteSpace(NovelContent.Language) ? "ja" : NovelContent.Language,
+            images.ContainsKey(CoverFileName) ? CoverFileName : null
+        );
+        return engine.BuildEpubFromText(metadata, NovelContent.Text, images);
+    }
+
     public Stream? TryGetStream(int index)
     {
         if (index is 0)

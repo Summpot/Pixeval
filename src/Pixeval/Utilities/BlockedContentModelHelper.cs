@@ -28,12 +28,12 @@ public static class BlockedContentModelHelper
             : long.TryParse(user.Id, out var parsed) ? parsed : 0;
         var avatarUrl = (user as User)?.AvatarUrl
             ?? (user as TokenUser)?.AvatarUrl
-            ?? user?.Avatar.FirstOrDefault()?.ImageUri.OriginalString
+            ?? user.Avatar?.FirstOrDefault()?.ImageUri.OriginalString
             ?? "";
         var account = (user as User)?.Account
             ?? (user as TokenUser)?.Account
             ?? "";
-        return new BlockedUserRecord(0, id, user.Name, avatarUrl, account);
+        return new BlockedUserRecord(0, id, user.Name ?? "", avatarUrl, account);
     }
 
     public static User CreateBlockedUserPreview(BlockedUserRecord entry) => new(

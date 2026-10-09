@@ -15,5 +15,8 @@ public enum NovelDownloadFormat
     Md,
 
     [LocalizedResource(EnumResources.NovelDownloadFormat.OriginalTxt)]
-    OriginalTxt
+    OriginalTxt,
+
+    [LocalizedResource(EnumResources.NovelDownloadFormat.Epub)]
+    Epub
 }

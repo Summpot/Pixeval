@@ -297,7 +297,7 @@ public partial class WorkContainer : UserControl
     }
 
     private FilterAnalysisResult AnalyzeFilter(string? text, int caret)
-        => WorkFilterLanguage.Instance.Analyze(text, caret, GetFilterValueCompletions);
+        => WorkFilterLanguage.Instance.Analyze(text ?? string.Empty, caret, GetFilterValueCompletions);
 
     private IReadOnlyList<FilterCompletionDefinition> GetFilterValueCompletions(FilterValueCompletionContext context)
     {

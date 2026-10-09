@@ -33,12 +33,13 @@ public sealed class SimpleViewDataProvider<T, TViewModel> : ViewModelBase, IData
         View.Dispose();
     }
 
-    public void ResetEngine(IAsyncEnumerable<T>? fetchEngine, Func<T, int, TViewModel> factory, int itemsPerPage = 20, int limit = -1)
+    public void ResetEngine(IAsyncEnumerable<T>? fetchEngine, Func<T, int, TViewModel>? factory = null, int itemsPerPage = 20, int limit = -1)
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
         DisposeSourceItems();
 
-        Source = new IncrementalLoadingCollection<TViewModel>(new IncrementalSource<T, TViewModel>(fetchEngine!, factory, limit), itemsPerPage);
+        var effectiveFactory = factory ?? ((entry, _) => (TViewModel) (object) entry);
+        Source = new IncrementalLoadingCollection<TViewModel>(new IncrementalSource<T, TViewModel>(fetchEngine!, effectiveFactory, limit), itemsPerPage);
     }
 
     private void DisposeSourceItems()

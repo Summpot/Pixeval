@@ -25,6 +25,8 @@ public partial class DownloadManager
     private int _concurrencyDegree;
     private bool _disposed;
 
+    public void MarkDisposed() => _disposed = true;
+
     public ObservableCollection<IDownloadTaskGroupBase> QueuedTasks { get; } = [];
 
     public int ConcurrencyDegree

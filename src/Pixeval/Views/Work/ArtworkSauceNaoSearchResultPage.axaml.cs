@@ -12,6 +12,11 @@ namespace Pixeval.Views.Work;
 
 public partial class ArtworkSauceNaoSearchResultPage : ContentPage
 {
+    public ArtworkSauceNaoSearchResultPage()
+    {
+        InitializeComponent();
+    }
+
     public ArtworkSauceNaoSearchResultPage(string apiKey, ReadOnlyMemory<byte> file)
     {
         InitializeComponent();

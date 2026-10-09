@@ -116,6 +116,14 @@ internal sealed class ProgressiveImageDecoder : IDisposable
                     }
                     result = rows == _pixels.Height ? SKCodecResult.Success : SKCodecResult.IncompleteInput;
                 }
+                else if (_codec.EncodedFormat is SKEncodedImageFormat.Jpeg)
+                {
+                    source.Position = 0;
+                    using var eoiStream = new EoiStream(source);
+                    using var eoiManaged = new SKManagedStream(eoiStream, false);
+                    using var eoiCodec = SKCodec.Create(eoiManaged);
+                    result = eoiCodec?.GetPixels(_pixels.Info, _pixels.GetPixels()) ?? SKCodecResult.InvalidInput;
+                }
                 else
                     result = _codec.GetPixels(_pixels.Info, _pixels.GetPixels(), new SKCodecOptions(frame));
                 if (animated && result is SKCodecResult.Success)
@@ -149,4 +157,68 @@ internal sealed class ProgressiveImageDecoder : IDisposable
     }
 
     public void Dispose() => Reset();
+
+    private sealed class EoiStream : Stream
+    {
+        private static readonly byte[] Eoi = [0xFF, 0xD9];
+        private readonly Stream _inner;
+        private readonly bool _needsEoi;
+
+        public EoiStream(Stream inner)
+        {
+            _inner = inner;
+            if (inner.Length >= 2 && inner.CanSeek)
+            {
+                var cur = inner.Position;
+                inner.Position = inner.Length - 2;
+                var b1 = inner.ReadByte();
+                var b2 = inner.ReadByte();
+                inner.Position = cur;
+                _needsEoi = !(b1 == 0xFF && b2 == 0xD9);
+            }
+            else
+            {
+                _needsEoi = true;
+            }
+        }
+
+        public override bool CanRead => _inner.CanRead;
+        public override bool CanSeek => _inner.CanSeek;
+        public override bool CanWrite => false;
+        public override long Length => _inner.Length + (_needsEoi ? 2 : 0);
+        public override long Position
+        {
+            get => _inner.Position;
+            set => _inner.Position = value;
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var pos = _inner.Position;
+            var innerLen = _inner.Length;
+            if (pos < innerLen)
+            {
+                var bytesRead = _inner.Read(buffer, offset, count);
+                if (bytesRead > 0)
+                    return bytesRead;
+            }
+
+            if (!_needsEoi)
+                return 0;
+
+            var eoiOffset = (int) (pos - innerLen);
+            if (eoiOffset >= 2)
+                return 0;
+            var available = 2 - eoiOffset;
+            var toCopy = Math.Min(available, count);
+            Array.Copy(Eoi, eoiOffset, buffer, offset, toCopy);
+            _inner.Position = pos + toCopy;
+            return toCopy;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override void Flush() => _inner.Flush();
+    }
 }

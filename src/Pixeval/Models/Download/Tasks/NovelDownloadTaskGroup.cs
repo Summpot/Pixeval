@@ -56,7 +56,7 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
         SkipFinalOutput = false;
         OverwriteDownloadedFile = App.AppViewModel.AppSettings.DownloadSettings.OverwriteDownloadedFile;
         if (DatabaseEntry.State is DownloadState.Queued
-            && DestinationNovelFormat.IsExtension
+            && (DestinationNovelFormat.IsExtension || DestinationNovelFormat.BuiltInFormat is NovelDownloadFormat.Epub)
             && !OverwriteDownloadedFile
             && File.Exists(NovelFile))
         {
@@ -103,7 +103,7 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
         NovelDownloadFormatToken format)
     {
         var extension = IoHelper.GetNovelExtension(format);
-        if (format.BuiltInFormat is not null)
+        if (format.BuiltInFormat is not null and not NovelDownloadFormat.Epub)
         {
             var imageFolderPath = IoHelper.RemoveTokenExtension(tokenizedDestination);
             return (Path.Combine(imageFolderPath, $"novel.{extension}"), imageFolderPath);
@@ -152,6 +152,48 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
     private async Task FormatBuiltInAsync(CancellationToken token)
     {
         var format = DestinationNovelFormat.BuiltInFormat ?? NovelDownloadFormatToken.DefaultBuiltInFormat;
+        var temporaryFile = NovelFile + IoHelper.PixevalTempExtension;
+        if (format is NovelDownloadFormat.Epub)
+        {
+            if (DownloadTaskFileHelper.ShouldSkipExistingFile(NovelFile, OverwriteDownloadedFile))
+            {
+                await DeleteTemporaryImageTasksAsync();
+                return;
+            }
+
+            var images = new Dictionary<string, byte[]>();
+            for (var i = 0; i < TasksSet.Count; i++)
+            {
+                var imageDownloadTask = TasksSet[i];
+                if (File.Exists(imageDownloadTask.Destination))
+                {
+                    images[Path.GetFileName(imageDownloadTask.Destination)] = await File.ReadAllBytesAsync(imageDownloadTask.Destination, token);
+                }
+            }
+
+            var authorName = Entry.Author?.Name;
+            var epubBytes = DocumentViewModel.BuildEpubBytes(images, authorName);
+            if (File.Exists(temporaryFile))
+                File.Delete(temporaryFile);
+            try
+            {
+                FileHelper.CreateParentDirectory(temporaryFile);
+                await File.WriteAllBytesAsync(temporaryFile, epubBytes, token);
+                _ = DownloadTaskFileHelper.CommitDownloadedFile(
+                    temporaryFile,
+                    NovelFile,
+                    OverwriteDownloadedFile);
+            }
+            finally
+            {
+                if (File.Exists(temporaryFile))
+                    File.Delete(temporaryFile);
+                await DeleteTemporaryImageTasksAsync();
+                images.Clear();
+            }
+            return;
+        }
+
         var content = format switch
         {
             NovelDownloadFormat.OriginalTxt => NovelContent.Text,
@@ -163,7 +205,6 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
         if (DownloadTaskFileHelper.ShouldSkipExistingFile(NovelFile, OverwriteDownloadedFile))
             return;
 
-        var temporaryFile = NovelFile + IoHelper.PixevalTempExtension;
         if (File.Exists(temporaryFile))
             File.Delete(temporaryFile);
         try

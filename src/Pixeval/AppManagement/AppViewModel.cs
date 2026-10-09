@@ -317,6 +317,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         _isDisposed = true;
         try
         {
+            DownloadManager?.MarkDisposed();
             DownloadManager?.Dispose();
             await AppServiceProvider.DisposeAsync();
         }

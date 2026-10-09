@@ -12,6 +12,7 @@ using Misaki;
 using Pixeval.Models.Download;
 using Pixeval.Models.Extensions;
 using Pixeval.Models.Options;
+using Pixeval.Native.Media;
 using SkiaSharp;
 
 namespace Pixeval.Utilities.IO;
@@ -50,7 +51,11 @@ public static partial class IoHelper
         ugoiraDownloadFormat ??= App.AppViewModel.AppSettings.DownloadSettings.DownloadFormats.UgoiraDownloadFormat;
         var token = new UgoiraDownloadFormatToken(ugoiraDownloadFormat);
         if (token.BuiltInFormat is not null)
+        {
+            if (token.BuiltInFormat == UgoiraDownloadFormat.Mp4 && !MediaEngine.IsMp4Available)
+                return UgoiraDownloadFormatToken.Default;
             return token;
+        }
 
         if (token.ExtensionFormatExtension is { } extension
             && App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>().GetAnimatedImageFormatProvider(extension) is not null)
@@ -138,6 +143,7 @@ public static partial class IoHelper
             NovelDownloadFormat.OriginalTxt => "txt",
             NovelDownloadFormat.Html => "html",
             NovelDownloadFormat.Md => "md",
+            NovelDownloadFormat.Epub => "epub",
             _ => throw new ArgumentOutOfRangeException(nameof(token))
         };
     }
@@ -157,6 +163,7 @@ public static partial class IoHelper
             ".txt" => Assign(NovelDownloadFormat.OriginalTxt, out format),
             ".html" => Assign(NovelDownloadFormat.Html, out format),
             ".md" => Assign(NovelDownloadFormat.Md, out format),
+            ".epub" => Assign(NovelDownloadFormat.Epub, out format),
             _ => Assign(default, out format, false)
         };
 

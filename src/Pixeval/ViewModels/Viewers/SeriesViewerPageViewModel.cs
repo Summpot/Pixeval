@@ -53,7 +53,7 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
         SimpleWorkType workType,
         long seriesId,
         Series seriesDetail,
-        IWorkEntry firstWork,
+        IWorkEntry? firstWork,
         IWorkViewViewModel worksViewModel)
     {
         WorkType = workType;

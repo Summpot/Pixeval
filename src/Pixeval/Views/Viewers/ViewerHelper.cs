@@ -106,7 +106,7 @@ public static class ViewerHelper
             SimpleWorkType workType,
             long seriesId,
             Series seriesDetail,
-            IWorkEntry firstWork,
+            IWorkEntry? firstWork,
             IWorkViewViewModel worksViewModel)
         {
             control.NavigateTo(new SeriesViewerPage(new(workType, seriesId, seriesDetail, firstWork, worksViewModel)));

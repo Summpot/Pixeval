@@ -671,6 +671,7 @@ namespace Pixeval
         }
         public static class NovelDownloadFormat
         {
+            public const string Epub = "Enum.NovelDownloadFormat.Epub";
             public const string Html = "Enum.NovelDownloadFormat.Html";
             public const string Md = "Enum.NovelDownloadFormat.Md";
             public const string OriginalTxt = "Enum.NovelDownloadFormat.OriginalTxt";

@@ -20,7 +20,7 @@ public sealed class DownloadItemViewModel : ViewModelBase, IDisposable
 
     public IDownloadTaskGroup DownloadTask { get; }
 
-    public IArtworkInfo Entry => DownloadTask.DatabaseEntry.Entry;
+    public IArtworkInfo Entry => DownloadTask.DatabaseEntry.Entry!;
 
     public string Id => Entry.Id;
 

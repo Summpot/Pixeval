@@ -92,14 +92,6 @@ public partial record Novel : IArtworkInfo, IWorkEntry, INovelEntry, ISerializab
 
     IArtworkInfo IWorkViewModel.Entry => this;
 
-    private readonly Lazy<Task<NovelContent>> _contentAsync = new(async () =>
-    {
-        if (BlockedContentHelper.IsBlockedPlaceholder(App.AppViewModel?.MakoClient is null ? null : (IArtworkInfo) (object) null!))
-            return BlockedContentModelHelper.CreateBlockedNovelContent(null!);
-
-        return null!;
-    });
-
     private Task<NovelContent>? _loadedContentTask;
 
     public Task<NovelContent> GetContentAsync()

@@ -416,7 +416,7 @@ public static class HomeCardDefinitions
 
     private sealed record SingleSeriesOpeningContext(
         Series SeriesDetail,
-        IWorkEntry FirstWork);
+        IWorkEntry? FirstWork);
 
     private sealed record SingleUserOpeningContext(SingleUserResponse UserDetail);
 

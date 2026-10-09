@@ -65,7 +65,7 @@ public class AddNewBookmarkTagItem : TemplatedControl
     {
         var name = _textBox?.Text?.Trim();
         if (!string.IsNullOrEmpty(name))
-            Source?.TagAdded.Invoke(Source, name);
+            Source?.TagAdded?.Invoke(Source, name);
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs e)

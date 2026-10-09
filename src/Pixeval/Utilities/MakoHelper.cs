@@ -294,7 +294,7 @@ public static class MakoHelper
             args.EndDate?.ToString("yyyy-MM-dd")
         ));
 
-    public static async Task<(Series Detail, IWorkEntry First, IFetchEngine<IWorkEntry> Engine)> GetWorkSeriesAsync(
+    public static async Task<(Series Detail, IWorkEntry? First, IFetchEngine<IWorkEntry> Engine)> GetWorkSeriesAsync(
         this MakoClient client,
         SimpleWorkType type,
         long seriesId,
