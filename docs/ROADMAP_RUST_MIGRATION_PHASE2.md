@@ -109,17 +109,28 @@ flowchart TD
         P4_2["4.2 统一跨平台 CI/CD (Windows / Linux / macOS) [待启动]"]
     end
 
-    subgraph Phase5 ["Phase 5: C# 表现层现代化与架构重构 (消除迁移过渡期坏味道) [待启动]"]
-        P5_1["5.1 领域契约与 UI 状态彻底解耦<br/>• 移除 Record 上的 INotifyPropertyChanged 与可变私有字段<br/>• 建立轻量 UI State Store 或 View-Scoped Behaviors"]
-        P5_2["5.2 彻底清退 Misaki 外部依赖与历史抽象<br/>• 物理移除 Misaki NuGet 包与 IArtworkInfo 等复杂接口链<br/>• 视图 DataTemplate 直绑原生实体并多态分发"]
-        P5_3["5.3 静态巨石解体与规范化标准 DI<br/>• MakoHelper / IoHelper 拆解为高内聚领域服务<br/>• 拔除 App.AppViewModel / PixevalSettings 静态穿透，推行构造注入"]
-        P5_4["5.4 集合管道与数据流极大化精简<br/>• 清退沉重的 DataProvider / IRefCloneable 体系<br/>• 直连 Rust 增量流与极简 ObservableCollection"]
-        P5_5["5.5 View Code-Behind 极致瘦身与声明式路由<br/>• WorkContainer / TabViewContainer 视图逻辑抽取<br/>• 规范化 NavigationService 统一路由跳转"]
+    subgraph Phase5 ["Phase 5: 深度领域业务与系统底层全量下沉 (达成 100% Rust Core) [待启动]"]
+        P5_1["5.1 图像流式解码与渐进预览管线下沉<br/>• 下沉逐行扫描与帧嗅探至 pixeval_cache<br/>• 物理清退 ProgressiveImageDecoder 与 EoiStream"]
+        P5_2["5.2 传输层彻底合流与 C# 网络栈物理清退<br/>• 全面收敛网络栈至 pixeval_maho<br/>• 物理清退 C# MahoSocketsHttpHandler / Stream 分片"]
+        P5_3["5.3 Mako 高阶业务门面与协议编排下沉<br/>• Pixiv 领域规则与数据清洗收敛至 Rust<br/>• 彻底解构 765 行 MakoHelper.cs 静态巨石"]
+        P5_4["5.4 动态库插件符号分析与解压规划下沉<br/>• 在 pixeval_plugin 中使用安全库解析 PE/ELF 导出表<br/>• 物理清退 ExtensionService 滑动窗口扫描"]
+        P5_5["5.5 DSL 动态建议生成与光标上下文感知下沉<br/>• 补全引擎下沉至 pixeval_filters<br/>• 消除 C# 端硬编码语法映射与复杂分词分析"]
+        P5_6["5.6 主页卡片配置持久化与布局状态机下沉<br/>• 卡片元数据、吸附状态与默认配置收敛至 pixeval_config<br/>• 物理清退 HomeCardDefinitions.cs 与布局状态代码"]
+        P5_7["5.7 订阅后台轮询机自转守护<br/>• Tokio 静默协程接管常驻定时拉取与熔断调度<br/>• 物理清退 WorkSubscriptionDownloadService 计时器管理"]
+    end
+
+    subgraph Phase6 ["Phase 6: C# 表现层现代化与终极架构重构 (达成 Pure Thin UI) [待启动]"]
+        P6_1["6.1 领域契约与 UI 状态彻底解耦<br/>• 移除 Record 上的 INotifyPropertyChanged 与可变私有字段<br/>• 建立轻量 UI State Store 或 View-Scoped Behaviors"]
+        P6_2["6.2 彻底清退 Misaki 外部依赖与历史抽象<br/>• 物理移除 Misaki NuGet 包与 IArtworkInfo 等复杂接口链<br/>• 视图 DataTemplate 直绑原生实体并多态分发"]
+        P6_3["6.3 静态巨石解体与规范化标准 DI<br/>• 彻底消除全局 App.AppViewModel / PixevalSettings 静态穿透<br/>• 全面推行构造注入与类型安全交互命令"]
+        P6_4["6.4 集合管道与数据流极大化精简<br/>• 清退沉重的 DataProvider / IRefCloneable 体系<br/>• 直连 Rust 增量流与极简 ObservableCollection"]
+        P6_5["6.5 View Code-Behind 极致瘦身与声明式路由<br/>• WorkContainer / TabViewContainer 视图逻辑抽取<br/>• 规范化 NavigationService 统一路由跳转"]
     end
 
     Phase2 --> Phase3
     Phase3 --> Phase4
     Phase4 --> Phase5
+    Phase5 --> Phase6
 ```
 
 ---
@@ -348,12 +359,104 @@ flowchart TD
 
 ---
 
-### 阶段 5：C# 表现层现代化与架构重构 (Phase 5: Presentation Clean Architecture) (待启动)
+### 阶段 5：深度领域业务与系统底层全量下沉 (Phase 5: Full Rust Core Sinking) (待启动)
 
-在 Phase 1 ~ 4.1 的“绞杀者（Strangler Fig）”演进过程中，为了在每一步保持全功能可用，表现层积累了大量逐步迁移而非从头设计的**架构技术债与过渡期坏味道**。
-Phase 5 的核心目标是：**在 Rust Core 已稳定承担 100% 领域计算的前提下，对 C# 表现层进行彻底的正规化与轻量化重塑，消除历史胶水与伪抽象，建立现代化、低耦合、强响应式的纯声明式 UI 架构。**
+在完成 Phase 1 ~ 4.1 后，经全景代码审计，表现层 C# 仍残留了 7 大系统级与领域级非 UI 计算逻辑。
+Phase 5 的核心目标是：**将所有残留在 C# 中的流式图像解码、TLS 传输分片栈、Pixiv 协议编排、插件二进制符号解析、DSL 补全引擎、主页布局状态机与后台常驻守护机 100% 下沉至 Rust，彻底消除双轨制，实现极致纯粹的 100% Rust Core。**
 
-#### 5.1 领域契约与 UI 状态彻底解耦 (Decouple Native Extensions from UI State)
+#### 5.1 图像流式解码与渐进预览管线下沉 (Progressive Image Stream & Scanline Decoder)
+- **痛点与现状**：
+  - C# 端仍保留 `ProgressiveImageDecoder.cs` 和 `ProgressiveImagePreview.cs`，使用 SkiaSharp 的 `SKCodec.IncrementalDecode` 逐行扫描、自建 `EoiStream` 补齐 JPEG EOI 标记（`0xFF, 0xD9`）来模拟渐进解码。
+  - 这导致图像解码、内存缓冲、格式修补依然发生在托管堆上，频繁引发大对象分配与 GC 压力，未能享受 Rust 原生解码的 SIMD 加速和零拷贝优势。
+- **下沉方案**：
+  - 在 `pixeval_cache` 或 `pixeval_media` 中封装基于 `turbojpeg` / `image` 的原生渐进式流解码器。
+  - 原生端直接接收网络流分片并维护内存对齐的解码帧缓存，直接输出原生内存指针或共享 BGRA 像素帧（`WriteableBitmap` 零拷贝锁定内存直接 blit）。
+  - C# 物理清退 `ProgressiveImageDecoder.cs` 与 `ProgressiveImagePreview.cs`。
+- **验收标准**：
+  - 物理删除 `ProgressiveImageDecoder.cs` 与 `EoiStream`，大图渐进流预览由 Rust 原生解码器直接发射像素缓冲区，托管内存分配减少 80% 以上。
+
+#### 5.2 传输层彻底合流与 C# 网络栈物理清退 (Network Stack Unification & TLS Desync Sinking)
+- **痛点与现状**：
+  - C# 端 `src/Pixeval/Utilities/Network/` 下仍存留一套完整的 HTTP/TLS 协议栈：`MahoSocketsHttpHandlerFactory.cs`、`MahoTlsFragmentedStream.cs`、`MahoTransport.cs`、`DnsOverHttps.cs` 等。
+  - 这些类在 C# `SocketsHttpHandler` 层手动通过 Stream 切片分片 TLS ClientHello、手动解析 DoH，与 Rust 的 `pixeval_maho` 形成了冗余的双轨制。
+- **下沉方案**：
+  - 将所有网络流、代理配置、SNI 分片防封锁与 DoH 调度 100% 收敛至 Rust `pixeval_maho` 原生网络栈。
+  - C# 端所有 HTTP/网络请求（包括外部图片加载、文件下载、API 请求）完全通过 `MahoClient`、`CacheEngine` 或统一的 UniFFI 网络接口发起。
+  - 物理删除 C# 端的全部 TLS 分片流与 SocketsHttpHandler 工厂代码。
+- **验收标准**：
+  - 物理删除 `MahoSocketsHttpHandlerFactory.cs`、`MahoTlsFragmentedStream.cs`、`MahoTransport.cs`，项目中不存在任何 C# 手写 TLS/DoH 栈。
+
+#### 5.3 Mako 高阶业务门面与协议编排下沉 (Pixiv Protocol Orchestration & Facade Sinking)
+- **痛点与现状**：
+  - `MakoHelper.cs` 高达 765 行（33KB），充斥着大量领域业务规则计算：
+    - 标签多语言翻译映射与推导（`TranslateTagAsync`、`TagTranslationCache`）
+    - 作品类型推导（`SimpleWorkType` 判定规则）
+    - 榜单参数拼接（`RankingMode` 字符串映射、日期格式合法性校验）
+    - 小说插图元数据回填（从正文提取 `illusts` 并匹配）
+    - 用户关注/收藏状态的混合条件校验。
+- **下沉方案**：
+  - 在 `pixeval_mako` 中构建高层业务门面（`MakoService` / `PixivWorkflow`）：
+    - 标签多语言缓存与翻译逻辑原生化。
+    - 作品过滤、类型派生、榜单参数构造与元数据丰富直接在 Rust 反序列化管线中完成，向前端输出就绪的数据结构。
+  - C# 端消灭 `MakoHelper.cs` 静态巨石，仅保留无状态的轻量 API 调用穿透。
+- **验收标准**：
+  - 物理删除 765 行的 `MakoHelper.cs`，Pixiv 协议编排与数据后处理全部在 Rust 端完成。
+
+#### 5.4 动态库插件符号分析与解压规划下沉 (Plugin Binary Symbol Extraction & Package Unpacking)
+- **痛点与现状**：
+  - `ExtensionService.cs`（782 行，30KB）在 C# 中手动进行 PE/ELF 二进制分析：使用 `stackalloc byte[4096]` 配合滑动窗口字节扫描，在原始 DLL 二进制流中搜索 `"GetExtensionsHost"` 导出函数符号。
+  - 同时在 C# 端手写 Zip 压缩包遍历、平台架构（win-x64, linux-x64, osx-arm64）解析与文件覆写解压逻辑。
+- **下沉方案**：
+  - 将插件包验证、解包、目录规划与动态库导出表扫描全量下沉至 `pixeval_plugin`。
+  - Rust 利用安全高效的二进制解析库（如 `object` crate）精准提取 PE/Mach-O/ELF 导出表符号，替代脆弱的 C# 4KB 滑动窗口扫描。
+  - 提供 `verify_and_install_plugin(archive_path, target_dir)` 等原子化 UniFFI 接口，C# 仅负责发起安装并展示进度通知。
+- **验收标准**：
+  - 物理移除 `ExtensionService.cs` 中的二进制扫描与解压文件 IO 代码，`ExtensionService` 缩减至 150 行以内的纯状态服务。
+
+#### 5.5 DSL 动态建议生成与光标上下文感知下沉 (Filter DSL Completion & Syntax Intelligence)
+- **痛点与现状**：
+  - 尽管 `pixeval_filters` 已经实现了 AST 解析和执行引擎，但在 `WorkFilterLanguage.cs` 和 `WorkFilterAutoSuggestBox.axaml.cs` 中，仍有数百行 C# 代码在负责：
+    - 基于光标位置的正则分词与语法推断。
+    - 关键字（`tag:`, `author:`, `sanity:`, `date:` 等）与比较运算符的自动补全候选集匹配。
+    - 标签与作者历史候选数据的本地混合过滤。
+- **下沉方案**：
+  - 在 `pixeval_filters` 中新增 `FilterCompletionEngine`：
+    - 输入当前查询字符串与光标位置，输出语义化的补全建议列表（包含 token 类型、建议值、光标替换范围）。
+    - 接驳 `pixeval_storage` 历史标签与常用作者数据，原生完成补全匹配与排序。
+  - C# 端 `WorkFilterAutoSuggestBox` 仅作为纯表现层，光标变动时将 `(text, cursor)` 抛给 Rust 并绑定结果列表。
+- **验收标准**：
+  - 物理清退 `WorkFilterLanguage.cs` 中的分词与建议算法，DSL 语法补全由 Rust 统一保证语法规则单点真相。
+
+#### 5.6 主页卡片配置持久化与布局状态机下沉 (Home Card Layout State Machine & Metadata Sinking)
+- **痛点与现状**：
+  - `HomeCardDefinitions.cs`（21KB）与 `HomePage.Layout.cs`（9KB）在 C# 端硬编码了所有卡片组件的元数据定义、默认布局尺寸、栅格网格碰撞吸附算法与布局持久化逻辑。
+  - 增减卡片或修改默认首页布局需修改多处 C# 静态声明与 JSON 序列化模型。
+- **下沉方案**：
+  - 在 `pixeval_config` 中收敛主页卡片元数据注册表（`CardRegistry`）与布局配置引擎。
+  - 栅格碰撞计算、自由拖拽网格对齐、卡片重排计算下沉至 Rust，向前端输出纯粹的绝对坐标与栅格跨度列表。
+  - C# 前端仅作为声明式渲染层，监听布局计算结果更新 Avalonia Canvas/Grid 布局。
+- **验收标准**：
+  - 物理删除 `HomeCardDefinitions.cs` 中的布局计算逻辑，卡片注册与布局计算 100% 由 `pixeval_config` 驱动。
+
+#### 5.7 订阅后台常驻轮询机自转守护 (Subscription Background Polling Daemon in Tokio)
+- **痛点与现状**：
+  - `WorkSubscriptionDownloadService.cs` 目前由 C# 端的 UI/后台定时器驱动循环轮询，在 C# 端调度画师新作拉取、比对更新、创建下载任务。
+  - 当 UI 处于特定生命周期或前台卡顿，定时器易受干扰，且跨 FFI 往返轮询产生不必要的互操作开销。
+- **下沉方案**：
+  - 将订阅后台轮询机完全收敛为 `pixeval_subscription` 内部的 Tokio 独立常驻守护任务（Daemon）。
+  - 轮询间隔、网络重试、限流熔断、新作去重比对与下载任务派发在 Rust Core 内部闭环自转。
+  - 通过 `ISubscriptionObserver` 仅在发现新作入库或下载完成时向 C# 发送事件通知更新 UI 徽章。
+- **验收标准**：
+  - C# 端彻底移除定时器轮询与任务比对逻辑，订阅服务完全由 Rust 后台协程静默守护。
+
+---
+
+### 阶段 6：C# 表现层现代化与终极架构重构 (Phase 6: Pure Presentation UI Modernization) (待启动)
+
+在 Phase 5 彻底完成系统与领域底层逻辑 100% 下沉后，C# 表现层将不再承担任何协议编排、二进制解析、媒体解码或状态守护职责。
+Phase 6 的核心目标是：**全面清理在逐步演进过程中积累的过渡期技术债与伪抽象，还原纯净不可变领域契约，彻底清退 Misaki 依赖，重构依赖注入与导航路由，打造极致现代化、高响应性的 Thin Avalonia UI。**
+
+#### 6.1 领域契约与 UI 状态彻底解耦 (Decouple Native Extensions from UI State)
 - **痛点与坏味道**：
   - 在 Phase 4.1 消除 `*ItemViewModel` 过程中，`NativeExtensions`（如 `Illustration.cs`、`Novel.cs`、`BooruPost.cs`）被塞入了大量原本属于 ViewModel 的职责：实现了 `INotifyPropertyChanged`、`IWorkViewModel`，持有了 `_isBookmarkedDisplay`、`_isInWatchLater`、`_isFavorite` 等私有可变字段，绑定了 UI 命令（`AddToBookmarkCommand`）乃至持有并发锁执行网络懒加载。
   - 这破坏了 UniFFI 生成的 `record` 的不可变值契约与纯净性，导致领域模型充当微型状态机。
@@ -364,7 +467,7 @@ Phase 5 的核心目标是：**在 Rust Core 已稳定承担 100% 领域计算�
 - **验收标准**：
   - `NativeExtensions` 中的 Record 没有任何私有可变字段，不实现 `INotifyPropertyChanged`，不直接持有 UI 命令。
 
-#### 5.2 彻底清退 `Misaki` 外部依赖与历史抽象包袱 (Eliminate Misaki Legacy Abstractions)
+#### 6.2 彻底清退 `Misaki` 外部依赖与历史抽象包袱 (Eliminate Misaki Legacy Abstractions)
 - **痛点与坏味道**：
   - 工程仍保留远古多平台抽象包 `Misaki`（`PackageReference Include="Misaki" Version="1.0.0.6"`），强行要求原生模型实现 `IArtworkInfo`、`IWorkEntry`、`ISingleImage`、`IImageSet`、`ISingleAnimatedImage`、`IIdentityInfo`。
   - 为此手写了数十个无意义的只读投影属性（如 `Author => User`、`TotalFavorite => (int)TotalBookmarks`、`IPreloadableList<IUser> Uploaders => []`），污染了代码库。
@@ -375,21 +478,20 @@ Phase 5 的核心目标是：**在 Rust Core 已稳定承担 100% 领域计算�
 - **验收标准**：
   - `Pixeval.csproj` 物理移除 `Misaki` 引用，项目中完全消除 `using Misaki;`。
 
-#### 5.3 静态巨石解体与规范化标准依赖注入 (Deconstruct Static God Helpers & Standardize DI)
+#### 6.3 静态巨石解体与规范化标准依赖注入 (Deconstruct Static God Helpers & Standardize DI)
 - **痛点与坏味道**：
   - 充斥着伪依赖注入与上帝单例：任何地方均能静态访问 `App.AppViewModel.*`、`AppInfo.*`、`PixevalSettings.*`。
-  - 存在 765 行的 `MakoHelper.cs`、多文件拼凑的 `IoHelper.cs`、以及弱类型运行期强转的 `WorkCommands.cs`。
+  - 存在多文件拼凑的 `IoHelper.cs`、以及弱类型运行期强转的 `WorkCommands.cs`。
 - **重构方案**：
-  - 将 `MakoHelper` 与 `IoHelper` 拆解为单一职责的标准服务并注册至 DI 容器：
-    - `IPixivApiService`：原生 Mako API 薄包装与端点调度。
+  - 将残留辅助类拆解为单一职责的标准服务并注册至 DI 容器：
     - `IArtworkActionService`：统一的收藏、点赞、关注操作与状态同步中心。
     - `IImageProviderService`：接驳 `CacheEngine` 的统一图像解析与供给服务。
   - 拔除 `App.AppViewModel`、`PixevalSettings` 等静态穿透路径，全面推行构造函数注入（Constructor Injection）与 XAML 标记扩展解析。
   - 消除弱类型 `WorkCommands`，替换为强类型、类型安全的交互命令系统。
 - **验收标准**：
-  - 彻底删除 `MakoHelper.cs` 与静态全局弱类型命令集，无任何未经 DI 托管的上帝单例访问。
+  - 彻底删除静态全局弱类型命令集，无任何未经 DI 托管的上帝单例访问。
 
-#### 5.4 集合管道与数据流极大化精简 (Streamline Data Providers & Collection Pipelines)
+#### 6.4 集合管道与数据流极大化精简 (Streamline Data Providers & Collection Pipelines)
 - **痛点与坏味道**：
   - 保留了旧版复杂的 `SharableViewDataProvider<T, TViewModel>`、`SimpleViewDataProvider`、`IncrementalLoadingCollection`、`AdvancedObservableCollection`、`CompositeObservableCollection`、`IRefCloneable` 轮子。
   - 在 C# 端维护了沉重的排序、多级过滤、多视图克隆与引用计数。
@@ -399,7 +501,7 @@ Phase 5 的核心目标是：**在 Rust Core 已稳定承担 100% 领域计算�
 - **验收标准**：
   - 物理删除 `SharableViewDataProvider.cs`、`SimpleViewDataProvider.cs` 等过度包装的数据提供者，消除多层集合中转。
 
-#### 5.5 View Code-Behind 极致瘦身与声明式路由体系 (View Code-Behind Decoupling & Modern Navigation)
+#### 6.5 View Code-Behind 极致瘦身与声明式路由体系 (View Code-Behind Decoupling & Modern Navigation)
 - **痛点与坏味道**：
   - `Views/` 目录下累积超过 400KB 的 Code-Behind 代码，`WorkContainer.axaml.cs`（404行）、`TabViewContainer.axaml.cs`（431行）等充当了事实上的巨石 Presenter。
   - 页面导航依赖容器控件间的直接硬编码跳转和实例化。
@@ -413,18 +515,21 @@ Phase 5 的核心目标是：**在 Rust Core 已稳定承担 100% 领域计算�
 
 ## 4. 下一步行动建议 (Recommended Next Steps)
 
-在 Phase 1、Phase 2、Phase 3 以及 Phase 4.1 的全量攻坚下，**Pixeval 几乎所有业务计算、网络传输、媒体转码、存储与状态机已 100% 成功下沉至 Rust Core**，并全量修复了 H1~H11 等 17 个既有存量缺陷。
+在 Phase 1 ~ 4.1 的全量攻坚下，Pixeval 已完成绝大多数底层架构向 Rust 的跨越，并修复了 17 个关键技术缺陷。
+为了彻底消除历史技术债务并实现极致精简的 Avalonia 表现层，后续建议按照**“先下沉残留核心系统，再解耦模型与清退外部抽象，最后解构静态巨石与精简表现层”**的战略步骤推进：
 
-在此坚实的底层基石之上，后续建议按照**“先去历史抽象与状态解耦，再解体静态巨石，最后精简管道与路由”**的顺序推进 Phase 5 C# 表现层现代化重塑：
-
-1. **第一优先级：模型契约还原与清退 Misaki 依赖 (Phase 5.1 & 5.2)**
-   - **理由**：拔除 `Misaki` 并解耦 `NativeExtensions` 中的可变状态，是理清整个 C# 表现层数据流动的第一步，彻底切断领域实体与 UI 状态机的反模式耦合。
+1. **第一优先级：底层核心业务与协议栈全量下沉 (Phase 5: 5.1 ~ 5.7)**
+   - **理由**：若底层仍保留 C# 图像解码、TLS 分片栈与 MakoHelper 业务门面，C# 表现层就永远无法做到“纯粹”。先将这 7 项非 UI 逻辑彻底下沉至 Rust，使 C# 真正成为不含任何协议和二进制计算的“轻客户端”。
+   - **成果**：达成真正的 **100% Rust Core**；消灭 C# 网络双轨制与大图解码大对象分配。
+2. **第二优先级：模型契约还原与清退 Misaki 依赖 (Phase 6.1 & 6.2)**
+   - **理由**：拔除 `Misaki` 并解耦 `NativeExtensions` 中的可变状态，是理清整个 C# 表现层数据流动的第一步，切断领域实体与 UI 状态机的反模式耦合。
    - **成果**：彻底移除 `Misaki` 包；原生 Record 恢复纯净不可变契约；XAML 依托强类型 DataTemplate 纯粹直连。
-2. **第二优先级：静态巨石解体与标准 DI 落地 (Phase 5.3)**
-   - **理由**：消灭 `MakoHelper`、`IoHelper` 与 `App.AppViewModel` 静态穿透，建立正规的 Service 服务层，为后续视图与集合重构铺平依赖路径。
-3. **第三优先级：集合管道精简与 View Code-Behind 瘦身 (Phase 5.4 & 5.5)**
+3. **第三优先级：静态巨石解体与标准 DI 落地 (Phase 6.3)**
+   - **理由**：消灭 `IoHelper` 与 `App.AppViewModel` 静态穿透，建立正规的 Service 服务层，为后续视图与集合重构铺平依赖路径。
+4. **第四优先级：集合管道精简与 View Code-Behind 瘦身 (Phase 6.4 & 6.5)**
    - **理由**：废除复杂的 `SharableViewDataProvider` 历史轮子，解耦 `WorkContainer` / `TabViewContainer`，完成 Avalonia 表现层极致轻量化的终局重构。
-4. **最终交付：统一跨平台 CI/CD 流水线 (Phase 4.2)**
+5. **最终交付：统一跨平台 CI/CD 流水线 (Phase 4.2)**
    - **目标**：配置 GitHub Actions 原生矩阵交叉编译与多架构分发。
+
 
 
