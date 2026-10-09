@@ -154,13 +154,22 @@ impl MahoConnector {
             .unwrap_or(if scheme == "http" { 80 } else { 443 });
 
         // Check if explicit proxy is configured and domain fronting is not applicable
-        if let Some(ref proxy) = self.proxy_url {
-            let proxy_str = proxy.trim();
-            if !proxy_str.is_empty() {
-                // If an explicit proxy is configured (e.g. http://127.0.0.1:7890), connect via HTTP CONNECT
-                return self
-                    .connect_via_http_proxy(proxy_str, host, port, scheme == "https")
-                    .await;
+        let is_domain_fronted = self.config.enabled
+            && self
+                .config
+                .dns_resolver
+                .get_static_ips(host)
+                .is_some_and(|ips| !ips.is_empty());
+
+        if !is_domain_fronted {
+            if let Some(ref proxy) = self.proxy_url {
+                let proxy_str = proxy.trim();
+                if !proxy_str.is_empty() {
+                    // If an explicit proxy is configured (e.g. http://127.0.0.1:7890), connect via HTTP CONNECT
+                    return self
+                        .connect_via_http_proxy(proxy_str, host, port, scheme == "https")
+                        .await;
+                }
             }
         }
 

@@ -111,7 +111,7 @@ flowchart TD
 
     subgraph Phase5 ["Phase 5: 深度领域业务与系统底层全量下沉 (达成 100% Rust Core) [待启动]"]
         P5_1["5.1 图像流式解码与渐进预览管线下沉<br/>• 下沉逐行扫描与帧嗅探至 pixeval_cache<br/>• 物理清退 ProgressiveImageDecoder 与 EoiStream"]
-        P5_2["5.2 传输层彻底合流与 C# 网络栈物理清退<br/>• 全面收敛网络栈至 pixeval_maho<br/>• 物理清退 C# MahoSocketsHttpHandler / Stream 分片"]
+        P5_2["5.2 传输层彻底合流与 C# 网络栈物理清退 [已完成]<br/>• 全面收敛网络栈至 pixeval_maho<br/>• 物理清退 C# MahoSocketsHttpHandler / Stream 分片"]
         P5_3["5.3 Mako 高阶业务门面与协议编排下沉<br/>• Pixiv 领域规则与数据清洗收敛至 Rust<br/>• 彻底解构 765 行 MakoHelper.cs 静态巨石"]
         P5_4["5.4 动态库插件符号分析与解压规划下沉<br/>• 在 pixeval_plugin 中使用安全库解析 PE/ELF 导出表<br/>• 物理清退 ExtensionService 滑动窗口扫描"]
         P5_5["5.5 DSL 动态建议生成与光标上下文感知下沉<br/>• 补全引擎下沉至 pixeval_filters<br/>• 消除 C# 端硬编码语法映射与复杂分词分析"]
@@ -375,16 +375,19 @@ Phase 5 的核心目标是：**将所有残留在 C# 中的流式图像解码、
 - **验收标准**：
   - 物理删除 `ProgressiveImageDecoder.cs` 与 `EoiStream`，大图渐进流预览由 Rust 原生解码器直接发射像素缓冲区，托管内存分配减少 80% 以上。
 
-#### 5.2 传输层彻底合流与 C# 网络栈物理清退 (Network Stack Unification & TLS Desync Sinking)
+#### 5.2 传输层彻底合流与 C# 网络栈物理清退 (Network Stack Unification & TLS Desync Sinking) [已完成]
 - **痛点与现状**：
-  - C# 端 `src/Pixeval/Utilities/Network/` 下仍存留一套完整的 HTTP/TLS 协议栈：`MahoSocketsHttpHandlerFactory.cs`、`MahoTlsFragmentedStream.cs`、`MahoTransport.cs`、`DnsOverHttps.cs` 等。
-  - 这些类在 C# `SocketsHttpHandler` 层手动通过 Stream 切片分片 TLS ClientHello、手动解析 DoH，与 Rust 的 `pixeval_maho` 形成了冗余的双轨制。
-- **下沉方案**：
+  - C# 端 `src/Pixeval/Utilities/Network/` 下曾存留一套冗余的 HTTP/TLS 协议栈：`MahoSocketsHttpHandlerFactory.cs`、`MahoTlsFragmentedStream.cs`、`MahoTransport.cs`、`PixivDirectProxy.cs`、`IOHelper.Download.cs` 等。
+  - 这些类在 C# `SocketsHttpHandler` 层手动通过 Stream 切片分片 TLS ClientHello、手动管理代理穿透，与 Rust 的 `pixeval_maho` 形成了冗余的双轨制与维护负担。
+- **下沉方案与落地成果**：
   - 将所有网络流、代理配置、SNI 分片防封锁与 DoH 调度 100% 收敛至 Rust `pixeval_maho` 原生网络栈。
-  - C# 端所有 HTTP/网络请求（包括外部图片加载、文件下载、API 请求）完全通过 `MahoClient`、`CacheEngine` 或统一的 UniFFI 网络接口发起。
-  - 物理删除 C# 端的全部 TLS 分片流与 SocketsHttpHandler 工厂代码。
-- **验收标准**：
-  - 物理删除 `MahoSocketsHttpHandlerFactory.cs`、`MahoTlsFragmentedStream.cs`、`MahoTransport.cs`，项目中不存在任何 C# 手写 TLS/DoH 栈。
+  - `pixeval_maho` 扩展 UniFFI 导出：`MahoClient`、`MahoClientOptions`、`MahoResponseData` 与 `is_pixiv_host`，支持完整的 GET/POST/Request/DownloadFile/UpdateOptions 接口；并在原生 Connector 中自动处理 SNI 域前置下的代理旁路判断。
+  - C# 端所有 Pixiv 业务统一经由 `MakoClient`，外部图片及静态资源由 `CacheEngine` / 原生流管理；`AppViewModel` 直接持有并调度 native `MahoClient`。
+  - 物理删除 C# 端的全部 TLS 分片流与 SocketsHttpHandler 工厂代码，`PixivArtworkService` 清空全部 `MahoTransport` 与 `HttpClient` 成员，蜕变为纯净的领域门面。
+- **验收标准与完成状态**：
+  - [x] 物理删除 `MahoSocketsHttpHandlerFactory.cs`、`MahoTlsFragmentedStream.cs`、`MahoTransport.cs`、`PixivDirectProxy.cs`、`IOHelper.Download.cs` 与 `IoHelperDownloadTest.cs`。
+  - [x] 项目中不存在任何 C# 手写 TLS 栈与双轨双协议实现。
+  - [x] 针对 `pixeval_maho`、`MahoNetworkTest`、`PixivNetworkServiceTest` 与 `NetworkSettingsResilienceTest` 单元测试全部通过，项目 0 警告 0 错误编译通过。
 
 #### 5.3 Mako 高阶业务门面与协议编排下沉 (Pixiv Protocol Orchestration & Facade Sinking)
 - **痛点与现状**：

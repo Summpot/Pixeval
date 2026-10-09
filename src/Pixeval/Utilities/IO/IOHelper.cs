@@ -4,8 +4,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 
@@ -40,21 +38,5 @@ public static partial class IoHelper
     public static string NormalizePathSegment(string path)
     {
         return InvalidNameChars.Aggregate(path, (s, c) => s.Replace(c.ToString(), "")).TrimEnd('.');
-    }
-
-    // todo 简化为PostJsonAsync
-    public static Task<HttpResponseMessage> PostFormAsync(this HttpClient httpClient, string url, params (string? Key, string? Value)[] parameters)
-    {
-        var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new FormUrlEncodedContent(parameters.Select(tuple => new KeyValuePair<string?, string?>(tuple.Key, tuple.Value)))
-            {
-                Headers =
-                {
-                    ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded")
-                }
-            }
-        };
-        return httpClient.SendAsync(httpRequestMessage);
     }
 }

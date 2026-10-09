@@ -24,6 +24,7 @@ using Pixeval.Models.Pixiv;
 using Pixeval.Models.Subscriptions;
 using Pixeval.Native.Booru;
 using Pixeval.Native.Download;
+using Pixeval.Native.Maho;
 using Pixeval.Native.Mako;
 using Pixeval.Native.Storage;
 using Pixeval.Utilities;
@@ -45,7 +46,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
     public ObservableCollection<SearchHistoryRecord> SearchHistoryEntries { get; } = [];
     public Task RestoreTask { get; private set; } = Task.CompletedTask;
     public MakoClient MakoClient { get; private set; } = null!;
-    public MahoTransport MahoTransport { get; } = new();
+    public MahoClient MahoClient { get; private set; } = null!;
     public AppSettings AppSettings { get; } = AppInfo.LoadAppSettings(logger) ?? new AppSettings();
     public LoginContext LoginContext { get; } = AppInfo.LoadLoginContext(logger) ?? new LoginContext();
     public ObservableCollection<HomePageCardLayout> HomePageCards { get; } = AppInfo.LoadHomePageCards(logger) ?? HomePageCardsSettings.CreateDefaultCards();
@@ -74,13 +75,34 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         CacheHelper.UpdateNetworkOptions(AppSettings.ToMakoConfiguration());
     }
 
+    public MahoClientOptions CreateMahoClientOptions()
+    {
+        var networkSettings = AppSettings.NetworkSettings;
+        var df = networkSettings.PixivDomainFronting;
+        var hostIps = new Dictionary<string, List<string>>
+        {
+            [MakoHelper.AppApiHost] = [.. df.PixivAppApiNameResolver],
+            [MakoHelper.OAuthHost] = [.. df.PixivOAuthNameResolver],
+            [MakoHelper.WebApiHost] = [.. df.PixivWebApiNameResolver],
+            [MakoHelper.AccountHost] = [.. df.PixivAccountNameResolver],
+            [MakoHelper.ImageHost] = [.. df.PixivImageNameResolver],
+            [MakoHelper.ImageHost2] = [.. df.PixivImageNameResolver2]
+        };
+        return new MahoClientOptions(
+            df.EnablePixivDomainFronting,
+            SplitDelayMs: 100,
+            hostIps,
+            ProxyUrl: MakoHelper.GetEffectiveProxyUrl(networkSettings));
+    }
+
     private ServiceProvider CreateServiceProvider()
     {
         var makoConfig = AppSettings.ToMakoConfiguration();
         MakoClient = new MakoClient(makoConfig);
         MakoClient.SetSessionCallback(new MakoSessionCallbackHandler(this, logger));
-        var pixivService = new PixivArtworkService(MakoClient, MahoTransport, AppSettings.NetworkSettings);
-        DownloadManager = new DownloadManager(pixivService.GetImageDownloadClient(), AppSettings.DownloadSettings.MaxDownloadTaskConcurrencyLevel);
+        MahoClient = new MahoClient(CreateMahoClientOptions());
+        var pixivService = new PixivArtworkService(MakoClient);
+        DownloadManager = new DownloadManager(null, AppSettings.DownloadSettings.MaxDownloadTaskConcurrencyLevel);
 
         try
         {
@@ -96,7 +118,6 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             .AddSingleton(_ => logger)
             .AddBooruServices()
             .AddKeyedSingleton<IGetArtworkService>(IPlatformInfo.Pixiv, (provider, key) => pixivService)
-            .AddKeyedSingleton<IDownloadHttpClientService>(IPlatformInfo.Pixiv, (provider, key) => pixivService)
             .AddKeyedSingleton<IPostFavoriteService>(IPlatformInfo.Pixiv, (provider, key) => pixivService)
             .AddKeyedSingleton<GitHubHttpClientProvider>(
                 GitHubHttpClientProvider.PlatformKey,
@@ -105,6 +126,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
                 GitHubHttpClientProvider.PlatformKey,
                 (provider, key) => provider.GetRequiredKeyedService<GitHubHttpClientProvider>(key))
             .AddSingleton(_ => MakoClient)
+            .AddSingleton(_ => MahoClient)
             .AddSingleton(_ => StorageEngine)
             .AddSingleton(_ => DownloadManager)
             .AddSingleton<WorkSubscriptionDownloadService>()
@@ -266,20 +288,18 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
     public void SetNameResolvers()
     {
         var networkSettings = AppSettings.NetworkSettings;
-        SetMahoResolver(MakoHelper.AppApiHost, networkSettings.PixivDomainFronting.PixivAppApiNameResolver);
-        SetMahoResolver(MakoHelper.ImageHost, networkSettings.PixivDomainFronting.PixivImageNameResolver);
-        SetMahoResolver(MakoHelper.ImageHost2, networkSettings.PixivDomainFronting.PixivImageNameResolver2);
-        SetMahoResolver(MakoHelper.OAuthHost, networkSettings.PixivDomainFronting.PixivOAuthNameResolver);
-        SetMahoResolver(MakoHelper.AccountHost, networkSettings.PixivDomainFronting.PixivAccountNameResolver);
-        SetMahoResolver(MakoHelper.WebApiHost, networkSettings.PixivDomainFronting.PixivWebApiNameResolver);
+        HookResolver(networkSettings.PixivDomainFronting.PixivAppApiNameResolver);
+        HookResolver(networkSettings.PixivDomainFronting.PixivImageNameResolver);
+        HookResolver(networkSettings.PixivDomainFronting.PixivImageNameResolver2);
+        HookResolver(networkSettings.PixivDomainFronting.PixivOAuthNameResolver);
+        HookResolver(networkSettings.PixivDomainFronting.PixivAccountNameResolver);
+        HookResolver(networkSettings.PixivDomainFronting.PixivWebApiNameResolver);
 
-        void SetMahoResolver(string host, ObservableCollection<string> ips)
+        void HookResolver(ObservableCollection<string> ips)
         {
-            MahoTransport.SetHostIps(host, ips);
-            ips.CollectionChanged += (sender, _) =>
+            ips.CollectionChanged += (_, _) =>
             {
-                if (sender is ObservableCollection<string> updatedIps)
-                    MahoTransport.SetHostIps(host, updatedIps);
+                UpdateMakoNetworkOptions();
             };
         }
     }
@@ -289,7 +309,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         var config = AppSettings.ToMakoConfiguration();
         MakoClient.UpdateConfiguration(config);
         CacheHelper.UpdateNetworkOptions(config);
-        (AppServiceProvider.GetKeyedService<IDownloadHttpClientService>(IPlatformInfo.Pixiv) as PixivArtworkService)?.Reset();
+        MahoClient?.UpdateOptions(CreateMahoClientOptions());
         AppInfo.AppVersion.ResetUpdateEngine();
     }
 
@@ -300,9 +320,6 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         AppServiceProvider.GetKeyedService<T>(platformKey)
         ?? AppServiceProvider.GetKeyedService<T>(IPlatformInfo.All)
         ?? throw new NotSupportedException($"No service found for {platformKey}");
-
-    public HttpClient GetRequiredHttpClient() =>
-        AppServiceProvider.GetRequiredKeyedService<IDownloadHttpClientService>(IPlatformInfo.All).GetImageDownloadClient();
 
     public HttpClient GetRequiredGitHubHttpClient() =>
         AppServiceProvider.GetRequiredKeyedService<IDownloadHttpClientService>(GitHubHttpClientProvider.PlatformKey).GetApiClient();
@@ -319,6 +336,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         {
             DownloadManager?.MarkDisposed();
             DownloadManager?.Dispose();
+            MahoClient?.Dispose();
             await AppServiceProvider.DisposeAsync();
         }
         catch

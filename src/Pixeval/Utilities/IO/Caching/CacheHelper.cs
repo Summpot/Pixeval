@@ -194,8 +194,6 @@ public static class CacheHelper
             throw new InvalidOperationException(
                 $"{nameof(IAnimatedImageFrame.PreferredAnimatedImageType)} should be {nameof(SingleAnimatedImageType.MultiFiles)}");
         await frame.MultiImageUris!.TryPreloadListAsync(platform, token: token);
-        var client = App.AppViewModel.AppServiceProvider.GetRequiredKeyedService<IDownloadHttpClientService>(platform)
-            .GetImageDownloadClient();
         var count = frame.MultiImageUris!.Count;
         var imageList = new List<BitmapOrStream>(count);
         var delayList = new List<int>(count);
@@ -385,38 +383,7 @@ public static class CacheHelper
                 onPreview: onPreview,
                 cancellationToken: token);
 
-            if (stream is not null)
-                return stream;
-
-            token.ThrowIfCancellationRequested();
-
-            if (App.AppViewModel?.AppServiceProvider?.GetKeyedService<IDownloadHttpClientService>(platform) is { } clientService)
-            {
-                var client = clientService.GetImageDownloadClient();
-                var ms = new MemoryStream();
-                using var fallbackDecoder = onPreview is null ? null : new ProgressiveImageDecoder();
-                var error = await client.DownloadStreamAsync(
-                    ms,
-                    new Uri(key),
-                    progress: progress,
-                    onDataAvailable: fallbackDecoder is null ? null : (s, _) =>
-                    {
-                        if (fallbackDecoder.Decode(s) is { } frame)
-                            onPreview?.Invoke(frame);
-                        return Task.CompletedTask;
-                    },
-                    token: token);
-                if (error is null && ms.Length > 0)
-                {
-                    ms.Position = 0;
-                    TryCacheStream(key, ms);
-                    ms.Position = 0;
-                    return ms;
-                }
-                await ms.DisposeAsync();
-            }
-
-            return null;
+            return stream;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {

@@ -1,10 +1,8 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using System;
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Utilities.Network;
 using Pixeval.Native.Maho;
 
 namespace Pixeval.Tests;
@@ -97,28 +95,28 @@ public sealed class MahoNetworkTest
     }
 
     [TestMethod]
-    public void MahoTransportDnsResolverShouldMapAndClear()
+    public void NativeDnsResolverShouldMapAndClear()
     {
-        using var transport = new MahoTransport();
-        transport.SetHostIps("custom.pixiv.net", ["1.2.3.4", "5.6.7.8"]);
+        using var resolver = new DnsResolver();
+        resolver.SetMapping("custom.pixiv.net", ["1.2.3.4", "5.6.7.8"]);
 
-        var ips = transport.GetHostIps("custom.pixiv.net");
+        var ips = resolver.GetMapping("custom.pixiv.net");
         Assert.AreEqual(2, ips.Count);
         Assert.AreEqual("1.2.3.4", ips[0]);
         Assert.AreEqual("5.6.7.8", ips[1]);
 
-        transport.ClearHostIps();
-        var empty = transport.GetHostIps("custom.pixiv.net");
+        resolver.Clear();
+        var empty = resolver.GetMapping("custom.pixiv.net");
         Assert.AreEqual(0, empty.Count);
     }
 
     [TestMethod]
-    public async System.Threading.Tasks.Task MahoTransportDnsResolverShouldResolveAsync()
+    public async System.Threading.Tasks.Task NativeDnsResolverShouldResolveAsync()
     {
-        using var transport = new MahoTransport();
-        transport.SetHostIps("override.pixiv.net", ["127.0.0.1"]);
+        using var resolver = new DnsResolver();
+        resolver.SetMapping("override.pixiv.net", ["127.0.0.1"]);
 
-        var ips = await transport.DnsResolver.ResolveAsync("override.pixiv.net");
+        var ips = await resolver.ResolveAsync("override.pixiv.net");
         Assert.AreEqual(1, ips.Count);
         Assert.AreEqual("127.0.0.1", ips[0]);
     }
@@ -146,33 +144,40 @@ public sealed class MahoNetworkTest
     }
 
     [TestMethod]
-    public async System.Threading.Tasks.Task MahoTlsFragmentedStreamShouldWriteFragmentsToUnderlyingStream()
+    public void CoreIsPixivHostShouldIdentifyDomains()
     {
-        using var memoryStream = new System.IO.MemoryStream();
-        await using (var fragmentedStream = new MahoTlsFragmentedStream(memoryStream, splitDelayMs: 0))
-        {
-            var packet = MakeSyntheticClientHello("oauth.secure.pixiv.net");
-            await fragmentedStream.WriteAsync(packet);
-            await fragmentedStream.FlushAsync();
+        Assert.IsTrue(PixevalMahoMethods.IsPixivHost("i.pximg.net"));
+        Assert.IsTrue(PixevalMahoMethods.IsPixivHost("s.pximg.net"));
+        Assert.IsTrue(PixevalMahoMethods.IsPixivHost("app-api.pixiv.net"));
+        Assert.IsTrue(PixevalMahoMethods.IsPixivHost("pixiv.net"));
+        Assert.IsTrue(PixevalMahoMethods.IsPixivHost("pximg.net"));
 
-            Assert.IsTrue(fragmentedStream.IsHandshakeCompleted);
+        Assert.IsFalse(PixevalMahoMethods.IsPixivHost("127.0.0.1"));
+        Assert.IsFalse(PixevalMahoMethods.IsPixivHost("github.com"));
+        Assert.IsFalse(PixevalMahoMethods.IsPixivHost("example.com"));
+    }
 
-            // Subsequent normal write should pass through
-            var ping = System.Text.Encoding.UTF8.GetBytes("PING_PAYLOAD");
-            await fragmentedStream.WriteAsync(ping);
-            await fragmentedStream.FlushAsync();
-        }
+    [TestMethod]
+    public void MahoClientShouldInitializeAndUpdateOptions()
+    {
+        var options = new MahoClientOptions(
+            DomainFrontingEnabled: true,
+            SplitDelayMs: 50,
+            HostIps: new Dictionary<string, List<string>>
+            {
+                ["test.pixiv.net"] = ["1.2.3.4"]
+            },
+            ProxyUrl: "http://127.0.0.1:7890");
 
-        var written = memoryStream.ToArray();
-        Assert.IsTrue(written.Length > 0);
+        using var client = new MahoClient(options);
+        Assert.IsNotNull(client);
 
-        // Verify that written data ends with PING_PAYLOAD
-        var pingBytes = System.Text.Encoding.UTF8.GetBytes("PING_PAYLOAD");
-        Assert.IsTrue(written.AsSpan().EndsWith(pingBytes));
+        var updated = new MahoClientOptions(
+            DomainFrontingEnabled: false,
+            SplitDelayMs: 0,
+            HostIps: new Dictionary<string, List<string>>(),
+            ProxyUrl: null);
 
-        // Verify first record starts with TLS handshake and rewritten version 0x03 0x09
-        Assert.AreEqual((byte) 0x16, written[0]);
-        Assert.AreEqual((byte) 0x03, written[1]);
-        Assert.AreEqual((byte) 0x09, written[2]);
+        client.UpdateOptions(updated);
     }
 }

@@ -143,16 +143,24 @@ public partial class Supporter : ViewModelBase
             var path = Path.Combine(basePath, supporter.Name + ".png");
             if (File.Exists(path) || supporter.ProfilePicture is null)
                 return;
-            var file = File.CreateAsyncWrite(path);
-            if (await client.DownloadStreamAsync(file, supporter.ProfilePicture) is not null)
+
+            try
             {
-                await file.DisposeAsync();
-                File.Delete(path);
-            }
-            else
-            {
-                await file.DisposeAsync();
+                var bytes = await client.GetByteArrayAsync(supporter.ProfilePicture);
+                await File.WriteAllBytesAsync(path, bytes);
                 supporter.OnPropertyChanged(nameof(LocalProfilePicture));
+            }
+            catch
+            {
+                try
+                {
+                    if (File.Exists(path))
+                        File.Delete(path);
+                }
+                catch
+                {
+                    // ignored
+                }
             }
         }
     }

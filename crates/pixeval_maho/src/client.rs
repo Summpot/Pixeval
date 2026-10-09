@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+use std::collections::HashMap;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
@@ -14,6 +15,7 @@ use http_body_util::{BodyExt, Full};
 use hyper::body::Body;
 use hyper_util::client::legacy::Client;
 use hyper_util::rt::TokioExecutor;
+use parking_lot::RwLock;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use url::form_urlencoded;
@@ -21,7 +23,7 @@ use url::form_urlencoded;
 use crate::config::MahoConfig;
 use crate::connector::MahoConnector;
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, uniffi::Error)]
 pub enum MahoError {
     #[error("Network error: {message}")]
     Network { message: String },
@@ -32,11 +34,19 @@ pub enum MahoError {
     #[error("HTTP error with status code: {code}")]
     Http { code: u16 },
 
-    #[error("Invalid URL: {0}")]
-    Url(String),
+    #[error("Invalid URL: {message}")]
+    Url { message: String },
 
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    #[error("IO error: {message}")]
+    Io { message: String },
+}
+
+impl From<std::io::Error> for MahoError {
+    fn from(err: std::io::Error) -> Self {
+        MahoError::Io {
+            message: err.to_string(),
+        }
+    }
 }
 
 impl From<hyper::Error> for MahoError {
@@ -205,7 +215,9 @@ impl MahoHttpClient {
         let uri: Uri = builder
             .url
             .parse()
-            .map_err(|e| MahoError::Url(format!("{}: {}", builder.url, e)))?;
+            .map_err(|e| MahoError::Url {
+                message: format!("{}: {}", builder.url, e),
+            })?;
 
         let mut req_builder = Request::builder().method(builder.method).uri(uri);
 
@@ -306,3 +318,160 @@ impl MahoRequestBuilder {
         client.execute(self).await
     }
 }
+
+#[derive(uniffi::Record, Clone, Debug, Default)]
+pub struct MahoClientOptions {
+    pub domain_fronting_enabled: bool,
+    pub split_delay_ms: u64,
+    pub host_ips: HashMap<String, Vec<String>>,
+    pub proxy_url: Option<String>,
+}
+
+#[derive(uniffi::Record, Clone, Debug)]
+pub struct MahoResponseData {
+    pub status: u16,
+    pub headers: HashMap<String, String>,
+    pub body: Vec<u8>,
+}
+
+#[derive(uniffi::Object)]
+pub struct MahoClient {
+    inner: Arc<RwLock<MahoHttpClient>>,
+}
+
+#[uniffi::export(async_runtime = "tokio")]
+impl MahoClient {
+    #[uniffi::constructor]
+    pub fn new(options: Option<MahoClientOptions>) -> Arc<Self> {
+        let client = Self::build_client(options.as_ref());
+        Arc::new(Self {
+            inner: Arc::new(RwLock::new(client)),
+        })
+    }
+
+    pub fn update_options(&self, options: MahoClientOptions) {
+        let new_client = Self::build_client(Some(&options));
+        *self.inner.write() = new_client;
+    }
+
+    pub async fn get(
+        &self,
+        url: String,
+        headers: Option<HashMap<String, String>>,
+    ) -> Result<MahoResponseData, MahoError> {
+        self.request("GET".to_string(), url, headers, None).await
+    }
+
+    pub async fn post(
+        &self,
+        url: String,
+        headers: Option<HashMap<String, String>>,
+        body: Option<Vec<u8>>,
+    ) -> Result<MahoResponseData, MahoError> {
+        self.request("POST".to_string(), url, headers, body).await
+    }
+
+    pub async fn request(
+        &self,
+        method: String,
+        url: String,
+        headers: Option<HashMap<String, String>>,
+        body: Option<Vec<u8>>,
+    ) -> Result<MahoResponseData, MahoError> {
+        let client = self.inner.read().clone();
+        let parsed_method = method.parse::<http::Method>().map_err(|e| MahoError::Network {
+            message: format!("Invalid HTTP method '{method}': {e}"),
+        })?;
+
+        let mut builder = client.request(parsed_method, &url);
+        if let Some(h) = headers {
+            for (k, v) in h {
+                builder = builder.header(k.as_str(), v.as_str());
+            }
+        }
+        if let Some(b) = body {
+            builder = builder.body(Bytes::from(b));
+        }
+
+        let resp = builder.send().await?;
+        let status = resp.status().as_u16();
+        let mut resp_headers = HashMap::new();
+        for (k, v) in resp.headers() {
+            if let Ok(val_str) = v.to_str() {
+                resp_headers.insert(k.as_str().to_string(), val_str.to_string());
+            }
+        }
+        let body_bytes = resp.bytes().await?.to_vec();
+
+        Ok(MahoResponseData {
+            status,
+            headers: resp_headers,
+            body: body_bytes,
+        })
+    }
+
+    pub async fn get_bytes(&self, url: String) -> Result<Vec<u8>, MahoError> {
+        let resp = self.get(url, None).await?;
+        if resp.status >= 400 {
+            return Err(MahoError::Http { code: resp.status });
+        }
+        Ok(resp.body)
+    }
+
+    pub async fn get_string(&self, url: String) -> Result<String, MahoError> {
+        let bytes = self.get_bytes(url).await?;
+        String::from_utf8(bytes).map_err(|e| MahoError::Network {
+            message: format!("UTF-8 decode error: {e}"),
+        })
+    }
+
+    pub async fn download_file(
+        &self,
+        url: String,
+        destination: String,
+    ) -> Result<(), MahoError> {
+        let bytes = self.get_bytes(url).await?;
+        if let Some(parent) = std::path::Path::new(&destination).parent() {
+            tokio::fs::create_dir_all(parent).await.map_err(|e| MahoError::Io {
+                message: e.to_string(),
+            })?;
+        }
+        tokio::fs::write(&destination, bytes)
+            .await
+            .map_err(|e| MahoError::Io {
+                message: e.to_string(),
+            })?;
+        Ok(())
+    }
+}
+
+impl MahoClient {
+    fn build_client(options: Option<&MahoClientOptions>) -> MahoHttpClient {
+        let resolver = crate::dns::DnsResolver::new();
+        let mut enabled = true;
+        let mut split_delay_ms = 100;
+        let mut proxy_url = None;
+
+        if let Some(opts) = options {
+            enabled = opts.domain_fronting_enabled;
+            split_delay_ms = opts.split_delay_ms;
+            proxy_url = opts
+                .proxy_url
+                .as_ref()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty());
+            for (host, ips) in &opts.host_ips {
+                resolver.set_mapping(host.clone(), ips.clone());
+            }
+        }
+
+        let config = Arc::new(MahoConfig {
+            enabled,
+            split_delay_ms,
+            dns_resolver: resolver,
+        });
+
+        MahoHttpClient::new(config, proxy_url)
+    }
+}
+
