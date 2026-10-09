@@ -15,6 +15,8 @@ public sealed class SubscriptionEngineTest
         public List<SubscriptionFetchState> StateChanges { get; } = [];
         public List<(long SubId, uint DuplicateCount)> DuplicateStoppedEvents { get; } = [];
         public List<SubscriptionDownloadItem> FetchedItems { get; } = [];
+        public List<uint> NewWorksIngestedCounts { get; } = [];
+        public List<bool> DaemonStateChanges { get; } = [];
 
         public void OnFetchStateChanged(SubscriptionFetchState state)
         {
@@ -37,6 +39,16 @@ public sealed class SubscriptionEngineTest
 
         public void OnSyncFinished()
         {
+        }
+
+        public void OnNewWorksIngested(uint totalCount)
+        {
+            NewWorksIngestedCounts.Add(totalCount);
+        }
+
+        public void OnDaemonStateChanged(bool isRunning)
+        {
+            DaemonStateChanges.Add(isRunning);
         }
     }
 
@@ -148,5 +160,25 @@ public sealed class SubscriptionEngineTest
 
         // Queue should now be empty
         Assert.IsNull(engine.TryDequeueSyncRequest());
+    }
+
+    [TestMethod]
+    public void DaemonLifecycleAndIntervalControlShouldWork()
+    {
+        var callback = new TestProgressCallback();
+        using var engine = new SubscriptionSyncEngine(5, callback);
+
+        Assert.IsFalse(engine.IsDaemonRunning());
+        Assert.AreEqual(1800UL, engine.GetDaemonInterval());
+
+        engine.SetDaemonInterval(3600UL);
+        Assert.AreEqual(3600UL, engine.GetDaemonInterval());
+
+        engine.StartDaemon(600UL);
+        Assert.IsTrue(engine.IsDaemonRunning());
+        Assert.AreEqual(600UL, engine.GetDaemonInterval());
+
+        engine.StopDaemon();
+        Assert.IsFalse(engine.IsDaemonRunning());
     }
 }

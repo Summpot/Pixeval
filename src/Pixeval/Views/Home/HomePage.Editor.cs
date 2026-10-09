@@ -5,7 +5,7 @@ using Avalonia.Controls;
 using CommunityToolkit.Mvvm.Input;
 using Pixeval.AppManagement;
 using Pixeval.I18N;
-using Pixeval.Models.Home;
+using Pixeval.Native.Config;
 using Pixeval.Utilities;
 
 namespace Pixeval.Views.Home;
@@ -38,10 +38,13 @@ public sealed partial class HomePage
                 return;
             }
 
-            draft.Column = column;
-            draft.Row = row;
-            draft.ColumnSpan = width;
-            draft.RowSpan = height;
+            draft = draft with
+            {
+                Column = column,
+                Row = row,
+                ColumnSpan = width,
+                RowSpan = height
+            };
             _cards.Add(draft);
             SelectCard(draft);
             SaveLayout();
@@ -112,12 +115,25 @@ public sealed partial class HomePage
             return;
         }
 
-        _selectedCard.Column = newColumn;
-        _selectedCard.Row = newRow;
-        _selectedCard.ColumnSpan = newColumnSpan;
-        _selectedCard.RowSpan = newRowSpan;
+        var index = _cards.IndexOf(_selectedCard);
+        var updated = _selectedCard with
+        {
+            Column = newColumn,
+            Row = newRow,
+            ColumnSpan = newColumnSpan,
+            RowSpan = newRowSpan
+        };
+        if (TryGetCardControl(_selectedCard, out var control))
+        {
+            control.UpdateCard(updated);
+            ApplyCardLayout(control);
+        }
+        if (index >= 0)
+        {
+            _cards[index] = updated;
+        }
+        _selectedCard = updated;
         SaveLayout();
-        UpdateSelectedCardLayoutVisual();
         UpdateSelectedCardControls();
     }
 
@@ -130,9 +146,19 @@ public sealed partial class HomePage
         if (_selectedCard.BackgroundColor == color)
             return;
 
-        _selectedCard.BackgroundColor = color;
+        var index = _cards.IndexOf(_selectedCard);
+        var updated = _selectedCard with { BackgroundColor = color };
+        if (TryGetCardControl(_selectedCard, out var control))
+        {
+            control.UpdateCard(updated);
+            control.UpdateBackground();
+        }
+        if (index >= 0)
+        {
+            _cards[index] = updated;
+        }
+        _selectedCard = updated;
         SaveLayout();
-        UpdateSelectedCardLayoutVisual();
     }
 
     private void HomeCardControl_OnCardSelected(object? sender, HomeCardSelectedEventArgs e)
@@ -153,7 +179,15 @@ public sealed partial class HomePage
             _activeCardControl = null;
 
         if (e.HasChanged)
+        {
+            var index = _cards.IndexOf(e.OriginalCard);
+            if (index >= 0)
+                _cards[index] = e.Card;
+            if (_selectedCard == e.OriginalCard)
+                _selectedCard = e.Card;
+
             SaveLayout();
+        }
 
         RefreshSelectionVisuals();
         UpdateSelectedCardControls();

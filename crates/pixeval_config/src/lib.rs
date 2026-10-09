@@ -302,4 +302,73 @@ footer:
         assert_eq!(norm.placed_cards[0].bounds, HomeCardBounds { column: 0, row: 0, column_span: 1, row_span: 1 });
         assert_eq!(norm.placed_cards[1].bounds, HomeCardBounds { column: 1, row: 0, column_span: 1, row_span: 1 });
     }
+
+    #[test]
+    fn test_card_registry_and_default_cards() {
+        let engine = ConfigEngine::new();
+        let all_meta = engine.get_all_card_metadata();
+        assert_eq!(all_meta.len(), 19);
+
+        let spotlight_meta = engine.get_card_metadata(HomePageCardSourceKind::Spotlight);
+        assert_eq!(spotlight_meta.parameter_flags, 0);
+
+        let bookmarks_meta = engine.get_card_metadata(HomePageCardSourceKind::WorkBookmarks);
+        assert!(bookmarks_meta.use_current_user_as_default);
+        assert_ne!(bookmarks_meta.parameter_flags, 0);
+
+        let defaults = engine.create_default_cards();
+        assert_eq!(defaults.len(), 3);
+        assert_eq!(defaults[0].source_kind, HomePageCardSourceKind::Spotlight);
+        assert_eq!(defaults[1].source_kind, HomePageCardSourceKind::UserRecommended);
+        assert_eq!(defaults[2].source_kind, HomePageCardSourceKind::WorkRecommended);
+    }
+
+    #[test]
+    fn test_layout_calculate_edit_candidate() {
+        let engine = ConfigEngine::new();
+        let start = HomeCardBounds { column: 1, row: 1, column_span: 2, row_span: 2 };
+
+        // Move inside grid
+        let moved = engine.layout_calculate_edit_candidate(HomeCardEditAction::Move, start, 1, 1, 6, 6);
+        assert_eq!(moved, HomeCardBounds { column: 2, row: 2, column_span: 2, row_span: 2 });
+
+        // Move clamped to bottom-right
+        let clamped_move = engine.layout_calculate_edit_candidate(HomeCardEditAction::Move, start, 10, 10, 4, 4);
+        assert_eq!(clamped_move, HomeCardBounds { column: 2, row: 2, column_span: 2, row_span: 2 });
+
+        // Resize right
+        let resized_right = engine.layout_calculate_edit_candidate(HomeCardEditAction::ResizeRight, start, 1, 0, 6, 6);
+        assert_eq!(resized_right, HomeCardBounds { column: 1, row: 1, column_span: 3, row_span: 2 });
+
+        // Resize left with minimum span enforcement
+        let resized_left = engine.layout_calculate_edit_candidate(HomeCardEditAction::ResizeLeft, start, 5, 0, 6, 6);
+        assert_eq!(resized_left.column_span, 1);
+        assert_eq!(resized_left.column, 2);
+    }
+
+    #[test]
+    fn test_home_page_cards_yaml_roundtrip() {
+        let engine = ConfigEngine::new();
+        let default_cards = engine.create_default_cards();
+
+        let yaml = engine.format_home_page_cards_yaml(default_cards.clone()).unwrap();
+        assert!(yaml.contains("Spotlight"));
+        assert!(yaml.contains("UserRecommended"));
+        assert!(yaml.contains("WorkRecommended"));
+
+        let parsed = engine.parse_home_page_cards_yaml(yaml).unwrap();
+        assert_eq!(parsed.len(), 3);
+        assert_eq!(parsed[0].source_kind, HomePageCardSourceKind::Spotlight);
+        assert_eq!(parsed[1].source_kind, HomePageCardSourceKind::UserRecommended);
+        assert_eq!(parsed[2].source_kind, HomePageCardSourceKind::WorkRecommended);
+
+        // Test file persistence
+        let dir = create_test_dir();
+        let file_path = dir.path().join("home_page_cards.yaml").to_str().unwrap().to_string();
+        engine.save_home_page_cards_to_file(file_path.clone(), parsed).unwrap();
+
+        let loaded = engine.load_home_page_cards_from_file(file_path).unwrap();
+        assert_eq!(loaded.len(), 3);
+        assert_eq!(loaded[0].source_kind, HomePageCardSourceKind::Spotlight);
+    }
 }

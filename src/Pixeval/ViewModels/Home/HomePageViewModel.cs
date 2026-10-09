@@ -10,7 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Controls;
 using Pixeval.I18N;
-using Pixeval.Models.Home;
+using Pixeval.Native.Config;
 using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.Views;
@@ -209,8 +209,6 @@ public partial class HomePageViewModel : ViewModelBase
         if (PendingTemplate is not { } template)
             return false;
 
-        var draft = new HomePageCardLayout(template.SourceKind, 0, 0, 1, 1);
-
         var userId = 0L;
         var entryId = 0L;
         var seriesId = 0L;
@@ -226,20 +224,29 @@ public partial class HomePageViewModel : ViewModelBase
         if (template.HasParameter(HomeCardParameterKinds.SearchText) && string.IsNullOrWhiteSpace(_sourceSearchTextEditor.Text))
             return false;
 
-        draft.WorkType = _sourceWorkTypeEditor.GetValue<WorkType>();
-        draft.SimpleWorkType = _sourceSimpleWorkTypeEditor.GetValue<SimpleWorkType>();
-        draft.PrivacyPolicy = _sourcePrivacyPolicyEditor.GetValue<PrivacyPolicy>();
-        draft.RankOption = _sourceRankOptionEditor.GetValue<RankOption>();
-        draft.UseSpecifiedRankingDate = _sourceRankingDateEditor.UseSpecifiedDate;
-        draft.UserId = userId;
-        draft.EntryId = entryId;
-        draft.SeriesId = seriesId;
-        draft.SearchText = string.IsNullOrWhiteSpace(_sourceSearchTextEditor.Text) ? null : _sourceSearchTextEditor.Text.Trim();
-        draft.Tag = string.IsNullOrWhiteSpace(_sourceTagEditor.Text) ? null : _sourceTagEditor.Text.Trim();
-        draft.RankingDate = draft.UseSpecifiedRankingDate
-            ? new(_sourceRankingDateEditor.SelectedDate)
-            : MakoClient.RankingMaxDateTime;
-        card = draft;
+        var useSpecifiedRankingDate = _sourceRankingDateEditor.UseSpecifiedDate;
+        var rawRankingDate = useSpecifiedRankingDate
+            ? new DateTimeOffset(_sourceRankingDateEditor.SelectedDate).ToString("o")
+            : null;
+
+        card = new HomePageCardLayout(
+            template.SourceKind,
+            (uint)_sourceWorkTypeEditor.GetValue<WorkType>(),
+            (uint)_sourceSimpleWorkTypeEditor.GetValue<SimpleWorkType>(),
+            (uint)_sourcePrivacyPolicyEditor.GetValue<PrivacyPolicy>(),
+            (uint)_sourceRankOptionEditor.GetValue<RankOption>(),
+            userId,
+            entryId,
+            seriesId,
+            string.IsNullOrWhiteSpace(_sourceSearchTextEditor.Text) ? null : _sourceSearchTextEditor.Text.Trim(),
+            string.IsNullOrWhiteSpace(_sourceTagEditor.Text) ? null : _sourceTagEditor.Text.Trim(),
+            0,
+            useSpecifiedRankingDate,
+            rawRankingDate,
+            0,
+            0,
+            1,
+            1);
         return true;
     }
 

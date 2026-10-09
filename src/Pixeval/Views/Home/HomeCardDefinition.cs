@@ -6,11 +6,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using FluentIcons.Common;
-using Pixeval.Controls;
-using Pixeval.Models.Pixiv;
 using Pixeval.I18N;
-using Pixeval.Models.Home;
 using Pixeval.Models.Options;
+using Pixeval.Native.Config;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Home;
 
@@ -18,38 +16,35 @@ namespace Pixeval.Views.Home;
 
 public sealed class HomeCardDefinition(
     HomePageCardSourceKind sourceKind,
-    HomeCardParameterKinds parameters,
     Func<HomePageCardLayout, Task<HomeCardPreviewSource>> previewSourceFactory,
     Action<HomePageCardLayout, HomeCardPreviewSource, TopLevel> pageOpener,
-    Func<HomePageCardLayout, IReadOnlyList<string>>? titleParameterFactory = null,
-    int defaultColumnSpan = 2,
-    int defaultRowSpan = 2,
-    WorkType workType = WorkType.Illustration,
-    SimpleWorkType simpleWorkType = SimpleWorkType.Illustration,
-    PrivacyPolicy privacyPolicy = PrivacyPolicy.Public,
-    bool useCurrentUserAsDefault = false)
+    Func<HomePageCardLayout, IReadOnlyList<string>>? titleParameterFactory = null)
 {
+    private static readonly ConfigEngine ConfigEngine = new();
+
+    private readonly HomeCardMetadata _metadata = ConfigEngine.GetCardMetadata(sourceKind);
+
     public HomePageCardSourceKind SourceKind { get; } = sourceKind;
 
     public Symbol Symbol => AvaloniaHelper.GetHomeCardHeader(SourceKind).Symbol;
 
-    public HomeCardParameterKinds Parameters { get; } = parameters;
+    public HomeCardParameterKinds Parameters => (HomeCardParameterKinds)_metadata.ParameterFlags;
 
-    public int DefaultColumnSpan { get; } = defaultColumnSpan;
+    public int DefaultColumnSpan => _metadata.DefaultColumnSpan;
 
-    public int DefaultRowSpan { get; } = defaultRowSpan;
+    public int DefaultRowSpan => _metadata.DefaultRowSpan;
 
-    public WorkType WorkType { get; } = workType;
+    public WorkType WorkType => (WorkType)_metadata.DefaultWorkType;
 
-    public SimpleWorkType SimpleWorkType { get; } = simpleWorkType;
+    public SimpleWorkType SimpleWorkType => (SimpleWorkType)_metadata.DefaultSimpleWorkType;
 
-    public PrivacyPolicy PrivacyPolicy { get; } = privacyPolicy;
+    public PrivacyPolicy PrivacyPolicy => (PrivacyPolicy)_metadata.DefaultPrivacyPolicy;
 
-    public bool UseCurrentUserAsDefault { get; } = useCurrentUserAsDefault;
+    public bool UseCurrentUserAsDefault => _metadata.UseCurrentUserAsDefault;
 
     public string Title => AvaloniaHelper.GetHomeCardHeader(SourceKind).Header;
 
-    public string Description => SymbolComboBoxItem.GetResource(SourceKind, nameof(Description));
+    public string Description => I18NManager.GetResource($"Enum.HomePageCardSourceKindDescription.{SourceKind}");
 
     public bool HasParameter(HomeCardParameterKinds parameter) =>
         (Parameters & parameter) is not HomeCardParameterKinds.None;

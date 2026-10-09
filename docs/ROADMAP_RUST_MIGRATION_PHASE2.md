@@ -446,27 +446,34 @@ Phase 5 的核心目标是：**将所有残留在 C# 中的流式图像解码、
   - [x] 物理删除 11 个 `Work*FilterSyntax.cs` 及 `FilterSyntaxGenerator.cs`。
   - [x] Rust 单元测试（9 项）与 .NET 测试（314 项）全部通过，全工程 0 错误编译通过。
 
-#### 5.6 主页卡片配置持久化与布局状态机下沉 (Home Card Layout State Machine & Metadata Sinking)
+#### 5.6 主页卡片配置持久化与布局状态机下沉 (Home Card Layout State Machine & Metadata Sinking) [已完成]
 - **痛点与现状**：
   - `HomeCardDefinitions.cs`（21KB）与 `HomePage.Layout.cs`（9KB）在 C# 端硬编码了所有卡片组件的元数据定义、默认布局尺寸、栅格网格碰撞吸附算法与布局持久化逻辑。
   - 增减卡片或修改默认首页布局需修改多处 C# 静态声明与 JSON 序列化模型。
-- **下沉方案**：
-  - 在 `pixeval_config` 中收敛主页卡片元数据注册表（`CardRegistry`）与布局配置引擎。
-  - 栅格碰撞计算、自由拖拽网格对齐、卡片重排计算下沉至 Rust，向前端输出纯粹的绝对坐标与栅格跨度列表。
-  - C# 前端仅作为声明式渲染层，监听布局计算结果更新 Avalonia Canvas/Grid 布局。
-- **验收标准**：
-  - 物理删除 `HomeCardDefinitions.cs` 中的布局计算逻辑，卡片注册与布局计算 100% 由 `pixeval_config` 驱动。
+- **下沉方案与落地成果**：
+  - 在 `pixeval_config` 中收敛主页卡片元数据注册表（`HomePageCardSourceKind` 19 种卡片元数据，统一提供标题、描述、默认行列跨度、支持属性开关与作品类型）。
+  - 下沉栅格碰撞计算、自由拖拽网格对齐、大小调整边界吸附计算（`calculate_edit_candidate`、`HomeCardEditAction`、`HomeCardBounds`）。
+  - 下沉主页卡片配置的直接 YAML 原生持久化与解析（`load_home_page_cards_from_file`、`save_home_page_cards_to_file`、`parse_home_page_cards_yaml`、`format_home_page_cards_yaml`）。
+  - C# 前端物理清退 `HomeCardDefinitions.cs` 中的静态元数据字典，100% 动态通过 `ConfigEngine.GetCardMetadata` 驱动；
+  - 物理删除旧版 `HomePageCardLayout.cs` 与 `HomePageCardSourceKind.cs`，通过 Zero-Wrapper 原生记录原地扩展 `src/Pixeval/NativeExtensions/Config/HomePageCardLayout.cs`；
+  - 交互拖拽与尺寸调整计算（`HomePageCardControl.Interaction.cs`）100% 委托给 `ConfigEngine.LayoutCalculateEditCandidate`。
+- **验收标准与完成状态**：
+  - [x] 物理删除 `HomeCardDefinitions.cs` 中的布局计算与元数据硬编码逻辑，卡片注册与布局计算 100% 由 `pixeval_config` 驱动。
+  - [x] 主页卡片配置改为统一的 YAML 格式直接由 Rust 原生持久化与解析。
+  - [x] Rust 单元测试（10 项）与 .NET 单元测试（315 项，313 通过，2 跳过）全部通过，全工程 0 警告 0 错误编译通过。
 
-#### 5.7 订阅后台常驻轮询机自转守护 (Subscription Background Polling Daemon in Tokio)
+#### 5.7 订阅后台常驻轮询机自转守护 (Subscription Background Polling Daemon in Tokio) [已完成]
 - **痛点与现状**：
-  - `WorkSubscriptionDownloadService.cs` 目前由 C# 端的 UI/后台定时器驱动循环轮询，在 C# 端调度画师新作拉取、比对更新、创建下载任务。
+  - `WorkSubscriptionDownloadService.cs` 曾由 C# 端的 UI/后台定时器驱动循环轮询，在 C# 端调度画师新作拉取、比对更新、创建下载任务。
   - 当 UI 处于特定生命周期或前台卡顿，定时器易受干扰，且跨 FFI 往返轮询产生不必要的互操作开销。
-- **下沉方案**：
+- **下沉方案与落地成果**：
   - 将订阅后台轮询机完全收敛为 `pixeval_subscription` 内部的 Tokio 独立常驻守护任务（Daemon）。
-  - 轮询间隔、网络重试、限流熔断、新作去重比对与下载任务派发在 Rust Core 内部闭环自转。
-  - 通过 `ISubscriptionObserver` 仅在发现新作入库或下载完成时向 C# 发送事件通知更新 UI 徽章。
-- **验收标准**：
-  - C# 端彻底移除定时器轮询与任务比对逻辑，订阅服务完全由 Rust 后台协程静默守护。
+  - 轮询间隔、生命周期管理（`start_daemon`、`stop_daemon`、`is_daemon_running`、`set_daemon_interval`、`get_daemon_interval`）、新作去重比对与下载任务派发在 Rust 闭环自转。
+  - 通过 `ISubscriptionProgressCallback` 新增 `OnNewWorksIngested` 与 `OnDaemonStateChanged` 原生回调通知 C# 更新徽章与状态；
+  - C# 端 `WorkSubscriptionDownloadService` 与 `IWorkSubscriptionService` 深度接驳 Rust Tokio 守护引擎，支持设置中心（`DownloadSettingsGroup`）的后台守护开关与检查间隔动态调谐。
+- **验收标准与完成状态**：
+  - [x] C# 端彻底移除定时器轮询与任务比对逻辑，订阅服务完全由 Rust 后台协程静默守护。
+  - [x] Rust 单元测试与 .NET 单元测试全部通过，全工程 0 警告 0 错误编译通过。
 
 ---
 

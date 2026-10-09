@@ -16,6 +16,7 @@ using FluentIcons.Common;
 using Pixeval.I18N;
 using Pixeval.Models.Navigation;
 using Pixeval.Models.Options;
+using Pixeval.Native.Config;
 using Pixeval.Views;
 using Pixeval.Views.Capability;
 using Pixeval.Views.Download;

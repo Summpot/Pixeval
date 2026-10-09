@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Home.HomePageCardControl"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:cfg="using:Pixeval.Native.Config"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:fluent="using:FluentIcons.Avalonia"
@@ -256,14 +257,14 @@
             x:Name="ResizeHandlesLayer"
             IsVisible="{Binding #Root.IsEditing}"
             PointerPressed="ResizeHandle_OnPointerPressed">
-            <Border Classes="corner top left" Tag="{x:Static local:HomeCardEditAction.ResizeTopLeft}" />
-            <Border Classes="horizontal top" Tag="{x:Static local:HomeCardEditAction.ResizeTop}" />
-            <Border Classes="corner top right" Tag="{x:Static local:HomeCardEditAction.ResizeTopRight}" />
-            <Border Classes="vertical right" Tag="{x:Static local:HomeCardEditAction.ResizeRight}" />
-            <Border Classes="corner right bottom" Tag="{x:Static local:HomeCardEditAction.ResizeBottomRight}" />
-            <Border Classes="horizontal bottom" Tag="{x:Static local:HomeCardEditAction.ResizeBottom}" />
-            <Border Classes="corner bottom left" Tag="{x:Static local:HomeCardEditAction.ResizeBottomLeft}" />
-            <Border Classes="vertical left" Tag="{x:Static local:HomeCardEditAction.ResizeLeft}" />
+            <Border Classes="corner top left" Tag="{x:Static cfg:HomeCardEditAction.ResizeTopLeft}" />
+            <Border Classes="horizontal top" Tag="{x:Static cfg:HomeCardEditAction.ResizeTop}" />
+            <Border Classes="corner top right" Tag="{x:Static cfg:HomeCardEditAction.ResizeTopRight}" />
+            <Border Classes="vertical right" Tag="{x:Static cfg:HomeCardEditAction.ResizeRight}" />
+            <Border Classes="corner right bottom" Tag="{x:Static cfg:HomeCardEditAction.ResizeBottomRight}" />
+            <Border Classes="horizontal bottom" Tag="{x:Static cfg:HomeCardEditAction.ResizeBottom}" />
+            <Border Classes="corner bottom left" Tag="{x:Static cfg:HomeCardEditAction.ResizeBottomLeft}" />
+            <Border Classes="vertical left" Tag="{x:Static cfg:HomeCardEditAction.ResizeLeft}" />
         </Panel>
 
         <Button

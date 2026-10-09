@@ -31,6 +31,12 @@ public record DownloadSettingsGroup
     [SettingsEntry(Symbol.DeveloperBoardLightning, AppSettingsResources.MaxDownloadConcurrencyLevelEntry.Header, AppSettingsResources.MaxDownloadConcurrencyLevelEntry.Description)]
     public int MaxDownloadTaskConcurrencyLevel { get; set; } = Environment.ProcessorCount / 4;
 
+    [SettingsEntry(Symbol.Clock, AppSettingsResources.EnableSubscriptionDaemonEntry.Header, AppSettingsResources.EnableSubscriptionDaemonEntry.Description)]
+    public bool EnableSubscriptionDaemon { get; set; } = true;
+
+    [SettingsEntry(Symbol.Timer, AppSettingsResources.SubscriptionDaemonIntervalMinutesEntry.Header, AppSettingsResources.SubscriptionDaemonIntervalMinutesEntry.Description)]
+    public int SubscriptionDaemonIntervalMinutes { get; set; } = 30;
+
     [JsonIgnore]
     [SettingsEntry(Symbol.FolderSync, AppSettingsResources.WorkSubscriptionsSettingsEntry.Header, AppSettingsResources.WorkSubscriptionsSettingsEntry.Description)]
     public byte WorkSubscriptions => 0;

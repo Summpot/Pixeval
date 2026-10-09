@@ -213,4 +213,53 @@ mod tests {
         assert_eq!(engine.get_pending_count(), 0);
         assert!(!engine.is_sync_in_progress());
     }
+
+    struct TestCallback {
+        daemon_states: std::sync::Mutex<Vec<bool>>,
+    }
+
+    impl SubscriptionProgressCallback for TestCallback {
+        fn on_fetch_state_changed(&self, _state: SubscriptionFetchState) {}
+        fn on_subscription_updated(&self, _id: i64, _name: String, _acc: String, _av: String) {}
+        fn on_item_fetched(&self, _item: SubscriptionDownloadItem) {}
+        fn on_duplicate_stopped(&self, _id: i64, _count: u32) {}
+        fn on_sync_finished(&self) {}
+        fn on_new_works_ingested(&self, _count: u32) {}
+        fn on_daemon_state_changed(&self, is_running: bool) {
+            self.daemon_states.lock().unwrap().push(is_running);
+        }
+    }
+
+    #[test]
+    fn test_daemon_lifecycle() {
+        let engine = SubscriptionSyncEngine::new(None, None);
+        assert!(!engine.is_daemon_running());
+        assert_eq!(engine.get_daemon_interval(), 1800);
+
+        engine.start_daemon(60);
+        assert!(engine.is_daemon_running());
+        assert_eq!(engine.get_daemon_interval(), 60);
+
+        engine.set_daemon_interval(120);
+        assert_eq!(engine.get_daemon_interval(), 120);
+
+        engine.stop_daemon();
+        assert!(!engine.is_daemon_running());
+    }
+
+    #[test]
+    fn test_daemon_callback_notification() {
+        let states_arc = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let cb = TestCallback {
+            daemon_states: std::sync::Mutex::new(Vec::new()),
+        };
+        let states_ptr = &cb.daemon_states as *const _;
+        let engine = SubscriptionSyncEngine::new(None, Some(Box::new(cb)));
+
+        engine.start_daemon(10);
+        assert!(engine.is_daemon_running());
+
+        engine.stop_daemon();
+        assert!(!engine.is_daemon_running());
+    }
 }

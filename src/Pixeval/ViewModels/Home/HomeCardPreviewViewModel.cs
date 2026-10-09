@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Pixeval.Collections;
 using Pixeval.I18N;
-using Pixeval.Models.Home;
+using Pixeval.Native.Config;
 
 namespace Pixeval.ViewModels.Home;
 

@@ -9,7 +9,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.Input;
 using FluentIcons.Common;
-using Pixeval.Models.Home;
+using Pixeval.Native.Config;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Home;
 
@@ -62,7 +62,9 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
 
     public event EventHandler<HomeCardDeleteRequestedEventArgs>? DeleteRequested;
 
-    public HomePageCardLayout Card { get; }
+    public HomePageCardLayout Card { get; internal set; }
+
+    public void UpdateCard(HomePageCardLayout card) => Card = card;
 
     private HomeCardDefinition Definition { get; }
 

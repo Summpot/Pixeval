@@ -45,9 +45,17 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
 
     public event EventHandler<long>? SubscriptionRemoved;
 
+    public event EventHandler<uint>? NewWorksIngested;
+
+    public event EventHandler<bool>? DaemonStateChanged;
+
     public bool IsSyncInProgress => _syncEngine.IsSyncInProgress();
 
     public SubscriptionSyncEngine SyncEngine => _syncEngine;
+
+    public bool IsDaemonRunning => _syncEngine.IsDaemonRunning();
+
+    public ulong DaemonIntervalSecs => _syncEngine.GetDaemonInterval();
 
     public WorkSubscriptionDownloadService(
         StorageEngine storageEngine,
@@ -66,6 +74,39 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
             downloadManager,
             config,
             this);
+
+        var settings = App.AppViewModel?.AppSettings?.DownloadSettings;
+        if (settings?.EnableSubscriptionDaemon ?? true)
+        {
+            var intervalMinutes = Math.Max(1, settings?.SubscriptionDaemonIntervalMinutes ?? 30);
+            _syncEngine.StartDaemon((ulong)(intervalMinutes * 60));
+        }
+    }
+
+    public void StartDaemon(ulong intervalSecs = 1800)
+    {
+        lock (_gate)
+        {
+            if (_isDisposed)
+                return;
+            _syncEngine.StartDaemon(intervalSecs);
+        }
+    }
+
+    public void StopDaemon()
+    {
+        lock (_gate)
+        {
+            _syncEngine.StopDaemon();
+        }
+    }
+
+    public void SetDaemonInterval(ulong intervalSecs)
+    {
+        lock (_gate)
+        {
+            _syncEngine.SetDaemonInterval(intervalSecs);
+        }
     }
 
     public void QueueSyncAll()
@@ -169,6 +210,7 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
             _isDisposed = true;
         }
 
+        _syncEngine.StopDaemon();
         await CancelAndWaitAsync().ConfigureAwait(false);
         _syncEngine.Dispose();
         GC.SuppressFinalize(this);
@@ -254,6 +296,38 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
         lock (_gate)
         {
             _currentFetchState = null;
+        }
+    }
+
+    public void OnNewWorksIngested(uint totalCount)
+    {
+        try
+        {
+            void Notify() => NewWorksIngested?.Invoke(this, totalCount);
+            if (Dispatcher.UIThread.CheckAccess())
+                Notify();
+            else
+                Dispatcher.UIThread.Post(Notify);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(nameof(OnNewWorksIngested), ex);
+        }
+    }
+
+    public void OnDaemonStateChanged(bool isRunning)
+    {
+        try
+        {
+            void Notify() => DaemonStateChanged?.Invoke(this, isRunning);
+            if (Dispatcher.UIThread.CheckAccess())
+                Notify();
+            else
+                Dispatcher.UIThread.Post(Notify);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(nameof(OnDaemonStateChanged), ex);
         }
     }
 

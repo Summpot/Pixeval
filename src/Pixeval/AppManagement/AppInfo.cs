@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Pixeval.AppManagement.Settings;
-using Pixeval.Models.Home;
+using Pixeval.Native.Config;
 using Pixeval.Utilities;
 using System.Text.Json;
 
@@ -159,9 +159,8 @@ public static class AppInfo
 
         return TryLoad(() =>
         {
-            var rawYaml = File.ReadAllText(HomePageCardsPath);
-            var json = new ConfigEngine().YamlToJson(rawYaml);
-            return JsonSerializer.Deserialize(json, SettingsSerializerContext.Default.ObservableCollectionHomePageCardLayout);
+            var cards = new ConfigEngine().LoadHomePageCardsFromFile(HomePageCardsPath);
+            return new ObservableCollection<HomePageCardLayout>(cards);
         }, logger);
     }
 
@@ -215,10 +214,7 @@ public static class AppInfo
 
         _ = TrySave(() =>
         {
-            var json = JsonSerializer.Serialize(cards, SettingsSerializerContext.Default.ObservableCollectionHomePageCardLayout);
-            var engine = new ConfigEngine();
-            var yaml = engine.JsonToYaml(json);
-            engine.SaveToFile(HomePageCardsPath, yaml);
+            new ConfigEngine().SaveHomePageCardsToFile(HomePageCardsPath, [.. cards]);
         });
     }
 

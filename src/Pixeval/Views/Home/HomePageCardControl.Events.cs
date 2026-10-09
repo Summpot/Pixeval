@@ -2,22 +2,9 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using Pixeval.Models.Home;
+using Pixeval.Native.Config;
 
 namespace Pixeval.Views.Home;
-
-public enum HomeCardEditAction
-{
-    Move,
-    ResizeLeft,
-    ResizeTop,
-    ResizeRight,
-    ResizeBottom,
-    ResizeTopLeft,
-    ResizeTopRight,
-    ResizeBottomRight,
-    ResizeBottomLeft
-}
 
 public sealed class HomeCardSelectedEventArgs(HomePageCardLayout card) : EventArgs
 {
@@ -33,9 +20,11 @@ public sealed class HomeCardEditPreviewEventArgs(HomePageCardLayout card, HomeCa
     public bool Accepted { get; set; }
 }
 
-public sealed class HomeCardEditCompletedEventArgs(HomePageCardLayout card, bool hasChanged) : EventArgs
+public sealed class HomeCardEditCompletedEventArgs(HomePageCardLayout card, HomePageCardLayout originalCard, bool hasChanged) : EventArgs
 {
     public HomePageCardLayout Card { get; } = card;
+
+    public HomePageCardLayout OriginalCard { get; } = originalCard;
 
     public bool HasChanged { get; } = hasChanged;
 }

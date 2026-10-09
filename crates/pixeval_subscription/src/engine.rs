@@ -51,6 +51,9 @@ struct EngineInner {
     is_running: bool,
     global_cancel: CancellationToken,
     active_sub_cancel: Option<CancellationToken>,
+    daemon_cancel: Option<CancellationToken>,
+    daemon_interval_secs: u64,
+    is_daemon_running: bool,
 }
 
 #[derive(Clone, uniffi::Object)]
@@ -80,6 +83,9 @@ impl SubscriptionSyncEngine {
                 is_running: false,
                 global_cancel: CancellationToken::new(),
                 active_sub_cancel: None,
+                daemon_cancel: None,
+                daemon_interval_secs: 1800,
+                is_daemon_running: false,
             })),
         }
     }
@@ -108,6 +114,9 @@ impl SubscriptionSyncEngine {
                 is_running: false,
                 global_cancel: CancellationToken::new(),
                 active_sub_cancel: None,
+                daemon_cancel: None,
+                daemon_interval_secs: 1800,
+                is_daemon_running: false,
             })),
         }
     }
@@ -247,6 +256,88 @@ impl SubscriptionSyncEngine {
         let mut inner = self.inner.lock();
         inner.queue.clear();
     }
+
+    pub fn start_daemon(&self, interval_secs: u64) {
+        let mut inner = self.inner.lock();
+        if let Some(ref cancel) = inner.daemon_cancel {
+            cancel.cancel();
+        }
+        let cancel = CancellationToken::new();
+        inner.daemon_cancel = Some(cancel.clone());
+        inner.daemon_interval_secs = interval_secs.max(1);
+        inner.is_daemon_running = true;
+        if let Some(ref cb) = inner.callback {
+            cb.on_daemon_state_changed(true);
+        }
+        drop(inner);
+
+        let clone = self.clone();
+        SUBSCRIPTION_RUNTIME.spawn(async move {
+            clone.queue_sync_all();
+
+            loop {
+                let interval = {
+                    let inner = clone.inner.lock();
+                    if !inner.is_daemon_running {
+                        break;
+                    }
+                    inner.daemon_interval_secs
+                };
+
+                tokio::select! {
+                    _ = cancel.cancelled() => {
+                        break;
+                    }
+                    _ = tokio::time::sleep(tokio::time::Duration::from_secs(interval)) => {
+                        let should_run = {
+                            let inner = clone.inner.lock();
+                            inner.is_daemon_running && !cancel.is_cancelled()
+                        };
+                        if should_run {
+                            clone.queue_sync_all();
+                        }
+                    }
+                }
+            }
+
+            let mut inner = clone.inner.lock();
+            if inner.is_daemon_running {
+                inner.is_daemon_running = false;
+                if let Some(ref cb) = inner.callback {
+                    cb.on_daemon_state_changed(false);
+                }
+            }
+        });
+    }
+
+    pub fn stop_daemon(&self) {
+        let mut inner = self.inner.lock();
+        if let Some(ref cancel) = inner.daemon_cancel {
+            cancel.cancel();
+        }
+        inner.daemon_cancel = None;
+        if inner.is_daemon_running {
+            inner.is_daemon_running = false;
+            if let Some(ref cb) = inner.callback {
+                cb.on_daemon_state_changed(false);
+            }
+        }
+    }
+
+    pub fn is_daemon_running(&self) -> bool {
+        let inner = self.inner.lock();
+        inner.is_daemon_running
+    }
+
+    pub fn set_daemon_interval(&self, interval_secs: u64) {
+        let mut inner = self.inner.lock();
+        inner.daemon_interval_secs = interval_secs.max(1);
+    }
+
+    pub fn get_daemon_interval(&self) -> u64 {
+        let inner = self.inner.lock();
+        inner.daemon_interval_secs
+    }
 }
 
 impl SubscriptionSyncEngine {
@@ -381,6 +472,7 @@ impl SubscriptionSyncEngine {
             Err(_) => return,
         };
 
+        let mut total_new_works = 0u32;
         for sub in subscriptions {
             if cancel_token.is_cancelled() {
                 break;
@@ -394,7 +486,7 @@ impl SubscriptionSyncEngine {
                 g.active_sub_cancel = Some(token.clone());
                 token
             };
-            Self::sync_subscription_internal(
+            let count = Self::sync_subscription_internal(
                 inner,
                 sub,
                 storage.clone(),
@@ -405,6 +497,13 @@ impl SubscriptionSyncEngine {
                 sub_cancel,
             )
             .await;
+            total_new_works += count;
+        }
+
+        if total_new_works > 0 {
+            if let Some(ref cb) = callback {
+                cb.on_new_works_ingested(total_new_works);
+            }
         }
     }
 
@@ -423,7 +522,7 @@ impl SubscriptionSyncEngine {
             _ => return,
         };
 
-        Self::sync_subscription_internal(
+        let count = Self::sync_subscription_internal(
             inner,
             sub,
             storage,
@@ -434,6 +533,12 @@ impl SubscriptionSyncEngine {
             cancel_token,
         )
         .await;
+
+        if count > 0 {
+            if let Some(ref cb) = callback {
+                cb.on_new_works_ingested(count);
+            }
+        }
     }
 
     async fn sync_subscription_internal(
@@ -445,7 +550,7 @@ impl SubscriptionSyncEngine {
         config: &SubscriptionSyncConfig,
         callback: Option<&dyn SubscriptionProgressCallback>,
         cancel_token: CancellationToken,
-    ) {
+    ) -> u32 {
         let history_id = sub.history_entry_id;
 
         // 1. Initial Fetch State
@@ -805,7 +910,27 @@ impl SubscriptionSyncEngine {
                         illust.id.to_string(),
                     );
                     if callback.is_none() {
-                        download.enqueue_task(key, download_url, destination.clone(), config.overwrite);
+                        if illust.page_count <= 1 || illust.meta_pages.is_empty() {
+                            download.enqueue_task(key, download_url, destination.clone(), config.overwrite);
+                        } else {
+                            for (page_idx, page) in illust.meta_pages.iter().enumerate() {
+                                let page_url = page
+                                    .image_urls
+                                    .original
+                                    .clone()
+                                    .or(page.image_urls.large.clone())
+                                    .or(page.image_urls.medium.clone())
+                                    .unwrap_or_default();
+                                let page_ext = if page_url.contains(".png") { "png" } else { "jpg" };
+                                let page_dest = resolve_tokens(&destination, page_ext, page_idx as i32);
+                                let page_key = DownloadTaskKey::new_subscription(
+                                    &page_dest,
+                                    history_id as i32,
+                                    format!("{}_{page_idx}", illust.id),
+                                );
+                                download.enqueue_task(page_key, page_url, page_dest, config.overwrite);
+                            }
+                        }
                     }
 
                     total_fetched += 1;
@@ -857,5 +982,7 @@ impl SubscriptionSyncEngine {
                 cb.on_fetch_state_changed(state);
             }
         }
+
+        total_fetched
     }
 }

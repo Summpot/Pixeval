@@ -15,6 +15,7 @@ using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Extensions;
 using Pixeval.Models.Options;
 using Pixeval.Models.Settings;
+using Pixeval.Models.Subscriptions;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO.Caching;
 
@@ -141,6 +142,23 @@ public class SettingsPageViewModel : ViewModelBase
                     entry.IllustrationDownloadFormat()
                         .UgoiraDownloadFormat()
                         .NovelDownloadFormat())
+                .Bool(t => t.EnableSubscriptionDaemon, entry => entry.ValueChanged += enabled =>
+                {
+                    if (App.AppViewModel.AppServiceProvider.GetService<WorkSubscriptionDownloadService>() is { } subService)
+                    {
+                        if (enabled)
+                            subService.StartDaemon((ulong)Math.Max(1, App.AppViewModel.AppSettings.DownloadSettings.SubscriptionDaemonIntervalMinutes) * 60);
+                        else
+                            subService.StopDaemon();
+                    }
+                })
+                .Int(t => t.SubscriptionDaemonIntervalMinutes, 1, 1440, 5, entry => entry.ValueChanged += minutes =>
+                {
+                    if (App.AppViewModel.AppServiceProvider.GetService<WorkSubscriptionDownloadService>() is { } subService)
+                    {
+                        subService.SetDaemonInterval((ulong)Math.Max(1, minutes) * 60);
+                    }
+                })
                 .WorkSubscriptions(t => t.WorkSubscriptions))
 #if PIXEVAL_MCP
             .NewGroup(t => t.McpSettings, group => group

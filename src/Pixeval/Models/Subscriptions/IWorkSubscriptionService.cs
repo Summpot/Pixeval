@@ -19,6 +19,18 @@ public interface IWorkSubscriptionService
 
     event EventHandler<long>? SubscriptionRemoved;
 
+    event EventHandler<uint>? NewWorksIngested;
+
+    event EventHandler<bool>? DaemonStateChanged;
+
+    bool IsDaemonRunning { get; }
+
+    void StartDaemon(ulong intervalSecs = 1800);
+
+    void StopDaemon();
+
+    void SetDaemonInterval(ulong intervalSecs);
+
     WorkSubscriptionRecord? TryGetSubscription(
         long targetId,
         WorkSubscriptionType subscriptionType,

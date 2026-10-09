@@ -318,6 +318,26 @@ public sealed class DownloadManagerTest
 
         public event EventHandler<long>? SubscriptionRemoved;
 
+        public event EventHandler<uint>? NewWorksIngested
+        {
+            add { }
+            remove { }
+        }
+
+        public event EventHandler<bool>? DaemonStateChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public bool IsDaemonRunning { get; private set; }
+
+        public void StartDaemon(ulong intervalSecs = 1800) => IsDaemonRunning = true;
+
+        public void StopDaemon() => IsDaemonRunning = false;
+
+        public void SetDaemonInterval(ulong intervalSecs) { }
+
         public WorkSubscriptionType? LastQueryType { get; private set; }
 
         public WorkSubscriptionRecord? TryGetSubscription(

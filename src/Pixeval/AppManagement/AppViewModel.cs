@@ -14,7 +14,7 @@ using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Download;
 using Pixeval.Models.Download.Tasks;
 using Pixeval.Models.Extensions;
-using Pixeval.Models.Home;
+using Pixeval.Native.Config;
 #if PIXEVAL_MCP
 using Pixeval.Models.McpServer;
 #endif

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
 using Pixeval.Models.Home;
+using Pixeval.Native.Config;
 
 namespace Pixeval.Views.Home;
 
@@ -86,7 +87,7 @@ public sealed partial class HomePage
     private void SyncCardControls()
     {
         for (var i = HomeGrid.Children.Count - 1; i >= 0; i--)
-            if (HomeGrid.Children[i] is HomePageCardControl control && !_cards.Any(card => ReferenceEquals(card, control.Card)))
+            if (HomeGrid.Children[i] is HomePageCardControl control && !_cards.Contains(control.Card))
             {
                 DisposeCardControl(control);
                 HomeGrid.Children.RemoveAt(i);
@@ -136,7 +137,7 @@ public sealed partial class HomePage
     private bool TryGetCardControl(HomePageCardLayout card, out HomePageCardControl control)
     {
         foreach (var child in HomeGrid.Children)
-            if (child is HomePageCardControl candidate && ReferenceEquals(candidate.Card, card))
+            if (child is HomePageCardControl candidate && candidate.Card == card)
             {
                 control = candidate;
                 return true;
@@ -235,8 +236,17 @@ public sealed partial class HomePage
     {
         var oldBounds = HomeCardBounds.From(card);
         var newBounds = HomeCardLayoutEngine.Clamp(oldBounds, RowCount, ColumnCount);
-        newBounds.ApplyTo(card);
-        return oldBounds != newBounds;
+        if (oldBounds != newBounds)
+        {
+            var idx = _cards.IndexOf(card);
+            var updated = newBounds.ApplyTo(card);
+            if (idx >= 0)
+                _cards[idx] = updated;
+            if (_selectedCard == card)
+                _selectedCard = updated;
+            return true;
+        }
+        return false;
     }
 
     private void NormalizeCards()
@@ -250,7 +260,10 @@ public sealed partial class HomePage
         foreach (var item in result.PlacedCards)
         {
             var card = _cards[(int)item.Index];
-            item.Bounds.ApplyTo(card);
+            var updated = item.Bounds.ApplyTo(card);
+            _cards[(int)item.Index] = updated;
+            if (_selectedCard == card)
+                _selectedCard = updated;
         }
 
         var removedCards = result.RemovedIndices

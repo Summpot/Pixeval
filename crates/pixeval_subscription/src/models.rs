@@ -73,5 +73,7 @@ pub trait SubscriptionProgressCallback: Send + Sync {
     fn on_item_fetched(&self, item: SubscriptionDownloadItem);
     fn on_duplicate_stopped(&self, subscription_id: i64, duplicate_count: u32);
     fn on_sync_finished(&self);
+    fn on_new_works_ingested(&self, total_count: u32);
+    fn on_daemon_state_changed(&self, is_running: bool);
 }
 
