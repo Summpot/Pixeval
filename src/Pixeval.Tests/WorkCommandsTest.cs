@@ -86,4 +86,26 @@ public sealed class WorkCommandsTest
         Assert.AreEqual(HeartButtonState.Unchecked, state.FollowState);
         CollectionAssert.Contains(changedProperties, nameof(UserUiState.FollowState));
     }
+
+    [TestMethod]
+    public void BookmarkCommandAcceptsWorkDirectlyWithoutThrowing()
+    {
+        var illust = DesignHelper.DesignIllustration;
+        Assert.IsTrue(WorkCommands.BookmarkCommand.CanExecute(illust));
+
+        var novel = DesignHelper.DesignNovel;
+        Assert.IsTrue(WorkCommands.BookmarkCommand.CanExecute(novel));
+    }
+
+    [TestMethod]
+    public void ButtonWithBookmarkCommandAcceptsWorkAsCommandParameter()
+    {
+        var illust = DesignHelper.DesignIllustration;
+        var button = new Button
+        {
+            Command = WorkCommands.BookmarkCommand,
+            CommandParameter = illust
+        };
+        Assert.IsTrue(button.Command.CanExecute(button.CommandParameter));
+    }
 }

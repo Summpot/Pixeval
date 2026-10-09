@@ -41,7 +41,7 @@
                     DockPanel.Dock="Top"
                     IsDynamicOverflowEnabled="True">
                     <CommandBarButton
-                        Command="{x:Static novel:WorkCommands.AddToBookmarkCommand}"
+                        Command="{x:Static novel:WorkCommands.BookmarkCommand}"
                         CommandParameter="{Binding CurrentNovel}"
                         ContextRequested="AddToBookmarkButton_OnClick"
                         Icon="{markup1:SymbolIconEx Heart,

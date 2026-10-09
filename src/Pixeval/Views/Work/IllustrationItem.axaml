@@ -27,7 +27,7 @@
             <ContextMenu>
                 <MenuItem
                     controls:ArtworkStateBehavior.TrackBookmark="True"
-                    Command="{x:Static viewModels:WorkCommands.AddToBookmarkCommand}"
+                    Command="{x:Static viewModels:WorkCommands.BookmarkCommand}"
                     CommandParameter="{Binding $self, Mode=OneTime}"
                     ContextRequested="AddToBookmark_OnRightClick"
                     Header="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
@@ -93,7 +93,7 @@
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
                     controls:ArtworkStateBehavior.TrackBookmark="True"
-                    Command="{x:Static viewModels:WorkCommands.AddToBookmarkCommand}"
+                    Command="{x:Static viewModels:WorkCommands.BookmarkCommand}"
                     CommandParameter="{Binding $self, Mode=OneTime}"
                     IsVisible="{Binding IsBookmarkSupported}">
                     

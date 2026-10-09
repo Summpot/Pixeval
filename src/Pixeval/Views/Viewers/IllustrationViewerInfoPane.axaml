@@ -102,7 +102,7 @@
                     DefaultLabelPosition="Collapsed"
                     IsDynamicOverflowEnabled="False">
                     <CommandBarButton
-                        Command="{x:Static viewModels:WorkCommands.AddToBookmarkCommand}"
+                        Command="{x:Static viewModels:WorkCommands.BookmarkCommand}"
                         CommandParameter="{Binding CurrentIllustration}"
                         ContextRequested="AddToBookmarkButton_OnRightClick"
                         Icon="{markup1:SymbolIconEx Heart,
