@@ -5,7 +5,7 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Pixeval.Controls;
-using Pixeval.Utilities;
+using Pixeval.Native.Mako;
 using Pixeval.ViewModels;
 
 namespace Pixeval.Views.Capability;
@@ -29,7 +29,7 @@ public partial class WorkRankingPage : IconContentPage
             ChangeSource();
     }
 
-    public static DateTime MaxDate => MakoHelper.RankingMaxDateTime.LocalDateTime;
+    public static DateTime MaxDate => MakoClient.RankingMaxDateTime.LocalDateTime;
 
     private void SimpleWorkTypeComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
     {

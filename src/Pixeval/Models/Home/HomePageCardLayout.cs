@@ -4,7 +4,7 @@
 using System;
 using System.Text.Json.Serialization;
 using Pixeval.Models.Options;
-using Pixeval.Utilities;
+using Pixeval.Native.Mako;
 
 namespace Pixeval.Models.Home;
 
@@ -78,5 +78,5 @@ public sealed class HomePageCardLayout
     public DateTimeOffset GetRankingDate() =>
         UseSpecifiedRankingDate && RankingDate != default
             ? RankingDate
-            : MakoHelper.RankingMaxDateTime;
+            : MakoClient.RankingMaxDateTime;
 }

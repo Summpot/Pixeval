@@ -95,7 +95,7 @@ public partial class WorkBookmarksPage : IconContentPage
 
         try
         {
-            var tags = await MakoHelper.GetBookmarkTagsAsync(
+            var tags = await App.AppViewModel.MakoClient.GetBookmarkTagsAsync(
                 _user.Id,
                 SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>(),
                 PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>());

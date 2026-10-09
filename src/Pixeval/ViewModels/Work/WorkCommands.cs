@@ -108,7 +108,7 @@ public static class WorkCommands
         ArtworkUiStateStore.SetBookmarkPending(work);
         try
         {
-            var result = await MakoHelper.SetWorkBookmarkAsync((IWorkEntry) work, target);
+            var result = await App.AppViewModel.MakoClient.SetWorkBookmarkAsync((IWorkEntry) work, target);
             if (result)
             {
                 ArtworkUiStateStore.SetBookmarkState(work, target);
@@ -142,7 +142,7 @@ public static class WorkCommands
         ArtworkUiStateStore.SetBookmarkPending(work);
         try
         {
-            var result = await MakoHelper.SetWorkBookmarkAsync((IWorkEntry) work, true, parameter.IsPrivate, parameter.Tags);
+            var result = await App.AppViewModel.MakoClient.SetWorkBookmarkAsync((IWorkEntry) work, true, parameter.IsPrivate, parameter.Tags);
             if (result)
             {
                 ArtworkUiStateStore.SetBookmarkState(work, true);
@@ -263,7 +263,7 @@ public static class WorkCommands
         UserUiStateStore.SetFollowPending(user);
         try
         {
-            var result = await MakoHelper.SetFollowAsync(user, target);
+            var result = await App.AppViewModel.MakoClient.SetFollowAsync(user, target);
             if (result)
                 UserUiStateStore.SetFollowState(user, target);
             else

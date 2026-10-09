@@ -5,6 +5,7 @@ using System;
 using System.Net;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Options;
+using Pixeval.Utilities.Network;
 
 namespace Pixeval.Utilities.GitHub;
 
@@ -46,7 +47,7 @@ internal sealed class GitHubDirectProxy(NetworkSettingsGroup settings) : IWebPro
 
     private WebProxy? CreateExplicitProxy()
     {
-        if (MakoHelper.NormalizeProxyUri(settings.ProxySettings.Proxy) is not { } proxyUri ||
+        if (ProxyHelper.NormalizeProxyUri(settings.ProxySettings.Proxy) is not { } proxyUri ||
             !Uri.TryCreate(proxyUri, UriKind.Absolute, out var uri))
             return null;
 

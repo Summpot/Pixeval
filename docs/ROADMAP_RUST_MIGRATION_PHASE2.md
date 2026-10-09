@@ -112,7 +112,7 @@ flowchart TD
     subgraph Phase5 ["Phase 5: 深度领域业务与系统底层全量下沉 (达成 100% Rust Core) [待启动]"]
         P5_1["5.1 图像流式解码与渐进预览管线下沉<br/>• 下沉逐行扫描与帧嗅探至 pixeval_cache<br/>• 物理清退 ProgressiveImageDecoder 与 EoiStream"]
         P5_2["5.2 传输层彻底合流与 C# 网络栈物理清退 [已完成]<br/>• 全面收敛网络栈至 pixeval_maho<br/>• 物理清退 C# MahoSocketsHttpHandler / Stream 分片"]
-        P5_3["5.3 Mako 高阶业务门面与协议编排下沉<br/>• Pixiv 领域规则与数据清洗收敛至 Rust<br/>• 彻底解构 765 行 MakoHelper.cs 静态巨石"]
+        P5_3["5.3 Mako 高阶业务门面与协议编排下沉 [已完成]<br/>• Pixiv 领域规则与数据清洗收敛至 Rust<br/>• 彻底解构 765 行 MakoHelper.cs 静态巨石"]
         P5_4["5.4 动态库插件符号分析与解压规划下沉<br/>• 在 pixeval_plugin 中使用安全库解析 PE/ELF 导出表<br/>• 物理清退 ExtensionService 滑动窗口扫描"]
         P5_5["5.5 DSL 动态建议生成与光标上下文感知下沉<br/>• 补全引擎下沉至 pixeval_filters<br/>• 消除 C# 端硬编码语法映射与复杂分词分析"]
         P5_6["5.6 主页卡片配置持久化与布局状态机下沉<br/>• 卡片元数据、吸附状态与默认配置收敛至 pixeval_config<br/>• 物理清退 HomeCardDefinitions.cs 与布局状态代码"]
@@ -389,7 +389,7 @@ Phase 5 的核心目标是：**将所有残留在 C# 中的流式图像解码、
   - [x] 项目中不存在任何 C# 手写 TLS 栈与双轨双协议实现。
   - [x] 针对 `pixeval_maho`、`MahoNetworkTest`、`PixivNetworkServiceTest` 与 `NetworkSettingsResilienceTest` 单元测试全部通过，项目 0 警告 0 错误编译通过。
 
-#### 5.3 Mako 高阶业务门面与协议编排下沉 (Pixiv Protocol Orchestration & Facade Sinking)
+#### 5.3 Mako 高阶业务门面与协议编排下沉 (Pixiv Protocol Orchestration & Facade Sinking) [已完成]
 - **痛点与现状**：
   - `MakoHelper.cs` 高达 765 行（33KB），充斥着大量领域业务规则计算：
     - 标签多语言翻译映射与推导（`TranslateTagAsync`、`TagTranslationCache`）
@@ -397,13 +397,21 @@ Phase 5 的核心目标是：**将所有残留在 C# 中的流式图像解码、
     - 榜单参数拼接（`RankingMode` 字符串映射、日期格式合法性校验）
     - 小说插图元数据回填（从正文提取 `illusts` 并匹配）
     - 用户关注/收藏状态的混合条件校验。
-- **下沉方案**：
-  - 在 `pixeval_mako` 中构建高层业务门面（`MakoService` / `PixivWorkflow`）：
-    - 标签多语言缓存与翻译逻辑原生化。
-    - 作品过滤、类型派生、榜单参数构造与元数据丰富直接在 Rust 反序列化管线中完成，向前端输出就绪的数据结构。
-  - C# 端消灭 `MakoHelper.cs` 静态巨石，仅保留无状态的轻量 API 调用穿透。
-- **验收标准**：
-  - 物理删除 765 行的 `MakoHelper.cs`，Pixiv 协议编排与数据后处理全部在 Rust 端完成。
+- **下沉方案与落地成果**：
+  - 在 `pixeval_mako` 中构建高层业务门面与统一协议编排：
+    - 标签多语言缓存与翻译逻辑原生化（`TagTranslationCache`，在详情抓取与流式拉取时自动并行水合翻译词）。
+    - 统一多态流式抓取引擎（`CommentFetchEngine`，统一评论流式翻页与回复抓取；统一作品流式引擎 `work_*_unified`）。
+    - 榜单参数校验与最大榜单日期推算原生化（`ranking_max_date`、合法 mode 静态校验）。
+    - 系列元数据探测下沉（`get_work_series_detail`、`set_series_watchlist`）。
+  - C# 端物理删除 765 行的 `MakoHelper.cs` 静态巨石：
+    - 代理配置与规范化迁移至 `src/Pixeval/Utilities/Network/ProxyHelper.cs`。
+    - 标签模型收敛至 `src/Pixeval/Models/Pixiv/BookmarkTagModels.cs`。
+    - 作品辅助扩展收敛至 `src/Pixeval/NativeExtensions/Mako/ArtworkInfoExtensions.cs`。
+    - 原生客户端原地扩展声明 `public partial class MakoClient` (`src/Pixeval/NativeExtensions/Mako/MakoClient.cs`)，100% 遵守 Zero-Wrapper Rule，直连消费 UniFFI 原生类型。
+- **验收标准与完成状态**：
+  - [x] 物理删除 765 行的 `MakoHelper.cs`，Pixiv 协议编排与数据后处理全部在 Rust 端完成。
+  - [x] C# 端 0 包装层、0 过渡 DTO，直连 `Pixeval.Native.Mako` 原生类型。
+  - [x] Rust 单元测试与 C# `MakoClientTest`、`PixivNetworkServiceTest` 全部通过，0 警告 0 错误编译通过。
 
 #### 5.4 动态库插件符号分析与解压规划下沉 (Plugin Binary Symbol Extraction & Package Unpacking)
 - **痛点与现状**：

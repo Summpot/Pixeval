@@ -9,6 +9,7 @@ using System.Threading;
 using Misaki;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Options;
+using Pixeval.Utilities.Network;
 
 namespace Pixeval.Utilities.GitHub;
 
@@ -56,7 +57,7 @@ public sealed class GitHubHttpClientProvider(NetworkSettingsGroup networkSetting
         var proxy = networkSettings.ProxySettings.ProxyType switch
         {
             ProxyType.None => "proxy:disabled",
-            ProxyType.Custom => $"proxy:explicit:{MakoHelper.NormalizeProxyUri(networkSettings.ProxySettings.Proxy) ?? ""}",
+            ProxyType.Custom => $"proxy:explicit:{ProxyHelper.NormalizeProxyUri(networkSettings.ProxySettings.Proxy) ?? ""}",
             ProxyType.System => $"proxy:system:{string.Join("|", _ProxyProbeUris.Select(GetSystemProxyCacheKeyPart))}",
             _ => throw new ArgumentOutOfRangeException(nameof(networkSettings.ProxySettings.ProxyType))
         };

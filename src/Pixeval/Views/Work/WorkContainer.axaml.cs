@@ -146,7 +146,7 @@ public partial class WorkContainer : UserControl
     {
         if (DataContext is IOperableViewViewModel vm && SortOptionComboBox.GetSelectedValue<LocalSortOption>() is var sortOption)
         {
-            vm.SetSortDescriptions(MakoHelper.GetSortDescription(sortOption));
+            vm.SetSortDescriptions(ArtworkInfoExtensions.GetSortDescription(sortOption));
 
             ScrollToTop();
         }

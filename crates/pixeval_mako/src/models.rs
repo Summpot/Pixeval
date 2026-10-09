@@ -1120,3 +1120,11 @@ pub struct FollowDetail {
 pub struct FollowUserDetailResponse {
     pub follow_detail: FollowDetail,
 }
+
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+pub struct WorkSeriesDetailResult {
+    pub detail: Series,
+    pub first_work_id: Option<i64>,
+    pub first_work_title: Option<String>,
+    pub total_works_count: i32,
+}

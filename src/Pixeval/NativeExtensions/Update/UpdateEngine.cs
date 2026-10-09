@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Options;
 using Pixeval.Utilities;
+using Pixeval.Utilities.Network;
 
 namespace Pixeval.Native.Update;
 
@@ -19,7 +20,7 @@ public partial class UpdateEngine
         var domainFronting = networkSettings.GitHubDomainFronting.EnableGitHubDomainFronting;
         string? proxyUrl = networkSettings.ProxySettings.ProxyType switch
         {
-            ProxyType.Custom => MakoHelper.NormalizeProxyUri(networkSettings.ProxySettings.Proxy),
+            ProxyType.Custom => ProxyHelper.NormalizeProxyUri(networkSettings.ProxySettings.Proxy),
             _ => null
         };
 

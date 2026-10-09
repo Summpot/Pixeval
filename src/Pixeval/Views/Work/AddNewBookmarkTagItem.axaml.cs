@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 
 namespace Pixeval.Views.Work;

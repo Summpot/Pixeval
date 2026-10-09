@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:pixeval="using:Pixeval"
+    xmlns:pixiv="using:Pixeval.Models.Pixiv"
     xmlns:utilities="using:Pixeval.Utilities"
     xmlns:work="using:Pixeval.Views.Work"
     x:Name="Root">
@@ -39,7 +40,7 @@
                 </ControlTheme>
             </ListBox.ItemContainerTheme>
             <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="{x:Type utilities:AddNewBookmarkTag}">
+                <DataTemplate x:DataType="{x:Type pixiv:AddNewBookmarkTag}">
                     <work:AddNewBookmarkTagItem Source="{Binding}" />
                 </DataTemplate>
             </ListBox.ItemTemplate>

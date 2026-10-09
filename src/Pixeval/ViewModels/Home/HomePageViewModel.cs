@@ -11,6 +11,7 @@ using Pixeval.AppManagement.Settings;
 using Pixeval.Controls;
 using Pixeval.I18N;
 using Pixeval.Models.Home;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.Views;
 using Pixeval.Views.Home;
@@ -49,7 +50,7 @@ public partial class HomePageViewModel : ViewModelBase
 
     private readonly HomeCardRankingDateParameterEditorViewModel _sourceRankingDateEditor = new(
         GetResource(HomePageResources.Source.RankingDateTextBlock.Text),
-        MakoHelper.RankingMaxDateTime.LocalDateTime);
+        MakoClient.RankingMaxDateTime.LocalDateTime);
 
     private readonly HomeCardTextParameterEditorViewModel _sourceUserIdEditor = new(
         HomeCardParameterKinds.UserId,
@@ -178,7 +179,7 @@ public partial class HomePageViewModel : ViewModelBase
         _sourceSimpleWorkTypeEditor.Value = template.SimpleWorkType;
         UpdateRankOptionEditor();
         _sourcePrivacyPolicyEditor.Value = template.PrivacyPolicy;
-        _sourceRankingDateEditor.Reset(MakoHelper.RankingMaxDateTime.LocalDateTime);
+        _sourceRankingDateEditor.Reset(MakoClient.RankingMaxDateTime.LocalDateTime);
 
         _sourceUserIdEditor.Text = template.UseCurrentUserAsDefault ? PixevalSettings.MyId.ToString() : "";
         _sourceEntryIdEditor.Text = "";
@@ -237,7 +238,7 @@ public partial class HomePageViewModel : ViewModelBase
         draft.Tag = string.IsNullOrWhiteSpace(_sourceTagEditor.Text) ? null : _sourceTagEditor.Text.Trim();
         draft.RankingDate = draft.UseSpecifiedRankingDate
             ? new(_sourceRankingDateEditor.SelectedDate)
-            : MakoHelper.RankingMaxDateTime;
+            : MakoClient.RankingMaxDateTime;
         card = draft;
         return true;
     }

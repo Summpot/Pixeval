@@ -28,9 +28,9 @@ using Pixeval.Native.Maho;
 using Pixeval.Native.Mako;
 using Pixeval.Native.Storage;
 using Pixeval.Utilities;
+using Pixeval.Utilities.Network;
 using Pixeval.Utilities.GitHub;
 using Pixeval.Utilities.IO.Caching;
-using Pixeval.Utilities.Network;
 using Pixeval.Views;
 
 namespace Pixeval.AppManagement;
@@ -81,18 +81,18 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         var df = networkSettings.PixivDomainFronting;
         var hostIps = new Dictionary<string, List<string>>
         {
-            [MakoHelper.AppApiHost] = [.. df.PixivAppApiNameResolver],
-            [MakoHelper.OAuthHost] = [.. df.PixivOAuthNameResolver],
-            [MakoHelper.WebApiHost] = [.. df.PixivWebApiNameResolver],
-            [MakoHelper.AccountHost] = [.. df.PixivAccountNameResolver],
-            [MakoHelper.ImageHost] = [.. df.PixivImageNameResolver],
-            [MakoHelper.ImageHost2] = [.. df.PixivImageNameResolver2]
+            [MakoHttpOptions.AppApiHost] = [.. df.PixivAppApiNameResolver],
+            [MakoHttpOptions.OAuthHost] = [.. df.PixivOAuthNameResolver],
+            [MakoHttpOptions.WebApiHost] = [.. df.PixivWebApiNameResolver],
+            [MakoHttpOptions.AccountHost] = [.. df.PixivAccountNameResolver],
+            [MakoHttpOptions.ImageHost] = [.. df.PixivImageNameResolver],
+            [MakoHttpOptions.ImageHost2] = [.. df.PixivImageNameResolver2]
         };
         return new MahoClientOptions(
             df.EnablePixivDomainFronting,
             SplitDelayMs: 100,
             hostIps,
-            ProxyUrl: MakoHelper.GetEffectiveProxyUrl(networkSettings));
+            ProxyUrl: ProxyHelper.GetEffectiveProxyUrl(networkSettings));
     }
 
     private ServiceProvider CreateServiceProvider()

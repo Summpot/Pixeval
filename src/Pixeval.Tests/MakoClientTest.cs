@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
+using Pixeval.Utilities.Network;
 using Pixeval.Native.Mako;
 
 namespace Pixeval.Tests;
@@ -16,7 +17,7 @@ public sealed class MakoClientTest
 {
     private static MakoClient CreateTestClient(PixivDomainFrontingSettings settings)
     {
-        var config = MakoHelper.CreateMakoConfiguration(settings);
+        var config = ProxyHelper.CreateMakoConfiguration(settings);
         return new MakoClient(config);
     }
 
@@ -136,14 +137,14 @@ public sealed class MakoClientTest
     public void MakoClientCreateConfigurationShouldPreserveResolvers()
     {
         var settings = new PixivDomainFrontingSettings();
-        var config = MakoHelper.CreateMakoConfiguration(settings, cooldownMs: 800, splitDelayMs: 150, proxyUrl: "http://127.0.0.1:7890");
+        var config = ProxyHelper.CreateMakoConfiguration(settings, cooldownMs: 800, splitDelayMs: 150, proxyUrl: "http://127.0.0.1:7890");
 
         Assert.IsTrue(config.DomainFrontingEnabled);
         Assert.AreEqual(800ul, config.CooldownMs);
         Assert.AreEqual(150ul, config.SplitDelayMs);
         Assert.AreEqual("http://127.0.0.1:7890", config.ProxyUrl);
-        Assert.IsTrue(config.HostIps.ContainsKey(MakoHelper.AppApiHost));
-        Assert.IsTrue(config.HostIps[MakoHelper.AppApiHost].Count > 0);
+        Assert.IsTrue(config.HostIps.ContainsKey(MakoHttpOptions.AppApiHost));
+        Assert.IsTrue(config.HostIps[MakoHttpOptions.AppApiHost].Count > 0);
     }
 
     [TestMethod]
@@ -151,7 +152,7 @@ public sealed class MakoClientTest
     {
         var settings = new PixivDomainFrontingSettings();
         using var client = CreateTestClient(settings);
-        var updatedConfig = MakoHelper.CreateMakoConfiguration(settings, cooldownMs: 500, splitDelayMs: 80, proxyUrl: "http://127.0.0.1:1080");
+        var updatedConfig = ProxyHelper.CreateMakoConfiguration(settings, cooldownMs: 500, splitDelayMs: 80, proxyUrl: "http://127.0.0.1:1080");
         client.UpdateConfiguration(updatedConfig);
     }
 
@@ -219,7 +220,7 @@ public sealed class MakoClientTest
     }
 
     [TestMethod]
-    public void MakoHelperSpotlightShouldReturnFetchEngineWithMapping()
+    public void MakoSpotlightShouldReturnFetchEngineWithMapping()
     {
         var settings = new PixivDomainFrontingSettings();
         using var client = CreateTestClient(settings);

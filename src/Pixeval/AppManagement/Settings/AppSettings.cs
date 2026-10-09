@@ -10,6 +10,7 @@ using Avalonia.Styling;
 using FluentIcons.Common;
 using Pixeval.Models.Options;
 using Pixeval.Utilities;
+using Pixeval.Utilities.Network;
 
 namespace Pixeval.AppManagement.Settings;
 
@@ -96,10 +97,10 @@ public record AppSettings
 
     public MakoConfigurationDto ToMakoConfiguration()
     {
-        return MakoHelper.CreateMakoConfiguration(
+        return ProxyHelper.CreateMakoConfiguration(
             NetworkSettings.PixivDomainFronting,
             NetworkSettings.ApiRequestCooldown,
-            proxyUrl: MakoHelper.GetEffectiveProxyUrl(NetworkSettings),
+            proxyUrl: ProxyHelper.GetEffectiveProxyUrl(NetworkSettings),
             targetFilter: BrowsingExperienceSettings.TargetFilter switch
             {
                 Models.Pixiv.TargetFilter.ForIos => "for_ios",

@@ -130,7 +130,7 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private async Task FollowAsync()
     {
-        var result = await MakoHelper.SetFollowAsync(Id, true, false);
+        var result = await App.AppViewModel.MakoClient.SetFollowAsync(Id, true, false);
         if (result)
         {
             if (UserDetail?.User is { } user)
@@ -142,7 +142,7 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private async Task FollowPrivatelyAsync()
     {
-        var result = await MakoHelper.SetFollowAsync(Id, true, true);
+        var result = await App.AppViewModel.MakoClient.SetFollowAsync(Id, true, true);
         if (result)
         {
             if (UserDetail?.User is { } user)
@@ -154,7 +154,7 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private async Task UnfollowAsync()
     {
-        var result = await MakoHelper.SetFollowAsync(Id, false);
+        var result = await App.AppViewModel.MakoClient.SetFollowAsync(Id, false);
         if (result)
         {
             if (UserDetail?.User is { } user)

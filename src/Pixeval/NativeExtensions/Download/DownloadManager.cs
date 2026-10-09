@@ -12,7 +12,9 @@ using Avalonia.Threading;
 using Pixeval.Download;
 using Pixeval.Models.Download.Tasks;
 using Pixeval.Models.Options;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
+using Pixeval.Utilities.Network;
 
 namespace Pixeval.Native.Download;
 
@@ -60,15 +62,15 @@ public partial class DownloadManager
     public static DownloadNetworkOptions GetEffectiveNetworkOptions()
     {
         var networkSettings = App.AppViewModel?.AppSettings?.NetworkSettings;
-        var proxyUrl = MakoHelper.GetEffectiveProxyUrl(networkSettings);
+        var proxyUrl = ProxyHelper.GetEffectiveProxyUrl(networkSettings);
 
         var staticDomainIps = new Dictionary<string, List<string>>();
         if (networkSettings?.PixivDomainFronting is { EnablePixivDomainFronting: true } df)
         {
             if (df.PixivImageNameResolver.Count > 0)
-                staticDomainIps[MakoHelper.ImageHost] = [.. df.PixivImageNameResolver];
+                staticDomainIps[MakoHttpOptions.ImageHost] = [.. df.PixivImageNameResolver];
             if (df.PixivImageNameResolver2.Count > 0)
-                staticDomainIps[MakoHelper.ImageHost2] = [.. df.PixivImageNameResolver2];
+                staticDomainIps[MakoHttpOptions.ImageHost2] = [.. df.PixivImageNameResolver2];
         }
 
         return new DownloadNetworkOptions(proxyUrl, staticDomainIps);

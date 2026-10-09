@@ -16,7 +16,7 @@ public sealed class PixivNetworkServiceTest
     public void PixivArtworkServiceShouldExposePixivPlatform()
     {
         var settings = new PixivDomainFrontingSettings();
-        var makoConfig = Utilities.MakoHelper.CreateMakoConfiguration(settings, 500);
+        var makoConfig = ProxyHelper.CreateMakoConfiguration(settings, 500);
         using var makoClient = new MakoClient(makoConfig);
         var service = new PixivArtworkService(makoClient);
 

@@ -15,6 +15,7 @@ using Pixeval.AppManagement;
 using Pixeval.I18N;
 using Pixeval.Native.Mako;
 using Pixeval.Utilities;
+using Pixeval.Utilities.Network;
 using Pixeval.ViewModels;
 using Pixeval.Views.Home;
 
@@ -114,7 +115,7 @@ public partial class LoginPage : IconContentPage
                                 if (App.AppViewModel?.AppSettings?.NetworkSettings?.ProxySettings is { ProxyType: Models.Options.ProxyType.Custom } proxySettings
                                     && !string.IsNullOrWhiteSpace(proxySettings.Proxy))
                                 {
-                                    var normalized = MakoHelper.NormalizeProxyUri(proxySettings.Proxy);
+                                    var normalized = ProxyHelper.NormalizeProxyUri(proxySettings.Proxy);
                                     if (normalized is not null && Uri.TryCreate(normalized, UriKind.Absolute, out var uri))
                                     {
                                         var cleanProxy = $"{uri.Scheme}://{uri.Authority}";

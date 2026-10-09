@@ -6,7 +6,7 @@ using AutoSettingsPage.Models;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Controls;
 using Pixeval.Models.Options;
-using Pixeval.Utilities;
+using Pixeval.Utilities.Network;
 
 namespace Pixeval.Models.Settings.Entries;
 
@@ -35,5 +35,5 @@ public class ProxySettingsEntry : MultiValuesWithMainValueEntry<NetworkSettingsG
 
     public event Action<string?>? ProxyChanged;
 
-    private void OnProxyChanged() => ProxyChanged?.Invoke(MakoHelper.ToMakoProxy((ProxyType) MainValue.Value, Settings.Proxy));
+    private void OnProxyChanged() => ProxyChanged?.Invoke(ProxyHelper.ToMakoProxy((ProxyType) MainValue.Value, Settings.Proxy));
 }
