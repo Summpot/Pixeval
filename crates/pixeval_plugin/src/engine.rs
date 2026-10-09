@@ -11,7 +11,7 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 
 use crate::error::PluginError;
-use crate::models::{DiscoveredPlugin, PluginMetadata};
+use crate::models::{DiscoveredPlugin, LocalExtensionHost, PluginInstallResult, PluginMetadata};
 
 struct LoadedPluginInstance {
     metadata: PluginMetadata,
@@ -101,6 +101,61 @@ impl PluginHostEngine {
         results
     }
 
+    pub fn enumerate_extension_hosts(&self, directory: String) -> Vec<LocalExtensionHost> {
+        let base = Path::new(&directory);
+        if !base.is_dir() {
+            return Vec::new();
+        }
+
+        let plugins = self.enumerate_plugins(directory.clone());
+        let mut hosts = Vec::new();
+
+        for p in plugins {
+            let path = Path::new(&p.library_path);
+            if crate::binary::inspect_file_entry_point(path).unwrap_or(false) {
+                if let Some(uninstall_target) =
+                    crate::installer::get_uninstall_target_relative_path(&p.library_path, &directory)
+                {
+                    hosts.push(LocalExtensionHost {
+                        library_path: p.library_path,
+                        uninstall_target_relative_path: uninstall_target,
+                    });
+                }
+            }
+        }
+
+        hosts.sort_by(|a, b| a.library_path.to_lowercase().cmp(&b.library_path.to_lowercase()));
+        hosts
+    }
+
+    pub fn verify_and_install_plugin(
+        &self,
+        package_path: String,
+        extensions_dir: String,
+    ) -> Result<PluginInstallResult, PluginError> {
+        crate::installer::verify_and_install_plugin(&package_path, &extensions_dir)
+    }
+
+    pub fn get_uninstall_target_relative_path(
+        &self,
+        library_path: String,
+        extensions_dir: String,
+    ) -> Option<String> {
+        crate::installer::get_uninstall_target_relative_path(&library_path, &extensions_dir)
+    }
+
+    pub fn clean_pending_uninstalls(
+        &self,
+        pending_targets: Vec<String>,
+        extensions_dir: String,
+    ) -> Vec<String> {
+        crate::installer::clean_pending_uninstalls(&pending_targets, &extensions_dir)
+    }
+
+    pub fn is_extension_host_library(&self, path: String) -> bool {
+        crate::binary::inspect_file_entry_point(Path::new(&path)).unwrap_or(false)
+    }
+
     pub fn inspect_library(&self, path: String) -> Result<PluginMetadata, PluginError> {
         let p = Path::new(&path);
         if !p.exists() {
@@ -111,6 +166,14 @@ impl PluginHostEngine {
 
         // 1. Check for companion metadata JSON: e.g. <lib_name>.json or plugin.json in same dir
         let json_meta = Self::try_read_companion_manifest(p);
+
+        // Statically check for entry points before dynamic loading to avoid executing untrusted DllMain
+        let has_entry_point = crate::binary::inspect_file_entry_point(p).unwrap_or(false);
+        if !has_entry_point && json_meta.is_none() {
+            return Err(PluginError::MissingEntryPoint {
+                entry_point: "GetExtensionsHost or pixeval_plugin_metadata".to_string(),
+            });
+        }
 
         // 2. Try loading dynamic library
         unsafe {

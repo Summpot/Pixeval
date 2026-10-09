@@ -113,7 +113,7 @@ flowchart TD
         P5_1["5.1 图像流式解码与渐进预览管线下沉<br/>• 下沉逐行扫描与帧嗅探至 pixeval_cache<br/>• 物理清退 ProgressiveImageDecoder 与 EoiStream"]
         P5_2["5.2 传输层彻底合流与 C# 网络栈物理清退 [已完成]<br/>• 全面收敛网络栈至 pixeval_maho<br/>• 物理清退 C# MahoSocketsHttpHandler / Stream 分片"]
         P5_3["5.3 Mako 高阶业务门面与协议编排下沉 [已完成]<br/>• Pixiv 领域规则与数据清洗收敛至 Rust<br/>• 彻底解构 765 行 MakoHelper.cs 静态巨石"]
-        P5_4["5.4 动态库插件符号分析与解压规划下沉<br/>• 在 pixeval_plugin 中使用安全库解析 PE/ELF 导出表<br/>• 物理清退 ExtensionService 滑动窗口扫描"]
+        P5_4["5.4 动态库插件符号分析与解压规划下沉 [已完成]<br/>• 在 pixeval_plugin 中使用安全库解析 PE/ELF 导出表<br/>• 物理清退 ExtensionService 滑动窗口扫描"]
         P5_5["5.5 DSL 动态建议生成与光标上下文感知下沉<br/>• 补全引擎下沉至 pixeval_filters<br/>• 消除 C# 端硬编码语法映射与复杂分词分析"]
         P5_6["5.6 主页卡片配置持久化与布局状态机下沉<br/>• 卡片元数据、吸附状态与默认配置收敛至 pixeval_config<br/>• 物理清退 HomeCardDefinitions.cs 与布局状态代码"]
         P5_7["5.7 订阅后台轮询机自转守护<br/>• Tokio 静默协程接管常驻定时拉取与熔断调度<br/>• 物理清退 WorkSubscriptionDownloadService 计时器管理"]
@@ -413,16 +413,17 @@ Phase 5 的核心目标是：**将所有残留在 C# 中的流式图像解码、
   - [x] C# 端 0 包装层、0 过渡 DTO，直连 `Pixeval.Native.Mako` 原生类型。
   - [x] Rust 单元测试与 C# `MakoClientTest`、`PixivNetworkServiceTest` 全部通过，0 警告 0 错误编译通过。
 
-#### 5.4 动态库插件符号分析与解压规划下沉 (Plugin Binary Symbol Extraction & Package Unpacking)
+#### 5.4 动态库插件符号分析与解压规划下沉 (Plugin Binary Symbol Extraction & Package Unpacking) [已完成]
 - **痛点与现状**：
   - `ExtensionService.cs`（782 行，30KB）在 C# 中手动进行 PE/ELF 二进制分析：使用 `stackalloc byte[4096]` 配合滑动窗口字节扫描，在原始 DLL 二进制流中搜索 `"GetExtensionsHost"` 导出函数符号。
   - 同时在 C# 端手写 Zip 压缩包遍历、平台架构（win-x64, linux-x64, osx-arm64）解析与文件覆写解压逻辑。
-- **下沉方案**：
-  - 将插件包验证、解包、目录规划与动态库导出表扫描全量下沉至 `pixeval_plugin`。
-  - Rust 利用安全高效的二进制解析库（如 `object` crate）精准提取 PE/Mach-O/ELF 导出表符号，替代脆弱的 C# 4KB 滑动窗口扫描。
-  - 提供 `verify_and_install_plugin(archive_path, target_dir)` 等原子化 UniFFI 接口，C# 仅负责发起安装并展示进度通知。
-- **验收标准**：
-  - 物理移除 `ExtensionService.cs` 中的二进制扫描与解压文件 IO 代码，`ExtensionService` 缩减至 150 行以内的纯状态服务。
+- **下沉方案与落地成果**：
+  - 在 `pixeval_plugin` 中集成 `object` 与 `zip` crate，安全静态解析 PE/ELF/Mach-O 导出表符号（`GetExtensionsHost` / `pixeval_plugin_metadata`），彻底消除了字符串扫描假阳性与执行不可信 DLL 的安全隐患。
+  - 原生提供 ZipArchive 解析、ZipSlip 路径穿越防护、单顶层目录规划与原子化解包，导出 `verify_and_install_plugin`、`enumerate_extension_hosts`、`clean_pending_uninstalls` 等 UniFFI 接口。
+  - 物理移除 `ExtensionService.cs` 中的二进制扫描与文件解压/拷贝/删除 IO 代码，C# `ExtensionService.cs` 缩减至 144 行（< 150 行）的纯状态服务；`ExtensionsPage.axaml.cs` 直连原生安装接口。
+- **验收标准与完成状态**：
+  - [x] 物理移除 `ExtensionService.cs` 中的二进制扫描与解压文件 IO 代码，`ExtensionService` 缩减至 144 行（< 150 行）的纯状态服务。
+  - [x] Rust 单元测试（8 项）与 .NET 测试（311 项）全部通过，全工程 0 警告 0 错误编译通过。
 
 #### 5.5 DSL 动态建议生成与光标上下文感知下沉 (Filter DSL Completion & Syntax Intelligence)
 - **痛点与现状**：

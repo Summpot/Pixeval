@@ -3,12 +3,18 @@ uniffi::setup_scaffolding!();
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+pub mod archive;
+pub mod binary;
 pub mod engine;
 pub mod error;
+pub mod installer;
 pub mod models;
 
+pub use archive::*;
+pub use binary::*;
 pub use engine::*;
 pub use error::*;
+pub use installer::*;
 pub use models::*;
 
 #[cfg(test)]
@@ -152,6 +158,129 @@ mod tests {
         // d6 (depth 6) -> not entered because depth < 5 check prevents pushing d6 when depth=5
         // So plugins at d1, d2, d3, d4, d5 are found (5 plugins)
         assert_eq!(discovered.len(), 5);
+    }
+
+    #[test]
+    fn test_binary_inspect_false_positive_prevention() {
+        // Text file containing entry point name should NOT be detected as valid binary export
+        let dummy_text = b"This is a text file that mentions GetExtensionsHost and pixeval_plugin_metadata in text!";
+        assert!(!crate::binary::has_extension_entry_point(dummy_text));
+        assert!(crate::binary::inspect_binary_exports(dummy_text).is_err());
+    }
+
+    #[test]
+    fn test_zip_entry_path_validation_and_zipslip() {
+        assert!(crate::archive::validate_zip_entry_path("plugin/my_ext.dll").is_ok());
+        assert!(crate::archive::validate_zip_entry_path("sub\\dir\\my_ext.dll").is_ok());
+
+        // Malicious paths
+        assert!(crate::archive::validate_zip_entry_path("../evil.dll").is_err());
+        assert!(crate::archive::validate_zip_entry_path("../../etc/passwd").is_err());
+        assert!(crate::archive::validate_zip_entry_path("plugin/../../evil.dll").is_err());
+        assert!(crate::archive::validate_zip_entry_path("C:/Windows/evil.dll").is_err());
+        assert!(crate::archive::validate_zip_entry_path("").is_err());
+    }
+
+    #[test]
+    fn test_zip_single_top_level_directory_detection() {
+        use std::io::{Cursor, Write};
+        use zip::write::SimpleFileOptions;
+        use zip::ZipWriter;
+
+        // Case 1: single root folder
+        let mut buf = Cursor::new(Vec::new());
+        {
+            let mut writer = ZipWriter::new(&mut buf);
+            let opts = SimpleFileOptions::default();
+            writer.start_file("MyPlugin/lib.dll", opts).unwrap();
+            writer.write_all(b"dummy").unwrap();
+            writer.start_file("MyPlugin/readme.txt", opts).unwrap();
+            writer.write_all(b"readme").unwrap();
+            writer.finish().unwrap();
+        }
+        buf.set_position(0);
+        let mut archive = zip::ZipArchive::new(buf).unwrap();
+        assert!(crate::archive::contains_single_top_level_directory(&mut archive).unwrap());
+
+        // Case 2: flat root files
+        let mut buf2 = Cursor::new(Vec::new());
+        {
+            let mut writer = ZipWriter::new(&mut buf2);
+            let opts = SimpleFileOptions::default();
+            writer.start_file("lib.dll", opts).unwrap();
+            writer.write_all(b"dummy").unwrap();
+            writer.start_file("readme.txt", opts).unwrap();
+            writer.write_all(b"readme").unwrap();
+            writer.finish().unwrap();
+        }
+        buf2.set_position(0);
+        let mut archive2 = zip::ZipArchive::new(buf2).unwrap();
+        assert!(!crate::archive::contains_single_top_level_directory(&mut archive2).unwrap());
+
+        // Case 3: multiple roots
+        let mut buf3 = Cursor::new(Vec::new());
+        {
+            let mut writer = ZipWriter::new(&mut buf3);
+            let opts = SimpleFileOptions::default();
+            writer.start_file("FolderA/lib.dll", opts).unwrap();
+            writer.write_all(b"dummy").unwrap();
+            writer.start_file("FolderB/readme.txt", opts).unwrap();
+            writer.write_all(b"readme").unwrap();
+            writer.finish().unwrap();
+        }
+        buf3.set_position(0);
+        let mut archive3 = zip::ZipArchive::new(buf3).unwrap();
+        assert!(!crate::archive::contains_single_top_level_directory(&mut archive3).unwrap());
+    }
+
+    #[test]
+    fn test_uninstall_target_resolution_and_cleanup() {
+        let repo_tmp = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("target").join("tmp"))
+            .unwrap_or_else(std::env::temp_dir);
+        let _ = std::fs::create_dir_all(&repo_tmp);
+        let temp_dir = tempfile::Builder::new()
+            .prefix("test_uninstall_")
+            .tempdir_in(&repo_tmp)
+            .unwrap_or_else(|_| {
+                tempfile::Builder::new()
+                    .prefix("test_uninstall_")
+                    .tempdir()
+                    .unwrap()
+            });
+        let ext_dir = temp_dir.path().join("extensions");
+        fs::create_dir_all(&ext_dir).unwrap();
+
+        // 1. Direct child file
+        let direct_file = ext_dir.join("single.dll");
+        fs::write(&direct_file, b"test").unwrap();
+        let target1 = crate::installer::get_uninstall_target_relative_path(
+            &direct_file.to_string_lossy(),
+            &ext_dir.to_string_lossy(),
+        );
+        assert_eq!(target1.as_deref(), Some("single.dll"));
+
+        // 2. Subdirectory plugin
+        let sub_plugin_dir = ext_dir.join("MyPlugin").join("nested");
+        fs::create_dir_all(&sub_plugin_dir).unwrap();
+        let nested_file = sub_plugin_dir.join("plugin.dll");
+        fs::write(&nested_file, b"test").unwrap();
+        let target2 = crate::installer::get_uninstall_target_relative_path(
+            &nested_file.to_string_lossy(),
+            &ext_dir.to_string_lossy(),
+        );
+        assert_eq!(target2.as_deref(), Some("MyPlugin"));
+
+        // 3. Clean pending uninstalls
+        let failed = crate::installer::clean_pending_uninstalls(
+            &["single.dll".to_string(), "MyPlugin".to_string(), "nonexistent".to_string()],
+            &ext_dir.to_string_lossy(),
+        );
+        assert!(failed.is_empty());
+        assert!(!direct_file.exists());
+        assert!(!ext_dir.join("MyPlugin").exists());
     }
 }
 

@@ -30,3 +30,15 @@ pub struct DiscoveredPlugin {
     pub file_name: String,
     pub relative_path: String,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct PluginInstallResult {
+    pub destination_dir: String,
+    pub installed_host_libraries: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct LocalExtensionHost {
+    pub library_path: String,
+    pub uninstall_target_relative_path: String,
+}

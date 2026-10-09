@@ -4,7 +4,6 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.IO.Compression;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -67,66 +66,27 @@ public partial class ExtensionsPage : IconContentPage
         {
             var fileInfo = new FileInfo(file.Path.LocalPath);
             var fileName = fileInfo.Name;
-            switch (fileInfo.Extension.ToLowerInvariant())
+            try
             {
-                case { } ext when ext == ExtensionService.NativeLibraryExtension:
+                var installResult = await Task.Run(() =>
+                    ExtensionService.PluginEngine.VerifyAndInstallPlugin(fileInfo.FullName, AppInfo.ExtensionsFolder));
+
+                if (installResult.InstalledHostLibraries.Count is 0)
                 {
-                    var newLibraryPath = Path.Combine(AppInfo.ExtensionsFolder, fileName);
-                    if (File.Exists(newLibraryPath))
-                    {
-                        viewContainer.ShowError(
-                            I18NManager.GetResource(ExtensionsPageResources.ExtensionFileExistedError), fileName);
-                        continue;
-                    }
-
-                    try
-                    {
-                        _ = fileInfo.CopyTo(newLibraryPath);
-                    }
-                    catch (Exception ex)
-                    {
-                        viewContainer.ShowError(I18NManager.GetResource(ExtensionsPageResources.ExtensionLoadFailed),
-                            $"{fileName}: {ex.Message}");
-                    }
-
-                    LoadExtension(newLibraryPath, fileName);
-
-                    break;
+                    viewContainer.ShowWarning(
+                        I18NManager.GetResource(ExtensionsPageResources.ZipContainsNoExtension), fileName);
+                    continue;
                 }
-                case ".zip":
-                    try
-                    {
-                        var (destinationDirectory, hostLibraryEntryNames) = await Task.Run(() =>
-                        {
-                            using var zipArchive = ZipFile.OpenRead(fileInfo.FullName);
-                            return ExtensionService.CreateExtensionZipExtractionPlan(
-                                zipArchive,
-                                fileInfo.FullName,
-                                AppInfo.ExtensionsFolder);
-                        });
 
-                        if (hostLibraryEntryNames.Count is not 0)
-                        {
-                            await Task.Run(() =>
-                                ZipFile.ExtractToDirectory(fileInfo.FullName, destinationDirectory));
-
-                            foreach (var libraryName in hostLibraryEntryNames)
-                            {
-                                var newLibraryPath = Path.Combine(destinationDirectory, libraryName);
-                                LoadExtension(newLibraryPath, fileName);
-                            }
-                        }
-                        else
-                            viewContainer.ShowWarning(
-                                I18NManager.GetResource(ExtensionsPageResources.ZipContainsNoExtension), fileName);
-                    }
-                    catch (Exception ex)
-                    {
-                        viewContainer.ShowError(I18NManager.GetResource(ExtensionsPageResources.ExtensionLoadFailed),
-                            $"{fileName}: {ex.Message}");
-                    }
-
-                    break;
+                foreach (var libraryPath in installResult.InstalledHostLibraries)
+                {
+                    LoadExtension(libraryPath, Path.GetFileName(libraryPath));
+                }
+            }
+            catch (Exception ex)
+            {
+                viewContainer.ShowError(I18NManager.GetResource(ExtensionsPageResources.ExtensionLoadFailed),
+                    $"{fileName}: {ex.Message}");
             }
         }
 
