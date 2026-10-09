@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Utilities.IO;
+using Pixeval.Native.Cache;
 using SkiaSharp;
 
 namespace Pixeval.Tests;
@@ -24,7 +24,7 @@ public sealed class ProgressiveImageDecoderTest
         var complete = decoder.Decode(source);
         Assert.IsNotNull(complete);
         using var expected = SKBitmap.Decode(encoded);
-        CollectionAssert.AreEqual(expected.Bytes, complete.Bytes);
+        AssertPixelsMatch(expected.Bytes, complete.Bytes, 4);
         CollectionAssert.AreNotEqual(before, complete.Bytes);
     }
 
@@ -93,7 +93,7 @@ public sealed class ProgressiveImageDecoderTest
         var complete = decoder.Decode(stream);
         Assert.IsNotNull(complete);
         using var expected = SKBitmap.Decode(encoded);
-        CollectionAssert.AreEqual(expected.Bytes, complete.Bytes);
+        AssertPixelsMatch(expected.Bytes, complete.Bytes, format is SKEncodedImageFormat.Jpeg ? 4 : 0);
         CollectionAssert.AreNotEqual(before, complete.Bytes);
         Assert.AreEqual(encoded.Length, stream.Position);
     }
@@ -164,5 +164,18 @@ public sealed class ProgressiveImageDecoderTest
             for (var x = 0; x < width; ++x)
                 bitmap.SetPixel(x, y, new SKColor((byte) random.Next(256), (byte) random.Next(256), (byte) random.Next(256)));
         return bitmap;
+    }
+
+    private static void AssertPixelsMatch(byte[] expected, byte[] actual, int maxDelta = 0)
+    {
+        Assert.AreEqual(expected.Length, actual.Length, "Pixel buffer lengths differ.");
+        for (var i = 0; i < expected.Length; i++)
+        {
+            var delta = Math.Abs(expected[i] - actual[i]);
+            if (delta > maxDelta)
+            {
+                Assert.Fail($"Pixel byte at index {i} mismatch. Expected: {expected[i]}, Actual: {actual[i]}, Delta: {delta} (max allowed {maxDelta}).");
+            }
+        }
     }
 }

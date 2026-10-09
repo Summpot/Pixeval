@@ -21,6 +21,7 @@ using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.Commands.Transformers;
 using Pixeval.I18N;
 using Pixeval.Models.Extensions;
+using Pixeval.Native.Cache;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO;
 using Pixeval.Utilities.IO.Caching;
@@ -316,16 +317,21 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
 
     private async Task<IAnimatedBitmap?> LoadWithPreviewAsync(bool original, CancellationToken token)
     {
-        using var preview = new ProgressiveImagePreview(bitmap => PublishLoadingPreviewAsync(bitmap, token),
-            () => Volatile.Read(ref _previewConsumers) > 0);
-        return await LoadImageAsync(original, preview, token);
+        Action<DecodedPreviewFrame>? onPreview = Volatile.Read(ref _previewConsumers) > 0
+            ? frame => PublishLoadingPreview(frame, token)
+            : null;
+        return await LoadImageAsync(original, onPreview, token);
     }
 
-    private async Task PublishLoadingPreviewAsync(Bitmap bitmap, CancellationToken token)
+    private void PublishLoadingPreview(DecodedPreviewFrame frame, CancellationToken token)
     {
-        await Dispatcher.UIThread.InvokeAsync(() =>
+        if (_disposed || Volatile.Read(ref _previewConsumers) is 0)
+            return;
+
+        var bitmap = frame.ToWriteableBitmap();
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
-            if (_disposed || _previewConsumers is 0)
+            if (_disposed || Volatile.Read(ref _previewConsumers) is 0)
             {
                 bitmap.Dispose();
                 return;
@@ -391,7 +397,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         return null;
     }
 
-    private async Task<IAnimatedBitmap?> LoadImageAsync(bool isOriginal, ProgressiveImagePreview? preview = null, CancellationToken token = default)
+    private async Task<IAnimatedBitmap?> LoadImageAsync(bool isOriginal, Action<DecodedPreviewFrame>? onPreview = null, CancellationToken token = default)
     {
         switch (_entry)
         {
@@ -405,7 +411,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
                     _platform,
                     f,
                     new Progress<double>(UpdateLoadingProgress),
-                    preview is null ? null : preview.UpdateAsync, token);
+                    onPreview, token);
             }
             case ISingleAnimatedImage { ImageType: ImageType.SingleAnimatedImage } singleAnimatedImage:
             {
@@ -424,7 +430,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
                             _platform,
                             f,
                             new Progress<double>(UpdateLoadingProgress),
-                            preview is null ? null : preview.UpdateAsync, token);
+                            onPreview, token);
                     }
                     case SingleAnimatedImageType.SingleZipFile or SingleAnimatedImageType.SingleFile:
                     {
@@ -432,8 +438,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
                             _platform,
                             f,
                             new Progress<double>(UpdateLoadingProgress),
-                            preview is null ? null : f.PreferredAnimatedImageType is SingleAnimatedImageType.SingleZipFile
-                                ? preview.UpdateZipAsync : preview.UpdateAsync, token);
+                            onPreview, token);
                     }
                 }
 

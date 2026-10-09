@@ -42,7 +42,7 @@ pub struct PlanarImageInfo {
 
 #[uniffi::export(callback_interface)]
 pub trait CachePreviewCallback: Send + Sync {
-    fn on_preview_frame(&self, frame_data: Vec<u8>);
+    fn on_preview_frame(&self, frame: crate::progressive::DecodedPreviewFrame);
     fn on_progress(&self, downloaded_bytes: u64, total_bytes: u64);
 }
 
@@ -459,9 +459,9 @@ impl CacheEngine {
         let total_bytes = resp.content_length().unwrap_or(0);
         let mut stream = resp.bytes_stream();
         let mut buffer = Vec::new();
-        let mut zip_sniffer = ZipSniffer::new();
-        let mut image_previewed = false;
+        let mut progressive_decoder = crate::progressive::ProgressiveDecoder::new(None);
         let mut last_progress_report = std::time::Instant::now();
+        let mut last_preview_report = std::time::Instant::now();
 
         while let Some(chunk_res) = stream.next().await {
             let chunk = chunk_res.map_err(|e| CacheError::Network {
@@ -477,14 +477,10 @@ impl CacheEngine {
                     cb.on_progress(buffer.len() as u64, total_bytes);
                 }
 
-                if let Some(frame) = zip_sniffer.sniff(&buffer) {
-                    cb.on_preview_frame(frame);
-                } else if !image_previewed && is_previewable_image_prefix(&buffer) {
-                    if buffer.len() >= 64 * 1024
-                        || (total_bytes > 0 && buffer.len() >= (total_bytes as usize) / 2)
-                    {
-                        image_previewed = true;
-                        cb.on_preview_frame(buffer.clone());
+                if now.duration_since(last_preview_report) >= std::time::Duration::from_millis(250) {
+                    if let Some(frame) = progressive_decoder.decode(&buffer) {
+                        last_preview_report = now;
+                        cb.on_preview_frame(frame);
                     }
                 }
             }
@@ -501,97 +497,6 @@ impl CacheEngine {
     }
 }
 
-struct ZipSniffer {
-    offset: usize,
-    _emitted_count: usize,
-}
-
-impl ZipSniffer {
-    fn new() -> Self {
-        Self {
-            offset: 0,
-            _emitted_count: 0,
-        }
-    }
-
-    fn sniff(&mut self, buffer: &[u8]) -> Option<Vec<u8>> {
-        let mut latest_frame = None;
-        while buffer.len().saturating_sub(self.offset) >= 30 {
-            let header = &buffer[self.offset..self.offset + 30];
-            if header[0..4] != [0x50, 0x4b, 0x03, 0x04] {
-                break;
-            }
-            let flags = u16::from_le_bytes([header[6], header[7]]);
-            let method = u16::from_le_bytes([header[8], header[9]]);
-            let compressed_size =
-                u32::from_le_bytes([header[18], header[19], header[20], header[21]]) as usize;
-            let uncompressed_size =
-                u32::from_le_bytes([header[22], header[23], header[24], header[25]]) as usize;
-            let filename_len = u16::from_le_bytes([header[26], header[27]]) as usize;
-            let extra_len = u16::from_le_bytes([header[28], header[29]]) as usize;
-
-            if (flags & 9) != 0
-                || (method != 0 && method != 8)
-                || compressed_size > 8 * 1024 * 1024
-                || uncompressed_size > 8 * 1024 * 1024
-            {
-                break;
-            }
-
-            let data_start = self.offset + 30 + filename_len + extra_len;
-            let data_end = data_start + compressed_size;
-
-            if buffer.len() < data_end {
-                break;
-            }
-
-            self.offset = data_end;
-            if uncompressed_size == 0 {
-                continue;
-            }
-
-            let entry_compressed = &buffer[data_start..data_end];
-            if method == 0 {
-                latest_frame = Some(entry_compressed.to_vec());
-                self._emitted_count += 1;
-            } else if method == 8 {
-                use std::io::Read;
-                let mut decoder = flate2::read::DeflateDecoder::new(entry_compressed);
-                let mut decompressed = Vec::with_capacity(uncompressed_size);
-                if decoder.read_to_end(&mut decompressed).is_ok()
-                    && decompressed.len() == uncompressed_size
-                {
-                    latest_frame = Some(decompressed);
-                    self._emitted_count += 1;
-                }
-            }
-        }
-        latest_frame
-    }
-}
-
-fn is_previewable_image_prefix(buf: &[u8]) -> bool {
-    if buf.len() < 4 {
-        return false;
-    }
-    // JPEG: 0xFF 0xD8
-    if buf[0] == 0xFF && buf[1] == 0xD8 {
-        return true;
-    }
-    // PNG: 0x89 'P' 'N' 'G'
-    if buf[0] == 0x89 && buf[1] == 0x50 && buf[2] == 0x4E && buf[3] == 0x47 {
-        return true;
-    }
-    // GIF: "GIF8"
-    if buf[0..4] == *b"GIF8" {
-        return true;
-    }
-    // WebP: "RIFF"
-    if buf[0..4] == *b"RIFF" {
-        return true;
-    }
-    false
-}
 
 impl Drop for CacheEngine {
     fn drop(&mut self) {

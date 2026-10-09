@@ -16,10 +16,10 @@ namespace Pixeval.Native.Cache;
 public partial class CacheEngine
 {
     private sealed class ActionCachePreviewCallback(
-        Action<byte[]>? onPreview,
+        Action<DecodedPreviewFrame>? onPreview,
         Action<ulong, ulong>? onProgress) : ICachePreviewCallback
     {
-        public void OnPreviewFrame(byte[] frameData) => onPreview?.Invoke(frameData);
+        public void OnPreviewFrame(DecodedPreviewFrame frame) => onPreview?.Invoke(frame);
         public void OnProgress(ulong downloadedBytes, ulong totalBytes) => onProgress?.Invoke(downloadedBytes, totalBytes);
     }
 
@@ -27,7 +27,7 @@ public partial class CacheEngine
         string url,
         string? referer = null,
         IProgress<double>? progress = null,
-        Action<byte[]>? onPreview = null,
+        Action<DecodedPreviewFrame>? onPreview = null,
         CancellationToken cancellationToken = default)
     {
         try

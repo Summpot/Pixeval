@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
+using Pixeval.Native.Cache;
 
 namespace Pixeval.Utilities.IO.Caching;
 
@@ -87,13 +88,14 @@ public static class CacheHelper
     }
 
     /// <summary>
+    /// <summary>
     /// 保证<see cref="Stream.Position"/>为0
     /// </summary>
     public static async ValueTask<IAnimatedBitmap> GetSingleAnimatedImageAsync(
         string platform,
         IAnimatedImageFrame frame,
         IProgress<double>? progress = null,
-        Func<Stream, CancellationToken, Task>? onDataAvailable = null,
+        Action<DecodedPreviewFrame>? onPreview = null,
         CancellationToken token = default)
     {
         var key = frame.SingleImageUri;
@@ -105,7 +107,7 @@ public static class CacheHelper
 
         if (frame.PreferredAnimatedImageType is SingleAnimatedImageType.SingleZipFile)
         {
-            var sourceStream = await GetStreamAsync(platform, key.OriginalString, progress, onDataAvailable, token);
+            var sourceStream = await GetStreamAsync(platform, key.OriginalString, progress, onPreview, token);
             if (sourceStream is null)
                 return AnimatedImageNotAvailable.Value;
 
@@ -132,7 +134,7 @@ public static class CacheHelper
         }
 
         // SingleAnimatedImageType.SingleFile
-        if (await GetSingleImageAsync(platform, key, progress, onDataAvailable, token) is { } bitmap)
+        if (await GetSingleImageAsync(platform, key, progress, onPreview, token) is { } bitmap)
             return bitmap;
 
         return AnimatedImageNotAvailable.Value;
@@ -145,21 +147,21 @@ public static class CacheHelper
         string platform,
         IImageFrame frame,
         IProgress<double>? progress = null,
-        Func<Stream, CancellationToken, Task>? onDataAvailable = null,
+        Action<DecodedPreviewFrame>? onPreview = null,
         CancellationToken token = default)
-        => GetSingleImageAsync(platform, frame.ImageUri, progress, onDataAvailable, token);
+        => GetSingleImageAsync(platform, frame.ImageUri, progress, onPreview, token);
 
     private static async ValueTask<IAnimatedBitmap> GetSingleImageAsync(
         string platform,
         Uri frameUri,
         IProgress<double>? progress = null,
-        Func<Stream, CancellationToken, Task>? onDataAvailable = null,
+        Action<DecodedPreviewFrame>? onPreview = null,
         CancellationToken token = default)
     {
         try
         {
             var key = frameUri.OriginalString;
-            var stream = await GetStreamAsync(platform, key, progress, onDataAvailable, token);
+            var stream = await GetStreamAsync(platform, key, progress, onPreview, token);
             if (stream is not null)
             {
                 return IAnimatedBitmap.Load(stream, true);
@@ -185,7 +187,7 @@ public static class CacheHelper
         string platform,
         IAnimatedImageFrame frame,
         IProgress<double>? progress = null,
-        Func<Stream, CancellationToken, Task>? onDataAvailable = null,
+        Action<DecodedPreviewFrame>? onPreview = null,
         CancellationToken token = default)
     {
         if (frame.PreferredAnimatedImageType is not SingleAnimatedImageType.MultiFiles)
@@ -217,7 +219,7 @@ public static class CacheHelper
                             platform,
                             key,
                             progress?.Let(t => new Progress<double>(d => t.Report(sp + (ratio * d)))),
-                            onDataAvailable,
+                            onPreview,
                             token);
                         if (s2 is not null)
                         {
@@ -365,7 +367,7 @@ public static class CacheHelper
         string platform,
         string key,
         IProgress<double>? progress = null,
-        Func<Stream, CancellationToken, Task>? onDataAvailable = null,
+        Action<DecodedPreviewFrame>? onPreview = null,
         CancellationToken token = default)
     {
         try
@@ -376,17 +378,11 @@ public static class CacheHelper
             if (TryGetStream(key) is { } cachedStream)
                 return cachedStream;
 
-            Action<byte[]>? previewAction = onDataAvailable is null ? null : bytes =>
-            {
-                using var ms = new MemoryStream(bytes, writable: false);
-                _ = onDataAvailable(ms, token);
-            };
-
             var stream = await _CacheEngine.Value.GetOrFetchStreamAsync(
                 key,
                 referer: null,
                 progress: progress,
-                onPreview: previewAction,
+                onPreview: onPreview,
                 cancellationToken: token);
 
             if (stream is not null)
@@ -398,11 +394,17 @@ public static class CacheHelper
             {
                 var client = clientService.GetImageDownloadClient();
                 var ms = new MemoryStream();
+                using var fallbackDecoder = onPreview is null ? null : new ProgressiveImageDecoder();
                 var error = await client.DownloadStreamAsync(
                     ms,
                     new Uri(key),
                     progress: progress,
-                    onDataAvailable: onDataAvailable,
+                    onDataAvailable: fallbackDecoder is null ? null : (s, _) =>
+                    {
+                        if (fallbackDecoder.Decode(s) is { } frame)
+                            onPreview?.Invoke(frame);
+                        return Task.CompletedTask;
+                    },
                     token: token);
                 if (error is null && ms.Length > 0)
                 {
