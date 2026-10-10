@@ -134,7 +134,7 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
             return;
 
         await PreviewViewModel.EnsureLoadedAsync();
-        var source = PreviewViewModel.CloneSource();
+        var source = PreviewViewModel.Source;
         if (source is null)
             return;
 

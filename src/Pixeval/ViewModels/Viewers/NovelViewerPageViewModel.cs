@@ -31,7 +31,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
     private readonly bool _needRefresh;
 
-    private readonly ISourceView<Novel>? _sourceView;
+    private readonly IReadOnlyList<Novel>? _novels;
 
     [ObservableProperty]
     public partial bool IsLoading { get; private set; }
@@ -70,7 +70,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
     }
 
     public NovelViewerPageViewModel(
-        ISourceView<Novel> dataProvider,
+        IReadOnlyList<Novel> novels,
         int currentNovelIndex,
         bool needRefresh,
         MakoClient? makoClient = null,
@@ -81,11 +81,11 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         _appSettings = appSettings ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<AppSettings>(App.Services!) ?? App.AppViewModel.AppSettings;
         _appViewModel = appViewModel ?? App.AppViewModel;
         _needRefresh = needRefresh;
-        _sourceView = dataProvider;
+        _novels = novels;
         CurrentWorkIndex = currentNovelIndex;
     }
 
-    public IReadOnlyList<Novel>? Novels => _sourceView?.View;
+    public IReadOnlyList<Novel>? Novels => _novels;
 
     public Novel? CurrentNovel
     {
@@ -99,7 +99,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
             return CurrentWorkIndex < 0 || CurrentWorkIndex >= WorkCount
                 ? null
-                : _sourceView?.View[CurrentWorkIndex];
+                : _novels?[CurrentWorkIndex];
         }
         private set
         {
@@ -351,7 +351,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         if (!_needRefresh)
             return CurrentNovel;
 
-        if (_sourceView is not null && _refreshedNovels.TryGetValue(index, out var cached))
+        if (_novels is not null && _refreshedNovels.TryGetValue(index, out var cached))
             return cached;
 
         if (CurrentNovel is not { Id: var id })
@@ -361,8 +361,8 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             id,
             novel =>
             {
-                // 单项刷新写回当前项，列表刷新只缓存到当前 Viewer，避免污染原始 SourceView。
-                if (_sourceView is null)
+                // 单项刷新写回当前项，列表刷新只缓存到当前 Viewer，避免污染原始列表。
+                if (_novels is null)
                     CurrentNovel = novel;
                 else
                     _refreshedNovels[index] = novel;
@@ -418,8 +418,6 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         _syncMarkerCts?.Dispose();
         _loadingCts.Cancel();
         _loadingCts.Dispose();
-
-        _sourceView?.Dispose();
     }
 
     #endregion

@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Pixeval.Collections;
 using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Search;
@@ -20,6 +19,9 @@ public partial class SearchPageViewModel : ViewModelBase
 
     private SearchPageViewModel()
     {
+        PinnedTags.CollectionChanged += (_, _) => SyncSearchTags();
+        SearchHistories.CollectionChanged += (_, _) => SyncSearchTags();
+        SyncSearchTags();
         _ = LoadResourcesAsync();
     }
 
@@ -66,7 +68,16 @@ public partial class SearchPageViewModel : ViewModelBase
 
     private static ObservableCollection<string> PinnedTags => App.AppViewModel.AppSettings.BrowsingExperienceSettings.PinnedTags;
 
-    public CompositeObservableCollection<object> SearchTags { get; } = new(PinnedTags, SearchHistories);
+    public ObservableCollection<object> SearchTags { get; } = [];
+
+    private void SyncSearchTags()
+    {
+        SearchTags.Clear();
+        foreach (var tag in PinnedTags)
+            SearchTags.Add(tag);
+        foreach (var history in SearchHistories)
+            SearchTags.Add(history);
+    }
 
     private async Task RefreshSearchOptionsAsync()
     {

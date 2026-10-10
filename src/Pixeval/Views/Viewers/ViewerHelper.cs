@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Models;
@@ -41,15 +42,15 @@ public static class ViewerHelper
         }
 
         /// <summary>
-        /// 此方法可以使用<paramref name="sourceView"/>来加载更多插画
+        /// 此方法可以使用<paramref name="items"/>来浏览更多插画
         /// </summary>
         /// <param name="illustrationViewModel">指定的插画实体</param>
-        /// <param name="sourceView">指定的插画实体所在的SourceView</param>
+        /// <param name="items">指定的插画实体所在列表</param>
         /// <param name="needRefresh">是否需要刷新插画（如从数据库中加载的则需要刷新）</param>
-        public void CreateIllustrationPage(object illustrationViewModel, ISourceView<object> sourceView, bool needRefresh = false)
+        public void CreateIllustrationPage(object illustrationViewModel, IReadOnlyList<object> items, bool needRefresh = false)
         {
-            var index = sourceView.View.IndexOf(illustrationViewModel);
-            control.NavigateTo(new IllustrationViewerPage(new(sourceView, index, needRefresh)));
+            var index = IndexOf(items, illustrationViewModel);
+            control.NavigateTo(new IllustrationViewerPage(new(items, index, needRefresh)));
         }
 
         #endregion
@@ -75,15 +76,15 @@ public static class ViewerHelper
         }
 
         /// <summary>
-        /// 此方法可以使用<paramref name="sourceView"/>来加载更多小说
+        /// 此方法可以使用<paramref name="items"/>来浏览更多小说
         /// </summary>
         /// <param name="novel">指定的小说实体</param>
-        /// <param name="sourceView">指定的小说所在的SourceView</param>
+        /// <param name="items">指定的小说所在列表</param>
         /// <param name="needRefresh">是否需要刷新小说（如从数据库中加载的则需要刷新）</param>
-        public void CreateNovelPage(Novel novel, ISourceView<Novel> sourceView, bool needRefresh = false)
+        public void CreateNovelPage(Novel novel, IReadOnlyList<Novel> items, bool needRefresh = false)
         {
-            var index = sourceView.View.IndexOf(novel);
-            control.NavigateTo(new NovelViewerPage(new(sourceView, index, needRefresh)));
+            var index = IndexOf(items, novel);
+            control.NavigateTo(new NovelViewerPage(new(items, index, needRefresh)));
         }
 
         #endregion
@@ -146,5 +147,19 @@ public static class ViewerHelper
         }
 
         return null;
+    }
+
+    private static int IndexOf<T>(IReadOnlyList<T> list, T item)
+    {
+        if (list is IList<T> iList)
+            return iList.IndexOf(item);
+
+        for (var i = 0; i < list.Count; i++)
+        {
+            if (EqualityComparer<T>.Default.Equals(list[i], item))
+                return i;
+        }
+
+        return -1;
     }
 }

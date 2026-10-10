@@ -7,7 +7,7 @@ namespace Pixeval.ViewModels.Home;
 
 public sealed class HomeCardPreviewSource(
     ISimpleViewViewModel viewModel,
-    object? openingContext = null) : IRefCloneable<HomeCardPreviewSource>, IDisposable
+    object? openingContext = null) : IDisposable
 {
     private ISimpleViewViewModel? _viewModel = viewModel;
 
@@ -16,23 +16,10 @@ public sealed class HomeCardPreviewSource(
 
     public object? OpeningContext { get; } = openingContext;
 
-    public HomeCardPreviewSource CloneRef() =>
-        ViewModel is IRefCloneable<ISimpleViewViewModel> cloneable
-            ? new(cloneable.CloneRef(), OpeningContext)
-            : throw new InvalidOperationException($"The home card view model {ViewModel.GetType().Name} cannot be cloned.");
-
     public TViewModel GetViewModel<TViewModel>()
         where TViewModel : class, ISimpleViewViewModel =>
         ViewModel as TViewModel
         ?? throw new InvalidOperationException($"The home card does not provide a {typeof(TViewModel).Name}.");
-
-    public TViewModel TakeViewModel<TViewModel>()
-        where TViewModel : class, ISimpleViewViewModel
-    {
-        var viewModel = GetViewModel<TViewModel>();
-        _viewModel = null;
-        return viewModel;
-    }
 
     public TContext GetOpeningContext<TContext>()
         where TContext : class =>

@@ -121,9 +121,9 @@ flowchart TD
 
     subgraph Phase6 ["Phase 6: C# 表现层现代化与终极架构重构 (达成 Pure Thin UI)"]
         P6_1["6.1 领域契约与 UI 状态彻底解耦 [已完成]<br/>• 移除 Record 上的 INotifyPropertyChanged 与可变私有字段<br/>• 建立轻量 UI State Store 或 View-Scoped Behaviors"]
-        P6_2["6.2 彻底清退 Misaki 外部依赖与历史抽象<br/>• 物理移除 Misaki NuGet 包与 IArtworkInfo 等复杂接口链<br/>• 视图 DataTemplate 直绑原生实体并多态分发"]
-        P6_3["6.3 静态巨石解体与规范化标准 DI<br/>• 彻底消除全局 App.AppViewModel / PixevalSettings 静态穿透<br/>• 全面推行构造注入与类型安全交互命令"]
-        P6_4["6.4 集合管道与数据流极大化精简<br/>• 清退沉重的 DataProvider / IRefCloneable 体系<br/>• 直连 Rust 增量流与极简 ObservableCollection"]
+        P6_2["6.2 彻底清退 Misaki 外部依赖与历史抽象 [已完成]<br/>• 物理移除 Misaki NuGet 包与 IArtworkInfo 等复杂接口链<br/>• 视图 DataTemplate 直绑原生实体并多态分发"]
+        P6_3["6.3 静态巨石解体与规范化标准 DI [已完成]<br/>• 彻底消除全局 App.AppViewModel / PixevalSettings 静态穿透<br/>• 全面推行构造注入与类型安全交互命令"]
+        P6_4["6.4 集合管道与数据流极大化精简 [已完成]<br/>• 清退沉重的 DataProvider / IRefCloneable 体系<br/>• 直连 Rust 增量流与极简 ObservableCollection"]
         P6_5["6.5 View Code-Behind 极致瘦身与声明式路由<br/>• WorkContainer / TabViewContainer 视图逻辑抽取<br/>• 规范化 NavigationService 统一路由跳转"]
     end
 
@@ -536,15 +536,20 @@ Phase 6 的核心目标是：**全面清理在逐步演进过程中积累的过�
   - [x] 建立标准单一职责服务接口并注册进 DI 容器，支持构造函数注入与 XAML 依赖注入标记扩展。
   - [x] 针对性单元测试（`ArtworkUiStateStoreTest` 8 项与 `WorkCommandsTest` 10 项）全绿通过，全工程 0 编译警告 0 编译错误。
 
-#### 6.4 集合管道与数据流极大化精简 (Streamline Data Providers & Collection Pipelines)
+#### 6.4 集合管道与数据流极大化精简 (Streamline Data Providers & Collection Pipelines) [已完成]
 - **痛点与坏味道**：
   - 保留了旧版复杂的 `SharableViewDataProvider<T, TViewModel>`、`SimpleViewDataProvider`、`IncrementalLoadingCollection`、`AdvancedObservableCollection`、`CompositeObservableCollection`、`IRefCloneable` 轮子。
   - 在 C# 端维护了沉重的排序、多级过滤、多视图克隆与引用计数。
-- **重构方案**：
+- **重构方案与落地成果**：
   - 鉴于 Rust Core（`pixeval_storage`、`pixeval_filters`、增量引擎）已原生承担高性能过滤、排序与分页，C# 废除冗余的动态重排序和复杂克隆机制。
-  - 将集合管道精简为标准的 `ObservableCollection<T>` 与极简的异步流分页驱动器（如基于 `IAsyncEnumerable<T>` 的薄层 Behavior）。
-- **验收标准**：
-  - 物理删除 `SharableViewDataProvider.cs`、`SimpleViewDataProvider.cs` 等过度包装的数据提供者，消除多层集合中转。
+  - 将集合管道精简为标准的 `ObservableCollection<T>` 与轻量 `FilteredIncrementalCollection<T>`。
+  - 彻底清退多视图克隆机制，查看器（`IllustrationViewerPage`、`NovelViewerPage`）直接消费 `IReadOnlyList<T>`，不持有或释放数据源。
+- **验收标准与完成状态**：
+  - [x] 物理删除 14 个过度包装的集合/提供者与引用计数历史文件（`SharableViewDataProvider.cs`、`SimpleViewDataProvider.cs`、`IDataProvider.cs`、`IRefCloneable.cs`、`ISourceView.cs`、`SimpleOperableSourceView.cs`、`AdvancedObservableCollection.cs`、`AdvancedObservableAdaptor.cs`、`DeferredCollectionBase.cs`、`CompositeObservableCollection.cs`、`IFilter.cs`、`ISortDescription.cs`、`SharedRef.cs` 及 `CompositeObservableCollectionTest.cs`）。
+  - [x] 废除跨视图 ViewModel/集合克隆机制（`CloneRef`、`TakeViewModel`、`CloneSource`），查看器（`IllustrationViewerPage`、`NovelViewerPage`）与预览直接直连 `IReadOnlyList<T>`，彻底消除析构悬挂与跨页持有风险。
+  - [x] 重构表现层集合管道：`WorkViewViewModelBase` 与 `SimpleOperableViewViewModel` 统一采用标准的 `ObservableCollection<T>` 与轻量 `FilteredIncrementalCollection<T>`，排序与过滤全面回归 .NET 标准 `Predicate<object>` 与 `IComparer<object>`。
+  - [x] 精简下载与搜索集合模型：`DownloadFolderPageViewModel` 直连 `ObservableCollection`，`DownloadItemPageViewModel` 采用轻量 LINQ 过滤同步，`SearchPageViewModel` 采用标准集合同步替换复合集合轮子。
+  - [x] 全工程 0 编译警告 0 编译错误，针对性单元测试 308 项全绿通过。
 
 #### 6.5 View Code-Behind 极致瘦身与声明式路由体系 (View Code-Behind Decoupling & Modern Navigation)
 - **痛点与坏味道**：
@@ -571,9 +576,9 @@ Phase 6 的核心目标是：**全面清理在逐步演进过程中积累的过�
    - 物理移除 `Misaki` NuGet 包与 `IArtworkInfo` 等接口链；视图 DataTemplate 纯粹直绑原生实体。
 4. **静态巨石解体与标准 DI 落地 (Phase 6.3) [已完成]**
    - 注册单一职责核心服务至 DI，消灭弱类型命令与 `App.AppViewModel` 静态穿透，推行构造函数注入与 XAML 标记扩展。
-5. **第一当前推进目标：集合管道精简与数据流极大化精简 (Phase 6.4) [待启动]**
+5. **集合管道精简与数据流极大化精简 (Phase 6.4) [已完成]**
    - 物理删除 `SharableViewDataProvider` 等复杂轮子，将集合管道收敛至原生异步流与精简集合。
-6. **后续演进：View Code-Behind 极致瘦身与声明式路由体系 (Phase 6.5)**
+6. **第一当前推进目标：View Code-Behind 极致瘦身与声明式路由体系 (Phase 6.5) [待启动]**
    - 解耦 `WorkContainer` / `TabViewContainer`，完成 Avalonia 表现层终极瘦身与声明式路由。
 7. **最终交付：统一跨平台 CI/CD 流水线 (Phase 4.2)**
    - 配置 GitHub Actions 原生矩阵交叉编译与多架构分发。

@@ -1,10 +1,11 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using Avalonia.Collections;
-using Pixeval.Collections;
+using Pixeval.Models.Options;
 
 namespace Pixeval.ViewModels;
 
@@ -21,9 +22,9 @@ public interface IOperableViewViewModel : ISimpleViewViewModel
 
     AvaloniaList<object> SelectedEntries { get; }
 
-    void SetSortDescriptions(params IEnumerable<ISortDescription<object>> descriptions);
+    void SetSortOption(LocalSortOption sortOption);
 
-    IFilter<object>? UserFilter { get; set; }
+    Predicate<object>? UserFilter { get; set; }
 
     bool RequireAdaptiveGrid { get; }
 

@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
+using System.Threading.Tasks;
 using Pixeval.Collections;
 using Pixeval.Models.Blocking;
 
@@ -16,35 +16,52 @@ public abstract class EntryViewViewModel<T, TViewModel>
     where TViewModel : class
 {
     private bool _isDisposed;
+    private IncrementalLoadingCollection<TViewModel>? _source;
 
-    public abstract IDataProvider<T, TViewModel> DataProvider { get; }
+    public virtual ObservableCollection<TViewModel> View => Source;
 
-    public AdvancedObservableCollection<TViewModel> View => DataProvider.View;
+    public ObservableCollection<TViewModel> Source => _source ??= CreateEmptyCollection();
 
-    public ObservableCollection<TViewModel> Source => DataProvider.Source;
+    protected IncrementalLoadingCollection<TViewModel>? BackingCollection => _source;
 
-    public void Dispose()
+    public virtual void Dispose()
     {
         GC.SuppressFinalize(this);
         if (_isDisposed)
             return;
 
         _isDisposed = true;
-        DataProvider.Dispose();
+        _source?.Dispose();
+        _source = null;
     }
 
-    public void ResetEngine(IAsyncEnumerable<T>? newEngine, Func<T, int, TViewModel>? factory = null, int itemsPerPage = 20, int itemLimit = -1)
+    public virtual void ResetEngine(IAsyncEnumerable<T>? newEngine, Func<T, int, TViewModel>? factory = null, int itemsPerPage = 20, int itemLimit = -1)
     {
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
+        _source?.Dispose();
+
         var snapshot = BlockedContentHelper.CaptureSnapshot();
-        DataProvider.ResetEngine(
-            newEngine,
-            (entry, index) =>
-            {
-                var replaced = BlockedContentHelper.ReplaceEntry(entry, snapshot);
-                return factory is not null ? factory(replaced, index) : (TViewModel) (object) replaced;
-            },
-            itemsPerPage,
-            itemLimit);
+        var effectiveFactory = (T entry, int index) =>
+        {
+            var replaced = BlockedContentHelper.ReplaceEntry(entry, snapshot);
+            return factory is not null ? factory(replaced, index) : (TViewModel) (object) replaced;
+        };
+
+        var engine = newEngine ?? EmptyAsyncEnumerable();
+        var incrementalSource = new IncrementalSource<T, TViewModel>(engine, effectiveFactory, itemLimit);
+        _source = new IncrementalLoadingCollection<TViewModel>(incrementalSource, itemsPerPage);
+
+        OnPropertyChanged(nameof(Source));
+        OnPropertyChanged(nameof(View));
+    }
+
+    private static IncrementalLoadingCollection<TViewModel> CreateEmptyCollection() =>
+        new(new IncrementalSource<T, TViewModel>(EmptyAsyncEnumerable(), static (entry, _) => (TViewModel) (object) entry));
+
+    private static async IAsyncEnumerable<T> EmptyAsyncEnumerable()
+    {
+        await Task.CompletedTask;
+        yield break;
     }
 
     /// <inheritdoc />

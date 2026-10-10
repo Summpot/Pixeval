@@ -4,9 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Pixeval.Collections;
 using Pixeval.Models.Options;
 
 namespace Pixeval.ViewModels;
@@ -29,9 +29,9 @@ public sealed partial class DownloadItemPageViewModel : ViewModelBase, IDisposab
 
     public DownloadFolderViewModel? Folder { get; }
 
-    public AdvancedObservableCollection<DownloadItemViewModel> View { get; }
+    public ObservableCollection<DownloadItemViewModel> View { get; } = [];
 
-    partial void OnCurrentOptionChanged(DownloadListOption value) => ResetFilter(GetCustomSearchResult());
+    partial void OnCurrentOptionChanged(DownloadListOption value) => RefreshView();
 
     partial void OnFilterTextChanged(string? value) => UpdateFilteredTasks(value);
 
@@ -40,8 +40,13 @@ public sealed partial class DownloadItemPageViewModel : ViewModelBase, IDisposab
         PageViewModel = pageViewModel;
         Folder = folder;
         _source = folder?.Items ?? pageViewModel.OrdinaryItems;
-        View = new AdvancedObservableCollection<DownloadItemViewModel>(_source, true);
-        ResetFilter();
+        _source.CollectionChanged += OnSourceCollectionChanged;
+        RefreshView();
+    }
+
+    private void OnSourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        RefreshView();
     }
 
     /// <inheritdoc />
@@ -52,24 +57,23 @@ public sealed partial class DownloadItemPageViewModel : ViewModelBase, IDisposab
             return;
 
         _isDisposed = true;
-        View.Filters.Clear();
-        View.Source = [];
-        View.Dispose();
+        _source.CollectionChanged -= OnSourceCollectionChanged;
+        View.Clear();
         _filteredTasks.Clear();
     }
 
-    private void ResetFilter(IEnumerable<DownloadItemViewModel>? customSearchResult = null)
+    private void RefreshView()
     {
         if (_isDisposed)
             return;
 
-        var filterSource = customSearchResult?.ToHashSet();
-        using (View.DeferFiltersChange())
+        var filterSource = GetCustomSearchResult()?.ToHashSet();
+        var matches = _source.Where(item => item.MatchesOption(CurrentOption, filterSource)).ToList();
+
+        View.Clear();
+        foreach (var item in matches)
         {
-            View.Filters.Clear();
-            View.Filters.Add(IFilter<DownloadItemViewModel>.Create(
-                item => item.MatchesOption(CurrentOption, filterSource),
-                false));
+            View.Add(item);
         }
     }
 
@@ -82,9 +86,13 @@ public sealed partial class DownloadItemPageViewModel : ViewModelBase, IDisposab
     {
         _filteredTasks.Clear();
         if (!string.IsNullOrWhiteSpace(key))
+        {
             foreach (var item in _source.Where(item => item.MatchesSearch(key)))
+            {
                 _filteredTasks.Add(item);
+            }
+        }
 
-        ResetFilter(GetCustomSearchResult());
+        RefreshView();
     }
 }

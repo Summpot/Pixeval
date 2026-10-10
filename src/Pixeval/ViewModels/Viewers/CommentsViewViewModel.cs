@@ -19,8 +19,6 @@ public class CommentsViewViewModel : EntryViewViewModel<Comment, CommentItemView
     protected readonly MakoClient MakoClient;
     protected readonly IUserSessionService? UserSessionService;
 
-    public override SimpleViewDataProvider<Comment, CommentItemViewModel> DataProvider { get; } = new();
-
     public CommentsViewViewModel(
         SimpleWorkType parentType,
         long parentId,

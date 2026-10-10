@@ -100,16 +100,16 @@ public sealed partial class WorkView : UserControl, IDisposable
         switch (vm, DataContext)
         {
             case (Novel novel, NovelViewViewModel viewViewModel):
-                viewContainer.CreateNovelPage(novel, viewViewModel.DataProvider.CloneRef());
+                viewContainer.CreateNovelPage(novel, (IReadOnlyList<Novel>) viewViewModel.View);
                 break;
             case (Novel novel, SimpleOperableViewViewModel<Novel> viewViewModel):
-                viewContainer.CreateNovelPage(novel, viewViewModel.SourceView.CloneSourceView(), viewViewModel.NeedRefreshOnOpen);
+                viewContainer.CreateNovelPage(novel, viewViewModel.View.OfType<Novel>().ToList(), viewViewModel.NeedRefreshOnOpen);
                 break;
             case (object illustration, IllustrationViewViewModel viewViewModel):
-                viewContainer.CreateIllustrationPage(illustration, viewViewModel.DataProvider.CloneRef());
+                viewContainer.CreateIllustrationPage(illustration, viewViewModel.View);
                 break;
             case (object illustration, SimpleOperableViewViewModel<object> viewViewModel):
-                viewContainer.CreateIllustrationPage(illustration, viewViewModel.SourceView.CloneSourceView(), viewViewModel.NeedRefreshOnOpen);
+                viewContainer.CreateIllustrationPage(illustration, viewViewModel.View, viewViewModel.NeedRefreshOnOpen);
                 break;
             case (Novel { Id: var id }, _):
                 viewContainer.CreateNovelPage(id);

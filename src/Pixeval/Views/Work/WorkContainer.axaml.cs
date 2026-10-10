@@ -13,7 +13,6 @@ using Avalonia.Controls.Selection;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Pixeval.Collections;
 using Pixeval.Controls;
 using Pixeval.Filters;
 using Pixeval.Native.Filters;
@@ -145,7 +144,7 @@ public partial class WorkContainer : UserControl
     {
         if (DataContext is IOperableViewViewModel vm && SortOptionComboBox.GetSelectedValue<LocalSortOption>() is var sortOption)
         {
-            vm.SetSortDescriptions(ArtworkInfoExtensions.GetSortDescription(sortOption));
+            vm.SetSortOption(sortOption);
 
             ScrollToTop();
         }
@@ -308,7 +307,7 @@ public partial class WorkContainer : UserControl
         }
 
         viewModel.UserFilter = query.HasPredicates()
-            ? IFilter<object>.Create(o => query.MatchesArtwork(o.ToArtworkMetadata()), false)
+            ? o => query.MatchesArtwork(o.ToArtworkMetadata())
             : null;
         WorkFilterAutoSuggestBox.ClearSelection();
     }

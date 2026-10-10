@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using Pixeval.Collections;
 using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Booru;
@@ -37,19 +36,23 @@ public static class ArtworkInfoExtensions
         };
     }
 
-    public static IEnumerable<ISortDescription<object>> GetSortDescription(LocalSortOption sortOption)
+    public static IComparer<object>? GetComparer(LocalSortOption sortOption)
     {
         if (sortOption is LocalSortOption.DoNotSort)
-            yield break;
+            return null;
 
-        yield return sortOption switch
+        return Comparer<object>.Create((x, y) =>
         {
-            LocalSortOption.PopularityDescending => ISortDescription<object>.Create((x, y) => GetBookmarks(y).CompareTo(GetBookmarks(x)), true),
-            LocalSortOption.PublishDateDescending => ISortDescription<object>.Create((x, y) => GetCreateDate(y).CompareTo(GetCreateDate(x)), true),
-            LocalSortOption.PublishDateAscending => ISortDescription<object>.Create((x, y) => GetCreateDate(x).CompareTo(GetCreateDate(y))),
-            LocalSortOption.DoNotSort or _ => throw new ArgumentOutOfRangeException(nameof(sortOption))
-        };
-        yield return ISortDescription<object>.Create((x, y) => GetId(x).CompareTo(GetId(y)));
+            var cmp = sortOption switch
+            {
+                LocalSortOption.PopularityDescending => GetBookmarks(y).CompareTo(GetBookmarks(x)),
+                LocalSortOption.PublishDateDescending => GetCreateDate(y).CompareTo(GetCreateDate(x)),
+                LocalSortOption.PublishDateAscending => GetCreateDate(x).CompareTo(GetCreateDate(y)),
+                _ => 0
+            };
+
+            return cmp != 0 ? cmp : GetId(x).CompareTo(GetId(y));
+        });
 
         static long GetBookmarks(object? item) => item switch
         {

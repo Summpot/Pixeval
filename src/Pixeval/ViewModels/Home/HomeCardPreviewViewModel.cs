@@ -51,7 +51,7 @@ public sealed partial class HomeCardPreviewViewModel(
 
     public Task EnsureLoadedAsync() => ViewModel is null ? LoadAsync() : Task.CompletedTask;
 
-    public HomeCardPreviewSource? CloneSource() => _source?.CloneRef();
+    public HomeCardPreviewSource? Source => _source;
 
     private async Task LoadCoreAsync()
     {

@@ -3,11 +3,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Pixeval.Collections;
-using Pixeval.Models.Pixiv;
-using Pixeval.Utilities;
+using Pixeval.Models.Blocking;
+using Pixeval.Models.Options;
+using Pixeval.Native.Mako;
 
 namespace Pixeval.ViewModels;
 
@@ -15,19 +17,21 @@ public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelB
     where TViewModel : class
 {
     private bool _isDisposed;
+    private LocalSortOption _sortOption = LocalSortOption.DoNotSort;
+    private Predicate<object>? _userFilter;
 
     public SimpleOperableViewViewModel(IReadOnlyCollection<object> source, bool needRefreshOnOpen = false)
     {
         NeedRefreshOnOpen = needRefreshOnOpen;
-        SourceView = new(source);
-        SetFilters();
+        Source = [.. source.Select(static entry => BlockedContentHelper.Replace(entry))];
+        RefreshView();
     }
 
-    public SimpleOperableSourceView<TViewModel> SourceView { get; }
+    public ObservableCollection<object> Source { get; }
+
+    public ObservableCollection<object> View { get; } = [];
 
     public bool NeedRefreshOnOpen { get; }
-
-    private static IFilter<object> TypeFilter { get; } = IFilter<object>.Create(entry => entry is TViewModel, false);
 
     /// <inheritdoc />
     [ObservableProperty]
@@ -36,47 +40,55 @@ public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelB
     /// <inheritdoc />
     public AvaloniaList<object> SelectedEntries { get; } = [];
 
-    public void SetSortDescriptions(params IEnumerable<ISortDescription<object>> descriptions)
+    public void SetSortOption(LocalSortOption sortOption)
     {
-        using (SourceView.View.DeferSortDescriptionsChange())
-        {
-            SourceView.View.SortDescriptions.Clear();
-            SourceView.View.SortDescriptions.AddRange(descriptions);
-        }
+        if (_sortOption == sortOption)
+            return;
+
+        _sortOption = sortOption;
+        RefreshView();
     }
 
-    private void SetFilters()
+    public Predicate<object>? UserFilter
     {
-        using (SourceView.View.DeferFiltersChange())
-        {
-            SourceView.View.Filters.Clear();
-            SourceView.View.Filters.Add(TypeFilter);
-            if (UserFilter is not null)
-                SourceView.View.Filters.Add(UserFilter);
-        }
-    }
-
-    public IFilter<object>? UserFilter
-    {
-        get;
+        get => _userFilter;
         set
         {
-            if (Equals(field, value))
+            if (Equals(_userFilter, value))
                 return;
 
-            field = value;
-            SetFilters();
+            _userFilter = value;
+            RefreshView();
         }
     }
 
-    /// <inheritdoc />
-    IReadOnlyCollection<object> IOperableViewViewModel.View => SourceView.View;
+    private void RefreshView()
+    {
+        View.Clear();
+        var items = Source.Where(entry => entry is TViewModel);
+        if (_userFilter is not null)
+            items = items.Where(entry => _userFilter(entry));
+        if (_sortOption is not LocalSortOption.DoNotSort)
+        {
+            var comparer = ArtworkInfoExtensions.GetComparer(_sortOption);
+            if (comparer is not null)
+                items = items.OrderBy(entry => entry, comparer);
+        }
+
+        foreach (var item in items)
+            View.Add(item);
+    }
 
     /// <inheritdoc />
-    public IReadOnlyCollection<object> Source => SourceView.Source;
+    IReadOnlyCollection<object> IOperableViewViewModel.View => View;
 
     /// <inheritdoc />
-    public bool RequireAdaptiveGrid => typeof(TViewModel) == typeof(Pixeval.Native.Mako.Novel);
+    public IReadOnlyCollection<object> SourceItems => Source;
+
+    IReadOnlyCollection<object> IOperableViewViewModel.Source => Source;
+
+    /// <inheritdoc />
+    public bool RequireAdaptiveGrid => typeof(TViewModel) == typeof(Novel);
 
     public void Dispose()
     {
@@ -84,6 +96,7 @@ public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelB
             return;
 
         _isDisposed = true;
-        SourceView.Dispose();
+        View.Clear();
+        Source.Clear();
     }
 }

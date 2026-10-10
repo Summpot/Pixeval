@@ -35,7 +35,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
     private CancellationTokenSource _loadingCts = new();
 
-    private readonly ISourceView<object>? _sourceView;
+    private readonly IReadOnlyList<object>? _illustrations;
 
     [ObservableProperty]
     public partial bool IsLoading { get; private set; }
@@ -128,7 +128,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// otherwise it contains the entire manga data
     /// </remarks>
     public IllustrationViewerPageViewModel(
-        ISourceView<object> dataProvider,
+        IReadOnlyList<object> illustrations,
         int currentIllustrationIndex,
         bool needRefresh,
         MakoClient? makoClient = null,
@@ -139,7 +139,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         _appSettings = appSettings ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<AppSettings>(App.Services!) ?? App.AppViewModel.AppSettings;
         _logger = logger ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<FileLogger>(App.Services!);
         _needRefresh = needRefresh;
-        _sourceView = dataProvider;
+        _illustrations = illustrations;
         CurrentWorkIndex = currentIllustrationIndex;
     }
 
@@ -160,7 +160,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
             return CurrentWorkIndex < 0 || CurrentWorkIndex >= WorkCount
                 ? null
-                : _sourceView?.View[CurrentWorkIndex];
+                : _illustrations?[CurrentWorkIndex];
         }
         private set
         {
@@ -246,7 +246,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
                 return CurrentIllustration;
             }
 
-            if (_sourceView is not null && _refreshedIllustrations.TryGetValue(workIndex, out var cached))
+            if (_illustrations is not null && _refreshedIllustrations.TryGetValue(workIndex, out var cached))
             {
                 IsLoading = false;
                 return cached;
@@ -271,8 +271,8 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
                 platform,
                 item =>
                 {
-                    // 单项刷新写回当前项，列表刷新只缓存到当前 Viewer，避免污染原始 SourceView。
-                    if (_sourceView is null)
+                    // 单项刷新写回当前项，列表刷新只缓存到当前 Viewer，避免污染原始列表。
+                    if (_illustrations is null)
                         CurrentIllustration = item;
                     else
                         _refreshedIllustrations[workIndex] = item;
@@ -410,7 +410,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// <summary>
     /// 插画列表
     /// </summary>
-    public IReadOnlyList<object>? Illustrations => _sourceView?.View;
+    public IReadOnlyList<object>? Illustrations => _illustrations;
 
     #endregion
 
@@ -510,7 +510,6 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         _loadingCts.Dispose();
         IsAutoPlaying = false;
         CurrentImage = null!;
-        _sourceView?.Dispose();
     }
 
     #endregion
