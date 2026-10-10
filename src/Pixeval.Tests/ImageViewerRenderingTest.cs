@@ -17,15 +17,16 @@ using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Native.Booru;
-using Pixeval.AppManagement;
+using Pixeval.Booru;
 using Pixeval.I18N;
 using Pixeval.Utilities;
-using Pixeval.Models.Extensions;
+using Pixeval.Services.Background;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
 using SmoothScroll.Avalonia.Controls;
 using Size = Avalonia.Size;
+using Pixeval.Common;
+using Pixeval.Services.Core;
 
 namespace Pixeval.Tests;
 

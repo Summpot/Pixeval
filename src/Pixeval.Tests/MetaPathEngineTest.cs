@@ -4,9 +4,9 @@
 using System;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Models.Download;
+using Pixeval.Download;
 using Pixeval.Utilities;
-using Pixeval.Native.Download;
+using Pixeval.Common;
 
 namespace Pixeval.Tests;
 

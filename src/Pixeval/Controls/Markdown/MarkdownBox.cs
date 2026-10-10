@@ -24,11 +24,9 @@ using Markdown.Avalonia.Svg;
 using Markdown.Avalonia.SyntaxHigh;
 using Markdown.Avalonia.Utils;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Models;
-using Pixeval.AppManagement;
-using Pixeval.Services;
+using Pixeval.Pixiv;
 using Pixeval.Utilities;
-using Pixeval.Utilities.GitHub;
+using Pixeval.Services.Update;
 using Pixeval.Views.Viewers;
 
 namespace Pixeval.Controls;

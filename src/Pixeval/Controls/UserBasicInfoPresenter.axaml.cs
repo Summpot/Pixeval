@@ -3,11 +3,10 @@
 
 using Avalonia;
 using Avalonia.Controls.Primitives;
-using Pixeval.AppManagement;
-using Pixeval.Models.Pixiv;
-using Pixeval.Native.Booru;
-using Pixeval.Native.Mako;
-using Pixeval.Native.Storage;
+using Pixeval.Pixiv;
+using Pixeval.Booru;
+using Pixeval.Mako;
+using Pixeval.Storage;
 
 namespace Pixeval.Controls;
 

@@ -1,9 +1,10 @@
 using System;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement;
-using Pixeval.Native.Mako;
+using Pixeval.Mako;
 using Pixeval.ViewModels;
+using Pixeval.Services.Core;
+using Pixeval.ViewModels.Viewers;
 
 namespace Pixeval.Tests;
 

@@ -10,10 +10,9 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement;
-using Pixeval.AppManagement.Settings;
+using Pixeval.Config;
 using Pixeval.I18N;
-using Pixeval.Models.McpServer;
+using Pixeval.Services.Background;
 
 namespace Pixeval.Views.Settings;
 

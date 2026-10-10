@@ -4,11 +4,11 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement.Settings;
-using Pixeval.Models.Pixiv;
+using Pixeval.Config;
+using Pixeval.Pixiv;
 using Pixeval.Utilities;
-using Pixeval.Utilities.Network;
-using Pixeval.Native.Mako;
+using Pixeval.Services.Network;
+using Pixeval.Mako;
 
 namespace Pixeval.Tests;
 
@@ -70,7 +70,7 @@ public sealed class MakoClientTest
         using var engine = client.NovelRecommended(includeRanking: true, includePrivacy: true);
 
         // Verify that NovelFetchEngine implements IAsyncEnumerable<Novel>
-        Assert.IsInstanceOfType<IAsyncEnumerable<Novel>>(engine);
+        Assert.IsInstanceOfType<IAsyncEnumerable<Mako.Novel>>(engine);
 
         Assert.AreEqual(0u, engine.RequestedPages());
 
@@ -226,7 +226,7 @@ public sealed class MakoClientTest
         using var client = CreateTestClient(settings);
 
         var spotlightStream = client.Spotlight("all");
-        Assert.IsInstanceOfType<Pixeval.Models.Pixiv.IFetchEngine<SpotlightArticle>>(spotlightStream);
+        Assert.IsInstanceOfType<Pixeval.Pixiv.IFetchEngine<SpotlightArticle>>(spotlightStream);
 
         // Verify native SpotlightArticle extensions
         var article = new SpotlightArticle(
@@ -244,7 +244,7 @@ public sealed class MakoClientTest
         Assert.AreEqual("Pure Title", article.PureTitle);
         Assert.AreEqual("https://example.com/thumb.jpg", article.Thumbnail);
         Assert.AreEqual("https://example.com/article", article.ArticleUrl);
-        Assert.AreEqual(Pixeval.Models.Pixiv.SpotlightCategory.Spotlight, article.CategoryEnum);
+        Assert.AreEqual(Pixeval.Pixiv.SpotlightCategory.Spotlight, article.CategoryEnum);
         Assert.AreEqual("Subcategory", article.SubcategoryLabel);
         Assert.AreEqual(new System.Uri("https://www.pixivision.net/a/12345"), article.WebsiteUri);
         Assert.AreEqual(new System.Uri("pixeval://spotlight/12345"), article.AppUri);

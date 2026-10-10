@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Pixeval.AppManagement;
 
 namespace Pixeval.Views.Settings;
 

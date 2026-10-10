@@ -9,17 +9,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement;
 using Pixeval.Controls;
-using Pixeval.Models.Options;
-using Pixeval.Models.Pixiv;
-using Pixeval.Native.Config;
-using Pixeval.Native.Mako;
-using Pixeval.Services;
+using Pixeval.Config;
+using Pixeval.Pixiv;
+using Pixeval.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Home;
-using Pixeval.Views.Capability;
+using Pixeval.Views.Works;
 using Pixeval.Views.Search;
 using Pixeval.Views.Viewers;
 
@@ -175,8 +172,8 @@ public sealed class HomeCardDefinitions
     {
         switch (parameter, vm)
         {
-            case (Novel novel, NovelViewViewModel viewViewModel):
-                topLevel.ViewContainer?.CreateNovelPage(novel, (IReadOnlyList<Novel>) viewViewModel.View);
+            case (Mako.Novel novel, NovelViewViewModel viewViewModel):
+                topLevel.ViewContainer?.CreateNovelPage(novel, (IReadOnlyList<Mako.Novel>) viewViewModel.View);
                 break;
             case (object work, IllustrationViewViewModel viewViewModel):
                 topLevel.ViewContainer?.CreateIllustrationPage(work, (IReadOnlyList<object>) viewViewModel.View);
@@ -235,7 +232,7 @@ public sealed class HomeCardDefinitions
     }
 
     private static HomeCardPreviewSource CreateWorkPreviewSource(IFetchEngine<object> engine) =>
-        new(engine is IFetchEngine<Novel> novelEngine
+        new(engine is IFetchEngine<Mako.Novel> novelEngine
             ? CreateNovelViewModel(novelEngine)
             : CreateIllustrationViewModel(engine));
 
@@ -249,7 +246,7 @@ public sealed class HomeCardDefinitions
         return viewModel;
     }
 
-    private static NovelViewViewModel CreateNovelViewModel(IFetchEngine<Novel> engine)
+    private static NovelViewViewModel CreateNovelViewModel(IFetchEngine<Mako.Novel> engine)
     {
         var viewModel = new NovelViewViewModel();
         viewModel.ResetEngine(engine);

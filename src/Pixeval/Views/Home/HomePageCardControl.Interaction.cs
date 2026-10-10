@@ -7,7 +7,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.VisualTree;
-using Pixeval.Native.Config;
+using Pixeval.Config;
 
 namespace Pixeval.Views.Home;
 

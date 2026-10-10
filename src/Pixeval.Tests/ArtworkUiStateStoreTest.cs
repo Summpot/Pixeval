@@ -4,13 +4,14 @@
 using System.ComponentModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
-using Pixeval.Models.Pixiv;
-using Pixeval.Native.Booru;
-using Pixeval.Native.Mako;
-using Pixeval.Native.SauceNao;
-using Pixeval.Services;
+using Pixeval.Pixiv;
+using Pixeval.Booru;
+using Pixeval.Mako;
+using Pixeval.SauceNao;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
+using Pixeval.Common;
+using Pixeval.Services.Core;
 
 namespace Pixeval.Tests;
 
@@ -102,7 +103,7 @@ public sealed class ArtworkUiStateStoreTest
     public void NativeRecordsDoNotImplementINotifyPropertyChanged()
     {
         Assert.IsFalse(typeof(INotifyPropertyChanged).IsAssignableFrom(typeof(Illustration)));
-        Assert.IsFalse(typeof(INotifyPropertyChanged).IsAssignableFrom(typeof(Novel)));
+        Assert.IsFalse(typeof(INotifyPropertyChanged).IsAssignableFrom(typeof(Mako.Novel)));
         Assert.IsFalse(typeof(INotifyPropertyChanged).IsAssignableFrom(typeof(BooruPost)));
         Assert.IsFalse(typeof(INotifyPropertyChanged).IsAssignableFrom(typeof(SauceNaoItem)));
         Assert.IsFalse(typeof(INotifyPropertyChanged).IsAssignableFrom(typeof(User)));
@@ -125,7 +126,7 @@ public sealed class ArtworkUiStateStoreTest
     [TestMethod]
     public void WorkRecordsDoNotExposeFieldAliases()
     {
-        foreach (var type in new[] { typeof(Illustration), typeof(Novel), typeof(WorkEntry) })
+        foreach (var type in new[] { typeof(Illustration), typeof(Mako.Novel), typeof(WorkEntry) })
         {
             Assert.IsNull(type.GetProperty("IsFavorite"), type.Name);
             Assert.IsNull(type.GetProperty("Author"), type.Name);

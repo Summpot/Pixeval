@@ -2,10 +2,10 @@
 // Licensed under the GPL-3.0 License.
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement.Settings;
-using Pixeval.Native.Maho;
-using Pixeval.Native.Mako;
-using Pixeval.Utilities.Network;
+using Pixeval.Config;
+using Pixeval.Maho;
+using Pixeval.Mako;
+using Pixeval.Services.Network;
 
 namespace Pixeval.Tests;
 
@@ -20,7 +20,7 @@ public sealed class PixivNetworkServiceTest
         using var makoClient = new MakoClient(makoConfig);
         var service = new PixivArtworkService(makoClient);
 
-        Assert.AreEqual(Pixeval.Models.PlatformConstants.Pixiv, service.Platform);
+        Assert.AreEqual(Pixeval.Pixiv.PlatformConstants.Pixiv, service.Platform);
     }
 
     [TestMethod]

@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Native.Cache;
+using Pixeval.Cache;
 using SkiaSharp;
 
 namespace Pixeval.Tests;

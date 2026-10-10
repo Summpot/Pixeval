@@ -14,12 +14,12 @@ using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Pixeval.I18N;
-using Pixeval.Models;
-using Pixeval.Models.Options;
-using Pixeval.Native.Download;
+using Pixeval.Pixiv;
+using Pixeval.Config;
+using Pixeval.Download;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
-using Pixeval.Views.ViewContainers;
+using Pixeval.Views.Shell;
 using Pixeval.Views.Viewers;
 
 namespace Pixeval.Views.Download;

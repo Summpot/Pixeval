@@ -10,7 +10,7 @@ using Avalonia.Media;
 using CommunityToolkit.Mvvm.Input;
 using FluentIcons.Common;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Native.Config;
+using Pixeval.Config;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Home;
 

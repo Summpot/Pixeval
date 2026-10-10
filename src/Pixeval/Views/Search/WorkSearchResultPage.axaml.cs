@@ -9,7 +9,7 @@ using Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.I18N;
-using Pixeval.Models.Pixiv;
+using Pixeval.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Viewers;
@@ -111,9 +111,9 @@ public partial class WorkSearchResultPage : IconContentPage
     {
         if (sender is Avalonia.Controls.Control { DataContext: object artwork } && TopLevel.GetTopLevel(this) is { } topLevel)
         {
-            if (artwork is Pixeval.Native.Mako.Novel novel)
+            if (artwork is Pixeval.Mako.Novel novel)
                 topLevel.ViewContainer?.CreateNovelPage(novel);
-            else if (artwork is Pixeval.Native.Mako.Illustration illust)
+            else if (artwork is Pixeval.Mako.Illustration illust)
                 topLevel.ViewContainer?.CreateIllustrationPage(illust);
         }
     }

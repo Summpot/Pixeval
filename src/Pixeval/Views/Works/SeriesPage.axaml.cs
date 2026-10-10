@@ -1,0 +1,36 @@
+// Copyright (c) Pixeval.
+// Licensed under the GPL-3.0 License.
+
+using System;
+using Avalonia.Interactivity;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.Controls;
+using Pixeval.Pixiv;
+using Pixeval.ViewModels;
+
+namespace Pixeval.Views.Works;
+
+public partial class SeriesPage : IconContentPage
+{
+
+    public SeriesPage()
+    {
+        InitializeComponent();
+        ChangeSource();
+    }
+
+    private void SimpleWorkTypeComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
+    {
+        ChangeSource();
+    }
+
+    private void RefreshButton_OnClick(object? sender, RoutedEventArgs e) => ChangeSource();
+
+    private void ChangeSource()
+    {
+        var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
+        (SeriesView.DataContext as SeriesViewViewModel)?.ResetEngine(
+            App.Services!.GetRequiredService<MakoClient>().WorkSeriesWatchlist(workType is SimpleWorkType.Novel).ToFetchEngine(),
+            workType);
+    }
+}

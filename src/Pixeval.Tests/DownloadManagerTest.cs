@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Models.Options;
-using Pixeval.Models.Subscriptions;
-using Pixeval.Native.Download;
-using Pixeval.Native.Storage;
+using Pixeval.Config;
+using Pixeval.Services.Background;
+using Pixeval.Download;
+using Pixeval.Storage;
 using Pixeval.ViewModels;
+using Pixeval.ViewModels.Download;
 
 namespace Pixeval.Tests;
 

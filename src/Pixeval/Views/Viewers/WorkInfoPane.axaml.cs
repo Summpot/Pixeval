@@ -11,16 +11,12 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Data.Converters;
 using CommunityToolkit.Mvvm.Input;
-using Pixeval.AppManagement;
-using Pixeval.AppManagement.Settings;
-using Pixeval.Models;
-using Pixeval.Models.Blocking;
-using Pixeval.Models.Pixiv;
-using Pixeval.Native.Booru;
+using Pixeval.Config;
+using Pixeval.Pixiv;
+using Pixeval.Booru;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Services;
 using Pixeval.Utilities;
-using Pixeval.Views.Capability;
+using Pixeval.Views.Works;
 using Pixeval.Views.Search;
 
 namespace Pixeval.Views.Viewers;
@@ -146,7 +142,7 @@ public class WorkInfoPane : TemplatedControl
                 SafeRating = illust.SafeRating;
                 TagGroups = [new WorkInfoTagGroup("", illust.Tags.Select(t => new WorkInfoTag(t.Name, t.TranslatedName)).ToList())];
                 break;
-            case Novel novel:
+            case Mako.Novel novel:
                 WorkTitle = novel.Title;
                 WorkDescription = novel.Caption;
                 WorkId = novel.Id.ToString();
@@ -204,7 +200,7 @@ public class WorkInfoPane : TemplatedControl
         {
             nav.NavigateTo<BookmarkUsersPage>((illust.Id, false, illust.Title), sourceControl: this);
         }
-        else if (ArtworkInfo is Novel novel && novel.Id > 0)
+        else if (ArtworkInfo is Mako.Novel novel && novel.Id > 0)
         {
             nav.NavigateTo<BookmarkUsersPage>((novel.Id, true, novel.Title), sourceControl: this);
         }
@@ -212,7 +208,7 @@ public class WorkInfoPane : TemplatedControl
         {
             if (we.AsWorkEntry is Illustration i && i.Id > 0)
                 nav.NavigateTo<BookmarkUsersPage>((i.Id, false, i.Title), sourceControl: this);
-            else if (we.AsWorkEntry is Novel n && n.Id > 0)
+            else if (we.AsWorkEntry is Mako.Novel n && n.Id > 0)
                 nav.NavigateTo<BookmarkUsersPage>((n.Id, true, n.Title), sourceControl: this);
         }
     }
@@ -242,7 +238,7 @@ public class WorkInfoPane : TemplatedControl
         if (tag is null)
             return;
 
-        var type = ArtworkInfo is Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
+        var type = ArtworkInfo is Mako.Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
         App.Services!.GetRequiredService<SearchHistorySession>().Add(tag.Name, tag.TranslatedName);
         var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
         nav.NavigateToWorkSearch(tag.Name, type, this);

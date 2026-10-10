@@ -7,10 +7,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement;
-using Pixeval.Services;
 using Pixeval.I18N;
-using Pixeval.Models.Navigation;
+using Pixeval.Config;
 using Pixeval.Utilities;
 
 namespace Pixeval.Views.Settings;
@@ -52,7 +50,7 @@ public sealed partial class NavigationSettingsPage : ContentPage
         TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
             I18NManager.GetResource(NavigationSettingsPageResources.Applied));
 
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is ViewContainers.TabViewContainer container)
+        if (TopLevel.GetTopLevel(this)?.ViewContainer is TabViewContainer container)
             container.ReloadNavigation();
 
         return true;

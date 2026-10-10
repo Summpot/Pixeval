@@ -4,14 +4,12 @@
 using System;
 using AutoSettingsPage.Avalonia;
 using CommunityToolkit.Avalonia.Controls;
-using Pixeval.Controls.Settings;
 using Pixeval.I18N;
-using Pixeval.Native.Download;
-using Pixeval.Models.Download;
-using Pixeval.Models.Settings.Entries;
-using Pixeval.Native.Mako;
+using Pixeval.Download;
+using Pixeval.Config;
+using Pixeval.Mako;
 using Pixeval.Utilities;
-using Pixeval.Utilities.IO;
+using Pixeval.Common.IO;
 
 namespace Pixeval.Views.Settings;
 
@@ -24,7 +22,7 @@ public partial class DownloadMacroSettingsExpander : SettingsExpander, IEntryCon
     private static readonly Illustration _SingleImage = DesignHelper.DownloadParserSampleSingleIllustration;
     private static readonly Illustration _SingleAnimatedImage = DesignHelper.DownloadParserSampleAnimatedIllustration;
     private static readonly Illustration _ImageSet = DesignHelper.DownloadParserSampleImageSetIllustration;
-    private static readonly Novel _Novel = DesignHelper.DownloadParserSampleNovel;
+    private static readonly Mako.Novel _Novel = DesignHelper.DownloadParserSampleNovel;
 
     public DownloadMacroSettingsEntry Entry
     {

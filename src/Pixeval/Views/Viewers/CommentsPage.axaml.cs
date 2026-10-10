@@ -2,7 +2,6 @@
 // Licensed under the GPL-3.0 License.
 
 using Avalonia;
-using Pixeval.Views;
 using Pixeval.ViewModels.Viewers;
 
 namespace Pixeval.Views.Viewers;

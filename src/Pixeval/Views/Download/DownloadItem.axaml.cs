@@ -10,7 +10,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using FluentIcons.Common;
 using Pixeval.I18N;
-using Pixeval.Native.Download;
+using Pixeval.Download;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 

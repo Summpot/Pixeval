@@ -1,14 +1,12 @@
 using System;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement;
-using Pixeval.AppManagement.Settings;
-using Pixeval.Models.Download;
-using Pixeval.Models.Options;
+using Pixeval.Config;
+using Pixeval.Download;
 using Pixeval.Utilities;
-using Pixeval.Utilities.IO;
-using Pixeval.Native.Download;
-using Pixeval.Native.Storage;
+using Pixeval.Common.IO;
+using Pixeval.Storage;
+using Pixeval.Common;
 
 namespace Pixeval.Tests;
 

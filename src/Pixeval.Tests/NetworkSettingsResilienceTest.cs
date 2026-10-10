@@ -1,7 +1,7 @@
 using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement.Settings;
-using Pixeval.Utilities.GitHub;
+using Pixeval.Config;
+using Pixeval.Services.Update;
 
 namespace Pixeval.Tests;
 

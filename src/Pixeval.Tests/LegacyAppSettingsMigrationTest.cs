@@ -1,10 +1,7 @@
 using System.IO;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement;
-using Pixeval.AppManagement.Settings;
-using Pixeval.Native.Config;
-using Pixeval.Models.Options;
+using Pixeval.Config;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -75,8 +72,8 @@ public sealed class LegacyAppSettingsMigrationTest
         Assert.AreEqual(222, settings.BrowsingExperienceSettings.ThumbnailLayout.IllustrationGridItemSize);
         Assert.AreEqual(333, settings.BrowsingExperienceSettings.ThumbnailLayout.IllustrationGridLineSize);
         Assert.AreEqual(444, settings.BrowsingExperienceSettings.ThumbnailLayout.IllustrationMasonryColumnWidth);
-        Assert.AreEqual(Pixeval.Models.Pixiv.RankOption.Month, settings.SearchSettings.RankOptions.IllustrationRankOption);
-        Assert.AreEqual(Pixeval.Models.Pixiv.RankOption.Week, settings.SearchSettings.RankOptions.NovelRankOption);
+        Assert.AreEqual(Pixeval.Pixiv.RankOption.Month, settings.SearchSettings.RankOptions.IllustrationRankOption);
+        Assert.AreEqual(Pixeval.Pixiv.RankOption.Week, settings.SearchSettings.RankOptions.NovelRankOption);
         Assert.AreEqual("custom-image", settings.DownloadSettings.DownloadFormats.IllustrationDownloadFormat);
         Assert.AreEqual("custom-animation", settings.DownloadSettings.DownloadFormats.UgoiraDownloadFormat);
         Assert.AreEqual("custom-novel", settings.DownloadSettings.DownloadFormats.NovelDownloadFormat);

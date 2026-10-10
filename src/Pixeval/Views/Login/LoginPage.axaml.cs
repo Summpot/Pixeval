@@ -11,14 +11,12 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement;
-using Pixeval.AppManagement.Settings;
+using Pixeval.Config;
 using Pixeval.I18N;
-using Pixeval.Models.Subscriptions;
-using Pixeval.Native.Mako;
-using Pixeval.Services;
+using Pixeval.Services.Background;
+using Pixeval.Mako;
 using Pixeval.Utilities;
-using Pixeval.Utilities.Network;
+using Pixeval.Services.Network;
 using Pixeval.ViewModels;
 using Pixeval.Views.Home;
 
@@ -115,7 +113,7 @@ public partial class LoginPage : IconContentPage
                                 winArgs.UserDataFolder = userDataFolder;
                                 // For System proxy, WebView2 natively uses Windows system proxy.
                                 // For Custom proxy, format host:port without trailing slash or internal quotes.
-                                if (App.Services?.GetService<AppSettings>()?.NetworkSettings?.ProxySettings is { ProxyType: Models.Options.ProxyType.Custom } proxySettings
+                                if (App.Services?.GetService<AppSettings>()?.NetworkSettings?.ProxySettings is { ProxyType: ProxyType.Custom } proxySettings
                                     && !string.IsNullOrWhiteSpace(proxySettings.Proxy))
                                 {
                                     var normalized = ProxyHelper.NormalizeProxyUri(proxySettings.Proxy);

@@ -9,8 +9,8 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
     xmlns:settings="using:Pixeval.Views.Settings"
-    xmlns:utilities="using:Pixeval.Utilities"
-    xmlns:views="using:Pixeval.Views"
+    xmlns:utilities="using:Pixeval.Common"
+    xmlns:views="using:Pixeval.Views.Shell"
     mc:Ignorable="d"
     d:DesignHeight="600"
     d:DesignWidth="800">

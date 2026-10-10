@@ -15,16 +15,14 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement;
 using Pixeval.I18N;
-using Pixeval.Models.Options;
-using Pixeval.Models.Subscriptions;
-using Pixeval.Native.Mako;
-using Pixeval.Services;
+using Pixeval.Config;
+using Pixeval.Services.Background;
+using Pixeval.Mako;
 using Pixeval.Utilities;
 using Pixeval.Views.Home;
 using Pixeval.Views.Login;
-using Pixeval.Views.ViewContainers;
+using Pixeval.Views.Shell;
 
 [assembly: InternalsVisibleTo("Pixeval.Tests")]
 

@@ -9,12 +9,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
-using Pixeval.Models.Blocking;
-using Pixeval.Models.Pixiv;
-using Pixeval.Native.Mako;
-using Pixeval.Services;
+using Pixeval.Pixiv;
+using Pixeval.Mako;
 using Pixeval.Utilities;
-using Pixeval.Views;
 
 namespace Pixeval.ViewModels.Viewers;
 

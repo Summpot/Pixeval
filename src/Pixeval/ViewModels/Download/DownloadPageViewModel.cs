@@ -4,7 +4,7 @@
 using System;
 using System.Collections.ObjectModel;
 
-namespace Pixeval.ViewModels;
+namespace Pixeval.ViewModels.Download;
 
 public sealed class DownloadPageViewModel(DownloadManager manager) : ViewModelBase, IDisposable
 {

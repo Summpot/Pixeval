@@ -5,7 +5,6 @@ using System;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Pixeval.AppManagement;
 using Pixeval.Controls;
 using Pixeval.I18N;
 using Pixeval.Utilities;
@@ -53,7 +52,7 @@ public partial class SettingsPage : NavigationPage
     public static string GetReleaseTitle(string version) =>
         I18NManager.GetResource(SettingsMainViewResources.ReleaseNoteDialog.TitleFormatted, version);
 
-    public static Control CreateReleaseNotes(Pixeval.Native.Update.AppRelease? release) =>
+    public static Control CreateReleaseNotes(Pixeval.Update.AppRelease? release) =>
         new MarkdownBox { Markdown = release?.ReleaseNotes ?? I18NManager.GetResource(SettingsMainViewResources.ReleaseNoteDialog.Empty) };
 
     public static async Task<Control> GetReleaseNotesAsync()

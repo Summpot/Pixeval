@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement;
 using Pixeval.Extensions.Common;
-using Pixeval.Models.Extensions;
+using Pixeval.Services.Background;
 using Pixeval.Utilities;
+using Pixeval.Common.Logging;
+using Pixeval.Services.Core;
 
 namespace Pixeval.Tests;
 
@@ -113,7 +114,7 @@ public sealed class ExtensionServiceTest
         _ = Directory.CreateDirectory(extensionsFolder);
         try
         {
-            using var engine = new Pixeval.Native.Plugin.PluginHostEngine("5.0.0");
+            using var engine = new Pixeval.Plugin.PluginHostEngine("5.0.0");
 
             var directFile = Path.Combine(extensionsFolder, "plugin.dll");
             File.WriteAllText(directFile, "test");
@@ -146,7 +147,7 @@ public sealed class ExtensionServiceTest
         _ = Directory.CreateDirectory(tempDir);
         try
         {
-            using var engine = new Pixeval.Native.Plugin.PluginHostEngine("5.0.0");
+            using var engine = new Pixeval.Plugin.PluginHostEngine("5.0.0");
             var fakePackage = Path.Combine(tempDir, "fake.unknown");
             File.WriteAllText(fakePackage, "not a plugin");
 
@@ -155,7 +156,7 @@ public sealed class ExtensionServiceTest
             {
                 _ = engine.VerifyAndInstallPlugin(fakePackage, tempDir);
             }
-            catch (Pixeval.Native.Plugin.PluginError)
+            catch (Pixeval.Plugin.PluginError)
             {
                 threw = true;
             }

@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Pixeval.Models.Pixiv;
+using Pixeval.Pixiv;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
 using Pixeval.ViewModels.Home;

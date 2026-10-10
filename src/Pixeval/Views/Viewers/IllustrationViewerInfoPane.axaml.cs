@@ -9,13 +9,12 @@ using Avalonia.Controls.Metadata;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Pixeval.I18N;
-using Pixeval.Models.Pixiv;
-using Pixeval.Native.Mako;
-using Pixeval.Services;
+using Pixeval.Pixiv;
+using Pixeval.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Views.Viewers;
 

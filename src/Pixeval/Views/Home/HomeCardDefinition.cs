@@ -7,8 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using FluentIcons.Common;
 using Pixeval.I18N;
-using Pixeval.Models.Options;
-using Pixeval.Native.Config;
+using Pixeval.Config;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Home;
 

@@ -41,7 +41,7 @@ Phase 1 成功构建了跨语言基础底座并下沉了底层密集型子系统
 
 > [!CAUTION]
 > **执行智能体与开发者强制遵循：严禁手写任何形式的包装类型（Wrapper / Adapter / Shim / Proxy / DTO）！**
-> UniFFISharp 代码生成器导出的所有领域模型（Record）和引擎句柄（Class）均为 `public partial`。表现层若需扩充功能，**必须且只能**通过在 `src/Pixeval/NativeExtensions/<SubNamespace>/` 下使用 `public partial record/class` 原地扩展，业务层 100% 直连消费原生类型！
+> UniFFISharp 代码生成器导出的所有领域模型（Record）和引擎句柄（Class）均为 `public partial`。表现层若需扩充功能，**必须且只能**在与 crate 同名的目录下使用 `public partial record/class` 原地扩展，命名空间与 `Pixeval.csproj` 的 `UniFFINamespace` 一致。业务层 100% 直连消费原生类型。
 
 #### 1.4.1 为什么要 Partial 化？
 在早期开发中，部分模块手写了冗余胶水层（例如 `CacheTable` 包装 `CacheEngine`、`CoreDownloadManager` 包装 `DownloadManager`、手写中间 DTO 与模型映射），导致：
@@ -49,39 +49,36 @@ Phase 1 成功构建了跨语言基础底座并下沉了底层密集型子系统
 2. **代码膨胀与状态不同步**：两套模型字段不同步、事件穿透断裂，带来严重的隐蔽 Bug。
 3. **维护地狱**：每次 Rust 修改结构体，都需要同步修改 C# DTO 和手写转换器。
 
-自 UniFFISharp 0.2.7 / 0.2.9 起，生成的 C# 类型天然带有 `partial` 关键字。整个项目已经通过重构（如提交 `600f6b42`、`d09cb60b`）彻底消除了过渡包装层，建立了统一的 **NativeExtensions 原生扩展模式**。后续迁移必须严格继承该模式。
+自 UniFFISharp 0.2.7 / 0.2.9 起，生成的 C# 类型天然带有 `partial` 关键字。整个项目已经通过重构（如提交 `600f6b42`、`d09cb60b`）彻底消除了过渡包装层。手写 partial 与生成类型放在同一 crate 目录，命名空间为 `Pixeval.<crate>`，伞形内部类型为 `Pixeval.Ffi`。后续迁移必须严格继承该模式。
 
 #### 1.4.2 Partial 化的标准工程范式
 所有新下沉的 Rust 领域实体和核心引擎，在 C# 表现层的对接**统一遵循以下四条铁律**：
 
 1. **命名空间严格对齐**：
-   在 `src/Pixeval/NativeExtensions/<SubNamespace>/` 下创建扩展文件，命名空间严格与 UniFFI 生成的代码保持一致（例如 `namespace Pixeval.Native.Novel;`、`namespace Pixeval.Native.Media;`、`namespace Pixeval.Native.Storage;`）。
+   在与 crate 同名的目录下创建扩展文件（`Mako/`、`Download/`、`Storage/`、`Config/`、`Cache/`、`Booru/`、`SauceNao/`、`Media/`、`Filters/`、`Update/`、`Subscription/`）。命名空间与 `UniFFINamespace` 一致，例如 `namespace Pixeval.Mako;`、`namespace Pixeval.Storage;`、`namespace Pixeval.Download;`。一个 crate 对应一个命名空间。`pixeval_mako` 保持 `Pixeval.Mako`，不按作品、用户、评论再拆。`pixeval_maho`、`pixeval_mcp`、`pixeval_plugin`、`pixeval_novel` 只有生成代码，不另建手写目录。
 2. **声明 Partial 类型并就地实现接口**：
-   若领域实体需要对齐 Avalonia / Misaki 表现层接口（如 `IArtworkInfo`、`ISerializable`、`ISingleImage`、`IImageSize`），或者需要追加只读计算属性（如 `DateTimeOffset` 解析、标签投影），**直接在 partial 类型中就地实现**：
+   若领域实体需要实现表现层接口，或者需要追加只读计算属性，**直接在 partial 类型中就地实现**：
    ```csharp
-   // 规范示例：src/Pixeval/NativeExtensions/Novel/NovelArticle.cs
-   namespace Pixeval.Native.Novel;
+   // 规范示例：src/Pixeval/Mako/Illustration.cs
+   namespace Pixeval.Mako;
 
-   // 语法严律：直接 partial 声明 UniFFI 生成的 Record 或 Class
-   public partial record NovelArticle : IArtworkInfo, ISerializable
+   public partial record Illustration : IWorkEntry
    {
-       // 仅追加接口实现所需的投影属性，不持有重复字段！
        [JsonIgnore]
-       public long RawId => Id;
+       public double AspectRatio => Width > 0 && Height > 0 ? (double) Width / Height : 1;
 
-       string IIdentityInfo.Id => Id.ToString();
-       string IPlatformInfo.Platform => IPlatformInfo.Pixiv;
-
-       // 严禁在此类中嵌套 private NovelArticle _inner 字段！
-       // 严禁为此类编写多重包装构造函数！
+       // 仅追加只读投影，不持有与原生字段重复的状态。
+       // 严禁在此类中嵌套 private Illustration _inner 字段。
+       // 严禁为此类编写多重包装构造函数。
    }
    ```
 3. **零胶水 DTO，消除类型互转**：
    - 严禁手写 `ToEntity()`、`FromNative()`、`ToDto()`、`MapTo()` 等映射算法。
    - 严禁命名 `Core*`、`*Wrapper`、`*Adapter`、`*Model` 的双轨制并行类型。
 4. **表现层全面直连原始强类型**：
-   - Views、ViewModels、Services 必须直接以 `Pixeval.Native.*` 中的原始强类型作为数据源与参数。
-   - 集合直接绑定 `ObservableCollection<Illustration>` 或通过 `IncrementalLoadingCollection` 流式驱动原生实体。
+   - Views、ViewModels、Services 直接以 `Pixeval.Mako`、`Pixeval.Download`、`Pixeval.Storage` 等生成命名空间中的原始强类型作为数据源与参数。
+   - 集合直接绑定 `ObservableCollection<Illustration>` 或通过增量集合流式驱动原生实体。
+   - `Pixeval.Novel` 是 `pixeval_novel` 的命名空间。在 `namespace Pixeval` 及其子命名空间中，作品类型 `Novel` 写成 `Mako.Novel`。`namespace Pixeval.Mako` 内部的 `partial record Novel` 保持原名。
 
 ---
 
@@ -136,11 +133,11 @@ flowchart TD
         P7_6["7.6 作品记录上的重复投影收敛 [已完成]"]
     end
 
-    subgraph Phase8 ["Phase 8: 表现层文件组织与纯净架构深度重组 (Clean Thin UI Architecture) [待启动]"]
-        P8_1["8.1 领域模型统一收敛 (NativeExtensions + Models -> Domain/)<br/>• 废除 NativeExtensions 伪目录，确立 Domain 一等实体<br/>• 清理 Models 遗留冗余模型，设置偏好项收归 Domain/Settings"]
-        P8_2["8.2 服务体系正名与物理收拢 (-> Services/)<br/>• 将 ExtensionService, McpService, SubscriptionService 迁入 Services/Background<br/>• 将 PixivArtworkService 从 Utilities/Network 迁入 Services/Network"]
-        P8_3["8.3 视图体系与展示模型 1:1 对称重组 (Views & ViewModels)<br/>• 彻底物理删除 Views/Capability 与 Views/Entry，合并为 Views/Works<br/>• 将 PixevalSettings.cs 从 Views/ 迁入 Domain/Config 或 Settings<br/>• 严格对齐 View 与 ViewModel 目录层级"]
-        P8_4["8.4 基础设施归并与垃圾目录物理清理 (-> Common/)<br/>• 删除空的 Download/ 与 Storage/ 目录<br/>• 将 Collections, Attributes, Converters, Markup, Utilities 收编至 Common/<br/>• 全工程命名空间规范化与单测验证"]
+    subgraph Phase8 ["Phase 8: 表现层文件组织与纯净架构深度重组 (Clean Thin UI Architecture) [已完成]"]
+        P8_1["8.1 原生扩展按 crate 归位 [已完成]<br/>• 废除 NativeExtensions、Models、AppManagement<br/>• UniFFI 命名空间为 Pixeval.crate，伞形内部类型为 Pixeval.Ffi<br/>• 不设 Domain。一个 crate 对应一个目录与命名空间"]
+        P8_2["8.2 服务收拢至 Services [已完成]<br/>• Core、Media、Network、Background、Update<br/>• 命名空间 Pixeval.Services.group。Versioning 保持类名"]
+        P8_3["8.3 Views 与 ViewModels 1:1 [已完成]<br/>• Shell、Home、Works、Viewers、Search、Download、Comments、Settings、Login<br/>• 删除 Capability 与 Entry，并入 Works。PixevalSettings 迁入 Config"]
+        P8_4["8.4 基础设施归入 Common [已完成]<br/>• Collections、Converters、Markup、Logging、IO 收编至 Common<br/>• 保留 i18n 与各 crate 目录。特性命名空间仍为 Pixeval.Attributes"]
     end
 
     Phase2 --> Phase3
@@ -699,115 +696,118 @@ Phase 2 至 Phase 6 已经把作品列表收成原生模型直绑，并清掉了
 
 ---
 
-### 阶段 8：表现层文件组织与纯净架构深度重组 (Phase 8: Clean Thin UI Architecture & Reorganization) [待启动]
+### 阶段 8：表现层文件组织与纯净架构深度重组 (Phase 8: Clean Thin UI Architecture & Reorganization) [已完成]
 
-Phase 2 至 Phase 7 成功实现了 100% 密集型计算与领域逻辑向 Rust Core 下沉，并消除了表现层的包装类、Misaki 依赖、静态定位器与平行模型。
-然而，经系统级审查，表现层当前的物理文件与目录组织依然残留着各个过渡时期的“历史疤痕”：
-1. **技术来源标签感过重**：将核心领域实体置于 `NativeExtensions/` 目录下并按 Rust Crate 细分，依然带着“来自 Native 的外部代码”这一过渡期命名包袱。在现代化 Thin UI 中，它们就是一等**领域实体（Domain Models）**。
-2. **`Models/` 沦为历史杂物间**：明明是常驻服务的 `ExtensionService`、`WorkSubscriptionDownloadService`、`PixevalMcpService` 被藏在 `Models/`；已完全下沉的宏解析、YAML 解析残留模型仍在 `Models/`；设置偏好项散落在 `Models/Settings/`，导致开发者难以区分 `Models/` 与 `NativeExtensions/`。
-3. **视图命名远古且碎片化**：保留 4 年前的 `Views/Capability/`（10 个页面）与 `Views/Entry/` 目录；实体卡片被切成 `Entry/` 和 `Work/` 两半；`PixevalSettings.cs` 奇特地放置在 `Views/` 根目录。
-4. **View 与 ViewModel 结构完全不对齐**：两套目录分类维度不同、层级错位，无法形成清晰直观的 1:1 对称映射。
-5. **顶层目录散落**：顶层残留多达 14+ 个目录，包括空目录 `Download/`、`Storage/`，仅有数个类的 `Collections/`、`Attributes/`、`Filters/` 等。
+表现层按职责与 crate 边界归位。公开类型名、运行时行为和 Rust 代码保持不变。零包装原则继续有效：手写扩展仍是生成类型的 `partial`，不引入 Wrapper、Adapter、Shim 或 DTO。
 
-**终极目标**：将表现层重构成如同**第一天由专业架构师从零开始设计**出的纯净形态：顶层极简、语义高度内聚、分层严格对称、彻底消除历史过渡痕迹。
+相对初稿，落地形态有三处明确取舍：
 
-#### 8.1 目标目录结构全景 (Clean Presentation Architecture)
+1. **不设 `Domain/`**。手写 partial 与 UniFFI 生成类型放在 crate 同名目录。`Pixeval.csproj` 的 `UniFFINamespace` 把各 crate 映射到 `Pixeval.<crate>`，伞形内部类型映射到 `Pixeval.Ffi`。一个 crate 一个命名空间，`pixeval_mako` 保持 `Pixeval.Mako`。
+2. **保留 `i18n/`**。它仍是工程根上的 `AdditionalFiles` 与 `Language.tt` 输入，Android 侧继续作为资源引用。`Language.cs` 的命名空间保持 `Pixeval`。
+3. **保留 `Download/` 与 `Storage/`**。二者是 `pixeval_download` 与 `pixeval_storage` 的 partial 与辅助代码，不是空目录。`src/Pixeval.Utilities` 仍是独立程序集，命名空间保持 `Pixeval.Utilities`。
+
+#### 8.1 目录结构 (Clean Presentation Architecture)
 
 ```
 src/Pixeval/
-├── Domain/                   # 【彻底取代 NativeExtensions 与 Models】一等领域实体与原生 partial 扩展
-│   ├── Works/               # Illustration, Novel, BooruPost, Series, SpotlightArticle, Tag, WorkEntry
-│   ├── Users/               # User, BlockedUserRecord
-│   ├── Downloads/           # DownloadItemSnapshot, DownloadFolderSnapshot, FormatToken
-│   ├── Subscriptions/       # WorkSubscriptionRecord
-│   ├── Comments/            # CommentRecord
-│   ├── Search/              # SauceNaoItem, SearchFilterOptions
-│   └── Config/              # HomePageCardLayout, NavigationMenu, AppSettings, PixevalSettings
+├── Assets/                   # 静态图片、图标与矢量资源
+├── Themes/                   # Fluent 主题与样式字典
+├── i18n/                     # Language.tt 与 AdditionalFiles，命名空间 Pixeval
 │
-├── Services/                 # 【收揽全部单例与后台服务，消除 Models/ 下的伪模型与 Utilities 下的伪服务】
-│   ├── Core/                # UserSessionService, NavigationService, ArtworkUiStateStore, UserUiStateStore
+├── Common/                   # 应用内基础设施
+│   ├── Attributes/          # 文件在此；类型命名空间仍为 Pixeval.Attributes
+│   ├── Collections/
+│   ├── Converters/
+│   ├── IO/
+│   ├── Logging/             # FileLogger
+│   └── Markup/              # 标记扩展，XAML 前缀指向此命名空间
+│
+├── Controls/                 # 自定义外观控件
+│   ├── Behaviors/           # 文件在此；命名空间仍为 Pixeval.Controls
+│   ├── Markdown/
+│   ├── ContentDialog/ InfoBar/ Panels/ TokenizingBox/
+│   └── （通用控件与图片查看控件留在既有位置，不设 Controls/Viewers）
+│
+├── Services/                 # 命名空间 Pixeval.Services.<group>
+│   ├── Core/                # AppViewModel, NavigationService, *UiStateStore, NavigationPageRegistry
 │   ├── Media/               # ImageProviderService, ArtworkActionService, DownloadFormatService
 │   ├── Network/             # NetworkRuntime, PixivArtworkService, ProxyHelper
-│   ├── Background/          # WorkSubscriptionDownloadService, PixevalMcpService, ExtensionService
-│   └── Update/              # AppUpdateNotificationCoordinator, VersioningService
+│   ├── Background/          # ExtensionService, PixevalMcpService, WorkSubscriptionDownloadService
+│   └── Update/              # Versioning（类名不变）, AppUpdateNotificationCoordinator
 │
-├── ViewModels/               # 【展示状态机与响应式命令，与 Views 目录 1:1 严格对称】
-│   ├── Shell/               # TabViewContainerViewModel
-│   ├── Home/                # HomePageViewModel, HomeCardPreviewViewModel
-│   ├── Works/               # WorkContainerViewModel, TagSelectorViewModel (收编旧 Capability/Entry/Work 散落 VM)
-│   ├── Viewers/             # IllustrationViewerViewModel, NovelViewerViewModel, SingleViewerViewModel, UserViewerViewModel
-│   ├── Search/              # SearchPageViewModel, SauceNaoSearchViewModel
-│   ├── Download/            # DownloadPageViewModel, DownloadFolderPageViewModel
-│   ├── Comments/            # CommentsViewModel
-│   ├── Settings/            # SettingsPageViewModel
-│   └── Login/               # LoginPageViewModel
+├── ViewModels/               # 页面目录与 Views 1:1；根目录仅 ViewModelBase 等共享基类
+│   └── Shell/ Home/ Works/ Viewers/ Search/ Download/ Comments/ Settings/ Login/
+├── Views/                    # 同上九个目录；根目录无裸露 .cs / .axaml
 │
-├── Views/                    # 【纯声明式 XAML 模板，与 ViewModels 目录 1:1 严格对称】
-│   ├── Shell/               # TabViewContainer.axaml
-│   ├── Home/                # HomePage.axaml, HomePageCardControl.axaml
-│   ├── Works/               # WorkView, WorkContainer, NovelItem, UserItem, SeriesItem, SpotlightItem (彻底消灭 Capability 与 Entry)
-│   ├── Viewers/             # IllustrationViewerPage, NovelViewerPage, UserViewerPage, SingleViewer, WorkInfoPane
-│   ├── Search/              # SearchPage.axaml, SauceNaoSearchPage.axaml
-│   ├── Download/            # DownloadPage.axaml, DownloadFolder.axaml, DownloadItem.axaml
-│   ├── Comments/            # CommentView.axaml, CommentItem.axaml, CommentContainer.axaml
-│   ├── Settings/            # SettingsMainView.axaml, SettingsSubView.axaml, McpHelpSection.axaml
-│   └── Login/               # LoginPage.axaml
-│
-├── Controls/                 # 【自定义外观控件与 Attached Behaviors】
-│   ├── Viewers/             # 图片手势缩放、旋转、逐帧动画控件
-│   ├── Markdown/            # MarkdownBox
-│   └── Behaviors/           # Attached Behaviors (AutoPlay, ArtworkState, DragDrop)
-│
-├── Common/                   # 【通用基础设施，收编 Utilities, Collections, Attributes, Converters, Markup】
-│   ├── Collections/         # FilteredIncrementalCollection
-│   ├── Converters/          # PixevalConverters, NumberEllipsisConverter
-│   ├── Markup/              # ServiceExtension, Localization
-│   └── Logging/             # FileLogger
-│
-├── Assets/                   # 静态图片、图标与矢量资源
-└── Themes/                   # Fluent 主题与样式字典
+├── Config/                   # Pixeval.Config。子目录不另起命名空间
+│                             # PixevalSettings, HomeCardLayoutEngine, Navigation/NavigationYamlParser
+├── Mako/                     # Pixeval.Mako。Illustration, Novel, CommentRecord, WorkEntryComparers
+├── Download/                 # Pixeval.Download。含 DownloadPathMacroParser
+├── Storage/                  # Pixeval.Storage。含 BlockedContentModelHelper
+├── Filters/                  # Pixeval.Filters；Syntax/、Analysis/ 使用对应子命名空间
+├── Cache/                    # Pixeval.Cache
+├── Media/                    # Pixeval.Media
+├── Booru/                    # Pixeval.Booru。BooruArtworkService 留在此目录
+├── SauceNao/                 # Pixeval.SauceNao
+├── Subscription/             # Pixeval.Subscription
+├── Update/                   # Pixeval.Update。生成类型；应用更新编排在 Services/Update
+└── Pixiv/                    # Pixeval.Pixiv。含 BlockedContentHelper
 ```
+
+`pixeval_maho`、`pixeval_mcp`、`pixeval_plugin`、`pixeval_novel` 只有生成代码，工程根下不建空目录。
 
 #### 8.2 子任务拆解与实施规范
 
-##### 8.2.1 领域模型收敛与统一命名 (`NativeExtensions` + `Models` -> `Domain/`)
+##### 8.2.1 原生扩展按 crate 归位
 - **目标**：
-  - 新建 `Domain/`，彻底取代带有技术过渡标签的 `NativeExtensions/`。
-  - 领域实体按业务范畴组织（`Domain/Works/`、`Domain/Users/`、`Domain/Downloads/` 等），保持 `public partial record ...` 就地扩展特性。
-  - 清理 `Models/` 目录中的死代码和过渡残留模型（清理已下沉至 Rust 的 `DownloadPathMacroParser.cs`、`NavigationYamlParser.cs` 等）。
-  - 将设置偏好实体收敛至 `Domain/Settings/`。
+  - 删除 `NativeExtensions/`、`Models/`、`AppManagement/`。不新建 `Domain/`。
+  - 手写 partial 进入对应 crate 目录，命名空间与生成代码相同。
+  - 仍在使用的门面留在所属目录：`DownloadPathMacroParser` 在 `Download/`，`NavigationYamlParser` 与 `HomeCardLayoutEngine` 在 `Config/`。
+  - `CommentImageHelper`、`WorkEntryComparers` 在 `Mako/`。`BlockedContentHelper` 在 `Pixiv/`。`BlockedContentModelHelper` 在 `Storage/`。
 - **验收标准**：
-  - [ ] 表现层不再存在 `NativeExtensions/` 目录。
-  - [ ] `Models/` 目录中只保留纯数据模型或被完全平移至 `Domain/`。
-  - [ ] 全工程 0 编译错误，单元测试全绿。
+  - [x] 表现层不存在 `NativeExtensions/`、`Models/`、`AppManagement/`、`Domain/`。
+  - [x] 生成绑定的命名空间为 `Pixeval.Ffi` 与 `Pixeval.<crate>`，应用代码不再使用 `Pixeval.Native.*`。
+  - [x] `Mako/Illustration.cs` 的命名空间为 `Pixeval.Mako`。
 
-##### 8.2.2 服务体系正名与物理收拢 (-> `Services/`)
+##### 8.2.2 服务体系收拢 (`Services/`)
 - **目标**：
-  - 将伪装在 `Models/` 下的核心后台服务迁入 `Services/Background/`：`ExtensionService.cs`、`WorkSubscriptionDownloadService.cs`、`PixevalMcpService.cs`。
-  - 将伪装在 `Utilities/Network/` 下的业务门面服务迁入 `Services/Network/`：`PixivArtworkService.cs`。
-  - 规范服务目录分类（`Core/`, `Media/`, `Network/`, `Background/`, `Update/`）。
+  - 服务按 `Core/`、`Media/`、`Network/`、`Background/`、`Update/` 放置，命名空间为 `Pixeval.Services.<group>`。
+  - `ExtensionService`、`PixevalMcpService`、`WorkSubscriptionDownloadService` 在 `Services/Background/`。
+  - `PixivArtworkService` 在 `Services/Network/`。`BooruArtworkService` 留在 `Booru/`，命名空间 `Pixeval.Booru`。
+  - `Versioning` 保持类名，位于 `Services/Update/`。
+  - `NavigationPageRegistry` 在 `Services/Core/`。
+  - 关闭 MCP 时，`Pixeval.csproj` 按文件排除 `Services/Background` 与 `ViewModels/Settings` 中的 MCP 源文件。
 - **验收标准**：
-  - [ ] 所有实现类命名为 `*Service` 或承担后台守护职责的类 100% 收敛至 `Services/` 及其子目录。
-  - [ ] `Models/` 与 `Utilities/` 下不再包含任何服务类。
+  - [x] 应用工程下不存在 `Utilities/`。`src/Pixeval.Utilities` 程序集保持独立。
+  - [x] `Services/` 只有上述五个子目录。
 
-##### 8.2.3 视图体系与展示模型 1:1 对称重组 (`Views/` & `ViewModels/`)
+##### 8.2.3 视图与展示模型 1:1 (`Views/` 与 `ViewModels/`)
 - **目标**：
-  - 彻底物理废除远古遗留的 `Views/Capability/` 和 `Views/Entry/` 目录，将作品流子页面与实体卡片（`SeriesItem`, `SpotlightItem`, `UserItem`, `NovelItem`, `WorkView`）统一并入 `Views/Works/`。
-  - 将 `ViewModels/` 目录结构与 `Views/` 目录结构严格建立 1:1 对称对齐映射（`Shell`, `Home`, `Works`, `Viewers`, `Search`, `Download`, `Comments`, `Settings`, `Login`）。
-  - 将错置于 `Views/PixevalSettings.cs` 的静态配置门面迁出至 `Domain/Config/`。
+  - 页面目录同为 `Shell`、`Home`、`Works`、`Viewers`、`Search`、`Download`、`Comments`、`Settings`、`Login`。
+  - 删除 `Views/Capability/` 与 `Views/Entry/`，作品流页面与实体卡片并入 `Views/Works/`。
+  - `HistoryPage` 在 `Views/Works/`。`ExtensionsPage` 在 `Views/Settings/`。`IconContentPage` 在 `Views/Shell/`，命名空间 `Pixeval.Views.Shell`。评论视图在 `Views/Comments/`。
+  - `PixevalSettings` 在 `Config/`，命名空间 `Pixeval.Config`，仍继承 `ViewModelBase`。
+  - `NovelContext` 与 `INovelContext` 在 `ViewModels/Viewers/`。
+  - `ViewModels/` 根目录只保留 `ViewModelBase`、`DetailedViewModelBase`、`ViewModelDisposal`。
 - **验收标准**：
-  - [ ] 物理删除 `Views/Capability/` 与 `Views/Entry/` 目录。
-  - [ ] `Views/` 与 `ViewModels/` 目录结构保持 1:1 对称。
-  - [ ] `Views/` 根目录下不再有裸露的 `.cs` 文件。
+  - [x] 不存在 `Views/Capability/` 与 `Views/Entry/`。
+  - [x] `Views/` 与 `ViewModels/` 的页面目录 1:1，且这些目录下没有空文件夹。
+  - [x] `Views/` 根目录没有裸露的 `.cs` 或 `.axaml`。
 
-##### 8.2.4 基础设施归并与垃圾目录彻底物理清理 (-> `Common/`)
+##### 8.2.4 基础设施归并 (`Common/`) 与命名约束
 - **目标**：
-  - 物理删除根目录下的空残留目录 `src/Pixeval/Download/` 与 `src/Pixeval/Storage/`。
-  - 新建 `Common/` 目录，收编顶层零散的 `Collections/`、`Attributes/`，收敛 `Utilities/` 中的纯辅助函数（`Converters/`, `Markup/`, `Logging/`）。
-  - 确保顶层目录严格收敛为：`Domain`, `Services`, `ViewModels`, `Views`, `Controls`, `Common`, `Assets`, `Themes`。
+  - `Collections/`、`Converters/`、`Markup/`、`Logging/`、`IO/` 以及其余应用辅助类型进入 `Common/` 的对应子目录。
+  - 特性源文件在 `Common/Attributes/`，命名空间保持 `Pixeval.Attributes`，供 `Pixeval.SourceGen` 按元数据名查找。
+  - `*Behavior.cs` 在 `Controls/Behaviors/`，命名空间保持 `Pixeval.Controls`。
+  - 顶层保留 crate 目录与 `i18n/`、`Pixiv/`、`Assets/`、`Themes/`。不把顶层压成八个目录。
+- **命名约束**：
+  - `Services/Update/UpdateState.cs` 只有 `global using UpdateState = Pixeval.Update.UpdateState`。不再增加 `global using Pixeval.Update`。
+  - XAML 不使用全局 using。标记扩展的 `xmlns` 指向 `Pixeval.Common.Markup`。`pixeval:EnumResources` 与 `x:Static pixeval:` 继续使用 `xmlns:pixeval="using:Pixeval"`。
+  - 应用工程的全局 using 不作用于 `Pixeval.Desktop` 与 `Pixeval.Tests`。
 - **验收标准**：
-  - [ ] 顶层不再有空的或零散碎片目录。
-  - [ ] 全工程 0 编译警告、0 编译错误，所有单元测试持续全绿通过。
+  - [x] 顶层目录为 `Assets`、`Booru`、`Cache`、`Common`、`Config`、`Controls`、`Download`、`Filters`、`i18n`、`Mako`、`Media`、`Pixiv`、`SauceNao`、`Services`、`Storage`、`Subscription`、`Themes`、`Update`、`ViewModels`、`Views`。
+  - [x] `Pixeval`、`Pixeval.Desktop`、`Pixeval.Tests` 编译 0 警告、0 错误。`EnableMcp=false` 时应用工程同样通过。
+  - [x] `Pixeval.Tests` 全量套件通过。唯一跳过项是本机缺少扩展宿主原生库时，`InstalledExtensionHostsShouldLoadAndExposeMetadata` 既有的 Inconclusive。
 
 
 

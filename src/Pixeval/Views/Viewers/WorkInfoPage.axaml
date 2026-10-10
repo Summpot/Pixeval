@@ -5,7 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewers="using:Pixeval.Views.Viewers"
-    xmlns:views="using:Pixeval.Views"
+    xmlns:views="using:Pixeval.Views.Shell"
     x:DataType="x:Object"
     Name="WorkInfoPageRoot"
     mc:Ignorable="d"

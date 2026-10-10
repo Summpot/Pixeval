@@ -22,8 +22,8 @@
         <MergeResourceInclude Source="/Controls/ContentDialog/ContentDialog.axaml" />
         <MergeResourceInclude Source="/Controls/TokenizingBox/TokenizingBox.axaml" />
         <MergeResourceInclude Source="/Controls/NotificationCard.axaml" />
-        <MergeResourceInclude Source="/Views/Entry/EntryView.axaml" />
-        <MergeResourceInclude Source="/Views/Work/AddNewBookmarkTagItem.axaml" />
+        <MergeResourceInclude Source="/Views/Works/EntryView.axaml" />
+        <MergeResourceInclude Source="/Views/Works/AddNewBookmarkTagItem.axaml" />
         <MergeResourceInclude Source="/Views/Viewers/WorkInfoPane.axaml" />
     </ResourceDictionary.MergedDictionaries>
 

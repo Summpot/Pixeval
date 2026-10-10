@@ -3,8 +3,8 @@
 
 using System;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Models.Subscriptions;
-using Pixeval.Native.Storage;
+using Pixeval.Services.Background;
+using Pixeval.Storage;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 

@@ -7,18 +7,13 @@ using AutoSettingsPage.Models;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
-using Pixeval.AppManagement;
-using Pixeval.AppManagement.Settings;
+using Pixeval.Config;
 using Pixeval.Controls;
 using Pixeval.I18N;
-using Pixeval.Models.Navigation;
-using Pixeval.Models.Options;
-using Pixeval.Models.Settings;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Services;
 
 namespace Pixeval.Views.Settings;
 
@@ -69,7 +64,7 @@ public partial class SettingsMainView : ContentPage
             foreach (var settingsEntry in extensionGroup)
                 settingsEntry.ValueReset();
 
-        if (viewContainer is ViewContainers.TabViewContainer container)
+        if (viewContainer is TabViewContainer container)
             container.ReloadNavigation();
     }
 

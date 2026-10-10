@@ -3,8 +3,8 @@
 
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Models.Options;
-using Pixeval.Native.Storage;
+using Pixeval.Config;
+using Pixeval.Storage;
 
 namespace Pixeval.Tests;
 

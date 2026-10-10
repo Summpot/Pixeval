@@ -2,10 +2,9 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Search;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Views.Search;
 

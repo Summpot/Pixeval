@@ -4,8 +4,7 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Pixeval.Models;
-using Pixeval.Models.Pixiv;
+using Pixeval.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;

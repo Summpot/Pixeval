@@ -3,11 +3,11 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using Pixeval.Models.Pixiv;
-using Pixeval.Native.Booru;
-using Pixeval.Native.Filters;
-using Pixeval.Native.Mako;
-using Pixeval.Native.SauceNao;
+using Pixeval.Pixiv;
+using Pixeval.Booru;
+using Pixeval.Filters;
+using Pixeval.Mako;
+using Pixeval.SauceNao;
 
 namespace Pixeval.Filters;
 
@@ -31,7 +31,7 @@ public static class ArtworkMetadataMapper
                 illust.IsAiGenerated ? 1 : 0,
                 illust.Type == IllustrationType.Ugoira ? 2 : illust.Type == IllustrationType.Manga ? 1 : 0),
 
-            Novel novel => new ArtworkMetadata(
+            Mako.Novel novel => new ArtworkMetadata(
                 novel.Id.ToString(),
                 novel.Title ?? string.Empty,
                 novel.User?.Name ?? string.Empty,

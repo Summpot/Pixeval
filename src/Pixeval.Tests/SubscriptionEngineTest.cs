@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Native.Subscription;
+using Pixeval.Subscription;
 
 namespace Pixeval.Tests;
 

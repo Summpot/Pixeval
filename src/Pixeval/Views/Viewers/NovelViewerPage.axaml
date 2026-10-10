@@ -1,24 +1,26 @@
-<views:IconContentPage
+<shell:IconContentPage
     x:Class="Pixeval.Views.Viewers.NovelViewerPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:capability="using:Pixeval.Views.Capability"
+    xmlns:capability="using:Pixeval.Views.Works"
     xmlns:controls="using:Pixeval.Controls"
-    xmlns:converters="using:Pixeval.Views.Converters"
+    xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:di="using:Pixeval.Views.Markup"
+    xmlns:di="using:Pixeval.Common.Markup"
     xmlns:local="using:Pixeval.Views.Viewers"
-    xmlns:mako="using:Pixeval.Native.Mako"
-    xmlns:pixiv="using:Pixeval.Models.Pixiv"
+    xmlns:mako="using:Pixeval.Mako"
+    xmlns:pixiv="using:Pixeval.Pixiv"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
-    xmlns:markup1="using:Pixeval.Views.Markup"
+    xmlns:markup1="using:Pixeval.Common.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:novel="using:Pixeval.ViewModels"
+    xmlns:novel="using:Pixeval.ViewModels.Works"
     xmlns:pixeval="using:Pixeval"
-    xmlns:utilities="using:Pixeval.Utilities"
+    xmlns:utilities="using:Pixeval.Common"
     xmlns:viewers="using:Pixeval.ViewModels.Viewers"
     xmlns:views="using:Pixeval.Views"
-    xmlns:work="using:Pixeval.Views.Work"
+    xmlns:config="using:Pixeval.Config"
+    xmlns:shell="using:Pixeval.Views.Shell"
+    xmlns:work="using:Pixeval.Views.Works"
     x:DataType="{x:Type viewers:NovelViewerPageViewModel}"
     Header="{Binding CurrentNovel.Title, FallbackValue={x:Null}}"
     mc:Ignorable="d"
@@ -29,7 +31,7 @@
             x:Name="InfoSplitView"
             Grid.Row="0"
             DisplayMode="Inline"
-            IsPaneOpen="{Binding OpenWorkInfo, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}, Mode=TwoWay}">
+            IsPaneOpen="{Binding OpenWorkInfo, Source={di:Service Type={x:Type config:PixevalSettings}}, DataType={x:Type config:PixevalSettings}, Mode=TwoWay}">
             <SplitView.Pane>
                 <DockPanel>
                     <local:WorkSeriesInfoPane DataContext="{Binding SeriesInfo}" DockPanel.Dock="Bottom" />
@@ -211,4 +213,4 @@
             </Grid>
         </Border>
     </Grid>
-</views:IconContentPage>
+</shell:IconContentPage>

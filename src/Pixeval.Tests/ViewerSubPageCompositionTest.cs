@@ -13,14 +13,14 @@ using Avalonia.Threading;
 using FluentIcons.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement;
 using Pixeval.Controls;
 using Pixeval.I18N;
-using Pixeval.Models.Navigation;
-using Pixeval.Services;
+using Pixeval.Config;
+using Pixeval.Services.Core;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Settings;
+using Pixeval.Common;
 
 namespace Pixeval.Tests;
 

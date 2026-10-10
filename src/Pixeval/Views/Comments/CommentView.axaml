@@ -1,0 +1,36 @@
+<UserControl
+    x:Class="Pixeval.Views.Comments.CommentView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:comment="using:Pixeval.Views.Comment"
+    xmlns:controls="using:Pixeval.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:entry="using:Pixeval.Views.Works"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:mako="using:Pixeval.Mako"
+    xmlns:viewers="using:Pixeval.ViewModels.Comments"
+    xmlns:views="using:Pixeval.Views.Comments"
+    x:DataType="{x:Type viewers:CommentsViewViewModel}"
+    DataContextChanged="CommentView_OnDataContextChanged"
+    mc:Ignorable="d"
+    d:DesignHeight="400"
+    d:DesignWidth="350">
+    <entry:EntryView HasNoItem="{Binding !View.Count}" IsLoadingMore="{Binding #ListBox.(controls:IncrementalLoadingBehavior.IsLoadingMore)}">
+        <ListBox
+            x:Name="ListBox"
+            controls:IncrementalLoadingBehavior.IsEnabled="True"
+            controls:IncrementalLoadingBehavior.Threshold="200"
+            ItemsSource="{Binding View}">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Spacing="5" />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="{x:Type mako:CommentRecord}">
+                    <views:CommentItem DeleteButtonClick="CommentItem_OnDeleteButtonClick" OpenRepliesButtonClick="CommentItem_OnOpenRepliesButtonClick" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </entry:EntryView>
+</UserControl>

@@ -4,9 +4,8 @@
 using AutoSettingsPage;
 using AutoSettingsPage.Avalonia;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement.Settings;
+using Pixeval.Config;
 using Avalonia.Interactivity;
-using Pixeval.Models.Settings;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Settings;
 

@@ -3,8 +3,7 @@
 
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Models.Filters;
-using Pixeval.Native.Filters;
+using Pixeval.Filters;
 
 namespace Pixeval.Tests;
 

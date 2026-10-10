@@ -8,9 +8,9 @@ using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Pixeval.Collections;
+using Pixeval.Common.Collections;
 using Pixeval.I18N;
-using Pixeval.Native.Config;
+using Pixeval.Config;
 
 namespace Pixeval.ViewModels.Home;
 

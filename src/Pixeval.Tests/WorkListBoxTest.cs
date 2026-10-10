@@ -6,7 +6,7 @@ using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using Avalonia.Headless;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests;
 

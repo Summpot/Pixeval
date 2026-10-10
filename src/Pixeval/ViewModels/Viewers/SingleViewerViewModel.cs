@@ -18,13 +18,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.Commands.Transformers;
 using Pixeval.I18N;
-using Pixeval.Models.Extensions;
-using Pixeval.Native.Booru;
-using Pixeval.Native.Cache;
-using Pixeval.Native.Mako;
-using Pixeval.Services;
+using Pixeval.Services.Background;
+using Pixeval.Booru;
+using Pixeval.Cache;
+using Pixeval.Mako;
 using Pixeval.Utilities;
-using Pixeval.Utilities.IO;
+using Pixeval.Common.IO;
 
 namespace Pixeval.ViewModels.Viewers;
 

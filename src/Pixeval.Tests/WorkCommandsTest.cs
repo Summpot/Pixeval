@@ -5,11 +5,14 @@ using System.Collections.Generic;
 using Avalonia.Controls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
-using Pixeval.Models.Pixiv;
-using Pixeval.Native.Mako;
-using Pixeval.Services;
+using Pixeval.Pixiv;
+using Pixeval.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
+using Pixeval.Common;
+using Pixeval.Services.Core;
+using Pixeval.ViewModels.Works;
+using Pixeval.Services.Media;
 
 namespace Pixeval.Tests;
 

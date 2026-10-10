@@ -14,7 +14,7 @@ using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using FluentIcons.Common;
 using Pixeval.Attributes;
-using Pixeval.Models.Settings;
+using Pixeval.Config;
 
 namespace Pixeval.Controls;
 

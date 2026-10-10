@@ -5,8 +5,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Native.Config;
-using Pixeval.Services;
+using Pixeval.Config;
 using Pixeval.ViewModels.Home;
 
 namespace Pixeval.Views.Home;

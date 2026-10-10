@@ -12,8 +12,8 @@ using Avalonia.Interactivity;
 using CommunityToolkit.Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
-using Pixeval.Models.Settings.Entries;
-using Pixeval.Native.Storage;
+using Pixeval.Config;
+using Pixeval.Storage;
 using Pixeval.Utilities;
 
 namespace Pixeval.Views.Settings;

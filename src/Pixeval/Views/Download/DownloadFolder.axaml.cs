@@ -4,7 +4,7 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Pixeval.Native.Download;
+using Pixeval.Download;
 
 namespace Pixeval.Views.Download;
 

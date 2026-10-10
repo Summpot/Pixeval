@@ -5,15 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Models;
-using Pixeval.Models.Pixiv;
-using Pixeval.Native.Booru;
-using Pixeval.Native.Mako;
+using Pixeval.Pixiv;
+using Pixeval.Booru;
+using Pixeval.Mako;
 using Pixeval.Utilities;
-using Pixeval.Services;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
-using Pixeval.Views.ViewContainers;
+using Pixeval.Views.Shell;
 
 namespace Pixeval.Views.Viewers;
 
@@ -58,7 +56,7 @@ public static class ViewerHelper
 
         #endregion
 
-        #region Novel
+        #region Mako.Novel
 
         /// <summary>
         /// 此方法无法加载更多小说，加载单个小说使用
@@ -73,7 +71,7 @@ public static class ViewerHelper
         /// </summary>
         /// <param name="novel">指定的小说实体</param>
         /// <param name="needRefresh">是否需要刷新小说（如从数据库中加载的则需要刷新）</param>
-        public void CreateNovelPage(Novel novel, bool needRefresh = false)
+        public void CreateNovelPage(Mako.Novel novel, bool needRefresh = false)
         {
             NavigationService.NavigateToNovel(novel, null, needRefresh, control);
         }
@@ -84,7 +82,7 @@ public static class ViewerHelper
         /// <param name="novel">指定的小说实体</param>
         /// <param name="items">指定的小说所在列表</param>
         /// <param name="needRefresh">是否需要刷新小说（如从数据库中加载的则需要刷新）</param>
-        public void CreateNovelPage(Novel novel, IReadOnlyList<Novel> items, bool needRefresh = false)
+        public void CreateNovelPage(Mako.Novel novel, IReadOnlyList<Mako.Novel> items, bool needRefresh = false)
         {
             NavigationService.NavigateToNovel(novel, items, needRefresh, control);
         }

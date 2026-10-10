@@ -4,11 +4,8 @@
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement;
-using Pixeval.AppManagement.Settings;
-using Pixeval.Services;
+using Pixeval.Config;
 using Pixeval.I18N;
-using Pixeval.Native.Config;
 using Pixeval.Utilities;
 
 namespace Pixeval.Views.Home;

@@ -1,8 +1,9 @@
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Models.Navigation;
-using Pixeval.Services;
+using Pixeval.Config;
 using Pixeval.Utilities;
+using Pixeval.Common;
+using Pixeval.Services.Core;
 
 namespace Pixeval.Tests;
 

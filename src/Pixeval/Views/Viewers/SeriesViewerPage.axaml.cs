@@ -3,10 +3,10 @@
 
 using System.ComponentModel;
 using Avalonia.Interactivity;
-using Pixeval.Models.Pixiv;
+using Pixeval.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
-using Pixeval.Views.Entry;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Views.Viewers;
 

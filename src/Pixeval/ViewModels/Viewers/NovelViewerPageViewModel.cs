@@ -11,13 +11,10 @@ using System.Threading.Tasks;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement.Settings;
+using Pixeval.Config;
 using Pixeval.I18N;
-using Pixeval.Models.Blocking;
-using Pixeval.Models.Pixiv;
-using Pixeval.Models.Settings;
-using Pixeval.Native.Mako;
-using Pixeval.Services;
+using Pixeval.Pixiv;
+using Pixeval.Mako;
 using Pixeval.Utilities;
 
 namespace Pixeval.ViewModels.Viewers;
@@ -28,11 +25,11 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
     private readonly AppSettings _appSettings;
     private readonly StorageEngine _storageEngine;
 
-    private readonly Dictionary<int, Novel> _refreshedNovels = [];
+    private readonly Dictionary<int, Mako.Novel> _refreshedNovels = [];
 
     private readonly bool _needRefresh;
 
-    private readonly IReadOnlyList<Novel>? _novels;
+    private readonly IReadOnlyList<Mako.Novel>? _novels;
 
     [ObservableProperty]
     public partial bool IsLoading { get; private set; }
@@ -44,7 +41,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
     public partial WorkSeriesInfoViewModel? SeriesInfo { get; private set; }
 
     public NovelViewerPageViewModel(
-        Novel novelViewModel,
+        Mako.Novel novelViewModel,
         bool needRefresh,
         MakoClient? makoClient = null,
         AppSettings? appSettings = null,
@@ -71,7 +68,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
     }
 
     public NovelViewerPageViewModel(
-        IReadOnlyList<Novel> novels,
+        IReadOnlyList<Mako.Novel> novels,
         int currentNovelIndex,
         bool needRefresh,
         MakoClient? makoClient = null,
@@ -86,9 +83,9 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         CurrentWorkIndex = currentNovelIndex;
     }
 
-    public IReadOnlyList<Novel>? Novels => _novels;
+    public IReadOnlyList<Mako.Novel>? Novels => _novels;
 
-    public Novel? CurrentNovel
+    public Mako.Novel? CurrentNovel
     {
         get
         {
@@ -347,7 +344,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         }
     }
 
-    private async Task<Novel?> GetCurrentNovelAsync(int index, CancellationToken token)
+    private async Task<Mako.Novel?> GetCurrentNovelAsync(int index, CancellationToken token)
     {
         if (!_needRefresh)
             return CurrentNovel;
@@ -379,7 +376,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         return _loadingCts.Token;
     }
 
-    private async Task<Novel?> LoadNovelAsync(long id, Action<Novel> onLoaded, CancellationToken token)
+    private async Task<Mako.Novel?> LoadNovelAsync(long id, Action<Mako.Novel> onLoaded, CancellationToken token)
     {
         IsLoading = true;
         LoadErrorMessage = null;

@@ -11,10 +11,9 @@ using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement;
 using Pixeval.Utilities;
-using Pixeval.Utilities.GitHub;
-using Pixeval.Utilities.IO;
+using Pixeval.Services.Update;
+using Pixeval.Common.IO;
 using Pixeval.ViewModels;
 
 namespace Pixeval.Views.Settings;

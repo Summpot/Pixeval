@@ -10,7 +10,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement.Settings;
+using Pixeval.Config;
 using Pixeval.Utilities;
 
 namespace Pixeval.ViewModels.Search;

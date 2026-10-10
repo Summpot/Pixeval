@@ -7,11 +7,12 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Models.Pixiv;
-using Pixeval.Native.Booru;
-using Pixeval.Native.Storage;
+using Pixeval.Pixiv;
+using Pixeval.Booru;
+using Pixeval.Storage;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
+using Pixeval.ViewModels.Login;
 
 namespace Pixeval.Tests;
 

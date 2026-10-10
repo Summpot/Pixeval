@@ -14,12 +14,11 @@ using Avalonia.Threading;
 using CommunityToolkit.Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
-using Pixeval.Models.Pixiv;
+using Pixeval.Pixiv;
 using Pixeval.I18N;
-using Pixeval.Models.Options;
-using Pixeval.Models.Settings.Entries;
-using Pixeval.Models.Subscriptions;
-using Pixeval.Native.Storage;
+using Pixeval.Config;
+using Pixeval.Services.Background;
+using Pixeval.Storage;
 using Pixeval.Utilities;
 
 namespace Pixeval.Views.Settings;

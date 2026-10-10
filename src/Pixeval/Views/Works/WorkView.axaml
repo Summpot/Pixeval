@@ -1,0 +1,115 @@
+<UserControl
+    x:Class="Pixeval.Views.Works.WorkView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Pixeval.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:entry="using:Pixeval.Views.Works"
+    xmlns:local="using:Pixeval.Views.Works"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:di="using:Pixeval.Common.Markup"
+    xmlns:settings="using:Pixeval.Config"
+    xmlns:vm="using:Pixeval.ViewModels.Works"
+    xmlns:mako="using:Pixeval.Mako"
+    xmlns:booru="using:Pixeval.Booru"
+    x:DataType="{x:Type vm:IOperableViewViewModel}"
+    DataContextChanged="StyledElement_OnDataContextChanged"
+    mc:Ignorable="d"
+    d:DesignHeight="450"
+    d:DesignWidth="800">
+    <entry:EntryView
+        x:Name="EntryView"
+        HasNoItem="{Binding !View.Count}"
+        IsLoadingMore="{Binding #WorkListBox.(controls:IncrementalLoadingBehavior.IsLoadingMore)}">
+        <local:WorkListBox
+            x:Name="WorkListBox"
+            controls:IncrementalLoadingBehavior.IsEnabled="True"
+            controls:IncrementalLoadingBehavior.Threshold="200"
+            AutoScrollToSelectedItem="False"
+            ContainerClearing="ListBox_OnContainerClearing"
+            ContainerPrepared="ListBox_OnContainerPrepared"
+            ItemsSource="{Binding View}"
+            SelectedItems="{Binding SelectedEntries}"
+            SelectionMode="{Binding IsSelecting, Converter={x:Static local:WorkView.SelectionModeConverter}}"
+            UseLayoutRounding="False">
+            <ListBox.Styles>
+                <controls:ItemsViewListBoxStyles />
+            </ListBox.Styles>
+            <ListBox.DataTemplates>
+                <DataTemplate x:DataType="{x:Type mako:Novel}">
+                    <local:NovelItem RequestAddToBookmark="WorkItem_OnRequestAddToBookmark" RequestOpenUserInfoPage="WorkItem_OnRequestOpenUserInfoPage" />
+                </DataTemplate>
+                <DataTemplate x:DataType="{x:Type mako:Illustration}">
+                    <local:IllustrationItem RequestAddToBookmark="WorkItem_OnRequestAddToBookmark" RequestOpenUserInfoPage="WorkItem_OnRequestOpenUserInfoPage" />
+                </DataTemplate>
+                <DataTemplate x:DataType="{x:Type booru:BooruPost}">
+                    <local:BooruItem RequestAddToBookmark="WorkItem_OnRequestAddToBookmark" RequestOpenUserInfoPage="WorkItem_OnRequestOpenUserInfoPage" />
+                </DataTemplate>
+            </ListBox.DataTemplates>
+        </local:WorkListBox>
+    </entry:EntryView>
+    <UserControl.Styles>
+        <Style Selector="local|WorkView:linedFlow ListBox">
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <controls:VirtualizingWrapPanel
+                            ItemHeight="{Binding BrowsingExperienceSettings.ThumbnailLayout.IllustrationLinedFlowItemHeight, Source={di:Service Type={x:Type settings:AppSettings}}, DataType={x:Type settings:AppSettings}, Mode=OneTime}"
+                            ItemSpacing="5"
+                            ItemsAlignment="Stretch"
+                            LineSpacing="5" />
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="local|WorkView:verticalStack ListBox">
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <controls:VirtualizingStackPanel Orientation="Vertical" Spacing="5" />
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="local|WorkView:grid ListBox">
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <controls:VirtualizingAdaptiveGrid
+                            ItemSize="{Binding BrowsingExperienceSettings.ThumbnailLayout.IllustrationGridItemSize, Source={di:Service Type={x:Type settings:AppSettings}}, DataType={x:Type settings:AppSettings}, Mode=OneTime}"
+                            ItemSpacing="5"
+                            ItemsAlignment="Stretch"
+                            LineSize="{Binding BrowsingExperienceSettings.ThumbnailLayout.IllustrationGridLineSize, Source={di:Service Type={x:Type settings:AppSettings}}, DataType={x:Type settings:AppSettings}, Mode=OneTime}"
+                            LineSpacing="5" />
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="local|WorkView:novel ListBox">
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <controls:VirtualizingAdaptiveGrid
+                            ItemSize="350"
+                            ItemSpacing="5"
+                            ItemsAlignment="Stretch"
+                            LineSize="200"
+                            LineSpacing="5" />
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style Selector="local|WorkView:masonry ListBox">
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <controls:VirtualizingMasonryPanel
+                            ColumnSpacing="5"
+                            ColumnWidth="{Binding BrowsingExperienceSettings.ThumbnailLayout.IllustrationMasonryColumnWidth, Source={di:Service Type={x:Type settings:AppSettings}}, DataType={x:Type settings:AppSettings}, Mode=OneTime}"
+                            RowSpacing="5" />
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Styles>
+</UserControl>

@@ -1,6 +1,7 @@
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Utilities;
+using Pixeval.ViewModels.Shell;
 
 namespace Pixeval.Tests;
 

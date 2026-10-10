@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Models;
-using Pixeval.Native.Booru;
-using Pixeval.Native.Mako;
+using Pixeval.Pixiv;
+using Pixeval.Booru;
+using Pixeval.Mako;
 
 namespace Pixeval.ViewModels.Viewers;
 

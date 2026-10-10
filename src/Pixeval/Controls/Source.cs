@@ -13,8 +13,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Models;
-using Pixeval.Services;
+using Pixeval.Pixiv;
 using Pixeval.Utilities;
 
 namespace Pixeval.Controls;

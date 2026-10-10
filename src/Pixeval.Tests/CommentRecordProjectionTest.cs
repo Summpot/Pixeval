@@ -5,14 +5,14 @@ using System;
 using System.Collections.Frozen;
 using System.ComponentModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement.Settings;
-using Pixeval.Models.Blocking;
-using Pixeval.Models.Pixiv;
-using Pixeval.Native.Mako;
-using Pixeval.Native.Storage;
-using Pixeval.Services;
-using Pixeval.Utilities.Network;
+using Pixeval.Config;
+using Pixeval.Pixiv;
+using Pixeval.Mako;
+using Pixeval.Storage;
+using Pixeval.Services.Core;
+using Pixeval.Services.Network;
 using Pixeval.ViewModels.Viewers;
+using Pixeval.ViewModels.Comments;
 
 namespace Pixeval.Tests;
 

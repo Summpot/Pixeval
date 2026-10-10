@@ -6,9 +6,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement.Settings;
+using Pixeval.Config;
 using Pixeval.Controls;
-using Pixeval.Models.Options;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 
