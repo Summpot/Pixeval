@@ -10,6 +10,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
     xmlns:utilities="using:Pixeval.Utilities"
+    xmlns:views="using:Pixeval.Views"
     mc:Ignorable="d"
     d:DesignHeight="40"
     d:DesignWidth="350">
@@ -104,6 +105,7 @@
             HorizontalAlignment="Stretch"
             VerticalAlignment="Center"
             MaxLength="140"
-            PlaceholderText="{I18N {x:Static pixeval:PixivReplyBarResources+ReplyContentRichEditBox.PlaceholderText}}" />
+            PlaceholderText="{I18N {x:Static pixeval:PixivReplyBarResources+ReplyContentRichEditBox.PlaceholderText}}"
+            Text="{Binding $parent[views:PixivReplyBar].ReplyText, Mode=TwoWay}" />
     </DockPanel>
 </UserControl>

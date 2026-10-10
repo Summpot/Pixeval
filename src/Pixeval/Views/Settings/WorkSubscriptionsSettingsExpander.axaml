@@ -12,9 +12,10 @@
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:converters="using:Pixeval.Views.Converters"
     xmlns:options="using:Pixeval.Models.Options"
     xmlns:pixeval="using:Pixeval"
-    xmlns:settings="using:Pixeval.ViewModels.Settings"
+    xmlns:storage="using:Pixeval.Native.Storage"
     x:DataType="{x:Type entries:WorkSubscriptionsSettingsEntry}"
     Description="{Binding Converter={x:Static avalonia:SettingsEntryHelper.DescriptionConverter}}"
     Header="{Binding Header}"
@@ -70,18 +71,18 @@
         <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Left">
             <ItemsControl x:Name="SubscriptionItemsControl" ItemsSource="{Binding $parent[local:WorkSubscriptionsSettingsExpander].Subscriptions}">
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="{x:Type settings:WorkSubscriptionItemViewModel}">
+                    <DataTemplate x:DataType="{x:Type storage:WorkSubscriptionRecord}">
                         <Grid
                             Margin="10"
                             ColumnDefinitions="Auto,Auto,*,Auto,Auto"
                             ColumnSpacing="8">
-                            <controls1:UserBasicInfoPresenter Grid.Column="0" User="{Binding User}" />
+                            <controls1:UserBasicInfoPresenter Grid.Column="0" User="{Binding}" />
                             <TextBlock
                                 Grid.Column="1"
                                 VerticalAlignment="Center"
                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                <Run Text="{Binding SubscriptionTypeText}" /><LineBreak />
-                                <Run Text="{Binding WorkKindText}" />
+                                <Run Text="{Binding Type, Converter={x:Static converters:PixevalConverters.WorkSubscriptionTypeText}}" /><LineBreak />
+                                <Run Text="{Binding Kind, Converter={x:Static converters:PixevalConverters.WorkSubscriptionKindText}}" />
                             </TextBlock>
                             <Button
                                 Grid.Column="3"

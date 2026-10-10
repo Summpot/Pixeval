@@ -4,6 +4,7 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 
@@ -13,11 +14,12 @@ public partial class CommentView : UserControl
 {
     public CommentView() => InitializeComponent();
 
-    public event Action<CommentItemViewModel>? OpenRepliesButtonClick;
+    public event Action<CommentRecord>? OpenRepliesButtonClick;
 
-    private void CommentItem_OnOpenRepliesButtonClick(CommentItemViewModel viewModel) => OpenRepliesButtonClick?.Invoke(viewModel);
+    private void CommentItem_OnOpenRepliesButtonClick(CommentRecord comment) => OpenRepliesButtonClick?.Invoke(comment);
 
-    private void CommentItem_OnDeleteButtonClick(CommentItemViewModel viewModel) => (DataContext as CommentsViewViewModel)?.DeleteComment(viewModel);
+    private void CommentItem_OnDeleteButtonClick(CommentRecord comment) =>
+        (DataContext as CommentsViewViewModel)?.RemoveComment(comment.Id);
 
     private void CommentView_OnDataContextChanged(object? sender, EventArgs e) => (DataContext as CommentsViewViewModel)?.RefreshEngine();
 

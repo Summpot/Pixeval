@@ -2,7 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using Avalonia.Controls;
-using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 
@@ -12,7 +12,7 @@ public partial class CommentContainer : ContentPage
 {
     public CommentContainer() => InitializeComponent();
 
-    public CommentContainer(CommentItemViewModel viewModel)
+    public CommentContainer(CommentsViewViewModel viewModel)
     {
         DataContext = viewModel;
         InitializeComponent();
@@ -32,7 +32,7 @@ public partial class CommentContainer : ContentPage
         AddComment(await viewModel.AddStickerAsync(stickerId), viewModel);
     }
 
-    private void AddComment(Comment comment, CommentsViewViewModel viewModel)
+    private void AddComment(CommentRecord comment, CommentsViewViewModel viewModel)
     {
         if (comment.Id is 0)
             TopLevel.GetTopLevel(this)?.ViewContainer?.ShowError("评论发送失败"); //TODO i18n
@@ -40,9 +40,12 @@ public partial class CommentContainer : ContentPage
             viewModel.AddComment(comment);
     }
 
-    private async void CommentView_OnOpenRepliesButtonClick(CommentItemViewModel viewModel)
+    private async void CommentView_OnOpenRepliesButtonClick(CommentRecord comment)
     {
+        if (DataContext is not CommentsViewViewModel parent)
+            return;
+
         if (IsInNavigationPage && Parent is NavigationPage frame)
-            await frame.PushAsync(new CommentContainer(viewModel));
+            await frame.PushAsync(new CommentContainer(parent.OpenReplies(comment.Id)));
     }
 }

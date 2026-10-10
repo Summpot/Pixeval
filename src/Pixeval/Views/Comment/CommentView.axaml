@@ -7,6 +7,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:entry="using:Pixeval.Views.Entry"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:mako="using:Pixeval.Native.Mako"
     xmlns:viewers="using:Pixeval.ViewModels.Viewers"
     xmlns:views="using:Pixeval.Views"
     x:DataType="{x:Type viewers:CommentsViewViewModel}"
@@ -26,7 +27,7 @@
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="{x:Type viewers:CommentItemViewModel}">
+                <DataTemplate x:DataType="{x:Type mako:CommentRecord}">
                     <views:CommentItem DeleteButtonClick="CommentItem_OnDeleteButtonClick" OpenRepliesButtonClick="CommentItem_OnOpenRepliesButtonClick" />
                 </DataTemplate>
             </ListBox.ItemTemplate>

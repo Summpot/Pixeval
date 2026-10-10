@@ -13,7 +13,7 @@
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
-    xmlns:settings="using:Pixeval.ViewModels.Settings"
+    xmlns:storage="using:Pixeval.Native.Storage"
     x:DataType="{x:Type entries:BlockedUsersSettingsEntry}"
     Description="{Binding Converter={x:Static avalonia:SettingsEntryHelper.DescriptionConverter}}"
     Header="{Binding Header}"
@@ -55,17 +55,17 @@
         <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Left">
             <ItemsControl ItemsSource="{Binding $parent[local:BlockedUsersSettingsExpander].Users}">
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="{x:Type settings:BlockedUserItemViewModel}">
+                    <DataTemplate x:DataType="{x:Type storage:BlockedUserRecord}">
                         <Grid
                             Margin="10"
                             ColumnDefinitions="Auto,*,Auto,Auto"
                             ColumnSpacing="8">
-                            <controls1:UserBasicInfoPresenter Grid.Column="0" User="{Binding User}" />
+                            <controls1:UserBasicInfoPresenter Grid.Column="0" User="{Binding}" />
                             <TextBlock
                                 Grid.Column="1"
                                 VerticalAlignment="Center"
                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                Text="{Binding Entry.Id}" />
+                                Text="{Binding Id}" />
                             <Button
                                 Grid.Column="2"
                                 VerticalAlignment="Center"

@@ -188,7 +188,7 @@ public class IncrementalSource<T, TViewModel> : IIncrementalSource<TViewModel>, 
         Pixeval.Native.Booru.BooruUser bu => bu.Id,
         Pixeval.Native.Mako.Series s => s.Id.ToString(),
         Pixeval.Native.Mako.SpotlightArticle a => a.Id.ToString(),
-        Pixeval.Models.Pixiv.Comment c => c.Id.ToString(),
+        Pixeval.Native.Mako.CommentRecord c => c.Id.ToString(),
         Pixeval.Models.Pixiv.IWorkEntry we => we.Id.ToString(),
         _ => entity.ToString() ?? string.Empty
     };

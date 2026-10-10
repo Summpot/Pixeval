@@ -8,9 +8,9 @@
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
+    xmlns:mako="using:Pixeval.Native.Mako"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:viewers="using:Pixeval.ViewModels.Viewers"
-    x:DataType="{x:Type viewers:CommentItemViewModel}"
+    x:DataType="{x:Type mako:CommentRecord}"
     mc:Ignorable="d"
     d:DesignHeight="120"
     d:DesignWidth="350">
@@ -21,7 +21,7 @@
                 controls:TranslatableTextBlockBehavior.IsEnabled="True"
                 controls:TranslatableTextBlockBehavior.TextType="Comment"
                 IsVisible="{Binding !IsStamp}"
-                Text="{Binding Comment.Content}"
+                Text="{Binding DisplayText}"
                 TextWrapping="Wrap" />
             <Image
                 x:Name="StickerImage"
@@ -45,18 +45,19 @@
                 BorderThickness="0"
                 Click="DeleteReplyButton_OnClicked"
                 Content="{markup:SymbolIcon Delete}"
-                IsVisible="{Binding IsMe}" />
+                IsVisible="{Binding User.Id, Converter={x:Static converters:PixevalConverters.IsCurrentUserId}}" />
             <Button
+                x:Name="OpenRepliesButton"
                 Padding="6"
                 Background="Transparent"
                 BorderThickness="0"
                 Click="OpenRepliesButton_OnClicked"
+                IsVisible="False"
                 Content="{markup1:EitherBinding {Binding HasReplies},
                                                 {markup:SymbolIcon Chat,
                                                                    IconVariant=Color},
                                                 {markup:SymbolIcon ChatAdd},
-                                                x:TypeArguments=fluent:SymbolIcon}"
-                IsVisible="{Binding IsTopComment}" />
+                                                x:TypeArguments=fluent:SymbolIcon}" />
         </StackPanel>
 
         <!--  Poster info  -->
@@ -69,13 +70,13 @@
             <DockPanel HorizontalSpacing="10" LastChildFill="False">
                 <controls:AvatarImage
                     Width="35"
-                    controls:Source.Cache="{Binding Comment.User.ProfileImageUrls.Medium}"
+                    controls:Source.Cache="{Binding User.ProfileImageUrls.Medium}"
                     DockPanel.Dock="Left" />
                 <StackPanel Spacing="2">
-                    <TextBlock Text="{Binding User}" Theme="{StaticResource CaptionStrongTextBlockStyle}" />
+                    <TextBlock Text="{Binding User.Name}" Theme="{StaticResource CaptionStrongTextBlockStyle}" />
                     <TextBlock
                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                        Text="{Binding Date, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}"
+                        Text="{Binding PostedAt, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}"
                         Theme="{StaticResource CaptionStrongTextBlockStyle}" />
                 </StackPanel>
             </DockPanel>

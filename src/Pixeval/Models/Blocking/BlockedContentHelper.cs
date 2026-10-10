@@ -41,6 +41,7 @@ public static class BlockedContentHelper
             Novel novel => novel.Tags.Any(t => snapshot.BlockedTags.Contains(t.Name)) || IsBlocked(novel.User.Id, snapshot),
             BooruPost booru => booru.Tags.Any(t => snapshot.BlockedTags.Contains(t.Name)),
             WorkEntry we => IsBlocked(we.AsWorkEntry, snapshot),
+            CommentRecord comment => IsBlocked(comment, snapshot),
             _ => false
         };
     }
@@ -53,10 +54,10 @@ public static class BlockedContentHelper
     public static bool IsBlocked(User user, BlockedContentSnapshot snapshot) =>
         user.Id > 0 && snapshot.BlockedUsers.Contains(user.Id);
 
-    public static bool IsBlocked(Comment comment) => IsBlocked(comment, CaptureSnapshot());
+    public static bool IsBlocked(CommentRecord comment) => IsBlocked(comment, CaptureSnapshot());
 
-    public static bool IsBlocked(Comment comment, BlockedContentSnapshot snapshot) =>
-        snapshot.BlockedUsers.Contains(comment.User.Id);
+    public static bool IsBlocked(CommentRecord comment, BlockedContentSnapshot snapshot) =>
+        comment.User.Id > 0 && snapshot.BlockedUsers.Contains(comment.User.Id);
 
     public static bool IsBlockedPlaceholder(object entry) =>
         BlockedContentModelHelper.IsBlockedPlaceholder(entry);

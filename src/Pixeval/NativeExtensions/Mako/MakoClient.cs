@@ -270,101 +270,29 @@ public partial class MakoClient
     public IFetchEngine<User> UserMyPixiv(long userId) =>
         UserMypixiv(userId).ToFetchEngine();
 
-    public IAsyncEnumerable<Comment> WorkComments(SimpleWorkType type, long id) =>
-        FetchWorkCommentsAsync(type is SimpleWorkType.Novel, id);
+    public IAsyncEnumerable<CommentRecord> WorkComments(SimpleWorkType type, long id) =>
+        EnumerateCommentsAsync(WorkComments(type is SimpleWorkType.Novel, id));
 
-    private async IAsyncEnumerable<Comment> FetchWorkCommentsAsync(bool isNovel, long id)
+    public IAsyncEnumerable<CommentRecord> WorkCommentReplies(SimpleWorkType type, long id) =>
+        EnumerateCommentsAsync(WorkCommentReplies(type is SimpleWorkType.Novel, id));
+
+    private static async IAsyncEnumerable<CommentRecord> EnumerateCommentsAsync(CommentFetchEngine engine)
     {
-        var engine = WorkComments(isNovel, id);
         while (await engine.NextAsync() is { } item)
-        {
-            yield return new Comment
-            {
-                Id = item.Id,
-                Content = item.Comment,
-                Date = DateTimeOffset.TryParse(item.Date, out var dt) ? dt : DateTimeOffset.UtcNow,
-                User = item.User,
-                HasReplies = item.HasReplies,
-                Stamp = item.Stamp is { } st ? new Stamp { StampId = st.StampId, StampUrl = st.StampUrl } : null
-            };
-        }
+            yield return item;
     }
 
-    public IAsyncEnumerable<Comment> WorkCommentReplies(SimpleWorkType type, long id) =>
-        FetchWorkCommentRepliesAsync(type is SimpleWorkType.Novel, id);
+    public Task<CommentRecord> AddWorkCommentAsync(SimpleWorkType type, long parentId, string content) =>
+        AddWorkCommentUnifiedAsync(type is SimpleWorkType.Novel, parentId, content, null, null);
 
-    private async IAsyncEnumerable<Comment> FetchWorkCommentRepliesAsync(bool isNovel, long commentId)
-    {
-        var engine = WorkCommentReplies(isNovel, commentId);
-        while (await engine.NextAsync() is { } item)
-        {
-            yield return new Comment
-            {
-                Id = item.Id,
-                Content = item.Comment,
-                Date = DateTimeOffset.TryParse(item.Date, out var dt) ? dt : DateTimeOffset.UtcNow,
-                User = item.User,
-                HasReplies = item.HasReplies,
-                Stamp = item.Stamp is { } st ? new Stamp { StampId = st.StampId, StampUrl = st.StampUrl } : null
-            };
-        }
-    }
+    public Task<CommentRecord> AddWorkCommentAsync(SimpleWorkType type, long parentId, int stampId) =>
+        AddWorkCommentUnifiedAsync(type is SimpleWorkType.Novel, parentId, "", null, stampId);
 
-    public async Task<Comment> AddWorkCommentAsync(SimpleWorkType type, long parentId, string content)
-    {
-        var item = await AddWorkCommentUnifiedAsync(type is SimpleWorkType.Novel, parentId, content, null, null);
-        return new Comment
-        {
-            Id = item.Id,
-            Content = item.Comment,
-            Date = DateTimeOffset.TryParse(item.Date, out var dt) ? dt : DateTimeOffset.UtcNow,
-            User = item.User,
-            HasReplies = item.HasReplies,
-            Stamp = item.Stamp is { } st ? new Stamp { StampId = st.StampId, StampUrl = st.StampUrl } : null
-        };
-    }
+    public Task<CommentRecord> AddWorkCommentAsync(SimpleWorkType type, long parentId, long parentCommentId, string content) =>
+        AddWorkCommentUnifiedAsync(type is SimpleWorkType.Novel, parentId, content, parentCommentId, null);
 
-    public async Task<Comment> AddWorkCommentAsync(SimpleWorkType type, long parentId, int stampId)
-    {
-        var item = await AddWorkCommentUnifiedAsync(type is SimpleWorkType.Novel, parentId, "", null, stampId);
-        return new Comment
-        {
-            Id = item.Id,
-            Content = item.Comment,
-            Date = DateTimeOffset.TryParse(item.Date, out var dt) ? dt : DateTimeOffset.UtcNow,
-            User = item.User,
-            HasReplies = item.HasReplies,
-            Stamp = item.Stamp is { } st ? new Stamp { StampId = st.StampId, StampUrl = st.StampUrl } : null
-        };
-    }
-
-    public async Task<Comment> AddWorkCommentAsync(SimpleWorkType type, long parentId, long parentCommentId, string content)
-    {
-        var item = await AddWorkCommentUnifiedAsync(type is SimpleWorkType.Novel, parentId, content, parentCommentId, null);
-        return new Comment
-        {
-            Id = item.Id,
-            Content = item.Comment,
-            Date = DateTimeOffset.TryParse(item.Date, out var dt) ? dt : DateTimeOffset.UtcNow,
-            User = item.User,
-            HasReplies = item.HasReplies,
-            Stamp = item.Stamp is { } st ? new Stamp { StampId = st.StampId, StampUrl = st.StampUrl } : null
-        };
-    }
-
-    public async Task<Comment> AddWorkCommentAsync(SimpleWorkType type, long parentId, long parentCommentId, int stampId)
-    {
-        var item = await AddWorkCommentUnifiedAsync(type is SimpleWorkType.Novel, parentId, "", parentCommentId, stampId);
-        return new Comment
-        {
-            Id = item.Id,
-            Content = item.Comment,
-            Date = DateTimeOffset.TryParse(item.Date, out var dt) ? dt : DateTimeOffset.UtcNow,
-            User = item.User,
-            HasReplies = item.HasReplies,
-            Stamp = item.Stamp is { } st ? new Stamp { StampId = st.StampId, StampUrl = st.StampUrl } : null
-        };
-    }
+    public Task<CommentRecord> AddWorkCommentAsync(SimpleWorkType type, long parentId, long parentCommentId, int stampId) =>
+        AddWorkCommentUnifiedAsync(type is SimpleWorkType.Novel, parentId, "", parentCommentId, stampId);
 
     public async Task<bool> DeleteWorkCommentAsync(SimpleWorkType type, long commentId)
     {

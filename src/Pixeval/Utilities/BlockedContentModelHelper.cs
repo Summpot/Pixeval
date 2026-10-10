@@ -27,14 +27,6 @@ public static class BlockedContentModelHelper
         return new BlockedUserRecord(0, user.Id, user.Name ?? "", avatarUrl, account);
     }
 
-    public static User CreateBlockedUserPreview(BlockedUserRecord entry) => new(
-        entry.Id,
-        entry.UserName,
-        entry.Account ?? "",
-        new ProfileImageUrls(null, null, null, string.IsNullOrWhiteSpace(entry.AvatarUrl) ? AppInfo.BlockedContentPath : entry.AvatarUrl),
-        false,
-        null);
-
     public static NovelContent CreateBlockedNovelContent(Novel entry) => NovelContent.CreateDefault() with
     {
         Id = entry.Id,
@@ -54,6 +46,7 @@ public static class BlockedContentModelHelper
             {
                 Illustration illustration => (T) (object) ReplaceIllustration(illustration, snapshot),
                 Novel novel => (T) (object) ReplaceNovel(novel, snapshot),
+                CommentRecord comment => (T) (object) ReplaceComment(comment, snapshot),
                 _ => entry
             }
             : entry;
@@ -107,14 +100,12 @@ public static class BlockedContentModelHelper
             }
             : entry;
 
-    internal static Comment Replace(Comment entry, BlockedContentSnapshot snapshot) =>
-        BlockedContentHelper.IsBlocked(entry, snapshot)
-            ? entry with
-            {
-                Content = I18NManager.GetResource(BlockedContentResources.Comment),
-                User = Replace(entry.User, snapshot)
-            }
-            : entry;
+    private static CommentRecord ReplaceComment(CommentRecord entry, BlockedContentSnapshot snapshot) =>
+        entry with
+        {
+            Comment = I18NManager.GetResource(BlockedContentResources.Comment),
+            User = Replace(entry.User, snapshot)
+        };
 
     private static T MarkBlocked<T>(T entry)
         where T : class

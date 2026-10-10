@@ -2,7 +2,9 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Interactivity;
 using Pixeval.I18N;
 using Pixeval.Utilities;
@@ -11,7 +13,19 @@ namespace Pixeval.Views;
 
 public partial class PixivReplyBar : UserControl
 {
+    public static readonly StyledProperty<string> ReplyTextProperty =
+        AvaloniaProperty.Register<PixivReplyBar, string>(
+            nameof(ReplyText),
+            "",
+            defaultBindingMode: BindingMode.TwoWay);
+
     public PixivReplyBar() => InitializeComponent();
+
+    public string ReplyText
+    {
+        get => GetValue(ReplyTextProperty);
+        set => SetValue(ReplyTextProperty, value);
+    }
 
     public event Action<string>? SendButtonClick;
 

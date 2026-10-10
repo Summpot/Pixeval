@@ -21,32 +21,6 @@ public interface IWorkEntry
     Series? Series => null;
 }
 
-public record Comment
-{
-    public required long Id { get; set; }
-    public required string Content { get; set; } = "";
-    public required DateTimeOffset Date { get; set; }
-    public required User User { get; set; }
-    public required bool HasReplies { get; set; }
-    public required Stamp? Stamp { get; set; }
-
-    public static Comment CreateDefault() => new()
-    {
-        Id = 0,
-        Content = "",
-        Date = DateTimeOffset.UtcNow,
-        User = new User(0, "", "", new ProfileImageUrls(null, null, null, null), false, null),
-        HasReplies = false,
-        Stamp = null
-    };
-}
-
-public record Stamp
-{
-    public required long StampId { get; set; }
-    public required string StampUrl { get; set; } = "";
-}
-
 public enum SpotlightCategory
 {
     All,

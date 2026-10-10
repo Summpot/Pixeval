@@ -21,7 +21,6 @@ using Pixeval.Models.Settings.Entries;
 using Pixeval.Models.Subscriptions;
 using Pixeval.Native.Storage;
 using Pixeval.Utilities;
-using Pixeval.ViewModels.Settings;
 
 namespace Pixeval.Views.Settings;
 
@@ -31,7 +30,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
 
     private bool _isLoaded;
 
-    public ObservableCollection<WorkSubscriptionItemViewModel> Subscriptions { get; } = [];
+    public ObservableCollection<WorkSubscriptionRecord> Subscriptions { get; } = [];
 
     public WorkSubscriptionsSettingsEntry Entry
     {
@@ -71,7 +70,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
             foreach (var entry in App.AppViewModel.StorageEngine.GetAllSubscriptions())
             {
                 token.ThrowIfCancellationRequested();
-                Subscriptions.Add(new(entry));
+                Subscriptions.Add(entry);
             }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -123,10 +122,10 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
 
     private async void DeleteButton_OnClicked(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: WorkSubscriptionItemViewModel item })
+        if (sender is not Button { Tag: WorkSubscriptionRecord item })
             return;
 
-        _ = await SubscriptionService.TryRemoveAsync(item.Entry.HistoryEntryId);
+        _ = await SubscriptionService.TryRemoveAsync(item.HistoryEntryId);
         await ReloadAsync();
     }
 
@@ -137,8 +136,8 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
 
     private void SyncSubscriptionButton_OnClicked(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: WorkSubscriptionItemViewModel item })
-            App.AppViewModel.QueueWorkSubscriptionSync(item.Entry);
+        if (sender is Button { Tag: WorkSubscriptionRecord item })
+            App.AppViewModel.QueueWorkSubscriptionSync(item);
     }
 
     private void SubscriptionServiceOnSubscriptionUpdated(object? sender, WorkSubscriptionRecord subscription)
@@ -159,10 +158,17 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         });
     }
 
-    private void ApplySubscriptionUpdate(WorkSubscriptionRecord subscription) =>
-        Subscriptions.FirstOrDefault(item =>
-                item.Entry.HistoryEntryId == subscription.HistoryEntryId)
-            ?.UpdateSubscription(subscription);
+    private void ApplySubscriptionUpdate(WorkSubscriptionRecord subscription)
+    {
+        for (var i = 0; i < Subscriptions.Count; i++)
+        {
+            if (Subscriptions[i].HistoryEntryId != subscription.HistoryEntryId)
+                continue;
+
+            Subscriptions[i] = subscription;
+            return;
+        }
+    }
 
     private void SubscriptionTypeComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
     {

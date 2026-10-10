@@ -4,6 +4,8 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
@@ -12,25 +14,46 @@ namespace Pixeval.Views;
 
 public partial class CommentItem : UserControl
 {
-    public CommentItem() => InitializeComponent();
+    public CommentItem()
+    {
+        InitializeComponent();
+        DataContextChanged += (_, _) => UpdateReplyButton();
+    }
 
-    private CommentItemViewModel ViewModel => (CommentItemViewModel) DataContext!;
+    public event Action<CommentRecord>? OpenRepliesButtonClick;
 
-    public event Action<CommentItemViewModel>? OpenRepliesButtonClick;
+    public event Action<CommentRecord>? DeleteButtonClick;
 
-    public event Action<CommentItemViewModel>? DeleteButtonClick;
+    private CommentsViewViewModel? ListViewModel =>
+        this.FindAncestorOfType<CommentView>()?.DataContext as CommentsViewViewModel;
+
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+        UpdateReplyButton();
+    }
+
+    private void UpdateReplyButton() =>
+        OpenRepliesButton.IsVisible = ListViewModel?.AllowsReplies ?? false;
 
     private void PosterButton_OnClicked(object? sender, RoutedEventArgs e)
     {
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
-            viewContainer.CreateUserPage(ViewModel.UserId);
+        if (DataContext is CommentRecord comment && TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
+            viewContainer.CreateUserPage(comment.User.Id);
     }
 
-    private void OpenRepliesButton_OnClicked(object? sender, RoutedEventArgs e) => OpenRepliesButtonClick?.Invoke(ViewModel);
+    private void OpenRepliesButton_OnClicked(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is CommentRecord comment)
+            OpenRepliesButtonClick?.Invoke(comment);
+    }
 
     private async void DeleteReplyButton_OnClicked(object? sender, RoutedEventArgs e)
     {
-        if (await ViewModel.DeleteAsync())
-            DeleteButtonClick?.Invoke(ViewModel);
+        if (ListViewModel is not { } list || DataContext is not CommentRecord comment)
+            return;
+
+        if (await list.DeleteCommentAsync(comment))
+            DeleteButtonClick?.Invoke(comment);
     }
 }

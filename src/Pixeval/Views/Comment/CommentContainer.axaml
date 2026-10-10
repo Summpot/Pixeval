@@ -16,6 +16,7 @@
             x:Name="ReplyBar"
             Margin="10"
             DockPanel.Dock="Top"
+            ReplyText="{Binding ReplyDraft, Mode=TwoWay}"
             SendButtonClick="ReplyBar_OnSendButtonClick"
             StickerClick="ReplyBar_OnStickerClick" />
         <views:CommentView HorizontalAlignment="Stretch" OpenRepliesButtonClick="CommentView_OnOpenRepliesButtonClick" />

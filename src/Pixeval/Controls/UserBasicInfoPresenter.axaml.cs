@@ -7,6 +7,7 @@ using Pixeval.AppManagement;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Booru;
 using Pixeval.Native.Mako;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.Controls;
 
@@ -63,9 +64,15 @@ public class UserBasicInfoPresenter : TemplatedControl
 
     private void UpdateFromUser(object? user)
     {
-        var avatarUrl = (user as User)?.AvatarUrl
-            ?? (user as TokenUser)?.AvatarUrl
-            ?? (user as BooruUser)?.AvatarUrl;
+        var avatarUrl = user switch
+        {
+            User u => u.AvatarUrl,
+            TokenUser tokenUser => tokenUser.AvatarUrl,
+            BooruUser booruUser => booruUser.AvatarUrl,
+            BlockedUserRecord blocked => blocked.AvatarUrl,
+            WorkSubscriptionRecord subscription => subscription.AvatarUrl,
+            _ => null
+        };
 
         AvatarUrl = string.IsNullOrWhiteSpace(avatarUrl)
             ? AppInfo.ImageNotAvailablePath
@@ -73,12 +80,20 @@ public class UserBasicInfoPresenter : TemplatedControl
         UserDisplayName = user switch
         {
             User u => string.IsNullOrWhiteSpace(u.Name) ? u.Id.ToString() : u.Name,
-            TokenUser tu => string.IsNullOrWhiteSpace(tu.Name) ? tu.Id.ToString() : tu.Name,
-            BooruUser bu => string.IsNullOrWhiteSpace(bu.Name) ? bu.Id.ToString() : bu.Name,
+            TokenUser tokenUser => string.IsNullOrWhiteSpace(tokenUser.Name) ? tokenUser.Id.ToString() : tokenUser.Name,
+            BooruUser booruUser => string.IsNullOrWhiteSpace(booruUser.Name) ? booruUser.Id.ToString() : booruUser.Name,
+            BlockedUserRecord blocked => string.IsNullOrWhiteSpace(blocked.DisplayName) ? blocked.Id.ToString() : blocked.DisplayName,
+            WorkSubscriptionRecord subscription => subscription.DisplayName,
             _ => ""
         };
-        var account = (user as User)?.Account
-            ?? (user as TokenUser)?.Account;
+        var account = user switch
+        {
+            User u => u.Account,
+            TokenUser tokenUser => tokenUser.Account,
+            BlockedUserRecord blocked => blocked.Account,
+            WorkSubscriptionRecord subscription => subscription.Account,
+            _ => null
+        };
         AccountDisplay = string.IsNullOrWhiteSpace(account) ? "" : $"@{account}";
     }
 }

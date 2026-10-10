@@ -12,9 +12,12 @@ using Avalonia.Data.Converters;
 using Avalonia.Media;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.Models;
+using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
+using Pixeval.Services;
 using Pixeval.Utilities;
 
 namespace Pixeval.Views.Converters;
@@ -84,6 +87,15 @@ public static partial class PixevalConverters
         });
 
     public static readonly FuncValueConverter<string, FontFamily?> FontFamilyConverter = new(static font => FontFamilyHelper.Create(font));
+
+    public static readonly FuncValueConverter<long, bool> IsCurrentUserId = new(static id =>
+        App.Services?.GetService<IUserSessionService>() is { CurrentUserId: > 0 and var current } && id == current);
+
+    public static readonly FuncValueConverter<WorkSubscriptionType, string> WorkSubscriptionTypeText =
+        new(static value => SymbolComboBoxItem.GetResource(value));
+
+    public static readonly FuncValueConverter<WorkSubscriptionWorkKind, string> WorkSubscriptionKindText =
+        new(static value => SymbolComboBoxItem.GetResource(value));
 
     public static readonly FuncValueConverter<uint, IBrush?> OptionalColorToBrush = new(static value =>
     {
