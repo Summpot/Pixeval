@@ -44,7 +44,7 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
         Users.Clear();
         try
         {
-            foreach (var entry in App.AppViewModel.StorageEngine.GetAllBlockedUsers())
+            foreach (var entry in App.Services!.GetRequiredService<StorageEngine>().GetAllBlockedUsers())
             {
                 token.ThrowIfCancellationRequested();
                 Users.Add(entry);
@@ -55,7 +55,7 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
         }
         catch (Exception e)
         {
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+            App.Services!.GetRequiredService<FileLogger>()
                 .LogError(nameof(ReloadAsync), e);
         }
     }
@@ -71,8 +71,8 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
 
         try
         {
-            var user = (await App.AppViewModel.MakoClient.GetUserFromIdAsync(userId)).User;
-            App.AppViewModel.StorageEngine.AddOrUpdateBlockedUser(BlockedContentModelHelper.CreateBlockedUserRecord(user));
+            var user = (await App.Services!.GetRequiredService<MakoClient>().GetUserFromIdAsync(userId)).User;
+            App.Services!.GetRequiredService<StorageEngine>().AddOrUpdateBlockedUser(BlockedContentModelHelper.CreateBlockedUserRecord(user));
             TargetIdTextBox.Text = "";
             await ReloadAsync();
         }
@@ -99,8 +99,8 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
     {
         try
         {
-            var user = (await App.AppViewModel.MakoClient.GetUserFromIdAsync(item.Id)).User;
-            var entry = App.AppViewModel.StorageEngine.AddOrUpdateBlockedUser(BlockedContentModelHelper.CreateBlockedUserRecord(user));
+            var user = (await App.Services!.GetRequiredService<MakoClient>().GetUserFromIdAsync(item.Id)).User;
+            var entry = App.Services!.GetRequiredService<StorageEngine>().AddOrUpdateBlockedUser(BlockedContentModelHelper.CreateBlockedUserRecord(user));
             ReplaceUser(entry);
         }
         catch (Exception exception)
@@ -126,7 +126,7 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
         if (sender is not Button { Tag: BlockedUserRecord item })
             return;
 
-        _ = App.AppViewModel.StorageEngine.TryDeleteBlockedUser(item.Id);
+        _ = App.Services!.GetRequiredService<StorageEngine>().TryDeleteBlockedUser(item.Id);
         await ReloadAsync();
     }
 

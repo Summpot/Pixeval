@@ -19,7 +19,7 @@ namespace Pixeval.Views;
 public partial class ExtensionsPage : IconContentPage
 {
     private ExtensionService ExtensionService { get; } =
-        App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>();
+        App.Services!.GetRequiredService<ExtensionService>();
 
     private bool _firstTime = true;
 
@@ -50,7 +50,7 @@ public partial class ExtensionsPage : IconContentPage
             return;
         }
 
-        var logger = App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>();
+        var logger = App.Services!.GetRequiredService<FileLogger>();
 
         var files = await provider.OpenFilePickerAsync(new()
         {

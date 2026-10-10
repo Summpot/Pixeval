@@ -85,8 +85,8 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         AppSettings? appSettings = null,
         FileLogger? logger = null)
     {
-        _makoClient = makoClient ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<MakoClient>(App.Services!) ?? App.AppViewModel.MakoClient;
-        _appSettings = appSettings ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<AppSettings>(App.Services!) ?? App.AppViewModel.AppSettings;
+        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
+        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
         _logger = logger ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<FileLogger>(App.Services!);
         _needRefresh = needRefresh;
         CurrentIllustration = illustrationViewModel;
@@ -100,8 +100,8 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         AppSettings? appSettings = null,
         FileLogger? logger = null)
     {
-        _makoClient = makoClient ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<MakoClient>(App.Services!) ?? App.AppViewModel.MakoClient;
-        _appSettings = appSettings ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<AppSettings>(App.Services!) ?? App.AppViewModel.AppSettings;
+        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
+        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
         _logger = logger ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<FileLogger>(App.Services!);
         _ = LoadSingleIllustrationAsync(id, platform, _loadingCts.Token);
     }
@@ -135,8 +135,8 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         AppSettings? appSettings = null,
         FileLogger? logger = null)
     {
-        _makoClient = makoClient ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<MakoClient>(App.Services!) ?? App.AppViewModel.MakoClient;
-        _appSettings = appSettings ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<AppSettings>(App.Services!) ?? App.AppViewModel.AppSettings;
+        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
+        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
         _logger = logger ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<FileLogger>(App.Services!);
         _needRefresh = needRefresh;
         _illustrations = illustrations;

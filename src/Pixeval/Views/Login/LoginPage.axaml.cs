@@ -12,7 +12,9 @@ using Avalonia.Interactivity;
 using Avalonia.Platform;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement;
+using Pixeval.AppManagement.Settings;
 using Pixeval.I18N;
+using Pixeval.Models.Subscriptions;
 using Pixeval.Native.Mako;
 using Pixeval.Services;
 using Pixeval.Utilities;
@@ -45,15 +47,15 @@ public partial class LoginPage : IconContentPage
             if (string.IsNullOrWhiteSpace(token))
                 return;
 
-            App.AppViewModel.MakoClient.SetRefreshToken(token);
-            var result = await App.AppViewModel.MakoClient.IdentifyTokenAsync();
+            App.Services!.GetRequiredService<MakoClient>().SetRefreshToken(token);
+            var result = await App.Services!.GetRequiredService<MakoClient>().IdentifyTokenAsync();
             if (result.Success)
             {
-                var tokenResponse = App.AppViewModel.MakoClient.GetTokenResponse()
-                    ?? (App.AppViewModel.MakoClient.GetUser() is { } user
+                var tokenResponse = App.Services!.GetRequiredService<MakoClient>().GetTokenResponse()
+                    ?? (App.Services!.GetRequiredService<MakoClient>().GetUser() is { } user
                         ? new TokenResponse("", 0, "Bearer", token, user)
                         : null);
-                App.AppViewModel.OnTokenRefreshed(tokenResponse);
+                App.Services!.GetRequiredService<IUserSessionService>().OnTokenRefreshed(tokenResponse);
                 LoginNavigate();
             }
             else if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
@@ -61,7 +63,7 @@ public partial class LoginPage : IconContentPage
         }
         catch (Exception exception)
         {
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+            App.Services!.GetRequiredService<FileLogger>()
                 .LogError(nameof(LoginButton_OnClick), exception);
             if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
             {
@@ -113,7 +115,7 @@ public partial class LoginPage : IconContentPage
                                 winArgs.UserDataFolder = userDataFolder;
                                 // For System proxy, WebView2 natively uses Windows system proxy.
                                 // For Custom proxy, format host:port without trailing slash or internal quotes.
-                                if (App.AppViewModel?.AppSettings?.NetworkSettings?.ProxySettings is { ProxyType: Models.Options.ProxyType.Custom } proxySettings
+                                if (App.Services?.GetService<AppSettings>()?.NetworkSettings?.ProxySettings is { ProxyType: Models.Options.ProxyType.Custom } proxySettings
                                     && !string.IsNullOrWhiteSpace(proxySettings.Proxy))
                                 {
                                     var normalized = ProxyHelper.NormalizeProxyUri(proxySettings.Proxy);
@@ -134,8 +136,8 @@ public partial class LoginPage : IconContentPage
             var code = HttpUtility.ParseQueryString(callbackUri.Query)["code"];
             if (string.IsNullOrWhiteSpace(code))
                 return;
-            var tokenResponse = await App.AppViewModel.MakoClient.ExchangeCodeAsync(code, verifier);
-            App.AppViewModel.OnTokenRefreshed(tokenResponse);
+            var tokenResponse = await App.Services!.GetRequiredService<MakoClient>().ExchangeCodeAsync(code, verifier);
+            App.Services!.GetRequiredService<IUserSessionService>().OnTokenRefreshed(tokenResponse);
             LoginNavigate();
         }
         catch (TaskCanceledException)
@@ -144,7 +146,7 @@ public partial class LoginPage : IconContentPage
         }
         catch (Exception exception)
         {
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+            App.Services!.GetRequiredService<FileLogger>()
                 .LogError(nameof(OpenWebView_OnClick), exception);
             if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
             {
@@ -164,7 +166,7 @@ public partial class LoginPage : IconContentPage
     {
         var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
         nav.NavigateToHome(removeCurrentPage: true, sourceControl: this);
-        App.AppViewModel.QueueWorkSubscriptionSyncAll();
+        App.Services!.GetRequiredService<IWorkSubscriptionService>().QueueSyncAll();
     }
 
     protected override async void OnLoaded(RoutedEventArgs e)
@@ -184,7 +186,7 @@ public partial class LoginPage : IconContentPage
         }
         catch (Exception exception)
         {
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+            App.Services!.GetRequiredService<FileLogger>()
                 .LogError(nameof(LoginPageViewModel.LoadUsersAsync), exception);
         }
     }

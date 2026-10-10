@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
@@ -64,7 +65,7 @@ public static class ProxyHelper
     }
 
     public static string? GetEffectiveProxyUrl() =>
-        GetEffectiveProxyUrl(App.AppViewModel?.AppSettings?.NetworkSettings);
+        GetEffectiveProxyUrl(App.Services?.GetService<AppSettings>()?.NetworkSettings);
 
     public static string? GetEffectiveProxyUrl(NetworkSettingsGroup? networkSettings)
     {

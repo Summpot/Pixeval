@@ -86,8 +86,8 @@ public partial class DownloadFolderListView : ContentPage, IDisposable
         if (sender is not MenuItem { Tag: DownloadFolderSnapshot folder })
             return;
 
-        if (App.AppViewModel.StorageEngine.GetSubscriptionByHistoryId(folder.SubscriptionId) is { } subscription)
-            App.AppViewModel.QueueWorkSubscriptionSync(subscription);
+        if (App.Services!.GetRequiredService<StorageEngine>().GetSubscriptionByHistoryId(folder.SubscriptionId) is { } subscription)
+            App.Services!.GetRequiredService<IWorkSubscriptionService>().QueueSyncSubscription(subscription);
     }
 
     private static async void RemoveSubscription_OnClicked(object? sender, RoutedEventArgs e)
@@ -95,8 +95,7 @@ public partial class DownloadFolderListView : ContentPage, IDisposable
         if (sender is not MenuItem { Tag: DownloadFolderSnapshot folder })
             return;
 
-        _ = await App.AppViewModel.AppServiceProvider
-            .GetRequiredService<IWorkSubscriptionService>()
+        _ = await App.Services!.GetRequiredService<IWorkSubscriptionService>()
             .TryRemoveAsync(folder.SubscriptionId);
     }
 

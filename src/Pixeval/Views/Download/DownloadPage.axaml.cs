@@ -23,7 +23,7 @@ public partial class DownloadPage : IconTabbedPage, IDisposable
     public DownloadPage()
     {
         InitializeComponent();
-        _viewModel = new DownloadPageViewModel(App.AppViewModel.DownloadManager);
+        _viewModel = new DownloadPageViewModel(App.Services!.GetRequiredService<DownloadManager>());
         DataContext = _viewModel;
 
         _ordinaryView = new(new DownloadItemPageViewModel(_viewModel));

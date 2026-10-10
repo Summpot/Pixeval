@@ -8,6 +8,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.AppManagement.Settings;
 using Pixeval.Collections;
 using Pixeval.Models.Options;
 using Pixeval.Native.Mako;
@@ -19,7 +21,7 @@ public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<str
     where T : class
     where TViewModel : class
 {
-    public FrozenSet<string> CachedBlockedTags { get; private set; } = blockedTags ?? App.AppViewModel.AppSettings.BrowsingExperienceSettings.BlockedTags.ToFrozenSet();
+    public FrozenSet<string> CachedBlockedTags { get; private set; } = blockedTags ?? App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.BlockedTags.ToFrozenSet();
 
     [ObservableProperty]
     public partial bool IsSelecting { get; set; }
@@ -73,7 +75,7 @@ public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<str
 
     public void ResetEngine(IAsyncEnumerable<object>? newEngine, int itemsPerPage = 20, int itemLimit = -1)
     {
-        CachedBlockedTags = [.. App.AppViewModel.AppSettings.BrowsingExperienceSettings.BlockedTags.ToFrozenSet()];
+        CachedBlockedTags = [.. App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.BlockedTags.ToFrozenSet()];
         var typedEngine = newEngine as IAsyncEnumerable<T> ?? (newEngine is not null ? CastEngine(newEngine) : null);
         ResetEngine(typedEngine, static (info, _) => (TViewModel) (object) info, itemsPerPage, itemLimit);
 

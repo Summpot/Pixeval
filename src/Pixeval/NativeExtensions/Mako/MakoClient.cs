@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
 using Pixeval.Services;
-using Pixeval.Views;
 
 namespace Pixeval.Native.Mako;
 
@@ -259,12 +258,6 @@ public partial class MakoClient
     {
         var restrict = privacy is PrivacyPolicy.Private ? "private" : "public";
         return UserFollowing(userId, restrict).ToFetchEngine();
-    }
-
-    public IFetchEngine<User> UserFollower(long? userId = null)
-    {
-        var targetId = userId ?? (PixevalSettings.MyId > 0 ? PixevalSettings.MyId : throw new InvalidOperationException("User is not logged in"));
-        return UserFollower(targetId).ToFetchEngine();
     }
 
     public IFetchEngine<User> UserMyPixiv(long userId) =>

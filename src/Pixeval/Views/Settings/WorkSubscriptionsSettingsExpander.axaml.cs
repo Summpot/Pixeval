@@ -48,7 +48,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
     }
 
     private static IWorkSubscriptionService SubscriptionService =>
-        App.AppViewModel.AppServiceProvider.GetRequiredService<IWorkSubscriptionService>();
+        App.Services!.GetRequiredService<IWorkSubscriptionService>();
 
     private static IReadOnlyList<SymbolComboBoxItem> BookmarkWorkKinds { get; } =
         [.. SymbolComboBoxItem.GetValues<WorkSubscriptionWorkKind>().Where(t => t.Value is WorkSubscriptionWorkKind.Illustration or WorkSubscriptionWorkKind.Novel)];
@@ -67,7 +67,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         Subscriptions.Clear();
         try
         {
-            foreach (var entry in App.AppViewModel.StorageEngine.GetAllSubscriptions())
+            foreach (var entry in App.Services!.GetRequiredService<StorageEngine>().GetAllSubscriptions())
             {
                 token.ThrowIfCancellationRequested();
                 Subscriptions.Add(entry);
@@ -78,7 +78,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         }
         catch (Exception e)
         {
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+            App.Services!.GetRequiredService<FileLogger>()
                 .LogError(nameof(ReloadAsync), e);
         }
     }
@@ -107,13 +107,15 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
             var simpleWorkType = workKind is WorkSubscriptionWorkKind.Novel
                 ? SimpleWorkType.Novel
                 : SimpleWorkType.Illustration;
-            var (detail, first, engine) = await App.AppViewModel.MakoClient.GetWorkSeriesAsync(simpleWorkType, targetId);
-            _ = WorkSubscriptionHelper.TryAddOrUpdateSeries(targetId, workKind, detail, first, engine);
+            var storage = App.Services!.GetRequiredService<StorageEngine>();
+            var (detail, first, engine) = await App.Services!.GetRequiredService<MakoClient>().GetWorkSeriesAsync(simpleWorkType, targetId);
+            _ = WorkSubscriptionHelper.TryAddOrUpdateSeries(targetId, workKind, storage, SubscriptionService, detail, first, engine);
         }
         else
         {
-            var user = (await App.AppViewModel.MakoClient.GetUserFromIdAsync(targetId)).User;
-            _ = WorkSubscriptionHelper.TryAddOrUpdateUser(user, subscriptionType, workKind);
+            var storage = App.Services!.GetRequiredService<StorageEngine>();
+            var user = (await App.Services!.GetRequiredService<MakoClient>().GetUserFromIdAsync(targetId)).User;
+            _ = WorkSubscriptionHelper.TryAddOrUpdateUser(user, subscriptionType, workKind, storage, SubscriptionService);
         }
 
         TargetIdTextBox.Text = "";
@@ -131,13 +133,13 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
 
     private void SyncAllButton_OnClicked(object? sender, RoutedEventArgs e)
     {
-        App.AppViewModel.QueueWorkSubscriptionSyncAll();
+        SubscriptionService.QueueSyncAll();
     }
 
     private void SyncSubscriptionButton_OnClicked(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: WorkSubscriptionRecord item })
-            App.AppViewModel.QueueWorkSubscriptionSync(item);
+            SubscriptionService.QueueSyncSubscription(item);
     }
 
     private void SubscriptionServiceOnSubscriptionUpdated(object? sender, WorkSubscriptionRecord subscription)

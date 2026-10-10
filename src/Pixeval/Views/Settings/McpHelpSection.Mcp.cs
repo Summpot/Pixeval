@@ -11,6 +11,7 @@ using Avalonia;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement;
+using Pixeval.AppManagement.Settings;
 using Pixeval.I18N;
 using Pixeval.Models.McpServer;
 
@@ -46,7 +47,7 @@ public partial class McpHelpSection
         if (_isLoadingMcpTools)
             return;
 
-        var settings = App.AppViewModel.AppSettings.McpSettings;
+        var settings = App.Services!.GetRequiredService<AppSettings>().McpSettings;
         if (!settings.EnableServer)
         {
             McpTools.Clear();
@@ -54,7 +55,7 @@ public partial class McpHelpSection
             return;
         }
 
-        if (App.AppViewModel.AppServiceProvider.GetService<IPixevalMcpService>() is not { } service)
+        if (App.Services!.GetService<IPixevalMcpService>() is not { } service)
         {
             McpTools.Clear();
             McpToolsStatus = I18NManager.GetResource(HelpPageResources.McpToolsStatus.Unavailable);

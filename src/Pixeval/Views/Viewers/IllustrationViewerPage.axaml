@@ -5,6 +5,7 @@
     xmlns:common="using:FluentIcons.Common"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:di="using:Pixeval.Views.Markup"
     xmlns:local="using:Pixeval.Views.Viewers"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
@@ -140,7 +141,7 @@
         <controls:FloatingPaneView
             x:Name="EntryViewerFloatingPaneView"
             Grid.Row="0"
-            IsDocked="{Binding OpenWorkInfo, Source={x:Static views:PixevalSettings.Instance}, Mode=TwoWay}"
+            IsDocked="{Binding OpenWorkInfo, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}, Mode=TwoWay}"
             PaneVerticalAlignment="Top">
             <controls:FloatingPaneView.Pane>
                 <Border Name="FloatingPaneBorder">

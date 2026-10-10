@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Mako;
 using Pixeval.Utilities;
@@ -27,7 +28,7 @@ public partial class SpotlightPage : IconContentPage
 
     private void ChangeSource()
     {
-        ResetEngine(App.AppViewModel.MakoClient.Spotlight().ToFetchEngine());
+        ResetEngine(App.Services!.GetRequiredService<MakoClient>().Spotlight().ToFetchEngine());
     }
 
     private void ResetEngine(IFetchEngine<SpotlightArticle> fetchEngine) =>

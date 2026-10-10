@@ -38,9 +38,10 @@ public sealed partial class ExtensionService : IDisposable
     private readonly HashSet<string> _outdatedExtensionHostUninstallTargets = new(_TargetPathComparer);
     private readonly HashSet<string> _pendingExtensionUninstallTargets;
     private readonly Dictionary<string, Dictionary<string, object?>> _extensionSettings;
+    private readonly AppSettings? _appSettings;
 
     public ExtensionService(FileLogger logger, AppSettings appSettings, bool loadInstalledHosts = true)
-        : this(logger, appSettings.ExtensionSettings,
+        : this(logger, appSettings, appSettings.ExtensionSettings,
             appSettings.PendingExtensionUninstallTargets = new HashSet<string>(appSettings.PendingExtensionUninstallTargets, _TargetPathComparer),
             loadInstalledHosts) { }
 
@@ -49,7 +50,18 @@ public sealed partial class ExtensionService : IDisposable
         Dictionary<string, Dictionary<string, object?>> extensionSettings,
         HashSet<string> pendingExtensionUninstallTargets,
         bool loadInstalledHosts)
+        : this(logger, null, extensionSettings, pendingExtensionUninstallTargets, loadInstalledHosts)
     {
+    }
+
+    internal ExtensionService(
+        FileLogger logger,
+        AppSettings? appSettings,
+        Dictionary<string, Dictionary<string, object?>> extensionSettings,
+        HashSet<string> pendingExtensionUninstallTargets,
+        bool loadInstalledHosts)
+    {
+        _appSettings = appSettings;
         _extensionSettings = extensionSettings;
         _pendingExtensionUninstallTargets = pendingExtensionUninstallTargets;
         if (!loadInstalledHosts) return;
@@ -57,7 +69,7 @@ public sealed partial class ExtensionService : IDisposable
         var failedTargets = PluginEngine.CleanPendingUninstalls([.. pendingExtensionUninstallTargets], AppInfo.ExtensionsFolder);
         pendingExtensionUninstallTargets.Clear();
         foreach (var failed in failedTargets) _pendingExtensionUninstallTargets.Add(failed);
-        AppInfo.SaveAppSettings(App.AppViewModel.AppSettings);
+        AppInfo.SaveAppSettings(_appSettings);
 
         foreach (var host in EnumerateLocalExtensionHosts(AppInfo.ExtensionsFolder))
         {
@@ -95,7 +107,7 @@ public sealed partial class ExtensionService : IDisposable
         if (model.UninstallTargetRelativePath.Length is 0) return false;
         _ = _pendingExtensionUninstallTargets.Add(model.UninstallTargetRelativePath);
         model.IsPendingUninstall = true;
-        AppInfo.SaveAppSettings(App.AppViewModel.AppSettings);
+        AppInfo.SaveAppSettings(_appSettings);
         return true;
     }
 
@@ -104,7 +116,7 @@ public sealed partial class ExtensionService : IDisposable
         if (model.UninstallTargetRelativePath.Length is 0) return false;
         _ = _pendingExtensionUninstallTargets.Remove(model.UninstallTargetRelativePath);
         model.IsPendingUninstall = false;
-        AppInfo.SaveAppSettings(App.AppViewModel.AppSettings);
+        AppInfo.SaveAppSettings(_appSettings);
         return true;
     }
 
@@ -124,7 +136,7 @@ public sealed partial class ExtensionService : IDisposable
         }
         foreach (var model in HostModels)
             model.IsPendingUninstall = _pendingExtensionUninstallTargets.Contains(model.UninstallTargetRelativePath);
-        AppInfo.SaveAppSettings(App.AppViewModel.AppSettings);
+        AppInfo.SaveAppSettings(_appSettings);
         return count;
     }
 

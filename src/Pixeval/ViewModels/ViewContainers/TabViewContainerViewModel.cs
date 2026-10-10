@@ -23,6 +23,7 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
     private readonly IUserSessionService _sessionService;
     private readonly MakoClient _makoClient;
     private readonly INavigationService _navigationService;
+    private readonly NavigationMenuDocument _navigationMenu;
     private NavigationConfiguration? _navigationConfiguration;
     private CancellationTokenSource? _avatarLoadCancellationTokenSource;
     private bool _isDisposed;
@@ -35,20 +36,23 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
     public partial bool CanCreateNewTab { get; private set; }
 
     public TabViewContainerViewModel() : this(
-        App.Services?.GetService<IUserSessionService>() ?? App.AppViewModel.AppServiceProvider.GetRequiredService<IUserSessionService>(),
-        App.Services?.GetService<MakoClient>() ?? App.AppViewModel.MakoClient,
-        App.Services?.GetService<INavigationService>() ?? new NavigationService())
+        App.Services!.GetRequiredService<IUserSessionService>(),
+        App.Services!.GetRequiredService<MakoClient>(),
+        App.Services!.GetRequiredService<INavigationService>(),
+        App.Services!.GetRequiredService<NavigationMenuDocument>())
     {
     }
 
     public TabViewContainerViewModel(
         IUserSessionService sessionService,
         MakoClient makoClient,
-        INavigationService navigationService)
+        INavigationService navigationService,
+        NavigationMenuDocument navigationMenu)
     {
         _sessionService = sessionService;
         _makoClient = makoClient;
         _navigationService = navigationService;
+        _navigationMenu = navigationMenu;
         RebuildNavigation();
         OnUserRefreshed(_sessionService.CurrentUser);
         _sessionService.UserRefreshed += OnUserRefreshed;
@@ -56,7 +60,7 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
 
     public void RebuildNavigation()
     {
-        _navigationConfiguration = NavigationYamlParser.ParseOrDefault(App.AppViewModel.NavigationMenuYamlText);
+        _navigationConfiguration = NavigationYamlParser.ParseOrDefault(_navigationMenu.Text);
         HeaderNavigationItems.Clear();
         FooterNavigationItems.Clear();
         foreach (var item in _navigationConfiguration.HeaderItems)

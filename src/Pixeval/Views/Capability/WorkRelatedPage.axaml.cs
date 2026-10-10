@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Interactivity;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 
@@ -91,7 +92,7 @@ public partial class WorkRelatedPage : IconContentPage
     {
         var engine = !IsVisible || _id is 0
             ? (IAsyncEnumerable<object>) AsyncEnumerable.Empty<object>()
-            : App.AppViewModel.MakoClient.WorkRelated(_id, _simpleWorkType);
+            : App.Services!.GetRequiredService<MakoClient>().WorkRelated(_id, _simpleWorkType);
         WorkContainer.ResetEngine(engine);
     }
 }

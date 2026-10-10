@@ -3,7 +3,10 @@
 
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement;
+using Pixeval.AppManagement.Settings;
+using Pixeval.Services;
 using Pixeval.I18N;
 using Pixeval.Native.Config;
 using Pixeval.Utilities;
@@ -68,7 +71,7 @@ public sealed partial class HomePage
     {
         var rows = DecimalToPositiveInt(decimal.Clamp(ViewModel.GridRowsValue, MinimumGridSize, MaximumGridSize));
         var columns = DecimalToPositiveInt(decimal.Clamp(ViewModel.GridColumnsValue, MinimumGridSize, MaximumGridSize));
-        var settings = App.AppViewModel.AppSettings.ApplicationSettings.HomePage;
+        var settings = App.Services!.GetRequiredService<AppSettings>().ApplicationSettings.HomePage;
         if (settings.HomePageRows == rows && settings.HomePageColumns == columns)
             return;
 
@@ -266,7 +269,7 @@ public sealed partial class HomePage
 
     private static void SaveLayout()
     {
-        AppInfo.SaveAppSettings(App.AppViewModel.AppSettings);
-        AppInfo.SaveHomePageCards(App.AppViewModel.HomePageCards);
+        AppInfo.SaveAppSettings(App.Services!.GetRequiredService<AppSettings>());
+        AppInfo.SaveHomePageCards(App.Services!.GetRequiredService<HomePageCardSession>().Cards);
     }
 }

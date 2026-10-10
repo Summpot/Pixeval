@@ -5,6 +5,8 @@
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Views.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:di="using:Pixeval.Views.Markup"
+    xmlns:services="using:Pixeval.Services"
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:local="using:Pixeval.Views.ViewContainers"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
@@ -14,7 +16,6 @@
     xmlns:tabView="using:TabView.Avalonia"
     xmlns:utilities="using:Pixeval.Utilities"
     xmlns:viewModels="using:Pixeval.ViewModels"
-    xmlns:views="using:Pixeval.Views"
     x:DataType="{x:Type viewModels:TabViewContainerViewModel}"
     x:Name="Root"
     mc:Ignorable="d"
@@ -49,7 +50,7 @@
             TabClosing="TabsView_OnTabClosing">
             <tabView:TabsView.ShowDefaultAddButton>
                 <MultiBinding Converter="{x:Static BoolConverters.And}">
-                    <Binding Path="IsLoggedIn" Source="{x:Static views:PixevalSettings.Instance}" />
+                    <Binding Path="IsLoggedIn" DataType="{x:Type services:IUserSessionService}" Source="{di:Service Type={x:Type services:IUserSessionService}}" />
                     <Binding Path="CanCreateNewTab" />
                 </MultiBinding>
             </tabView:TabsView.ShowDefaultAddButton>
@@ -77,18 +78,18 @@
                                 Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
                                 Header="{Binding IdText, StringFormat='ID: {0}'}"
                                 Icon="{markup:SymbolIcon Guest}"
-                                IsEnabled="{Binding IsLoggedIn, Source={x:Static views:PixevalSettings.Instance}}"
+                                IsEnabled="{Binding IsLoggedIn, Source={di:Service Type={x:Type services:IUserSessionService}}, DataType={x:Type services:IUserSessionService}}"
                                 Tag="{Binding IdText}" />
                             <MenuItem
                                 Command="{Binding OpenMyPageCommand}"
                                 Header="{I18N {x:Static pixeval:MainPageResources+OpenMyPageItem.Text}}"
                                 Icon="{markup:SymbolIcon Open}"
-                                IsEnabled="{Binding IsLoggedIn, Source={x:Static views:PixevalSettings.Instance}}" />
+                                IsEnabled="{Binding IsLoggedIn, Source={di:Service Type={x:Type services:IUserSessionService}}, DataType={x:Type services:IUserSessionService}}" />
                             <MenuItem
                                 Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                                 Header="{I18N {x:Static pixeval:MainPageResources+OpenMyPageInBrowserItem.Text}}"
                                 Icon="{markup:SymbolIcon GlobeArrowUp}"
-                                IsEnabled="{Binding IsLoggedIn, Source={x:Static views:PixevalSettings.Instance}}"
+                                IsEnabled="{Binding IsLoggedIn, Source={di:Service Type={x:Type services:IUserSessionService}}, DataType={x:Type services:IUserSessionService}}"
                                 Tag="{Binding Url}" />
                             <Separator />
                             <!--  该项不显示  -->
@@ -97,7 +98,7 @@
                                 Header="{I18N {x:Static pixeval:MainPageResources+RestrictedModeItem.Text}}"
                                 Icon="{markup:SymbolIcon PersonProhibited}"
                                 IsChecked="{Binding RestrictedCache}"
-                                IsEnabled="{Binding IsLoggedIn, Source={x:Static views:PixevalSettings.Instance}}"
+                                IsEnabled="{Binding IsLoggedIn, Source={di:Service Type={x:Type services:IUserSessionService}}, DataType={x:Type services:IUserSessionService}}"
                                 IsVisible="False"
                                 ToggleType="CheckBox" />
                             <MenuItem
@@ -105,13 +106,13 @@
                                 Header="{I18N {x:Static pixeval:MainPageResources+AiShowItem.Text}}"
                                 Icon="{markup:SymbolIcon Bot}"
                                 IsChecked="{Binding AiShowCache}"
-                                IsEnabled="{Binding IsLoggedIn, Source={x:Static views:PixevalSettings.Instance}}"
+                                IsEnabled="{Binding IsLoggedIn, Source={di:Service Type={x:Type services:IUserSessionService}}, DataType={x:Type services:IUserSessionService}}"
                                 ToggleType="CheckBox" />
                             <MenuItem
                                 Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                                 Header="{I18N {x:Static pixeval:MainPageResources+MoreViewingSettingsItem.Text}}"
                                 Icon="{markup:SymbolIcon MoreHorizontal}"
-                                IsEnabled="{Binding IsLoggedIn, Source={x:Static views:PixevalSettings.Instance}}"
+                                IsEnabled="{Binding IsLoggedIn, Source={di:Service Type={x:Type services:IUserSessionService}}, DataType={x:Type services:IUserSessionService}}"
                                 Tag="https://www.pixiv.net/settings/viewing" />
                             <Separator />
                             <MenuItem
@@ -137,7 +138,7 @@
                                 <Button.IsEnabled>
                                     <MultiBinding Converter="{x:Static BoolConverters.Or}">
                                         <Binding Path="!NeedLogin" />
-                                        <Binding Path="IsLoggedIn" Source="{x:Static views:PixevalSettings.Instance}" />
+                                        <Binding Path="IsLoggedIn" DataType="{x:Type services:IUserSessionService}" Source="{di:Service Type={x:Type services:IUserSessionService}}" />
                                     </MultiBinding>
                                 </Button.IsEnabled>
                                 <Grid RowDefinitions="Auto,Auto" RowSpacing="5">
@@ -159,7 +160,7 @@
                                 <Button.IsEnabled>
                                     <MultiBinding Converter="{x:Static BoolConverters.Or}">
                                         <Binding Path="!NeedLogin" />
-                                        <Binding Path="IsLoggedIn" Source="{x:Static views:PixevalSettings.Instance}" />
+                                        <Binding Path="IsLoggedIn" DataType="{x:Type services:IUserSessionService}" Source="{di:Service Type={x:Type services:IUserSessionService}}" />
                                     </MultiBinding>
                                 </Button.IsEnabled>
                                 <Grid RowDefinitions="Auto,Auto" RowSpacing="5">
@@ -190,7 +191,7 @@
                                                     <Setter.Value>
                                                         <MultiBinding Converter="{x:Static BoolConverters.Or}">
                                                             <Binding Path="!NeedLogin" />
-                                                            <Binding Path="IsLoggedIn" Source="{x:Static views:PixevalSettings.Instance}" />
+                                                            <Binding Path="IsLoggedIn" DataType="{x:Type services:IUserSessionService}" Source="{di:Service Type={x:Type services:IUserSessionService}}" />
                                                         </MultiBinding>
                                                     </Setter.Value>
                                                 </Setter>

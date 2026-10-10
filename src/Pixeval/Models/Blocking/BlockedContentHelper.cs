@@ -4,9 +4,12 @@
 using System;
 using System.Collections.Frozen;
 using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Booru;
 using Pixeval.Native.Mako;
+using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 
 namespace Pixeval.Models.Blocking;
@@ -17,12 +20,16 @@ public readonly record struct BlockedContentSnapshot(
 
 public static class BlockedContentHelper
 {
-    public static BlockedContentSnapshot CaptureSnapshot()
+    public static BlockedContentSnapshot CaptureSnapshot() =>
+        CaptureSnapshot(
+            App.Services!.GetRequiredService<AppSettings>(),
+            App.Services!.GetRequiredService<StorageEngine>());
+
+    public static BlockedContentSnapshot CaptureSnapshot(AppSettings settings, StorageEngine storageEngine)
     {
-        var appViewModel = App.AppViewModel;
-        var blockedTags = appViewModel.AppSettings.BrowsingExperienceSettings.BlockedTags
+        var blockedTags = settings.BrowsingExperienceSettings.BlockedTags
             .ToFrozenSet(StringComparer.Ordinal);
-        var blockedUsers = appViewModel.StorageEngine.GetAllBlockedUsers()
+        var blockedUsers = storageEngine.GetAllBlockedUsers()
             .Select(u => u.Id)
             .ToFrozenSet();
         return new(blockedTags, blockedUsers);
@@ -73,7 +80,7 @@ public static class BlockedContentHelper
         try
         {
             var record = BlockedContentModelHelper.CreateBlockedUserRecord(user);
-            App.AppViewModel.StorageEngine.AddOrUpdateBlockedUser(record.Id, record.UserName, record.AvatarUrl, record.Account);
+            App.Services!.GetRequiredService<StorageEngine>().AddOrUpdateBlockedUser(record.Id, record.UserName, record.AvatarUrl, record.Account);
             return true;
         }
         catch

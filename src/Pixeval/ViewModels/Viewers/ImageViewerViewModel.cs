@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Models;
 using Pixeval.Native.Booru;
 using Pixeval.Native.Mako;
@@ -34,7 +35,7 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
 
         PageCount = Images.Count;
 
-        App.AppViewModel.AddBrowseHistory(thumbnailViewModel);
+        App.Services!.GetRequiredService<StorageEngine>().HistoryRepository.AddBrowseHistory(thumbnailViewModel);
     }
 
     public object ThumbnailViewModel { get; set; }

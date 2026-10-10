@@ -22,7 +22,7 @@ public partial class SeriesContainer : UserControl
     private readonly IWorkEntry? _firstWork;
 
     private static IWorkSubscriptionService SubscriptionService =>
-        App.AppViewModel.AppServiceProvider.GetRequiredService<IWorkSubscriptionService>();
+        App.Services!.GetRequiredService<IWorkSubscriptionService>();
 
     public SeriesContainer()
     {
@@ -75,12 +75,12 @@ public partial class SeriesContainer : UserControl
 
     private void WorkContainer_OnRefreshRequested(object? sender, RoutedEventArgs e) => ChangeSource();
 
-    private void ChangeSource() => SetEngine(App.AppViewModel.MakoClient.WorkSeries(_workType, _seriesId));
+    private void ChangeSource() => SetEngine(App.Services!.GetRequiredService<MakoClient>().WorkSeries(_workType, _seriesId));
 
     private void SetEngine(IFetchEngine<IWorkEntry> engine)
     {
         WorkContainer.ResetEngine(engine);
-        App.AppViewModel.QueueWorkSubscriptionSyncCurrentSource(
+        SubscriptionService.QueueSyncCurrentSource(
             _seriesId,
             WorkSubscriptionType.Series,
             GetSubscriptionWorkKind(),
@@ -94,7 +94,13 @@ public partial class SeriesContainer : UserControl
         _ = await WorkSubscriptionButtonHelper.RunAsync(
             AddSubscriptionButton,
             RemoveSubscriptionButton,
-            () => Task.FromResult(WorkSubscriptionHelper.TryAddOrUpdateSeries(_seriesId, workKind, _seriesDetail, _firstWork)),
+            () => Task.FromResult(WorkSubscriptionHelper.TryAddOrUpdateSeries(
+                _seriesId,
+                workKind,
+                App.Services!.GetRequiredService<StorageEngine>(),
+                SubscriptionService,
+                _seriesDetail,
+                _firstWork)),
             UpdateSubscriptionButtons);
     }
 

@@ -237,17 +237,13 @@ public class NavigationService : INavigationService
     {
         var session = (_serviceProvider ?? App.Services)?.GetService<IUserSessionService>();
         return session?.CurrentUserEntity
-            ?? PixevalSettings.MyUser
             ?? new User(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []);
     }
 
     private long CurrentUserId()
     {
         var session = (_serviceProvider ?? App.Services)?.GetService<IUserSessionService>();
-        if (session is { CurrentUserId: > 0 })
-            return session.CurrentUserId;
-
-        return PixevalSettings.MyId;
+        return session is { CurrentUserId: > 0 } ? session.CurrentUserId : 0;
     }
 
     #region Strongly-Typed Domain Navigation

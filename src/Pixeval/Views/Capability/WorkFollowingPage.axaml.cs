@@ -3,6 +3,8 @@
 
 using System;
 using Avalonia.Interactivity;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.AppManagement.Settings;
 using Pixeval.Controls;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -11,7 +13,7 @@ namespace Pixeval.Views.Capability;
 
 public partial class WorkFollowingPage : IconContentPage
 {
-    public WorkFollowingPage() : this(PixevalSettings.SimpleWorkType, PrivacyPolicy.Public)
+    public WorkFollowingPage() : this(App.Services!.GetRequiredService<AppSettings>().SearchSettings.DefaultSimpleWorkType, PrivacyPolicy.Public)
     {
     }
 
@@ -40,7 +42,7 @@ public partial class WorkFollowingPage : IconContentPage
     {
         var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
         var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>();
-        var engine = App.AppViewModel.MakoClient.WorkFollowing(workType, privacy);
+        var engine = App.Services!.GetRequiredService<MakoClient>().WorkFollowing(workType, privacy);
         WorkContainer.ResetEngine(engine);
     }
 }

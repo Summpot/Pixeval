@@ -22,7 +22,7 @@ public partial class UserFollowingPage : IconContentPage
         AvaloniaProperty.Register<UserFollowingPage, long>(nameof(UserId));
 
     private static long CurrentUserId =>
-        App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? PixevalSettings.MyId;
+        App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? 0;
 
     private long _userId;
     private bool _hasViewModel;
@@ -107,7 +107,7 @@ public partial class UserFollowingPage : IconContentPage
             return;
         }
         var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>();
-        var makoClient = App.Services?.GetService<MakoClient>() ?? App.AppViewModel.MakoClient;
+        var makoClient = App.Services!.GetRequiredService<MakoClient>();
         ResetEngine(makoClient.UserFollowing(_userId, privacy));
     }
 

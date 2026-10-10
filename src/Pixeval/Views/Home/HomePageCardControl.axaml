@@ -5,6 +5,7 @@
     xmlns:cfg="using:Pixeval.Native.Config"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:di="using:Pixeval.Views.Markup"
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:homeViewModels="using:Pixeval.ViewModels.Home"
     xmlns:local="using:Pixeval.Views.Home"
@@ -120,7 +121,7 @@
             ClipToBounds="True"
             CornerRadius="16">
             <DockPanel VerticalSpacing="16">
-                <Border DockPanel.Dock="Bottom" IsVisible="{Binding !HideHomePageCardTitle, Source={x:Static views:PixevalSettings.Instance}}">
+                <Border DockPanel.Dock="Bottom" IsVisible="{Binding !HideHomePageCardTitle, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}}">
                     <DockPanel>
                         <Button
                             Width="28"

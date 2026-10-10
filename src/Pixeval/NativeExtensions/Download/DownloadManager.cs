@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net.Http;
 using Avalonia;
+using Microsoft.Extensions.DependencyInjection;
 using Avalonia.Threading;
 using Pixeval.Utilities.Network;
 
@@ -50,7 +51,7 @@ public partial class DownloadManager
 
     public static DownloadNetworkOptions GetEffectiveNetworkOptions()
     {
-        var networkSettings = App.AppViewModel?.AppSettings?.NetworkSettings;
+        var networkSettings = App.Services?.GetService<AppManagement.Settings.AppSettings>()?.NetworkSettings;
         var proxyUrl = ProxyHelper.GetEffectiveProxyUrl(networkSettings);
 
         var staticDomainIps = new Dictionary<string, List<string>>();

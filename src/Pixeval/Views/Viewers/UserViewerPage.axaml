@@ -5,6 +5,7 @@
     xmlns:capability="using:Pixeval.Views.Capability"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:di="using:Pixeval.Views.Markup"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
@@ -32,7 +33,7 @@
                 controls:Source.BackgroundCache="{Binding BackgroundUrl}"
                 DockPanel.Dock="Top"
                 ExpandDirection="Up"
-                IsExpanded="{Binding OpenUserInfo, Source={x:Static views:PixevalSettings.Instance}, Mode=TwoWay}"
+                IsExpanded="{Binding OpenUserInfo, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}, Mode=TwoWay}"
                 PropertyChanged="UserInfoExpander_OnPropertyChanged">
                 <Expander.Header>
                     <DockPanel>

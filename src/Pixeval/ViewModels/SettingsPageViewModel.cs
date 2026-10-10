@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Extensions;
+using Pixeval.Services;
 using Pixeval.Models.Options;
 using Pixeval.Models.Settings;
 using Pixeval.Models.Subscriptions;
@@ -27,7 +28,7 @@ public class SettingsPageViewModel : ViewModelBase
     private readonly ExtensionService _extensionService;
     private readonly DownloadManager _downloadManager;
     private readonly IServiceProvider _serviceProvider;
-    private readonly AppViewModel? _appViewModel;
+    private readonly INetworkRuntime _networkRuntime;
 
     public string CurrentVersion => AppInfo.AppVersion.CurrentVersionShortText;
 
@@ -48,11 +49,11 @@ public class SettingsPageViewModel : ViewModelBase
     public IReadOnlyList<ExtensionSettingsGroup> ExtensionGroups => _extensionService.SettingsGroups;
 
     public SettingsPageViewModel() : this(
-        App.Services?.GetService<AppSettings>() ?? App.AppViewModel.AppSettings,
-        App.Services?.GetService<ExtensionService>() ?? App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>(),
-        App.Services?.GetService<DownloadManager>() ?? App.AppViewModel.DownloadManager,
-        App.Services ?? App.AppViewModel.AppServiceProvider,
-        App.AppViewModel)
+        App.Services!.GetRequiredService<AppSettings>(),
+        App.Services!.GetRequiredService<ExtensionService>(),
+        App.Services!.GetRequiredService<DownloadManager>(),
+        App.Services!,
+        App.Services!.GetRequiredService<INetworkRuntime>())
     {
     }
 
@@ -61,13 +62,13 @@ public class SettingsPageViewModel : ViewModelBase
         ExtensionService extensionService,
         DownloadManager downloadManager,
         IServiceProvider serviceProvider,
-        AppViewModel? appViewModel = null)
+        INetworkRuntime networkRuntime)
     {
         _appSettings = appSettings;
         _extensionService = extensionService;
         _downloadManager = downloadManager;
         _serviceProvider = serviceProvider;
-        _appViewModel = appViewModel ?? App.AppViewModel;
+        _networkRuntime = networkRuntime;
         LocalGroups = BuildLocalGroups();
     }
 
@@ -102,7 +103,7 @@ public class SettingsPageViewModel : ViewModelBase
             .NewGroup(t => t.NetworkSettings, group => group
                 .Int(t => t.ApiRequestCooldown, 0, 5000, 100, entry => entry.ValueChanged += _ =>
                 {
-                    _appViewModel?.UpdateMakoNetworkOptions();
+                    _networkRuntime.UpdateNetworkOptions();
                 })
                 .DomainFronting(t => t.PixivDomainFronting, t => t.EnablePixivDomainFronting, entry =>
                         entry.Enum(t => t.PixivDomainFrontingType)
@@ -114,9 +115,9 @@ public class SettingsPageViewModel : ViewModelBase
                             .IPSet(t => t.PixivWebApiNameResolver),
                     entry => entry.MainValue.ValueChanged += t =>
                     {
-                        _appViewModel?.SetNameResolvers();
+                        _networkRuntime.AttachNameResolverHooks();
                         _downloadManager.UpdateNetworkOptions();
-                        _appViewModel?.UpdateMakoNetworkOptions();
+                        _networkRuntime.UpdateNetworkOptions();
                     })
                 .DomainFronting(t => t.GitHubDomainFronting, t => t.EnableGitHubDomainFronting, entry => entry
                     .IPSet(t => t.GitHubNameResolver)
@@ -128,7 +129,7 @@ public class SettingsPageViewModel : ViewModelBase
                 .Proxy(entry => entry.ProxyChanged += t =>
                 {
                     _downloadManager.UpdateNetworkOptions();
-                    _appViewModel?.UpdateMakoNetworkOptions();
+                    _networkRuntime.UpdateNetworkOptions();
                 })
                 .String(t => t.MirrorHost)
                 .String(t => t.WebCookie))

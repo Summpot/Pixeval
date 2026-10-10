@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.I18N;
 using Pixeval.Models.Pixiv;
@@ -79,7 +80,7 @@ public partial class WorkSearchResultPage : IconContentPage
         {
             if (type is SimpleWorkType.Novel)
             {
-                var novels = await App.AppViewModel.MakoClient.PopularPreviewNovelAsync(word, null, null, null, null);
+                var novels = await App.Services!.GetRequiredService<MakoClient>().PopularPreviewNovelAsync(word, null, null, null, null);
                 if (novels.Count > 0)
                 {
                     PopularPreviewItemsControl.ItemsSource = novels;
@@ -89,7 +90,7 @@ public partial class WorkSearchResultPage : IconContentPage
             }
             else
             {
-                var illusts = await App.AppViewModel.MakoClient.PopularPreviewIllustAsync(word, null, null, null, null);
+                var illusts = await App.Services!.GetRequiredService<MakoClient>().PopularPreviewIllustAsync(word, null, null, null, null);
                 if (illusts.Count > 0)
                 {
                     PopularPreviewItemsControl.ItemsSource = illusts;
@@ -123,13 +124,13 @@ public partial class WorkSearchResultPage : IconContentPage
     {
         IAsyncEnumerable<object> engine = (_illustrationArguments, _novelArguments) switch
         {
-            (null, null) => App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<object>()),
-            (_, null) => App.AppViewModel.MakoClient.IllustrationSearch(_illustrationArguments!),
-            (null, _) => App.AppViewModel.MakoClient.NovelSearch(_novelArguments!),
+            (null, null) => App.Services!.GetRequiredService<MakoClient>().Computed(AsyncEnumerable.Empty<object>()),
+            (_, null) => App.Services!.GetRequiredService<MakoClient>().IllustrationSearch(_illustrationArguments!),
+            (null, _) => App.Services!.GetRequiredService<MakoClient>().NovelSearch(_novelArguments!),
             _ => SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>() switch
             {
-                SimpleWorkType.Novel => App.AppViewModel.MakoClient.NovelSearch(_novelArguments!),
-                _ => App.AppViewModel.MakoClient.IllustrationSearch(_illustrationArguments!),
+                SimpleWorkType.Novel => App.Services!.GetRequiredService<MakoClient>().NovelSearch(_novelArguments!),
+                _ => App.Services!.GetRequiredService<MakoClient>().IllustrationSearch(_illustrationArguments!),
             }
         };
 

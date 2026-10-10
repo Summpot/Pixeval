@@ -3,86 +3,53 @@
 
 using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
-using Pixeval.Models.Options;
-using Pixeval.Models.Pixiv;
-using Pixeval.Native.Mako;
 using Pixeval.ViewModels;
 
 namespace Pixeval.Views;
 
 public class PixevalSettings : ViewModelBase
 {
-    public static AppSettings Settings => App.AppViewModel.AppSettings;
+    private readonly AppSettings _settings;
 
-    public static WorkType WorkType => Settings.SearchSettings.WorkType;
-
-    public static SimpleWorkType SimpleWorkType => Settings.SearchSettings.DefaultSimpleWorkType;
-
-    public static ThumbnailLayoutType LayoutType => Settings.BrowsingExperienceSettings.ThumbnailLayout.ThumbnailLayoutType;
-
-    public static double IllustrationLinedFlowItemHeight => Settings.BrowsingExperienceSettings.ThumbnailLayout.IllustrationLinedFlowItemHeight;
-
-    public static double IllustrationGridItemSize => Settings.BrowsingExperienceSettings.ThumbnailLayout.IllustrationGridItemSize;
-
-    public static double IllustrationGridLineSize => Settings.BrowsingExperienceSettings.ThumbnailLayout.IllustrationGridLineSize;
-
-    public static double IllustrationMasonryColumnWidth => Settings.BrowsingExperienceSettings.ThumbnailLayout.IllustrationMasonryColumnWidth;
-
-    public static TokenUser? Me => App.AppViewModel.MakoClient.GetUser();
-
-    public static long MyId => long.TryParse(Me?.Id, out var id) ? id : 0;
-
-    public static User? MyUser => Me is { } u
-        ? new User(MyId, u.Name, u.Account, u.ProfileImageUrls, false, null)
-        : null;
-
-    public static User? MyUserBasicInfo => MyUser;
-
-    public static PixevalSettings Instance { get; } = new();
-
-    public bool IsLoggedIn => App.AppViewModel.MakoClient.GetUser() is not null;
-
-    public void OnIsLoggedInChanged() => OnPropertyChanged(nameof(IsLoggedIn));
+    public PixevalSettings(AppSettings settings) => _settings = settings;
 
     public bool OpenWorkInfo
     {
-        get => Settings.BrowsingExperienceSettings.OpenWorkInfoByDefault;
+        get => _settings.BrowsingExperienceSettings.OpenWorkInfoByDefault;
         set
         {
-            // 仅更新设置
-            Settings.BrowsingExperienceSettings.OpenWorkInfoByDefault = value;
-            AppInfo.SaveAppSettings(Settings);
+            _settings.BrowsingExperienceSettings.OpenWorkInfoByDefault = value;
+            AppInfo.SaveAppSettings(_settings);
         }
     }
 
     public bool OpenUserInfo
     {
-        get => Settings.BrowsingExperienceSettings.OpenUserInfoByDefault;
+        get => _settings.BrowsingExperienceSettings.OpenUserInfoByDefault;
         set
         {
-            // 仅更新设置
-            Settings.BrowsingExperienceSettings.OpenUserInfoByDefault = value;
-            AppInfo.SaveAppSettings(Settings);
+            _settings.BrowsingExperienceSettings.OpenUserInfoByDefault = value;
+            AppInfo.SaveAppSettings(_settings);
         }
     }
 
     public bool HideHomePageCardTitle
     {
-        get => Settings.ApplicationSettings.HomePage.HideHomePageCardTitle;
-        set => SetProperty(Settings.ApplicationSettings.HomePage.HideHomePageCardTitle, value, Settings.ApplicationSettings.HomePage, (setting, v) =>
+        get => _settings.ApplicationSettings.HomePage.HideHomePageCardTitle;
+        set => SetProperty(_settings.ApplicationSettings.HomePage.HideHomePageCardTitle, value, _settings.ApplicationSettings.HomePage, (setting, v) =>
         {
             setting.HideHomePageCardTitle = v;
-            AppInfo.SaveAppSettings(Settings);
+            AppInfo.SaveAppSettings(_settings);
         });
     }
 
     public bool HideHomePageToolbar
     {
-        get => Settings.ApplicationSettings.HomePage.HideHomePageToolbar;
-        set => SetProperty(Settings.ApplicationSettings.HomePage.HideHomePageToolbar, value, Settings.ApplicationSettings.HomePage, (setting, v) =>
+        get => _settings.ApplicationSettings.HomePage.HideHomePageToolbar;
+        set => SetProperty(_settings.ApplicationSettings.HomePage.HideHomePageToolbar, value, _settings.ApplicationSettings.HomePage, (setting, v) =>
         {
             setting.HideHomePageToolbar = v;
-            AppInfo.SaveAppSettings(Settings);
+            AppInfo.SaveAppSettings(_settings);
         });
     }
 }

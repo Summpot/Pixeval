@@ -7,7 +7,8 @@
     xmlns:entry="using:Pixeval.Views.Entry"
     xmlns:local="using:Pixeval.Views.Work"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:views="using:Pixeval.Views"
+    xmlns:di="using:Pixeval.Views.Markup"
+    xmlns:settings="using:Pixeval.AppManagement.Settings"
     xmlns:vm="using:Pixeval.ViewModels"
     xmlns:mako="using:Pixeval.Native.Mako"
     xmlns:booru="using:Pixeval.Native.Booru"
@@ -53,7 +54,7 @@
                 <Setter.Value>
                     <ItemsPanelTemplate>
                         <controls:VirtualizingWrapPanel
-                            ItemHeight="{x:Static views:PixevalSettings.IllustrationLinedFlowItemHeight}"
+                            ItemHeight="{Binding BrowsingExperienceSettings.ThumbnailLayout.IllustrationLinedFlowItemHeight, Source={di:Service Type={x:Type settings:AppSettings}}, DataType={x:Type settings:AppSettings}, Mode=OneTime}"
                             ItemSpacing="5"
                             ItemsAlignment="Stretch"
                             LineSpacing="5" />
@@ -75,10 +76,10 @@
                 <Setter.Value>
                     <ItemsPanelTemplate>
                         <controls:VirtualizingAdaptiveGrid
-                            ItemSize="{x:Static views:PixevalSettings.IllustrationGridItemSize}"
+                            ItemSize="{Binding BrowsingExperienceSettings.ThumbnailLayout.IllustrationGridItemSize, Source={di:Service Type={x:Type settings:AppSettings}}, DataType={x:Type settings:AppSettings}, Mode=OneTime}"
                             ItemSpacing="5"
                             ItemsAlignment="Stretch"
-                            LineSize="{x:Static views:PixevalSettings.IllustrationGridLineSize}"
+                            LineSize="{Binding BrowsingExperienceSettings.ThumbnailLayout.IllustrationGridLineSize, Source={di:Service Type={x:Type settings:AppSettings}}, DataType={x:Type settings:AppSettings}, Mode=OneTime}"
                             LineSpacing="5" />
                     </ItemsPanelTemplate>
                 </Setter.Value>
@@ -104,7 +105,7 @@
                     <ItemsPanelTemplate>
                         <controls:VirtualizingMasonryPanel
                             ColumnSpacing="5"
-                            ColumnWidth="{x:Static views:PixevalSettings.IllustrationMasonryColumnWidth}"
+                            ColumnWidth="{Binding BrowsingExperienceSettings.ThumbnailLayout.IllustrationMasonryColumnWidth, Source={di:Service Type={x:Type settings:AppSettings}}, DataType={x:Type settings:AppSettings}, Mode=OneTime}"
                             RowSpacing="5" />
                     </ItemsPanelTemplate>
                 </Setter.Value>

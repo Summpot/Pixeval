@@ -54,12 +54,15 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     private readonly MakoClient? _makoClient;
     private readonly IUserSessionService? _userSessionService;
 
+    private static MakoClient? ResolveMakoClient(MakoClient? makoClient) =>
+        makoClient ?? (App.Services is { } services ? services.GetRequiredService<MakoClient>() : null);
+
     public UserViewerPageViewModel(
         SingleUserResponse userDetail,
         MakoClient? makoClient = null,
         IUserSessionService? userSessionService = null)
     {
-        _makoClient = makoClient ?? App.Services?.GetService<MakoClient>() ?? App.AppViewModel?.MakoClient;
+        _makoClient = ResolveMakoClient(makoClient);
         _userSessionService = userSessionService ?? App.Services?.GetService<IUserSessionService>();
         Id = userDetail.User.Id;
         UserDetail = userDetail;
@@ -70,7 +73,7 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         MakoClient? makoClient = null,
         IUserSessionService? userSessionService = null)
     {
-        _makoClient = makoClient ?? App.Services?.GetService<MakoClient>() ?? App.AppViewModel?.MakoClient;
+        _makoClient = ResolveMakoClient(makoClient);
         _userSessionService = userSessionService ?? App.Services?.GetService<IUserSessionService>();
         Id = userId;
         _ = LoadUserAsync(userId);
@@ -137,7 +140,7 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private bool CanFollow => Id != (_userSessionService?.CurrentUserId ?? PixevalSettings.MyId);
+    private bool CanFollow => Id != (_userSessionService?.CurrentUserId ?? 0);
 
     private bool CanBlockUser => UserDetail is { UserEntity: var user }
                                  && !BlockedContentHelper.IsBlocked(user);

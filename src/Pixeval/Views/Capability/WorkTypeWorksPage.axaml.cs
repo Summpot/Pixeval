@@ -9,6 +9,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
+using Pixeval.AppManagement.Settings;
 using Pixeval.Controls;
 using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
@@ -48,7 +49,7 @@ public abstract partial class WorkTypeWorksPage : IconContentPage
     protected void ChangeSource()
     {
         var workType = WorkTypeComboBox.GetSelectedValue<WorkType>();
-        var engine = GetFetchEngine(App.AppViewModel.MakoClient, workType);
+        var engine = GetFetchEngine(App.Services!.GetRequiredService<MakoClient>(), workType);
         WorkContainer.ResetEngine(engine);
         OnSourceChanged(engine, workType);
     }
@@ -60,7 +61,7 @@ public abstract partial class WorkTypeWorksPage : IconContentPage
     }
 
     protected static IWorkSubscriptionService SubscriptionService =>
-        App.AppViewModel.AppServiceProvider.GetRequiredService<IWorkSubscriptionService>();
+        App.Services!.GetRequiredService<IWorkSubscriptionService>();
 
     protected void EnableAddSubscriptionButton() => AddSubscriptionButton.IsVisible = true;
 
@@ -93,7 +94,7 @@ public abstract partial class WorkTypeWorksPage : IconContentPage
 
 public class WorkRecommendedPage : WorkTypeWorksPage
 {
-    public WorkRecommendedPage() : this(PixevalSettings.WorkType)
+    public WorkRecommendedPage() : this(App.Services!.GetRequiredService<AppSettings>().SearchSettings.WorkType)
     {
     }
 
@@ -114,7 +115,7 @@ public class WorkRecommendedPage : WorkTypeWorksPage
 
 public class WorkNewPage : WorkTypeWorksPage
 {
-    public WorkNewPage() : this(PixevalSettings.WorkType)
+    public WorkNewPage() : this(App.Services!.GetRequiredService<AppSettings>().SearchSettings.WorkType)
     {
     }
 
@@ -140,7 +141,7 @@ public class WorkPostsPage : WorkTypeWorksPage
         new(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []);
 
     private User _user = EmptyUser();
-    private WorkType _workType = PixevalSettings.WorkType;
+    private WorkType _workType = App.Services!.GetRequiredService<AppSettings>().SearchSettings.WorkType;
     private IWorkViewViewModel? _viewModel;
     private bool _initialized;
 
@@ -148,7 +149,7 @@ public class WorkPostsPage : WorkTypeWorksPage
     {
     }
 
-    public WorkPostsPage(User user) : this(user, PixevalSettings.WorkType)
+    public WorkPostsPage(User user) : this(user, App.Services!.GetRequiredService<AppSettings>().SearchSettings.WorkType)
     {
     }
 
@@ -213,7 +214,7 @@ public class WorkPostsPage : WorkTypeWorksPage
         if (_user.Id <= 0)
             return;
         var workKind = GetSubscriptionWorkKind(workType);
-        App.AppViewModel.QueueWorkSubscriptionSyncCurrentSource(
+        SubscriptionService.QueueSyncCurrentSource(
             _user.Id,
             WorkSubscriptionType.Posts,
             workKind,
@@ -227,7 +228,12 @@ public class WorkPostsPage : WorkTypeWorksPage
         var workKind = GetSubscriptionWorkKind(workType);
 
         _ = await RunSubscriptionOperationAsync(
-            () => Task.FromResult(WorkSubscriptionHelper.TryAddOrUpdateUser(_user, WorkSubscriptionType.Posts, workKind)),
+            () => Task.FromResult(WorkSubscriptionHelper.TryAddOrUpdateUser(
+                _user,
+                WorkSubscriptionType.Posts,
+                workKind,
+                App.Services!.GetRequiredService<StorageEngine>(),
+                SubscriptionService)),
             () => UpdateSubscriptionButtons(WorkTypeComboBox.GetSelectedValue<WorkType>()));
     }
 

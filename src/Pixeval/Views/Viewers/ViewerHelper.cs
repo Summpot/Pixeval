@@ -132,18 +132,18 @@ public static class ViewerHelper
             if (string.Equals(platform, PlatformConstants.Pixiv, StringComparison.OrdinalIgnoreCase))
             {
                 if (long.TryParse(id, out var illustId))
-                    return await App.AppViewModel.MakoClient.GetIllustrationAsync(illustId);
+                    return await App.Services!.GetRequiredService<MakoClient>().GetIllustrationAsync(illustId);
             }
             else
             {
                 var booruPlatform = BooruPlatformExtensions.FromPlatformString(platform);
-                var client = App.AppViewModel.AppServiceProvider.GetRequiredService<BooruClient>();
+                var client = App.Services!.GetRequiredService<BooruClient>();
                 return await client.GetPostAsync(booruPlatform, id);
             }
         }
         catch (Exception e)
         {
-            var logger = App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>();
+            var logger = App.Services!.GetRequiredService<FileLogger>();
             logger.LogError(nameof(TryGetArtworkAsync), e);
         }
 

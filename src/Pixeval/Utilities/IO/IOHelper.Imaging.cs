@@ -54,7 +54,7 @@ public static partial class IoHelper
         if (DownloadFormatService is { } service)
             return service.GetAvailableUgoiraDownloadFormatToken(ugoiraDownloadFormat);
 
-        ugoiraDownloadFormat ??= App.AppViewModel?.AppSettings?.DownloadSettings?.DownloadFormats?.UgoiraDownloadFormat ?? string.Empty;
+        ugoiraDownloadFormat ??= App.Services?.GetService<AppManagement.Settings.AppSettings>()?.DownloadSettings?.DownloadFormats?.UgoiraDownloadFormat ?? string.Empty;
         var token = new UgoiraDownloadFormatToken(ugoiraDownloadFormat);
         if (token.BuiltInFormat is not null)
         {
@@ -64,7 +64,7 @@ public static partial class IoHelper
         }
 
         if (token.ExtensionFormatExtension is { } extension
-            && App.AppViewModel?.AppServiceProvider?.GetService<ExtensionService>()?.GetAnimatedImageFormatProvider(extension) is not null)
+            && App.Services?.GetService<ExtensionService>()?.GetAnimatedImageFormatProvider(extension) is not null)
             return token;
 
         return UgoiraDownloadFormatToken.Default;
@@ -75,13 +75,13 @@ public static partial class IoHelper
         if (DownloadFormatService is { } service)
             return service.GetAvailableIllustrationDownloadFormatToken(illustrationDownloadFormat);
 
-        illustrationDownloadFormat ??= App.AppViewModel?.AppSettings?.DownloadSettings?.DownloadFormats?.IllustrationDownloadFormat ?? string.Empty;
+        illustrationDownloadFormat ??= App.Services?.GetService<AppManagement.Settings.AppSettings>()?.DownloadSettings?.DownloadFormats?.IllustrationDownloadFormat ?? string.Empty;
         var token = new IllustrationDownloadFormatToken(illustrationDownloadFormat);
         if (token.BuiltInFormat is IllustrationDownloadFormat.Original)
             return token;
 
         if (token.ExtensionFormatExtension is { } extension
-            && App.AppViewModel?.AppServiceProvider?.GetService<ExtensionService>()?.GetStaticImageFormatProvider(extension) is not null)
+            && App.Services?.GetService<ExtensionService>()?.GetStaticImageFormatProvider(extension) is not null)
             return token;
 
         return IllustrationDownloadFormatToken.Default;
@@ -92,13 +92,13 @@ public static partial class IoHelper
         if (DownloadFormatService is { } service)
             return service.GetAvailableNovelDownloadFormatToken(novelDownloadFormat);
 
-        novelDownloadFormat ??= App.AppViewModel?.AppSettings?.DownloadSettings?.DownloadFormats?.NovelDownloadFormat ?? string.Empty;
+        novelDownloadFormat ??= App.Services?.GetService<AppManagement.Settings.AppSettings>()?.DownloadSettings?.DownloadFormats?.NovelDownloadFormat ?? string.Empty;
         var token = new NovelDownloadFormatToken(novelDownloadFormat);
         if (token.BuiltInFormat is not null)
             return token;
 
         if (token.ExtensionFormatExtension is { } extension
-            && App.AppViewModel?.AppServiceProvider?.GetService<ExtensionService>()?.GetNovelFormatProvider(extension) is not null)
+            && App.Services?.GetService<ExtensionService>()?.GetNovelFormatProvider(extension) is not null)
             return token;
 
         return NovelDownloadFormatToken.Default;

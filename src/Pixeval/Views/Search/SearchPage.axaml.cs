@@ -14,6 +14,7 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
+using Pixeval.AppManagement.Settings;
 using Pixeval.I18N;
 using Pixeval.Models;
 using Pixeval.Models.Pixiv;
@@ -71,10 +72,10 @@ public partial class SearchPage : IconContentPage
         if (sender is not Control { DataContext: SearchHistoryRecord entry })
             return;
 
-        var pinnedTags = App.AppViewModel.AppSettings.BrowsingExperienceSettings.PinnedTags;
+        var pinnedTags = App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.PinnedTags;
         if (!pinnedTags.Contains(entry.Value))
             pinnedTags.Add(entry.Value);
-        _ = App.AppViewModel.SearchHistoryEntries.Remove(entry);
+        _ = App.Services!.GetRequiredService<SearchHistorySession>().Entries.Remove(entry);
     }
 
     private static void UnpinButton_OnClick(object? sender, RoutedEventArgs e)
@@ -82,15 +83,15 @@ public partial class SearchPage : IconContentPage
         if (sender is not Control { DataContext: string tag })
             return;
 
-        if (App.AppViewModel.AppSettings.BrowsingExperienceSettings.PinnedTags.Remove(tag))
-            App.AppViewModel.AddSearchHistory(tag);
+        if (App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.PinnedTags.Remove(tag))
+            App.Services!.GetRequiredService<SearchHistorySession>().Add(tag);
     }
 
     private void DeleteButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not Control { DataContext: SearchHistoryRecord entry })
             return;
-        _ = App.AppViewModel.SearchHistoryEntries.Remove(entry);
+        _ = App.Services!.GetRequiredService<SearchHistorySession>().Entries.Remove(entry);
     }
 
     private void TrendingTagButton_OnClick(object? sender, RoutedEventArgs e)
@@ -275,7 +276,7 @@ public partial class SearchPage : IconContentPage
                 return;
 
             await Task.Delay(_SearchTagCompletionDelay, token).ConfigureAwait(false);
-            var tags = await App.AppViewModel.MakoClient
+            var tags = await App.Services!.GetRequiredService<MakoClient>()
                 .GetAutoCompletionForKeyword(keyword, true, token)
                 .ConfigureAwait(false);
             token.ThrowIfCancellationRequested();
@@ -384,7 +385,7 @@ public partial class SearchPage : IconContentPage
                 }
 
                 var arguments = viewModel.NovelForm.BuildArguments(searchText);
-                App.AppViewModel.AddSearchHistory(searchText);
+                App.Services!.GetRequiredService<SearchHistorySession>().Add(searchText);
                 NavigationService.NavigateToWorkSearch(arguments, this);
             }
             else
@@ -396,7 +397,7 @@ public partial class SearchPage : IconContentPage
                 }
 
                 var arguments = viewModel.IllustrationForm.BuildArguments(searchText);
-                App.AppViewModel.AddSearchHistory(searchText);
+                App.Services!.GetRequiredService<SearchHistorySession>().Add(searchText);
                 NavigationService.NavigateToWorkSearch(arguments, this);
             }
         }

@@ -61,8 +61,8 @@ public partial class SettingsMainView : ContentPage
             return;
 
         var settings = new AppSettings();
-        App.AppViewModel.NavigationMenuYamlText = NavigationMenuYaml.DefaultYaml;
-        App.AppViewModel.ResetHomePageCards();
+        App.Services!.GetRequiredService<NavigationMenuDocument>().Text = NavigationMenuYaml.DefaultYaml;
+        App.Services!.GetRequiredService<HomePageCardSession>().Reset();
         foreach (var localGroup in vm.LocalGroups)
             foreach (var settingsEntry in localGroup)
                 settingsEntry.LocalValueReset(settings);
@@ -255,19 +255,22 @@ public partial class SettingsMainView : ContentPage
 
     private void DeleteSearchHistoriesButton_OnClicked(object sender, RoutedEventArgs e)
     {
-        App.AppViewModel.ClearSearchHistory();
+        App.Services!.GetRequiredService<SearchHistorySession>().Clear();
         ShowClearData(ClearDataKind.SearchHistory);
     }
 
     private void DeleteBrowseHistoriesButton_OnClicked(object sender, RoutedEventArgs e)
     {
-        App.AppViewModel.ClearBrowseHistory();
+        App.Services!.GetRequiredService<StorageEngine>().HistoryRepository.Clear();
         ShowClearData(ClearDataKind.BrowseHistory);
     }
 
     private void DeleteDownloadHistoriesButton_OnClicked(object sender, RoutedEventArgs e)
     {
-        App.AppViewModel.ClearDownloadHistories();
+        var storage = App.Services!.GetRequiredService<StorageEngine>();
+        App.Services!.GetRequiredService<DownloadManager>().ClearTasks();
+        storage.ClearDownloadHistory();
+        storage.ClearSubscriptionDownloadHistory();
         ShowClearData(ClearDataKind.DownloadHistory);
     }
 

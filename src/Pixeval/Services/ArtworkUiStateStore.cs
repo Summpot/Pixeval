@@ -71,8 +71,7 @@ public static class ArtworkUiStateStore
                 _ => HeartButtonState.Unchecked
             };
 
-            var inWatchLater = (s_storageEngine?.WatchLaterRepository.ContainsWatchLater(targetEntry)
-                ?? App.AppViewModel?.ContainsWatchLater(targetEntry)) is true;
+            var inWatchLater = s_storageEngine?.WatchLaterRepository.ContainsWatchLater(targetEntry) is true;
             return new ArtworkUiState(bookmarkState, inWatchLater);
         });
     }
@@ -128,7 +127,7 @@ public static class ArtworkUiStateStore
 
     private static void EnsureStorageObserver()
     {
-        var storageEngine = s_storageEngine ?? App.AppViewModel?.StorageEngine;
+        var storageEngine = s_storageEngine;
         if (s_observerHooked || storageEngine is null)
             return;
 
@@ -141,7 +140,7 @@ public static class ArtworkUiStateStore
             {
                 Dispatcher.UIThread.Post(() =>
                 {
-                    var currentEngine = s_storageEngine ?? App.AppViewModel?.StorageEngine;
+                    var currentEngine = s_storageEngine;
                     if (currentEngine?.WatchLaterRepository is not { } repo)
                         return;
 

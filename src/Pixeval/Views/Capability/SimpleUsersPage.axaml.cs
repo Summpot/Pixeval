@@ -18,7 +18,7 @@ namespace Pixeval.Views.Capability;
 public abstract partial class SimpleUsersPage : IconContentPage
 {
     protected static long CurrentUserId =>
-        App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? PixevalSettings.MyId;
+        App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? 0;
 
     protected SimpleUsersPage() => InitializeComponent();
 
@@ -27,7 +27,7 @@ public abstract partial class SimpleUsersPage : IconContentPage
         if (viewModel is not null)
             UserContainer.UserView.SetViewModel(viewModel);
         else
-            ResetEngine(GetFetchEngine(App.Services?.GetService<MakoClient>() ?? App.AppViewModel.MakoClient));
+            ResetEngine(GetFetchEngine(App.Services!.GetRequiredService<MakoClient>()));
     }
 
     private void UserContainer_OnRefreshRequested(object? sender, RoutedEventArgs e)
@@ -37,7 +37,7 @@ public abstract partial class SimpleUsersPage : IconContentPage
 
     protected void ChangeSource()
     {
-        ResetEngine(GetFetchEngine(App.AppViewModel.MakoClient));
+        ResetEngine(GetFetchEngine(App.Services!.GetRequiredService<MakoClient>()));
     }
 
     private void ResetEngine(IAsyncEnumerable<User> fetchEngine) =>

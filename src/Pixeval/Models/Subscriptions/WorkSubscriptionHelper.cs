@@ -13,7 +13,9 @@ public static class WorkSubscriptionHelper
     public static bool TryAddOrUpdateUser(
         User user,
         WorkSubscriptionType subscriptionType,
-        WorkSubscriptionWorkKind workKind)
+        WorkSubscriptionWorkKind workKind,
+        StorageEngine storageEngine,
+        IWorkSubscriptionService subscriptions)
     {
         var subscription = new WorkSubscriptionRecord(
             user.Id,
@@ -22,12 +24,14 @@ public static class WorkSubscriptionHelper
             user.Name,
             user.Account,
             user.AvatarUrl);
-        return TryAddOrUpdate(subscription);
+        return TryAddOrUpdate(subscription, storageEngine, subscriptions);
     }
 
     public static bool TryAddOrUpdateSeries(
         long seriesId,
         WorkSubscriptionWorkKind workKind,
+        StorageEngine storageEngine,
+        IWorkSubscriptionService subscriptions,
         Series? seriesDetail = null,
         IWorkEntry? firstWork = null,
         IFetchEngine<IWorkEntry>? sourceEngine = null)
@@ -42,20 +46,20 @@ public static class WorkSubscriptionHelper
             title,
             author,
             avatar);
-        return TryAddOrUpdate(subscription, sourceEngine);
+        return TryAddOrUpdate(subscription, storageEngine, subscriptions, sourceEngine);
     }
 
     private static bool TryAddOrUpdate(
         WorkSubscriptionRecord subscription,
+        StorageEngine storageEngine,
+        IWorkSubscriptionService subscriptions,
         IFetchEngine<IWorkEntry>? sourceEngine = null)
     {
         if (subscription.Id is 0)
             return false;
 
-        var storageEngine = App.AppViewModel.StorageEngine;
         var saved = storageEngine.UpsertSubscription(subscription);
-
-        App.AppViewModel.QueueWorkSubscriptionInitialSync(saved, sourceEngine);
+        subscriptions.QueueInitialSync(saved, sourceEngine);
         return true;
     }
 }

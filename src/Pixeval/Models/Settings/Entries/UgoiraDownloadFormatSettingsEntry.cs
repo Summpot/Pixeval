@@ -39,7 +39,7 @@ public class UgoiraDownloadFormatSettingsEntry(DownloadFormatsSettings settings)
             .Where(static t => (UgoiraDownloadFormat) t.Value != UgoiraDownloadFormat.Mp4 || MediaEngine.IsMp4Available)
             .Select(t => new SymbolComboBoxItem(UgoiraDownloadFormatToken.BuiltIn((UgoiraDownloadFormat) t.Value), t.Description, t.Symbol));
 
-        var extensions = App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>()
+        var extensions = App.Services!.GetRequiredService<ExtensionService>()
             .ActiveAnimatedImageFormatProviders
             .Select(t => new SymbolComboBoxItem(UgoiraDownloadFormatToken.Extension(t), t.FormatDescription, t is IEntryExtension entry ? entry.Icon : Symbol.Gif));
 

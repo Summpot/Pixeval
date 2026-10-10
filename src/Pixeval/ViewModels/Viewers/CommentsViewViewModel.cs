@@ -52,7 +52,7 @@ public class CommentsViewViewModel : EntryViewViewModel<CommentRecord, CommentRe
         ParentType = parentType;
         ParentId = parentId;
         ReplyToCommentId = replyToCommentId;
-        _makoClient = makoClient ?? App.Services?.GetService<MakoClient>() ?? App.AppViewModel.MakoClient;
+        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
         _userSessionService = userSessionService ?? App.Services?.GetService<IUserSessionService>();
     }
 

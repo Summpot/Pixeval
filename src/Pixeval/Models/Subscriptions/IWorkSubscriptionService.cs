@@ -4,8 +4,10 @@
 using System;
 using System.Threading.Tasks;
 using Pixeval.Models.Options;
+using Pixeval.Native.Mako;
 using Pixeval.Native.Storage;
 using Pixeval.Native.Subscription;
+using Pixeval.Utilities;
 
 namespace Pixeval.Models.Subscriptions;
 
@@ -37,4 +39,16 @@ public interface IWorkSubscriptionService
         WorkSubscriptionWorkKind workKind);
 
     Task<WorkSubscriptionRecord?> TryRemoveAsync(long historyEntryId);
+
+    void QueueSyncAll();
+
+    void QueueSyncSubscription(WorkSubscriptionRecord subscription);
+
+    void QueueInitialSync(WorkSubscriptionRecord subscription, IFetchEngine<IWorkEntry>? sourceEngine = null);
+
+    void QueueSyncCurrentSource(
+        long targetId,
+        WorkSubscriptionType subscriptionType,
+        WorkSubscriptionWorkKind workKind,
+        IFetchEngine<IWorkEntry> engine);
 }

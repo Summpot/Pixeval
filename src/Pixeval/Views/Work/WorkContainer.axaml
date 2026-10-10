@@ -105,7 +105,6 @@
         <work:WorkView
             x:Name="WorkView"
             DataContextChanged="WorkView_OnDataContextChanged"
-            LayoutType="{x:Static views:PixevalSettings.LayoutType}"
             RequestAddToBookmark="WorkView_OnRequestAddToBookmark" />
     </DockPanel>
 </UserControl>

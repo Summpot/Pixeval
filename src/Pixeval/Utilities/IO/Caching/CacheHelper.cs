@@ -29,7 +29,7 @@ public static class CacheHelper
             var engine = new CacheEngine(CachePath, capacity);
             try
             {
-                if (App.AppViewModel?.AppSettings is { } settings)
+                if (App.Services?.GetService<AppSettings>() is { } settings)
                 {
                     var cfg = settings.ToMakoConfiguration();
                     engine.UpdateNetworkOptions(
@@ -66,7 +66,7 @@ public static class CacheHelper
         }
         catch (Exception e)
         {
-            App.AppViewModel?.AppServiceProvider?.GetService<FileLogger>()?
+            App.Services?.GetService<FileLogger>()?
                 .LogError(nameof(UpdateNetworkOptions), e);
         }
     }
@@ -92,7 +92,7 @@ public static class CacheHelper
     private static long GetCacheSizeLimitInBytes()
     {
         var sizeInMegabytes =
-            Math.Max(1, App.AppViewModel?.AppSettings?.ApplicationSettings?.FileCache?.FileCacheSizeLimitInMegabytes ?? 128);
+            Math.Max(1, App.Services?.GetService<AppSettings>()?.ApplicationSettings?.FileCache?.FileCacheSizeLimitInMegabytes ?? 128);
         return sizeInMegabytes * 1024L * 1024L;
     }
 
@@ -198,7 +198,7 @@ public static class CacheHelper
         }
         catch (Exception e)
         {
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+            App.Services!.GetRequiredService<FileLogger>()
                 .LogError(nameof(GetSingleImageAsync), e);
         }
 
@@ -236,7 +236,7 @@ public static class CacheHelper
         }
         catch (Exception e)
         {
-            App.AppViewModel?.AppServiceProvider?.GetService<FileLogger>()?
+            App.Services?.GetService<FileLogger>()?
                 .LogError(nameof(GetImageStreamAsync), e);
         }
 
@@ -273,7 +273,7 @@ public static class CacheHelper
         }
         catch (Exception e)
         {
-            App.AppViewModel?.AppServiceProvider?.GetService<FileLogger>()?
+            App.Services?.GetService<FileLogger>()?
                 .LogError(nameof(GetAnimatedBitmapAsync), e);
         }
 
@@ -336,7 +336,7 @@ public static class CacheHelper
         }
         catch (Exception e)
         {
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+            App.Services!.GetRequiredService<FileLogger>()
                 .LogError(nameof(GetBitmapAsync), e);
         }
 
@@ -377,7 +377,7 @@ public static class CacheHelper
         }
         catch (Exception e)
         {
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+            App.Services!.GetRequiredService<FileLogger>()
                 .LogError(nameof(GetStreamAsync), e);
             token.ThrowIfCancellationRequested();
             return null;
@@ -400,7 +400,7 @@ public static class CacheHelper
         }
         catch (Exception e)
         {
-            App.AppViewModel?.AppServiceProvider?.GetService<FileLogger>()?
+            App.Services?.GetService<FileLogger>()?
                 .LogError(nameof(TryGetStream), e);
         }
 

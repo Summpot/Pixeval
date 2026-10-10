@@ -4,6 +4,8 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.AppManagement.Settings;
 using Pixeval.Controls;
 using Pixeval.Native.Mako;
 using Pixeval.ViewModels;
@@ -12,7 +14,10 @@ namespace Pixeval.Views.Capability;
 
 public partial class WorkRankingPage : IconContentPage
 {
-    public WorkRankingPage() : this(PixevalSettings.SimpleWorkType, App.AppViewModel.AppSettings.SearchSettings.RankOptions.IllustrationRankOption, MaxDate)
+    public WorkRankingPage() : this(
+        App.Services!.GetRequiredService<AppSettings>().SearchSettings.DefaultSimpleWorkType,
+        App.Services!.GetRequiredService<AppSettings>().SearchSettings.RankOptions.IllustrationRankOption,
+        MaxDate)
     {
     }
 
@@ -44,8 +49,8 @@ public partial class WorkRankingPage : IconContentPage
         var selectedWorkType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
         RankOptionComboBox.ItemsSource = SymbolComboBoxItem.GetValues<RankOption>(selectedWorkType);
         RankOptionComboBox.SelectedValue = selectedWorkType is SimpleWorkType.Illustration
-            ? App.AppViewModel.AppSettings.SearchSettings.RankOptions.IllustrationRankOption
-            : App.AppViewModel.AppSettings.SearchSettings.RankOptions.NovelRankOption;
+            ? App.Services!.GetRequiredService<AppSettings>().SearchSettings.RankOptions.IllustrationRankOption
+            : App.Services!.GetRequiredService<AppSettings>().SearchSettings.RankOptions.NovelRankOption;
     }
 
     private void RankOptionComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
@@ -73,11 +78,11 @@ public partial class WorkRankingPage : IconContentPage
         var date = (RankDateTimeCalendarDatePicker.SelectedDate ?? MaxDate).ToString("yyyy-MM-dd");
         if (workType is SimpleWorkType.Novel)
         {
-            WorkContainer.ResetEngine(App.AppViewModel.MakoClient.NovelRanking(mode, date));
+            WorkContainer.ResetEngine(App.Services!.GetRequiredService<MakoClient>().NovelRanking(mode, date));
         }
         else
         {
-            WorkContainer.ResetEngine(App.AppViewModel.MakoClient.WorkRanking(mode, date));
+            WorkContainer.ResetEngine(App.Services!.GetRequiredService<MakoClient>().WorkRanking(mode, date));
         }
     }
 }

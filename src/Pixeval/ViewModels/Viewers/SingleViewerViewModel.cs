@@ -419,7 +419,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         {
             case Illustration { IsPicGif: true } ill:
             {
-                var metadata = ill.UgoiraMetadata ?? await App.AppViewModel.MakoClient.GetUgoiraMetadataAsync(ill.Id);
+                var metadata = ill.UgoiraMetadata ?? await App.Services!.GetRequiredService<MakoClient>().GetUgoiraMetadataAsync(ill.Id);
                 var zipUrl = isOriginal ? (metadata.LargeUrl ?? metadata.MediumUrl) : metadata.MediumUrl;
                 if (string.IsNullOrEmpty(zipUrl))
                     return null;
@@ -628,7 +628,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         _ => "image"
     };
 
-    private static ExtensionService ExtensionService => App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>();
+    private static ExtensionService ExtensionService => App.Services!.GetRequiredService<ExtensionService>();
 
     private static IArtworkActionService ArtworkActions =>
         App.Services?.GetService<IArtworkActionService>() ?? NullArtworkActionService.Instance;

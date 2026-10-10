@@ -38,7 +38,7 @@ public class IllustrationDownloadFormatSettingsEntry(DownloadFormatsSettings set
             .Where(static t => (IllustrationDownloadFormat) t.Value is IllustrationDownloadFormat.Original)
             .Select(t => t with { Value = IllustrationDownloadFormatToken.BuiltIn((IllustrationDownloadFormat) t.Value) });
 
-        var extensions = App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>()
+        var extensions = App.Services!.GetRequiredService<ExtensionService>()
             .ActiveStaticImageFormatProviders
             .Select(t => new SymbolComboBoxItem(IllustrationDownloadFormatToken.Extension(t), t.FormatDescription, t is IEntryExtension entry ? entry.Icon : Symbol.Image));
 

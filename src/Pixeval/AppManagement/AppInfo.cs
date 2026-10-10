@@ -109,7 +109,7 @@ public static class AppInfo
 
     public static void SaveWindowContext(Window window, AppSettings? settings = null)
     {
-        settings ??= App.Services?.GetService<AppSettings>() ?? App.AppViewModel?.AppSettings;
+        settings ??= App.Services?.GetService<AppSettings>();
         if (settings is null)
             return;
         var applicationSettings = settings.ApplicationSettings;
@@ -128,7 +128,7 @@ public static class AppInfo
         ObservableCollection<HomePageCardLayout>? cards = null,
         string? navYaml = null)
     {
-        loginContext ??= App.Services?.GetService<LoginContext>() ?? App.AppViewModel?.LoginContext;
+        loginContext ??= App.Services?.GetService<LoginContext>();
         SaveLoginContext(loginContext);
         SaveSettings(appSettings, cards, navYaml);
     }
@@ -186,9 +186,9 @@ public static class AppInfo
         ObservableCollection<HomePageCardLayout>? cards = null,
         string? navYaml = null)
     {
-        appSettings ??= App.Services?.GetService<AppSettings>() ?? App.AppViewModel?.AppSettings;
-        cards ??= App.AppViewModel?.HomePageCards;
-        navYaml ??= App.AppViewModel?.NavigationMenuYamlText;
+        appSettings ??= App.Services?.GetService<AppSettings>();
+        cards ??= App.Services?.GetService<Services.HomePageCardSession>()?.Cards;
+        navYaml ??= App.Services?.GetService<Services.NavigationMenuDocument>()?.Text;
 
         SaveAppSettings(appSettings);
         if (cards is not null)

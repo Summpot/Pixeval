@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
 using Pixeval.Utilities;
 
@@ -40,6 +41,7 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
     [ObservableProperty]
     public partial bool IsWatchlistAdded { get; private set; }
 
+    private readonly MakoClient _makoClient = App.Services!.GetRequiredService<MakoClient>();
     private IWorkViewViewModel? _worksViewModel;
 
     public SeriesViewerPageViewModel(SimpleWorkType workType, long seriesId)
@@ -102,7 +104,7 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
         LoadErrorMessage = null;
         try
         {
-            var (detail, first, engine) = await App.AppViewModel.MakoClient.GetWorkSeriesAsync(WorkType, Id, token);
+            var (detail, first, engine) = await _makoClient.GetWorkSeriesAsync(WorkType, Id, token);
 
             if (_disposed)
             {
@@ -134,7 +136,7 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
     [RelayCommand(CanExecute = nameof(CanChangeWatchlist))]
     private async Task AddToWatchlistAsync()
     {
-        if (!await App.AppViewModel.MakoClient.PostWorkSeriesWatchlistAsync(WorkType, Id))
+        if (!await _makoClient.PostWorkSeriesWatchlistAsync(WorkType, Id))
             return;
 
         if (SeriesDetail is not null)
@@ -145,7 +147,7 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
     [RelayCommand(CanExecute = nameof(CanChangeWatchlist))]
     private async Task RemoveFromWatchlistAsync()
     {
-        if (!await App.AppViewModel.MakoClient.RemoveWorkSeriesWatchlistAsync(WorkType, Id))
+        if (!await _makoClient.RemoveWorkSeriesWatchlistAsync(WorkType, Id))
             return;
 
         if (SeriesDetail is not null)

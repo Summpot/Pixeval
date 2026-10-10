@@ -3,6 +3,7 @@
 
 using System;
 using Avalonia.Interactivity;
+using Microsoft.Extensions.DependencyInjection;
 using Avalonia.Threading;
 using Pixeval.Controls;
 using Pixeval.Models.Pixiv;
@@ -78,7 +79,7 @@ public class BrowsingHistoryPage : HistoryPage
 
     /// <inheritdoc />
     protected override IArtworkHistorySource Source =>
-        App.AppViewModel.StorageEngine.HistoryRepository;
+        App.Services!.GetRequiredService<StorageEngine>().HistoryRepository;
 }
 
 public class WatchLaterPage : HistoryPage
@@ -87,5 +88,5 @@ public class WatchLaterPage : HistoryPage
 
     /// <inheritdoc />
     protected override IArtworkHistorySource Source =>
-        App.AppViewModel.StorageEngine.WatchLaterRepository;
+        App.Services!.GetRequiredService<StorageEngine>().WatchLaterRepository;
 }

@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement.Settings;
 using Pixeval.I18N;
 using Pixeval.Models.Blocking;
@@ -25,7 +26,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 {
     private readonly MakoClient _makoClient;
     private readonly AppSettings _appSettings;
-    private readonly AppManagement.AppViewModel? _appViewModel;
+    private readonly StorageEngine _storageEngine;
 
     private readonly Dictionary<int, Novel> _refreshedNovels = [];
 
@@ -47,11 +48,11 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         bool needRefresh,
         MakoClient? makoClient = null,
         AppSettings? appSettings = null,
-        AppManagement.AppViewModel? appViewModel = null)
+        StorageEngine? storageEngine = null)
     {
-        _makoClient = makoClient ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<MakoClient>(App.Services!) ?? App.AppViewModel.MakoClient;
-        _appSettings = appSettings ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<AppSettings>(App.Services!) ?? App.AppViewModel.AppSettings;
-        _appViewModel = appViewModel ?? App.AppViewModel;
+        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
+        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
+        _storageEngine = storageEngine ?? App.Services!.GetRequiredService<StorageEngine>();
         _needRefresh = needRefresh;
         CurrentNovel = novelViewModel;
         CurrentWorkIndex = 0;
@@ -61,11 +62,11 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         long id,
         MakoClient? makoClient = null,
         AppSettings? appSettings = null,
-        AppManagement.AppViewModel? appViewModel = null)
+        StorageEngine? storageEngine = null)
     {
-        _makoClient = makoClient ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<MakoClient>(App.Services!) ?? App.AppViewModel.MakoClient;
-        _appSettings = appSettings ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<AppSettings>(App.Services!) ?? App.AppViewModel.AppSettings;
-        _appViewModel = appViewModel ?? App.AppViewModel;
+        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
+        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
+        _storageEngine = storageEngine ?? App.Services!.GetRequiredService<StorageEngine>();
         _ = LoadSingleNovelAsync(id, _loadingCts.Token);
     }
 
@@ -75,11 +76,11 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         bool needRefresh,
         MakoClient? makoClient = null,
         AppSettings? appSettings = null,
-        AppManagement.AppViewModel? appViewModel = null)
+        StorageEngine? storageEngine = null)
     {
-        _makoClient = makoClient ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<MakoClient>(App.Services!) ?? App.AppViewModel.MakoClient;
-        _appSettings = appSettings ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<AppSettings>(App.Services!) ?? App.AppViewModel.AppSettings;
-        _appViewModel = appViewModel ?? App.AppViewModel;
+        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
+        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
+        _storageEngine = storageEngine ?? App.Services!.GetRequiredService<StorageEngine>();
         _needRefresh = needRefresh;
         _novels = novels;
         CurrentWorkIndex = currentNovelIndex;
@@ -273,7 +274,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
                     return;
 
                 SeriesInfo = WorkSeriesInfoViewModel.Create(content, currentNovel.Series);
-                _appViewModel?.AddBrowseHistory(currentNovel);
+                _storageEngine.HistoryRepository.AddBrowseHistory(currentNovel);
                 var markdowns = await Task.Run(() => BuildPageMarkdowns(content), token);
                 token.ThrowIfCancellationRequested();
                 if (index != CurrentWorkIndex || _disposed)

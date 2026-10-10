@@ -11,6 +11,7 @@ using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
+using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
 using Pixeval.Services;
@@ -44,7 +45,12 @@ public sealed partial class WorkView : UserControl, IDisposable
 
     private void StyledElement_OnDataContextChanged(object? sender, EventArgs e) => UpdateLayoutPseudoClasses();
 
-    public WorkView() => InitializeComponent();
+    public WorkView()
+    {
+        InitializeComponent();
+        LayoutType = App.Services!.GetRequiredService<AppSettings>()
+            .BrowsingExperienceSettings.ThumbnailLayout.ThumbnailLayoutType;
+    }
 
     private void UpdateLayoutPseudoClasses()
     {

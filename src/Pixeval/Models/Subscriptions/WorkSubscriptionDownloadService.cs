@@ -194,8 +194,7 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
 
             subscription = persistedSubscription;
             wasDeleted = true;
-            if (App.AppViewModel is { } app)
-                await app.RemoveWorkSubscriptionDownloadsAsync(historyEntryId).ConfigureAwait(false);
+            _downloadManager.RemoveSubscription(historyEntryId);
             return subscription;
         }
         finally

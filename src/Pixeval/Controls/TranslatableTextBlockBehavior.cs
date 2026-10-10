@@ -441,7 +441,7 @@ public static class TranslatableTextBlockBehavior
         SetCanTranslate(textBlock, canTranslate);
     }
 
-    private static ExtensionService ExtensionService => App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>();
+    private static ExtensionService ExtensionService => App.Services!.GetRequiredService<ExtensionService>();
 
     private sealed class TranslationState
     {

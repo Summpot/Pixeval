@@ -9,6 +9,8 @@ using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.AppManagement.Settings;
 using Pixeval.Utilities;
 
 namespace Pixeval.ViewModels.Search;
@@ -25,7 +27,7 @@ public sealed partial class SauceNaoSearchPageViewModel : ViewModelBase, IDispos
     [ObservableProperty]
     public partial bool FileSelected { get; private set; }
 
-    public static string ApiKey => App.AppViewModel.AppSettings.SearchSettings.SauceNaoApiKey;
+    public static string ApiKey => App.Services!.GetRequiredService<AppSettings>().SearchSettings.SauceNaoApiKey;
 
     public static bool IsApiKeyExisted => !string.IsNullOrWhiteSpace(ApiKey);
 

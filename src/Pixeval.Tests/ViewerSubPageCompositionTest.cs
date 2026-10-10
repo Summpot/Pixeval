@@ -4,7 +4,6 @@ using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoSettingsPage.Models;
@@ -12,6 +11,7 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Threading;
 using FluentIcons.Common;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.AppManagement;
 using Pixeval.Controls;
@@ -35,12 +35,11 @@ public sealed class ViewerSubPageCompositionTest
         await session.Dispatch(() =>
         {
             I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
-            var appProperty = typeof(App).GetProperty(nameof(App.AppViewModel), BindingFlags.Public | BindingFlags.Static)!;
-            var previous = appProperty.GetValue(null);
-            var appModel = (AppViewModel) RuntimeHelpers.GetUninitializedObject(typeof(AppViewModel));
-            typeof(AppViewModel).GetProperty(nameof(AppViewModel.NavigationMenuYamlText))!
-                .SetValue(appModel, NavigationMenuYaml.DefaultYaml);
-            appProperty.SetValue(null, appModel);
+            var previousServices = App.Services;
+            var services = new ServiceCollection()
+                .AddSingleton(new NavigationMenuDocument(NavigationMenuYaml.DefaultYaml))
+                .BuildServiceProvider();
+            App.Services = services;
             try
             {
                 var service = new NavigationService();
@@ -60,7 +59,8 @@ public sealed class ViewerSubPageCompositionTest
             }
             finally
             {
-                appProperty.SetValue(null, previous);
+                App.Services = previousServices;
+                services.Dispose();
             }
         }, CancellationToken.None);
     }

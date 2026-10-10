@@ -22,7 +22,41 @@ namespace Pixeval.ViewModels.Home;
 
 public partial class HomePageViewModel : ViewModelBase
 {
-    private static AppSettings Settings => App.Services?.GetService<AppSettings>() ?? App.AppViewModel.AppSettings;
+    private readonly AppSettings _settings;
+    private readonly HomeCardDefinitions _definitions;
+    private readonly IUserSessionService _session;
+
+    public HomePageViewModel()
+        : this(
+            App.Services!.GetRequiredService<AppSettings>(),
+            App.Services!.GetRequiredService<HomeCardDefinitions>(),
+            App.Services!.GetRequiredService<IUserSessionService>())
+    {
+        _sourceParameterEditors =
+        [
+            _sourceWorkTypeEditor,
+            _sourceSimpleWorkTypeEditor,
+            _sourcePrivacyPolicyEditor,
+            _sourceRankOptionEditor,
+            _sourceRankingDateEditor,
+            _sourceUserIdEditor,
+            _sourceEntryIdEditor,
+            _sourceSeriesIdEditor,
+            _sourceSearchTextEditor,
+            _sourceTagEditor
+        ];
+        _sourceSimpleWorkTypeEditor.ValueChanged += SourceSimpleWorkTypeEditor_OnValueChanged;
+        UpdateRankOptionEditor();
+        SyncGridEditorValues();
+        SyncSelectedCardEditorValues();
+    }
+
+    public HomePageViewModel(AppSettings settings, HomeCardDefinitions definitions, IUserSessionService session)
+    {
+        _settings = settings;
+        _definitions = definitions;
+        _session = session;
+    }
 
     private readonly IReadOnlyList<HomeCardParameterEditorViewModel> _sourceParameterEditors;
 
@@ -76,34 +110,13 @@ public partial class HomePageViewModel : ViewModelBase
 
     private HomePageCardLayout? _selectedCard;
 
-    public HomePageViewModel()
-    {
-        _sourceParameterEditors =
-        [
-            _sourceWorkTypeEditor,
-            _sourceSimpleWorkTypeEditor,
-            _sourcePrivacyPolicyEditor,
-            _sourceRankOptionEditor,
-            _sourceRankingDateEditor,
-            _sourceUserIdEditor,
-            _sourceEntryIdEditor,
-            _sourceSeriesIdEditor,
-            _sourceSearchTextEditor,
-            _sourceTagEditor
-        ];
-        _sourceSimpleWorkTypeEditor.ValueChanged += SourceSimpleWorkTypeEditor_OnValueChanged;
-        UpdateRankOptionEditor();
-        SyncGridEditorValues();
-        SyncSelectedCardEditorValues();
-    }
-
-    public IReadOnlyList<HomeCardDefinition> CardTemplates => HomeCardDefinitions.All;
+    public IReadOnlyList<HomeCardDefinition> CardTemplates => _definitions.All;
 
     [ObservableProperty] public partial bool IsEditMode { get; set; }
 
-    public int RowCount => decimal.ToInt32(decimal.Clamp(Settings.ApplicationSettings.HomePage.HomePageRows, HomePage.MinimumGridSize, HomePage.MaximumGridSize));
+    public int RowCount => decimal.ToInt32(decimal.Clamp(_settings.ApplicationSettings.HomePage.HomePageRows, HomePage.MinimumGridSize, HomePage.MaximumGridSize));
 
-    public int ColumnCount => decimal.ToInt32(decimal.Clamp(Settings.ApplicationSettings.HomePage.HomePageColumns, HomePage.MinimumGridSize, HomePage.MaximumGridSize));
+    public int ColumnCount => decimal.ToInt32(decimal.Clamp(_settings.ApplicationSettings.HomePage.HomePageColumns, HomePage.MinimumGridSize, HomePage.MaximumGridSize));
 
     [ObservableProperty] public partial decimal GridColumnsValue { get; set; }
 
@@ -112,7 +125,7 @@ public partial class HomePageViewModel : ViewModelBase
     public bool HasSelectedCard => _selectedCard is not null;
 
     public string SelectedCardDescription => _selectedCard is { } card
-        ? HomeCardDefinitions.BuildTitle(card)
+        ? _definitions.BuildTitle(card)
         : I18NManager.GetResource(HomePageResources.NoSelectedCardTextBlock.Text);
 
     [ObservableProperty] public partial decimal SelectedColumnValue { get; set; } = 1;
@@ -183,7 +196,7 @@ public partial class HomePageViewModel : ViewModelBase
         _sourcePrivacyPolicyEditor.Value = template.PrivacyPolicy;
         _sourceRankingDateEditor.Reset(MakoClient.RankingMaxDateTime.LocalDateTime);
 
-        var currentUserId = App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? PixevalSettings.MyId;
+        var currentUserId = _session.CurrentUserId;
         _sourceUserIdEditor.Text = template.UseCurrentUserAsDefault ? currentUserId.ToString() : "";
         _sourceEntryIdEditor.Text = "";
         _sourceSeriesIdEditor.Text = "";
@@ -267,8 +280,8 @@ public partial class HomePageViewModel : ViewModelBase
     {
         var simpleWorkType = _sourceSimpleWorkTypeEditor.GetValue<SimpleWorkType>();
         var rankOption = simpleWorkType is SimpleWorkType.Illustration
-            ? Settings.SearchSettings.RankOptions.IllustrationRankOption
-            : Settings.SearchSettings.RankOptions.NovelRankOption;
+            ? _settings.SearchSettings.RankOptions.IllustrationRankOption
+            : _settings.SearchSettings.RankOptions.NovelRankOption;
         _sourceRankOptionEditor.Reset(SymbolComboBoxItem.GetValues<RankOption>(simpleWorkType), rankOption);
     }
 

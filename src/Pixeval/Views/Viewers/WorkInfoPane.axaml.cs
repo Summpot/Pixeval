@@ -12,6 +12,7 @@ using Avalonia.Controls.Templates;
 using Avalonia.Data.Converters;
 using CommunityToolkit.Mvvm.Input;
 using Pixeval.AppManagement;
+using Pixeval.AppManagement.Settings;
 using Pixeval.Models;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
@@ -242,7 +243,7 @@ public class WorkInfoPane : TemplatedControl
             return;
 
         var type = ArtworkInfo is Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
-        App.AppViewModel.AddSearchHistory(tag.Name, tag.TranslatedName);
+        App.Services!.GetRequiredService<SearchHistorySession>().Add(tag.Name, tag.TranslatedName);
         var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
         nav.NavigateToWorkSearch(tag.Name, type, this);
     }
@@ -252,11 +253,11 @@ public class WorkInfoPane : TemplatedControl
         if (tag is null)
             return;
 
-        var blockedTags = App.AppViewModel.AppSettings.BrowsingExperienceSettings.BlockedTags;
+        var blockedTags = App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.BlockedTags;
         if (!blockedTags.Contains(tag.Name))
         {
             blockedTags.Add(tag.Name);
-            AppInfo.SaveAppSettings(App.AppViewModel.AppSettings);
+            AppInfo.SaveAppSettings(App.Services!.GetRequiredService<AppSettings>());
         }
     }
 

@@ -38,7 +38,7 @@ public partial class WorkBookmarksPage : IconContentPage
     public static IReadOnlyList<BookmarkTag> DefaultTags { get; } = [AllBookmarkTag.Instance, UncategorizedBookmarkTag.Instance];
 
     private static IWorkSubscriptionService SubscriptionService =>
-        App.Services?.GetService<IWorkSubscriptionService>() ?? App.AppViewModel.AppServiceProvider.GetRequiredService<IWorkSubscriptionService>();
+        App.Services!.GetRequiredService<IWorkSubscriptionService>();
 
     public WorkBookmarksPage()
     {
@@ -108,7 +108,7 @@ public partial class WorkBookmarksPage : IconContentPage
 
     private void UpdatePrivacyVisibility()
     {
-        var myId = App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? PixevalSettings.MyId;
+        var myId = App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? 0;
         var enabled = _user.Id > 0 && _user.Id == myId;
         PrivacyPolicyComboBox.IsEnabled = PrivacyPolicyComboBox.IsVisible = enabled;
     }
@@ -145,7 +145,7 @@ public partial class WorkBookmarksPage : IconContentPage
 
         try
         {
-            var tags = await App.AppViewModel.MakoClient.GetBookmarkTagsAsync(
+            var tags = await App.Services!.GetRequiredService<MakoClient>().GetBookmarkTagsAsync(
                 _user.Id,
                 SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>(),
                 PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>());
@@ -157,7 +157,7 @@ public partial class WorkBookmarksPage : IconContentPage
         }
         catch (Exception ex)
         {
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+            App.Services!.GetRequiredService<FileLogger>()
                 .LogError(nameof(FetchTags), ex);
             _suppressChangeSource = true;
             TagComboBox.ItemsSource = new List<BookmarkTag> { AllBookmarkTag.Instance, UncategorizedBookmarkTag.Instance };
@@ -179,10 +179,10 @@ public partial class WorkBookmarksPage : IconContentPage
         var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
         var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>() is PrivacyPolicy.Private ? "private" : "public";
         var engine = (workType is SimpleWorkType.Novel
-            ? (IAsyncEnumerable<IWorkEntry>) App.AppViewModel.MakoClient.NovelBookmarks(_user.Id, privacy, tag)
-            : App.AppViewModel.MakoClient.WorkBookmarks(_user.Id, privacy, tag)).ToFetchEngine();
+            ? (IAsyncEnumerable<IWorkEntry>) App.Services!.GetRequiredService<MakoClient>().NovelBookmarks(_user.Id, privacy, tag)
+            : App.Services!.GetRequiredService<MakoClient>().WorkBookmarks(_user.Id, privacy, tag)).ToFetchEngine();
         WorkContainer.ResetEngine(engine);
-        App.AppViewModel.QueueWorkSubscriptionSyncCurrentSource(
+        SubscriptionService.QueueSyncCurrentSource(
             _user.Id,
             WorkSubscriptionType.Bookmarks,
             GetSubscriptionWorkKind(),
@@ -197,7 +197,12 @@ public partial class WorkBookmarksPage : IconContentPage
         _ = await WorkSubscriptionButtonHelper.RunAsync(
             AddSubscriptionButton,
             RemoveSubscriptionButton,
-            () => Task.FromResult(WorkSubscriptionHelper.TryAddOrUpdateUser(_user, WorkSubscriptionType.Bookmarks, workKind)),
+            () => Task.FromResult(WorkSubscriptionHelper.TryAddOrUpdateUser(
+                _user,
+                WorkSubscriptionType.Bookmarks,
+                workKind,
+                App.Services!.GetRequiredService<StorageEngine>(),
+                SubscriptionService)),
             UpdateSubscriptionButtons);
     }
 

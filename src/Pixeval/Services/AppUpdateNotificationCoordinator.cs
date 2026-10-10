@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Pixeval.AppManagement;
+using Pixeval.AppManagement.Settings;
 using Pixeval.Controls;
 using Pixeval.I18N;
 using Pixeval.Utilities;
@@ -15,11 +16,13 @@ namespace Pixeval.Services;
 
 public class AppUpdateNotificationCoordinator : IAppUpdateNotificationCoordinator
 {
+    private readonly AppSettings _appSettings;
     private readonly FileLogger? _logger;
     private bool _automaticUpdateStarted;
 
-    public AppUpdateNotificationCoordinator(FileLogger? logger = null)
+    public AppUpdateNotificationCoordinator(AppSettings appSettings, FileLogger? logger = null)
     {
+        _appSettings = appSettings;
         _logger = logger;
     }
 
@@ -30,7 +33,7 @@ public class AppUpdateNotificationCoordinator : IAppUpdateNotificationCoordinato
             if (AppInfo.AppVersion.UsesVelopack)
             {
                 StartAutomaticUpdate(viewContainer);
-                if (App.AppViewModel.AppSettings.IsNewVersion
+                if (_appSettings.IsNewVersion
                     && await AppInfo.AppVersion.GetCurrentAppReleaseModelAsync() is { } currentRelease)
                 {
                     await viewContainer.CreateAcknowledgementAsync(
@@ -50,7 +53,7 @@ public class AppUpdateNotificationCoordinator : IAppUpdateNotificationCoordinato
             }
             await checkTask;
 
-            if (App.AppViewModel.AppSettings.IsNewVersion)
+            if (_appSettings.IsNewVersion)
             {
                 await viewContainer.CreateAcknowledgementAsync(
                     SettingsPage.ReleaseTitle,

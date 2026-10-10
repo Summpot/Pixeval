@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.AppManagement;
 using Pixeval.Native.Storage;
 
 namespace Pixeval.ViewModels;
@@ -19,8 +21,8 @@ public partial class LoginPageViewModel : ViewModelBase
     private bool _areUsersLoaded;
 
     public LoginPageViewModel() : this(
-        App.AppViewModel.StorageEngine,
-        App.AppViewModel.LoginContext.CurrentKey)
+        App.Services!.GetRequiredService<StorageEngine>(),
+        App.Services!.GetRequiredService<LoginContext>().CurrentKey)
     {
     }
 

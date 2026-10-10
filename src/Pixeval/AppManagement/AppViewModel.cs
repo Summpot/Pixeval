@@ -30,6 +30,7 @@ using Pixeval.Utilities.Network;
 using Pixeval.Utilities.GitHub;
 using Pixeval.Utilities.IO.Caching;
 using Pixeval.Views;
+using Pixeval.Views.Home;
 
 namespace Pixeval.AppManagement;
 
@@ -44,21 +45,28 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
     public App App { get; } = app;
     public StorageEngine StorageEngine { get; } = new(AppInfo.DatabaseFilePath);
     public DownloadManager DownloadManager { get; private set; } = null!;
-    public ObservableCollection<SearchHistoryRecord> SearchHistoryEntries { get; } = [];
+    private readonly ObservableCollection<SearchHistoryRecord> _searchHistoryEntries = [];
+    private readonly ObservableCollection<HomePageCardLayout> _homePageCards =
+        AppInfo.LoadHomePageCards(logger) ?? HomePageCardsSettings.CreateDefaultCards();
+
+    public SearchHistorySession SearchHistory { get; private set; } = null!;
+    public HomePageCardSession HomePageCardsSession { get; private set; } = null!;
+    public NavigationMenuDocument NavigationMenu { get; } = new(AppInfo.LoadNavigationMenuYaml(logger) ?? NavigationMenuYaml.DefaultYaml);
+    public INetworkRuntime NetworkRuntime { get; private set; } = null!;
+    public ObservableCollection<SearchHistoryRecord> SearchHistoryEntries => _searchHistoryEntries;
     public Task RestoreTask { get; private set; } = Task.CompletedTask;
     public MakoClient MakoClient { get; private set; } = null!;
     public MahoClient MahoClient { get; private set; } = null!;
     public AppSettings AppSettings { get; } = AppInfo.LoadAppSettings(logger) ?? new AppSettings();
     public LoginContext LoginContext { get; } = AppInfo.LoadLoginContext(logger) ?? new LoginContext();
-    public ObservableCollection<HomePageCardLayout> HomePageCards { get; } = AppInfo.LoadHomePageCards(logger) ?? HomePageCardsSettings.CreateDefaultCards();
-    public string NavigationMenuYamlText { get; set; } = AppInfo.LoadNavigationMenuYaml(logger) ?? NavigationMenuYaml.DefaultYaml;
-
-    public void ResetHomePageCards()
+    public ObservableCollection<HomePageCardLayout> HomePageCards => _homePageCards;
+    public string NavigationMenuYamlText
     {
-        HomePageCards.Clear();
-        foreach (var card in HomePageCardsSettings.CreateDefaultCards())
-            HomePageCards.Add(card);
+        get => NavigationMenu.Text;
+        set => NavigationMenu.Text = value;
     }
+
+    public void ResetHomePageCards() => HomePageCardsSession.Reset();
 
     public void InitializeProvider()
     {
@@ -68,7 +76,6 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         NavigationService = AppServiceProvider.GetRequiredService<INavigationService>();
         AppUpdateNotificationCoordinator = AppServiceProvider.GetRequiredService<IAppUpdateNotificationCoordinator>();
         UserSession.UserRefreshed += u => UserRefreshed?.Invoke(u);
-        UserSession.UserRefreshed += _ => PixevalSettings.Instance.OnIsLoggedInChanged();
         SetNameResolvers();
         InitializePersistence();
         if (GetCurrentLoginUser() is { } currentUser)
@@ -76,7 +83,6 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             MakoClient.SetRefreshToken(currentUser.RefreshToken);
             MakoClient.SetUser(currentUser.TokenUser);
         }
-        PixevalSettings.Instance.OnIsLoggedInChanged();
         _ = AppServiceProvider.GetRequiredService<ExtensionService>();
         _ = CacheHelper.EnforceCacheSizeLimitAsync();
         CacheHelper.UpdateNetworkOptions(AppSettings.ToMakoConfiguration());
@@ -115,6 +121,11 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         DownloadManager.AttachPageSnapshotCallback();
         var extensionService = new ExtensionService(logger, AppSettings);
         DownloadManager.SetFormatEncoder(new DownloadFormatEncoderAdapter(extensionService));
+        SearchHistory = new SearchHistorySession(StorageEngine, _searchHistoryEntries);
+        HomePageCardsSession = new HomePageCardSession(_homePageCards);
+        var networkRuntime = new NetworkRuntime(AppSettings, MakoClient, MahoClient, CreateMahoClientOptions);
+        NetworkRuntime = networkRuntime;
+        var gitHubHttp = new GitHubHttpClientProvider(AppSettings.NetworkSettings);
 
         try
         {
@@ -131,9 +142,13 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             .AddSingleton(AppSettings)
             .AddSingleton(LoginContext)
             .AddBooruServices()
-            .AddKeyedSingleton<GitHubHttpClientProvider>(
-                GitHubHttpClientProvider.PlatformKey,
-                (_, _) => new GitHubHttpClientProvider(AppSettings.NetworkSettings))
+            .AddSingleton(gitHubHttp)
+            .AddKeyedSingleton(GitHubHttpClientProvider.PlatformKey, gitHubHttp)
+            .AddSingleton(SearchHistory)
+            .AddSingleton(HomePageCardsSession)
+            .AddSingleton(NavigationMenu)
+            .AddSingleton<INetworkRuntime>(networkRuntime)
+            .AddSingleton(new PixevalSettings(AppSettings))
             .AddSingleton(_ => MakoClient)
             .AddSingleton(_ => MahoClient)
             .AddSingleton(_ => StorageEngine)
@@ -144,6 +159,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             .AddSingleton<IArtworkActionService, ArtworkActionService>()
             .AddSingleton<INavigationService, NavigationService>()
             .AddSingleton<IAppUpdateNotificationCoordinator, AppUpdateNotificationCoordinator>()
+            .AddSingleton<HomeCardDefinitions>()
             .AddSingleton<WorkSubscriptionDownloadService>()
             .AddSingleton<IWorkSubscriptionService>(provider =>
                 provider.GetRequiredService<WorkSubscriptionDownloadService>())
@@ -183,21 +199,10 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         }
     }
 
-    public void AddSearchHistory(string text, string? translatedName = null)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return;
-        var entry = StorageEngine.UpsertSearchHistory(text, translatedName, DateTimeOffset.UtcNow.ToString("O"));
-        if (SearchHistoryEntries.FirstOrDefault(e => e.Value == text) is { } existing)
-            SearchHistoryEntries.Remove(existing);
-        SearchHistoryEntries.Insert(0, entry);
-    }
+    public void AddSearchHistory(string text, string? translatedName = null) =>
+        SearchHistory.Add(text, translatedName);
 
-    public void ClearSearchHistory()
-    {
-        StorageEngine.ClearSearchHistory();
-        SearchHistoryEntries.Clear();
-    }
+    public void ClearSearchHistory() => SearchHistory.Clear();
 
     public void AddBrowseHistory(object entry) => StorageEngine.HistoryRepository.AddBrowseHistory(entry);
 
@@ -209,9 +214,9 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
 
     public bool RemoveWatchLater(object entry) => StorageEngine.WatchLaterRepository.RemoveWatchLater(entry);
 
-    public static DownloadPolicy CreateDownloadPolicy(AppSettings? settings = null)
+    public static DownloadPolicy CreateDownloadPolicy(AppSettings settings)
     {
-        var download = (settings ?? App.AppViewModel.AppSettings).DownloadSettings;
+        var download = settings.DownloadSettings;
         return new DownloadPolicy(
             download.OverwriteDownloadedFile,
             download.DownloadFormats.IllustrationDownloadFormat,
@@ -253,33 +258,9 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
     public void QueueWorkSubscriptionSyncCurrentSource(long uid, WorkSubscriptionType subscriptionType, WorkSubscriptionWorkKind workKind, IFetchEngine<IWorkEntry> engine) =>
         AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().QueueSyncCurrentSource(uid, subscriptionType, workKind, engine);
 
-    public void SetNameResolvers()
-    {
-        var networkSettings = AppSettings.NetworkSettings;
-        HookResolver(networkSettings.PixivDomainFronting.PixivAppApiNameResolver);
-        HookResolver(networkSettings.PixivDomainFronting.PixivImageNameResolver);
-        HookResolver(networkSettings.PixivDomainFronting.PixivImageNameResolver2);
-        HookResolver(networkSettings.PixivDomainFronting.PixivOAuthNameResolver);
-        HookResolver(networkSettings.PixivDomainFronting.PixivAccountNameResolver);
-        HookResolver(networkSettings.PixivDomainFronting.PixivWebApiNameResolver);
+    public void SetNameResolvers() => NetworkRuntime.AttachNameResolverHooks();
 
-        void HookResolver(ObservableCollection<string> ips)
-        {
-            ips.CollectionChanged += (_, _) =>
-            {
-                UpdateMakoNetworkOptions();
-            };
-        }
-    }
-
-    public void UpdateMakoNetworkOptions()
-    {
-        var config = AppSettings.ToMakoConfiguration();
-        MakoClient.UpdateConfiguration(config);
-        CacheHelper.UpdateNetworkOptions(config);
-        MahoClient?.UpdateOptions(CreateMahoClientOptions());
-        AppInfo.AppVersion.ResetUpdateEngine();
-    }
+    public void UpdateMakoNetworkOptions() => NetworkRuntime.UpdateNetworkOptions();
 
     public HttpClient GetRequiredGitHubHttpClient() =>
         AppServiceProvider.GetRequiredKeyedService<GitHubHttpClientProvider>(GitHubHttpClientProvider.PlatformKey).GetApiClient();

@@ -9,6 +9,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.Input;
 using FluentIcons.Common;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Native.Config;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Home;
@@ -23,6 +24,7 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
     public static readonly StyledProperty<bool> IsSelectedProperty =
         AvaloniaProperty.Register<HomePageCardControl, bool>(nameof(IsSelected));
 
+    private readonly HomeCardDefinitions _definitions = App.Services!.GetRequiredService<HomeCardDefinitions>();
     private readonly bool _loadPreview;
     private PointerEditState? _pointerEditState;
     private bool _isDisposed;
@@ -41,7 +43,7 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
         bool loadPreview)
     {
         Card = card;
-        Definition = HomeCardDefinitions.Get(card.SourceKind);
+        Definition = _definitions.Get(card.SourceKind);
         RowCount = rowCount;
         ColumnCount = columnCount;
         PreviewViewModel = new(card, Definition.CreatePreviewSourceAsync);

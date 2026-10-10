@@ -6,6 +6,7 @@
     xmlns:capability="using:Pixeval.Views.Capability"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:di="using:Pixeval.Views.Markup"
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:home="using:Pixeval.Views.Home"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
@@ -82,12 +83,12 @@
                 IsDynamicOverflowEnabled="True">
                 <CommandBarToggleButton
                     Icon="{markup:SymbolIcon AppTitle}"
-                    IsChecked="{Binding HideHomePageCardTitle, Source={x:Static views:PixevalSettings.Instance}, Mode=TwoWay}"
+                    IsChecked="{Binding HideHomePageCardTitle, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}, Mode=TwoWay}"
                     Label="{I18N {x:Static pixeval:HomePageResources+HideCardTitleButton.Label}}" />
                 <CommandBarToggleButton
                     x:Name="HideHomePageToolbarButton"
                     Icon="{markup:SymbolIcon WindowHeaderHorizontal}"
-                    IsChecked="{Binding HideHomePageToolbar, Source={x:Static views:PixevalSettings.Instance}, Mode=TwoWay}"
+                    IsChecked="{Binding HideHomePageToolbar, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}, Mode=TwoWay}"
                     Label="{I18N {x:Static pixeval:HomePageResources+HideToolbarButton.Label}}" />
                 <CommandBarToggleButton
                     Icon="{markup:SymbolIcon Edit}"

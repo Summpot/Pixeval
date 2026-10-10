@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
 using Pixeval.Native.Storage;
 
@@ -40,7 +41,7 @@ public partial class FilterCompletionEngine
 
     public static FilterCompletionEngine CreateDefault()
     {
-        var storage = App.AppViewModel?.StorageEngine;
+        var storage = App.Services?.GetService<StorageEngine>();
         if (storage is not null)
         {
             return CreateWithStorage(storage);

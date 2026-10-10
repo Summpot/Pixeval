@@ -13,6 +13,7 @@ using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
+using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Navigation;
 using Pixeval.Services;
 using Pixeval.Utilities;
@@ -48,7 +49,10 @@ public partial class TabViewContainer : ViewContainerBase
     }
 
     public TabViewContainer() : this(
-        App.Services?.GetService<IAppUpdateNotificationCoordinator>() ?? new AppUpdateNotificationCoordinator(App.Services?.GetService<FileLogger>()))
+        App.Services?.GetService<IAppUpdateNotificationCoordinator>()
+        ?? new AppUpdateNotificationCoordinator(
+            App.Services!.GetRequiredService<AppSettings>(),
+            App.Services!.GetService<FileLogger>()))
     {
     }
 

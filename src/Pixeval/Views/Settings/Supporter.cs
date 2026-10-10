@@ -10,8 +10,10 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement;
 using Pixeval.Utilities;
+using Pixeval.Utilities.GitHub;
 using Pixeval.Utilities.IO;
 using Pixeval.ViewModels;
 
@@ -99,7 +101,7 @@ public partial class Supporter : ViewModelBase
         {
             _ = Directory.CreateDirectory(BasePath);
 
-            var httpClient = App.AppViewModel.GetRequiredGitHubHttpClient();
+            var httpClient = App.Services!.GetRequiredService<GitHubHttpClientProvider>().GetApiClient();
 
             var path = Path.Combine(BasePath, "github-supporters.json");
             var exists = File.Exists(path);

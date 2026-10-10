@@ -46,7 +46,7 @@ public abstract partial class SearchArgumentsFormViewModelBase : ViewModelBase
             return false;
         }
 
-        var isPremium = App.Services?.GetService<Services.IUserSessionService>()?.CurrentUser?.IsPremium ?? (PixevalSettings.Me?.IsPremium ?? false);
+        var isPremium = App.Services?.GetService<Services.IUserSessionService>()?.CurrentUser?.IsPremium ?? false;
         if (!isPremium
             && SortOption is WorkSortOption.PopularityDescending)
         {

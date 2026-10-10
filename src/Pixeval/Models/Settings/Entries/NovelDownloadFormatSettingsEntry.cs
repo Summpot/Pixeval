@@ -37,7 +37,7 @@ public class NovelDownloadFormatSettingsEntry(DownloadFormatsSettings settings)
         var builtIns = SymbolComboBoxItem.GetValues<NovelDownloadFormat>()
             .Select(t => t with { Value = NovelDownloadFormatToken.BuiltIn((NovelDownloadFormat) t.Value) });
 
-        var extensions = App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>()
+        var extensions = App.Services!.GetRequiredService<ExtensionService>()
             .ActiveNovelFormatProviders
             .Select(t => new SymbolComboBoxItem(NovelDownloadFormatToken.Extension(t), t.FormatDescription, t is IEntryExtension entry ? entry.Icon : Symbol.Document));
 
