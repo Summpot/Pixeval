@@ -25,8 +25,6 @@ public sealed class GitHubHttpClientProvider(NetworkSettingsGroup networkSetting
 
     public HttpClient GetImageDownloadClient() => GetClient(TimeSpan.FromSeconds(60));
 
-    public HttpClient GetUpdateDownloadClient() => GetClient(Timeout.InfiniteTimeSpan);
-
     private HttpClient GetClient(TimeSpan timeout)
     {
         var cacheKey = $"{GetCacheKey()};timeout:{timeout.Ticks}";

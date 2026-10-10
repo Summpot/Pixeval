@@ -9,8 +9,8 @@ using Pixeval.Models.Extensions;
 using Pixeval.Models.Subscriptions;
 using Pixeval.Native.Mcp;
 using Pixeval.Native.Storage;
+using Pixeval.Services;
 using Pixeval.Utilities;
-using Pixeval.Utilities.IO.Caching;
 using NativeMcpServer = Pixeval.Native.Mcp.McpServer;
 
 namespace Pixeval.Models.McpServer;
@@ -93,6 +93,7 @@ public sealed class PixevalMcpService : IPixevalMcpService, IMcpSessionBridge
             var downloadManager = _appViewModel.DownloadManager;
             var syncEngine = _appViewModel.AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().SyncEngine;
             var pluginEngine = _appViewModel.AppServiceProvider.GetService<ExtensionService>()?.PluginEngine;
+            var images = _appViewModel.AppServiceProvider.GetRequiredService<IImageProviderService>();
 
             var server = new NativeMcpServer(
                 config,
@@ -100,7 +101,7 @@ public sealed class PixevalMcpService : IPixevalMcpService, IMcpSessionBridge
                 _appViewModel.MakoClient,
                 storageEngine,
                 downloadManager,
-                CacheHelper.CacheEngine,
+                images.CacheEngine,
                 syncEngine,
                 pluginEngine
             );

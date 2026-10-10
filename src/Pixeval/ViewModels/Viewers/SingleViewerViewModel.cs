@@ -25,7 +25,6 @@ using Pixeval.Native.Mako;
 using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO;
-using Pixeval.Utilities.IO.Caching;
 
 namespace Pixeval.ViewModels.Viewers;
 
@@ -282,7 +281,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
                 token => LoadWithPreviewAsync(false, token), _lifetimeCancellationTokenSource.Token);
             if (source is null && !_disposed)
                 source = await DisplaySource.UpdateAsync(
-                    _ => Task.FromResult<IAnimatedBitmap?>(CacheHelper.AnimatedImageNotAvailable.Value),
+                    _ => Task.FromResult<IAnimatedBitmap?>(Images.AnimatedImageNotAvailable),
                     _lifetimeCancellationTokenSource.Token);
         }
         catch (OperationCanceledException) when (_lifetimeCancellationTokenSource.IsCancellationRequested)
@@ -393,7 +392,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         foreach (var (url, w, h) in GetThumbnailCandidates())
         {
             token.ThrowIfCancellationRequested();
-            await using var stream = CacheHelper.TryGetStream(url);
+            await using var stream = Images.TryGetStream(url);
             if (stream is null)
                 continue;
 
@@ -424,7 +423,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
                 if (string.IsNullOrEmpty(zipUrl))
                     return null;
                 var delays = metadata.Delays;
-                return await CacheHelper.GetUgoiraAnimatedImageAsync(
+                return await Images.GetUgoiraAnimatedImageAsync(
                     _platform,
                     new Uri(zipUrl),
                     delays,
@@ -438,7 +437,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
                     : (ill.LargeThumbnailUrl ?? ill.MediumThumbnailUrl ?? ill.OriginalUrl);
                 if (string.IsNullOrEmpty(url))
                     return null;
-                return await CacheHelper.GetSingleImageAsync(
+                return await Images.GetSingleImageAsync(
                     _platform,
                     url,
                     new Progress<double>(UpdateLoadingProgress),
@@ -451,7 +450,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
                     : (bp.LargeFileUrl ?? bp.PreviewFileUrl ?? bp.FileUrl);
                 if (string.IsNullOrEmpty(url))
                     return null;
-                return await CacheHelper.GetSingleImageAsync(
+                return await Images.GetSingleImageAsync(
                     _platform,
                     url,
                     new Progress<double>(UpdateLoadingProgress),

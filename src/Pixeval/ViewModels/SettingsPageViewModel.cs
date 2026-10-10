@@ -18,7 +18,6 @@ using Pixeval.Models.Options;
 using Pixeval.Models.Settings;
 using Pixeval.Models.Subscriptions;
 using Pixeval.Utilities;
-using Pixeval.Utilities.IO.Caching;
 
 namespace Pixeval.ViewModels;
 
@@ -89,11 +88,11 @@ public class SettingsPageViewModel : ViewModelBase
                 .Font(t => t.AppFontFamily, entry => entry.ValueChanged += App.ApplyAppFontFamily)
                 .MultiValuesWithSwitch(t => t.FileCache, t => t.LimitFileCacheSize,
                     entry => entry.Int(t => t.FileCacheSizeLimitInMegabytes, 1, 0x100000, 0x80,
-                        t => t.ValueChanged += _value => _ = CacheHelper.EnforceCacheSizeLimitAsync()),
+                        t => t.ValueChanged += _value => _ = _serviceProvider.GetRequiredService<IImageProviderService>().EnforceCacheSizeLimitAsync()),
                     t => t.MainValue.ValueChanged += enabled =>
                     {
                         if (enabled)
-                            _ = CacheHelper.EnforceCacheSizeLimitAsync();
+                            _ = _serviceProvider.GetRequiredService<IImageProviderService>().EnforceCacheSizeLimitAsync();
                     })
                 .MultiValues(t => t.HomePage, entries => entries
                     .Int(t => t.HomePageRows, 1, 12, 1)

@@ -12,14 +12,18 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Models;
+using Pixeval.Services;
 using Pixeval.Utilities;
-using Pixeval.Utilities.IO.Caching;
 
 namespace Pixeval.Controls;
 
 public static class Source
 {
+    private static IImageProviderService Images =>
+        App.Services!.GetRequiredService<IImageProviderService>();
+
     public static readonly AttachedProperty<string?> CacheProperty =
         AvaloniaProperty.RegisterAttached<Control, string?>(
             "Cache",
@@ -107,7 +111,7 @@ public static class Source
         var lifetime = BeginLoad(element, CacheLoadLifetimeProperty);
         try
         {
-            var bitmap = await CacheHelper.GetAnimatedBitmapAsync(GetPlatform(element), value, token: lifetime.Token);
+            var bitmap = await Images.GetAnimatedBitmapAsync(GetPlatform(element), value, token: lifetime.Token);
             if (!lifetime.TrySetSource(bitmap))
                 return;
             if (GetCache(element) != value)
@@ -139,7 +143,7 @@ public static class Source
         var lifetime = BeginLoad(element, CacheLoadLifetimeProperty);
         try
         {
-            var bitmap = await CacheHelper.GetAnimatedBitmapAsync(GetPlatform(element), value, token: lifetime.Token);
+            var bitmap = await Images.GetAnimatedBitmapAsync(GetPlatform(element), value, token: lifetime.Token);
             if (!lifetime.TrySetSource(bitmap))
                 return;
             if (GetCache(element) != value)
@@ -171,7 +175,7 @@ public static class Source
         var lifetime = BeginLoad(element, CacheLoadLifetimeProperty);
         try
         {
-            var bitmap = await CacheHelper.GetBitmapAsync(GetPlatform(element), value, token: lifetime.Token);
+            var bitmap = await Images.GetBitmapAsync(GetPlatform(element), value, token: lifetime.Token);
             if (!lifetime.TrySetSource(bitmap))
                 return;
             if (GetCache(element) != value)
@@ -231,7 +235,7 @@ public static class Source
         var lifetime = BeginLoad(element, BackgroundCacheLoadLifetimeProperty);
         try
         {
-            var bitmap = await CacheHelper.GetBitmapAsync(GetPlatform(element), value, token: lifetime.Token);
+            var bitmap = await Images.GetBitmapAsync(GetPlatform(element), value, token: lifetime.Token);
             if (!lifetime.TrySetSource(bitmap))
                 return;
             if (GetBackgroundCache(element) != value)

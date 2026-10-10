@@ -8,7 +8,6 @@ using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Native.Maho;
 using Pixeval.Native.Mako;
-using Pixeval.Utilities.IO.Caching;
 
 namespace Pixeval.Services;
 
@@ -16,7 +15,8 @@ public sealed class NetworkRuntime(
     AppSettings appSettings,
     MakoClient makoClient,
     MahoClient mahoClient,
-    Func<MahoClientOptions> mahoOptions) : INetworkRuntime
+    Func<MahoClientOptions> mahoOptions,
+    IImageProviderService images) : INetworkRuntime
 {
     public void AttachNameResolverHooks()
     {
@@ -36,7 +36,7 @@ public sealed class NetworkRuntime(
     {
         var config = appSettings.ToMakoConfiguration();
         makoClient.UpdateConfiguration(config);
-        CacheHelper.UpdateNetworkOptions(config);
+        images.UpdateNetworkOptions(config);
         mahoClient.UpdateOptions(mahoOptions());
         AppInfo.AppVersion.ResetUpdateEngine();
     }

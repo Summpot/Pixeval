@@ -2,7 +2,6 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,7 +11,6 @@ using Pixeval.Models.Download;
 using Pixeval.Models.Extensions;
 using Pixeval.Models.Options;
 using Pixeval.Native.Media;
-using SkiaSharp;
 
 using Pixeval.Services;
 
@@ -195,55 +193,6 @@ public static partial class IoHelper
         }
     }
 
-    public static async Task<IReadOnlyDictionary<Stream, int>> SplitAnimatedImageStreamAsync(Stream animatedStream)
-    {
-        if (animatedStream.CanSeek)
-            animatedStream.Position = 0;
-
-        using var codec = SKCodec.Create(animatedStream)
-            ?? throw new InvalidOperationException($"Unable to create {nameof(SKCodec)} from the provided stream.");
-        var frameCount = int.Max(codec.FrameCount, 1);
-        if (frameCount <= 1)
-            throw new ArgumentException("Not animated image");
-
-        var imageInfo = codec.Info;
-        var targetInfo = new SKImageInfo(imageInfo.Width, imageInfo.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
-        var frameInfos = codec.FrameInfo;
-        var streams = new Dictionary<Stream, int>(frameCount);
-        try
-        {
-            for (var frameIndex = 0; frameIndex < frameCount; frameIndex++)
-            {
-                using var bitmap = new SKBitmap(targetInfo);
-                var options = new SKCodecOptions(frameIndex);
-                var result = codec.GetPixels(targetInfo, bitmap.GetPixels(), options);
-                if (result is not SKCodecResult.Success and not SKCodecResult.IncompleteInput)
-                    throw new InvalidOperationException($"Failed to decode frame {frameIndex}: {result}.");
-
-                using var image = SKImage.FromBitmap(bitmap);
-                using var data = image.Encode(SKEncodedImageFormat.Png, 100)
-                    ?? throw new InvalidOperationException($"Failed to encode frame {frameIndex} as PNG.");
-                var memoryStream = Streams.RentStream();
-                data.SaveTo(memoryStream);
-                memoryStream.Position = 0;
-
-                var delay = frameInfos.Length > frameIndex && frameInfos[frameIndex].Duration > 0
-                    ? frameInfos[frameIndex].Duration
-                    : 100;
-
-                streams[memoryStream] = delay;
-            }
-
-            return streams;
-        }
-        catch
-        {
-            foreach (var stream in streams.Keys)
-                await stream.DisposeAsync();
-            throw;
-        }
-    }
-
     public static string ChangeExtension(string path, string extension)
     {
         return ReplaceFileExtensionTokens(path, extension);
@@ -258,26 +207,6 @@ public static partial class IoHelper
     public static string ReplaceTokenExtensionFromUrl(string path, string url, int setIndex)
     {
         return ReplaceTokenSetIndex(ReplaceFileExtensionTokens(path, Path.GetExtension(url)), setIndex);
-    }
-
-    public static Task<string> ReplaceTempExtensionFromStreamAsync(string path, Stream stream, int setIndex)
-    {
-        var originalPosition = stream.CanSeek ? stream.Position : 0;
-        try
-        {
-            if (stream.CanSeek)
-                stream.Position = 0;
-
-            using var codec = SKCodec.Create(stream)
-                ?? throw new InvalidOperationException($"Unable to create {nameof(SKCodec)} from the provided stream.");
-            var extension = GetEncodedImageExtension(codec.EncodedFormat);
-            return Task.FromResult(ReplaceTokenSetIndex(ReplaceFileExtensionTokens(path, extension), setIndex));
-        }
-        finally
-        {
-            if (stream.CanSeek)
-                stream.Position = originalPosition;
-        }
     }
 
     public static string ReplaceTokenExtensionWithTempExtension(string path, int setIndex)
@@ -373,25 +302,6 @@ public static partial class IoHelper
         var withoutSeparatedTokens = ReplaceTokenValues(path, "." + FileExtensionTokenPrefix, static _ => "");
         return ReplaceTokenValues(withoutSeparatedTokens, FileExtensionTokenPrefix, static _ => "");
     }
-
-    private static string GetEncodedImageExtension(SKEncodedImageFormat encodedFormat) =>
-        encodedFormat switch
-        {
-            SKEncodedImageFormat.Jpeg => ".jpg",
-            SKEncodedImageFormat.Png => ".png",
-            SKEncodedImageFormat.Gif => ".gif",
-            SKEncodedImageFormat.Bmp => ".bmp",
-            SKEncodedImageFormat.Webp => ".webp",
-            SKEncodedImageFormat.Ico => ".ico",
-            SKEncodedImageFormat.Wbmp => ".wbmp",
-            SKEncodedImageFormat.Pkm => ".pkm",
-            SKEncodedImageFormat.Ktx => ".ktx",
-            SKEncodedImageFormat.Astc => ".astc",
-            SKEncodedImageFormat.Dng => ".dng",
-            SKEncodedImageFormat.Heif => ".heif",
-            SKEncodedImageFormat.Avif => ".avif",
-            _ => throw new NotSupportedException($"Unsupported image format: {encodedFormat}.")
-        };
 
     extension(object? artworkInfo)
     {

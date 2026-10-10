@@ -337,7 +337,7 @@ public class Versioning
             GitHubRepositoryUri,
             string.Empty,
             prerelease: false,
-            downloader: new GitHubFileDownloader(App.AppViewModel.GetRequiredGitHubUpdateHttpClient));
+            downloader: new GitHubFileDownloader(() => UpdateEngine));
 
     private UpdateManager? GetVelopackUpdateManager()
     {

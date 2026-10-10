@@ -23,11 +23,12 @@ using Markdown.Avalonia.StyleCollections;
 using Markdown.Avalonia.Svg;
 using Markdown.Avalonia.SyntaxHigh;
 using Markdown.Avalonia.Utils;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Models;
 using Pixeval.AppManagement;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.Utilities.GitHub;
-using Pixeval.Utilities.IO.Caching;
 using Pixeval.Views.Viewers;
 
 namespace Pixeval.Controls;
@@ -531,7 +532,9 @@ public class MarkdownBox : MarkdownScrollViewer
             if (Uri.TryCreate(relativeOrAbsolutePath, UriKind.Absolute, out var uri)
                 && uri.Scheme is "http" or "https")
             {
-                return await CacheHelper.GetImageStreamAsync(ResolvePlatform(uri), uri.OriginalString).ConfigureAwait(false);
+                return await App.Services!.GetRequiredService<IImageProviderService>()
+                    .GetImageStreamAsync(ResolvePlatform(uri), uri.OriginalString)
+                    .ConfigureAwait(false);
             }
 
             return await (_defaultPathResolver.ResolveImageResource(relativeOrAbsolutePath) ?? Task.FromResult<Stream?>(null)).ConfigureAwait(false);

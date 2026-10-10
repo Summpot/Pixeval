@@ -15,7 +15,6 @@ using Pixeval.Models.Navigation;
 using Pixeval.Models.Options;
 using Pixeval.Models.Settings;
 using Pixeval.Utilities;
-using Pixeval.Utilities.IO.Caching;
 using Pixeval.ViewModels;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
@@ -249,7 +248,7 @@ public partial class SettingsMainView : ContentPage
 
     private async void DeleteFileCacheEntryButton_OnClicked(object sender, RoutedEventArgs e)
     {
-        await CacheHelper.PurgeCacheAsync();
+        await App.Services!.GetRequiredService<IImageProviderService>().PurgeCacheAsync();
         ShowClearData(ClearDataKind.FileCache);
     }
 

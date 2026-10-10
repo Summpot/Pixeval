@@ -14,7 +14,6 @@ using Pixeval.Models;
 using Pixeval.Models.Navigation;
 using Pixeval.Native.Mako;
 using Pixeval.Services;
-using Pixeval.Utilities.IO.Caching;
 
 namespace Pixeval.ViewModels;
 
@@ -24,6 +23,7 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
     private readonly MakoClient _makoClient;
     private readonly INavigationService _navigationService;
     private readonly NavigationMenuDocument _navigationMenu;
+    private readonly IImageProviderService _images;
     private NavigationConfiguration? _navigationConfiguration;
     private CancellationTokenSource? _avatarLoadCancellationTokenSource;
     private bool _isDisposed;
@@ -39,7 +39,8 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
         App.Services!.GetRequiredService<IUserSessionService>(),
         App.Services!.GetRequiredService<MakoClient>(),
         App.Services!.GetRequiredService<INavigationService>(),
-        App.Services!.GetRequiredService<NavigationMenuDocument>())
+        App.Services!.GetRequiredService<NavigationMenuDocument>(),
+        App.Services!.GetRequiredService<IImageProviderService>())
     {
     }
 
@@ -47,12 +48,14 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
         IUserSessionService sessionService,
         MakoClient makoClient,
         INavigationService navigationService,
-        NavigationMenuDocument navigationMenu)
+        NavigationMenuDocument navigationMenu,
+        IImageProviderService images)
     {
         _sessionService = sessionService;
         _makoClient = makoClient;
         _navigationService = navigationService;
         _navigationMenu = navigationMenu;
+        _images = images;
         RebuildNavigation();
         OnUserRefreshed(_sessionService.CurrentUser);
         _sessionService.UserRefreshed += OnUserRefreshed;
@@ -127,7 +130,7 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
             var avatarUrl = user?.ProfileImageUrls.Px50x50 ?? user?.ProfileImageUrls.Medium;
             if (!string.IsNullOrWhiteSpace(avatarUrl))
             {
-                avatar = await CacheHelper.GetAnimatedBitmapAsync(
+                avatar = await _images.GetAnimatedBitmapAsync(
                     PlatformConstants.Pixiv,
                     avatarUrl,
                     token: cancellationTokenSource.Token);

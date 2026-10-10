@@ -58,12 +58,22 @@ public partial class UpdateEngine
         return await DownloadAssetAsync(asset, destinationPath, callback, token).ConfigureAwait(false);
     }
 
-    public async Task<string> DownloadFileWithProgressAsync(
+    public Task<string> DownloadFileWithProgressAsync(
         string url,
         string destinationPath,
         string? expectedSha256 = null,
         IProgress<int>? progress = null,
         CancellationToken cancellationToken = default)
+        => DownloadFileWithProgressAsync(url, destinationPath, expectedSha256, progress, cancellationToken, null, null);
+
+    public async Task<string> DownloadFileWithProgressAsync(
+        string url,
+        string destinationPath,
+        string? expectedSha256,
+        IProgress<int>? progress,
+        CancellationToken cancellationToken,
+        IDictionary<string, string>? headers,
+        double? timeoutMinutes)
     {
         var token = cancellationToken.CanBeCanceled ? new UpdateCancellationToken() : null;
         await using var registration = cancellationToken.CanBeCanceled
@@ -71,8 +81,30 @@ public partial class UpdateEngine
             : default;
 
         var callback = progress != null ? new ProgressCallbackAdapter(progress) : null;
-        return await DownloadFileAsync(url, destinationPath, expectedSha256, callback, token).ConfigureAwait(false);
+        return await DownloadFileAsync(
+            url,
+            destinationPath,
+            expectedSha256,
+            callback,
+            token,
+            CopyHeaders(headers),
+            timeoutMinutes).ConfigureAwait(false);
     }
+
+    public Task<byte[]> DownloadUpdateBytesAsync(
+        string url,
+        IDictionary<string, string>? headers,
+        double? timeoutMinutes)
+        => DownloadBytesAsync(url, CopyHeaders(headers), timeoutMinutes);
+
+    public Task<string> DownloadUpdateTextAsync(
+        string url,
+        IDictionary<string, string>? headers,
+        double? timeoutMinutes)
+        => DownloadTextAsync(url, CopyHeaders(headers), timeoutMinutes);
+
+    private static Dictionary<string, string>? CopyHeaders(IDictionary<string, string>? headers)
+        => headers is null ? null : new Dictionary<string, string>(headers);
 
     private sealed class ProgressCallbackAdapter(IProgress<int> progress) : IUpdateProgressCallback
     {

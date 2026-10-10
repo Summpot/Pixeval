@@ -28,7 +28,6 @@ using Pixeval.Utilities;
 using Pixeval.Services;
 using Pixeval.Utilities.Network;
 using Pixeval.Utilities.GitHub;
-using Pixeval.Utilities.IO.Caching;
 using Pixeval.Views;
 using Pixeval.Views.Home;
 
@@ -84,8 +83,9 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             MakoClient.SetUser(currentUser.TokenUser);
         }
         _ = AppServiceProvider.GetRequiredService<ExtensionService>();
-        _ = CacheHelper.EnforceCacheSizeLimitAsync();
-        CacheHelper.UpdateNetworkOptions(AppSettings.ToMakoConfiguration());
+        var images = AppServiceProvider.GetRequiredService<IImageProviderService>();
+        _ = images.EnforceCacheSizeLimitAsync();
+        images.UpdateNetworkOptions(AppSettings.ToMakoConfiguration());
     }
 
     public MahoClientOptions CreateMahoClientOptions()
@@ -123,7 +123,8 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         DownloadManager.SetFormatEncoder(new DownloadFormatEncoderAdapter(extensionService));
         SearchHistory = new SearchHistorySession(StorageEngine, _searchHistoryEntries);
         HomePageCardsSession = new HomePageCardSession(_homePageCards);
-        var networkRuntime = new NetworkRuntime(AppSettings, MakoClient, MahoClient, CreateMahoClientOptions);
+        var images = new ImageProviderService(AppSettings, logger);
+        var networkRuntime = new NetworkRuntime(AppSettings, MakoClient, MahoClient, CreateMahoClientOptions, images);
         NetworkRuntime = networkRuntime;
         var gitHubHttp = new GitHubHttpClientProvider(AppSettings.NetworkSettings);
 
@@ -154,7 +155,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             .AddSingleton(_ => StorageEngine)
             .AddSingleton(_ => DownloadManager)
             .AddSingleton<IUserSessionService, UserSessionService>()
-            .AddSingleton<IImageProviderService, ImageProviderService>()
+            .AddSingleton<IImageProviderService>(images)
             .AddSingleton<IDownloadFormatService, DownloadFormatService>()
             .AddSingleton<IArtworkActionService, ArtworkActionService>()
             .AddSingleton<INavigationService, NavigationService>()
@@ -264,9 +265,6 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
 
     public HttpClient GetRequiredGitHubHttpClient() =>
         AppServiceProvider.GetRequiredKeyedService<GitHubHttpClientProvider>(GitHubHttpClientProvider.PlatformKey).GetApiClient();
-
-    public HttpClient GetRequiredGitHubUpdateHttpClient() =>
-        AppServiceProvider.GetRequiredKeyedService<GitHubHttpClientProvider>(GitHubHttpClientProvider.PlatformKey).GetUpdateDownloadClient();
 
     public async ValueTask DisposeAsync()
     {
