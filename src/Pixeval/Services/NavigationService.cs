@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -15,6 +16,7 @@ using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
+using Pixeval.Views;
 using Pixeval.Views.Capability;
 using Pixeval.Views.Home;
 using Pixeval.Views.Login;
@@ -105,6 +107,21 @@ public class NavigationService : INavigationService
     {
         if (parameter is null)
         {
+            if (pageType == typeof(WorkPostsPage))
+                return new WorkPostsPage(CurrentOrFallbackUser());
+
+            if (pageType == typeof(WorkBookmarksPage))
+                return new WorkBookmarksPage(CurrentOrFallbackUser());
+
+            if (pageType == typeof(UserFollowingPage))
+                return new UserFollowingPage(CurrentUserId());
+
+            if (pageType == typeof(UserMyPixivPage))
+                return new UserMyPixivPage(CurrentUserId());
+
+            if (pageType == typeof(RelatedUsersPage))
+                return new RelatedUsersPage(CurrentUserId());
+
             var diService = _serviceProvider?.GetService(pageType) ?? App.Services?.GetService(pageType);
             if (diService is Page diPage)
                 return diPage;
@@ -203,6 +220,34 @@ public class NavigationService : INavigationService
 
             throw;
         }
+    }
+
+    public Task PushAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TPage>(
+        Page host,
+        object? parameter = null)
+        where TPage : Page
+    {
+        if (host.IsInNavigationPage && host.Parent is NavigationPage frame)
+            return frame.PushAsync(CreatePage(typeof(TPage), parameter));
+
+        return Task.CompletedTask;
+    }
+
+    private User CurrentOrFallbackUser()
+    {
+        var session = (_serviceProvider ?? App.Services)?.GetService<IUserSessionService>();
+        return session?.CurrentUserEntity
+            ?? PixevalSettings.MyUser
+            ?? new User(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []);
+    }
+
+    private long CurrentUserId()
+    {
+        var session = (_serviceProvider ?? App.Services)?.GetService<IUserSessionService>();
+        if (session is { CurrentUserId: > 0 })
+            return session.CurrentUserId;
+
+        return PixevalSettings.MyId;
     }
 
     #region Strongly-Typed Domain Navigation

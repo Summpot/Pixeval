@@ -62,7 +62,7 @@ public sealed class ImageViewerRenderingTest
                     using var model = new SingleViewerViewModel("test", new BooruPost(
                         "1", "md5", BooruPlatform.Danbooru, "https://example.com/test.jpg", null, null,
                         100, 100, 0, "jpg", DateTimeOffset.UtcNow.ToString("o"), "1", "test",
-                        null, "general", [], null, false, 0, false, false, null), 0, (_, _) => Task.CompletedTask);
+                        null, "general", [], null, false, 0, false, false, null), 0);
                     using var thumbnail = CreateSource(size);
                     if (sourceReadyBeforeAttachment)
                     {

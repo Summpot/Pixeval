@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Mako;
@@ -54,4 +55,8 @@ public interface IArtworkActionService
     bool BlockUser(User user);
 
     Task CopyImageAsync(Image? image);
+
+    Task CopyBitmapAsync(Bitmap bitmap, Control anchor);
+
+    Task SaveBitmapAsAsync(Bitmap bitmap, Control anchor, string suggestedFileName);
 }

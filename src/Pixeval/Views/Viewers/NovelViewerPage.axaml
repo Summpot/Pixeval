@@ -2,11 +2,13 @@
     x:Class="Pixeval.Views.Viewers.NovelViewerPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:capability="using:Pixeval.Views.Capability"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Views.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Pixeval.Views.Viewers"
     xmlns:mako="using:Pixeval.Native.Mako"
+    xmlns:pixiv="using:Pixeval.Models.Pixiv"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -30,7 +32,22 @@
             <SplitView.Pane>
                 <DockPanel>
                     <local:WorkSeriesInfoPane DataContext="{Binding SeriesInfo}" DockPanel.Dock="Bottom" />
-                    <TabbedPage x:Name="NovelTabbedPage" TabPlacement="Bottom" />
+                    <TabbedPage x:Name="NovelTabbedPage" TabPlacement="Bottom">
+                        <local:WorkInfoPage
+                            controls:TabPageInclusion.IsIncluded="{Binding CurrentNovel, Converter={x:Static ObjectConverters.IsNotNull}}"
+                            Work="{Binding CurrentNovel}" />
+                        <local:CommentsPage
+                            controls:TabPageInclusion.IsIncluded="{Binding CurrentNovel, Converter={x:Static converters:PixevalConverters.IsInteractiveWork}}"
+                            ParentId="{Binding CurrentNovel.Id}"
+                            ParentType="{x:Static pixiv:SimpleWorkType.Novel}" />
+                        <capability:WorkRelatedPage
+                            controls:TabPageInclusion.IsIncluded="{Binding CurrentNovel, Converter={x:Static converters:PixevalConverters.IsInteractiveWork}}"
+                            IsCommandBarCollapsed="True"
+                            WorkId="{Binding CurrentNovel.Id}"
+                            WorkType="{x:Static pixiv:SimpleWorkType.Novel}" />
+                        <local:NovelViewerSettingsPage
+                            controls:TabPageInclusion.IsIncluded="{Binding CurrentNovel, Converter={x:Static converters:PixevalConverters.IsInteractiveWork}}" />
+                    </TabbedPage>
                 </DockPanel>
             </SplitView.Pane>
 

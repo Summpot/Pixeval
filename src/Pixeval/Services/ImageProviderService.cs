@@ -62,6 +62,8 @@ public sealed class ImageProviderService : IImageProviderService, IDisposable
 
     public IAnimatedBitmap AnimatedImageNotAvailable => _animatedImageNotAvailableLazy.Value;
 
+    public IAnimatedBitmap LoadAnimatedBitmap(Stream stream) => IAnimatedBitmap.Load(stream, true);
+
     private long GetCacheSizeLimitInBytes()
     {
         var sizeInMegabytes = Math.Max(1, _appSettings.ApplicationSettings.FileCache.FileCacheSizeLimitInMegabytes);

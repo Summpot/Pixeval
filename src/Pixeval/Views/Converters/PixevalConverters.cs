@@ -15,6 +15,7 @@ using FluentIcons.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.Models;
+using Pixeval.Models.Blocking;
 using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
 using Pixeval.Services;
@@ -70,6 +71,17 @@ public static partial class PixevalConverters
         });
 
     public static readonly StringFormatConverter StringFormatConverter = StringFormatConverter.Instance;
+
+    public static readonly FuncValueConverter<object?, bool> IsIllustration = new(value => value is Illustration);
+
+    public static readonly FuncValueConverter<object?, bool> IsInteractiveIllustration = new(value =>
+        value is Illustration illustration && !BlockedContentHelper.IsBlockedPlaceholder(illustration));
+
+    public static readonly FuncValueConverter<object?, long> IllustrationId = new(value =>
+        value is Illustration illustration ? illustration.Id : 0);
+
+    public static readonly FuncValueConverter<object?, bool> IsInteractiveWork = new(value =>
+        value is not null && !BlockedContentHelper.IsBlockedPlaceholder(value));
 
     public static readonly FuncValueConverter<string?, string?> HtmlToPlainText = new(value =>
         value is null

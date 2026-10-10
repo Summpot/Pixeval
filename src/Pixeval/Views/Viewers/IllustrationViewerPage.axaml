@@ -16,6 +16,7 @@
     xmlns:views="using:Pixeval.Views"
     x:DataType="{x:Type viewers:IllustrationViewerPageViewModel}"
     x:Name="Root"
+    controls:IllustrationAutoPlayBehavior.IsEnabled="True"
     Header="{Binding Title, FallbackValue={x:Null}}"
     mc:Ignorable="d"
     d:DesignHeight="450"

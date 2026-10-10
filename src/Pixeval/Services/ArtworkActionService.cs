@@ -375,6 +375,43 @@ public sealed class ArtworkActionService : IArtworkActionService
         topLevel.ViewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
     }
 
+    public async Task CopyBitmapAsync(Bitmap bitmap, Control anchor)
+    {
+        if (TopLevel.GetTopLevel(anchor) is not { ViewContainer: { } viewContainer, Clipboard: { } clipboard })
+            return;
+
+        await clipboard.SetBitmapAsync(bitmap);
+        await clipboard.FlushAsync();
+        viewContainer.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+    }
+
+    public async Task SaveBitmapAsAsync(Bitmap bitmap, Control anchor, string suggestedFileName)
+    {
+        if (TopLevel.GetTopLevel(anchor) is not { ViewContainer: { } viewContainer, StorageProvider: { } storageProvider })
+            return;
+
+        var file = await storageProvider.SaveFilePickerAsync(new()
+        {
+            FileTypeChoices =
+            [
+                new("PNG")
+                {
+                    Patterns = ["*.png"],
+                    MimeTypes = ["image/png"]
+                }
+            ],
+            DefaultExtension = "png",
+            SuggestedFileName = suggestedFileName
+        });
+
+        if (file is null)
+            return;
+
+        await using var stream = await file.OpenWriteAsync();
+        bitmap.Save(stream, new PngBitmapEncoderOptions());
+        viewContainer.ShowSuccess(I18NManager.GetResource(MiscResources.Saved), file.Path.OriginalString);
+    }
+
     private static ViewContainerBase? ResolveActiveViewContainer()
     {
         if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
@@ -411,4 +448,6 @@ public sealed class NullArtworkActionService : IArtworkActionService
     public Task<bool> ToggleFollowUserAsync(User user) => Task.FromResult(false);
     public bool BlockUser(User user) => false;
     public Task CopyImageAsync(Image? image) => Task.CompletedTask;
+    public Task CopyBitmapAsync(Bitmap bitmap, Control anchor) => Task.CompletedTask;
+    public Task SaveBitmapAsAsync(Bitmap bitmap, Control anchor, string suggestedFileName) => Task.CompletedTask;
 }

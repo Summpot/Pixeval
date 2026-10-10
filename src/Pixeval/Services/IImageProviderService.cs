@@ -48,6 +48,8 @@ public interface IImageProviderService
         Action<DecodedPreviewFrame>? onPreview = null,
         CancellationToken token = default);
 
+    IAnimatedBitmap LoadAnimatedBitmap(Stream stream);
+
     ValueTask<IAnimatedBitmap> GetUgoiraAnimatedImageAsync(
         string platform,
         Uri zipUri,

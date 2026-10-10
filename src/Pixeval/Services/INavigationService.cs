@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Pixeval.Models;
 using Pixeval.Models.Pixiv;
@@ -52,6 +53,14 @@ public interface INavigationService
     /// Creates a page instance for the given page type and parameter.
     /// </summary>
     Page CreatePage([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type pageType, object? parameter = null);
+
+    /// <summary>
+    /// Pushes a page created by <see cref="CreatePage"/> onto the navigation frame that hosts <paramref name="host"/>.
+    /// </summary>
+    Task PushAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TPage>(
+        Page host,
+        object? parameter = null)
+        where TPage : Page;
 
     #region Strongly-Typed Domain Navigation
 

@@ -14,5 +14,5 @@
     <viewers:WorkInfoPane
         ActionZone="{Binding #WorkInfoPageRoot.ActionZone}"
         ActionZoneTemplate="{Binding #WorkInfoPageRoot.ActionZoneTemplate}"
-        ArtworkInfo="{Binding}" />
+        ArtworkInfo="{Binding #WorkInfoPageRoot.Work}" />
 </views:IconContentPage>

@@ -1,12 +1,9 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using System;
-using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
 using Pixeval.Models.Options;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
@@ -15,8 +12,6 @@ namespace Pixeval.Views.Viewers;
 
 public partial class IllustrationViewerPage : ContentPage
 {
-    private readonly DispatcherTimer _autoPlayTimer = new();
-
     private IllustrationViewerPageViewModel ViewModel => (IllustrationViewerPageViewModel) DataContext!;
 
     public IllustrationViewerPage() : this(null)
@@ -27,48 +22,6 @@ public partial class IllustrationViewerPage : ContentPage
     {
         DataContext = viewModel;
         InitializeComponent();
-        _autoPlayTimer.Tick += AutoPlayTimerOnTick;
-        if (viewModel is not null)
-        {
-            viewModel.PropertyChanged += ViewModel_OnPropertyChanged;
-            UpdateAutoPlayTimer();
-        }
-    }
-
-    private void ViewModel_OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName is nameof(IllustrationViewerPageViewModel.IsAutoPlaying) or nameof(IllustrationViewerPageViewModel.AutoPlayInterval))
-        {
-            UpdateAutoPlayTimer();
-        }
-    }
-
-    private void UpdateAutoPlayTimer()
-    {
-        if (ViewModel?.IsAutoPlaying == true)
-        {
-            _autoPlayTimer.Interval = TimeSpan.FromSeconds(ViewModel.AutoPlayInterval);
-            _autoPlayTimer.Start();
-        }
-        else
-        {
-            _autoPlayTimer.Stop();
-        }
-    }
-
-    private void AutoPlayTimerOnTick(object? sender, EventArgs e)
-    {
-        ViewModel?.MoveAutoPlayNext();
-    }
-
-    protected override void OnUnloaded(RoutedEventArgs e)
-    {
-        base.OnUnloaded(e);
-        _autoPlayTimer.Stop();
-        if (ViewModel is not null)
-        {
-            ViewModel.PropertyChanged -= ViewModel_OnPropertyChanged;
-        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

@@ -2,11 +2,9 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +15,6 @@ using Pixeval.Native.Mako;
 using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.Views;
-using Pixeval.Views.Capability;
 
 namespace Pixeval.ViewModels.Viewers;
 
@@ -41,7 +38,6 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(Header))]
     [NotifyPropertyChangedFor(nameof(AvatarUrl))]
     [NotifyPropertyChangedFor(nameof(BackgroundUrl))]
-    [NotifyPropertyChangedFor(nameof(TabPages))]
     [NotifyPropertyChangedFor(nameof(CurrentUiState))]
     public partial SingleUserResponse? UserDetail { get; private set; }
 
@@ -54,17 +50,6 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     public string? AvatarUrl => UserDetail?.User.AvatarUrl;
 
     public string? BackgroundUrl => UserDetail?.Profile.BackgroundImageUrl ?? AvatarUrl;
-
-    public IReadOnlyList<ContentPage> TabPages => UserDetail is { User: var user }
-        ?
-        [
-            new WorkPostsPage(user),
-            new WorkBookmarksPage(user),
-            new UserFollowingPage(Id),
-            new UserMyPixivPage(Id),
-            new RelatedUsersPage(Id),
-        ]
-        : [];
 
     private readonly MakoClient? _makoClient;
     private readonly IUserSessionService? _userSessionService;

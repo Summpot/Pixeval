@@ -24,7 +24,7 @@ using Pixeval.Views.Viewers;
 
 namespace Pixeval.ViewModels.Viewers;
 
-public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewModel, IDisposable
+public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewModel, IDisposable, IIllustrationAutoPlayTarget
 {
     private readonly MakoClient _makoClient;
     private readonly AppSettings _appSettings;

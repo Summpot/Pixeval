@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Viewers.UserViewerPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:capability="using:Pixeval.Views.Capability"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
@@ -166,7 +167,13 @@
                     </StackPanel>
                 </Border>
             </Expander>
-            <TabbedPage Pages="{Binding TabPages}" />
+            <TabbedPage>
+                <capability:WorkPostsPage User="{Binding UserDetail.User}" />
+                <capability:WorkBookmarksPage User="{Binding UserDetail.User}" />
+                <capability:UserFollowingPage UserId="{Binding Id}" />
+                <capability:UserMyPixivPage UserId="{Binding Id}" />
+                <capability:RelatedUsersPage UserId="{Binding Id}" />
+            </TabbedPage>
         </DockPanel>
         <controls:ViewerStateOverlay ErrorMessage="{Binding LoadErrorMessage}" IsLoading="{Binding IsLoading}" />
     </Grid>

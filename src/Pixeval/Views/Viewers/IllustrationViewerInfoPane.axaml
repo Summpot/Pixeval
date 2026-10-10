@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:common="using:FluentIcons.Common"
+    xmlns:capability="using:Pixeval.Views.Capability"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Views.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -15,6 +16,7 @@
     xmlns:viewModels="using:Pixeval.ViewModels"
     xmlns:viewers="using:Pixeval.ViewModels.Viewers"
     xmlns:mako="using:Pixeval.Native.Mako"
+    xmlns:pixiv="using:Pixeval.Models.Pixiv"
     xmlns:booru="using:Pixeval.Native.Booru"
     x:DataType="{x:Type viewers:IllustrationViewerPageViewModel}"
     Name="InfoPaneRoot"
@@ -162,6 +164,27 @@
                         <TabbedPage.Resources>
                             <Thickness x:Key="TabbedPageTabStripPadding">0,0,60,0</Thickness>
                         </TabbedPage.Resources>
+                        <local:WorkInfoPage
+                            controls:TabPageInclusion.IsIncluded="{Binding CurrentIllustration, Converter={x:Static converters:PixevalConverters.IsIllustration}}"
+                            Work="{Binding CurrentIllustration}">
+                            <local:WorkInfoPage.ActionZone>
+                                <Border
+                                    Width="32"
+                                    Height="32"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    IsHitTestVisible="False" />
+                            </local:WorkInfoPage.ActionZone>
+                        </local:WorkInfoPage>
+                        <local:CommentsPage
+                            controls:TabPageInclusion.IsIncluded="{Binding CurrentIllustration, Converter={x:Static converters:PixevalConverters.IsInteractiveIllustration}}"
+                            ParentId="{Binding CurrentIllustration, Converter={x:Static converters:PixevalConverters.IllustrationId}}"
+                            ParentType="{x:Static pixiv:SimpleWorkType.Illustration}" />
+                        <capability:WorkRelatedPage
+                            controls:TabPageInclusion.IsIncluded="{Binding CurrentIllustration, Converter={x:Static converters:PixevalConverters.IsInteractiveIllustration}}"
+                            IsCommandBarCollapsed="True"
+                            WorkId="{Binding CurrentIllustration, Converter={x:Static converters:PixevalConverters.IllustrationId}}"
+                            WorkType="{x:Static pixiv:SimpleWorkType.Illustration}" />
                     </TabbedPage>
                 </Panel>
             </DockPanel>

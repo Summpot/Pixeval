@@ -31,10 +31,13 @@ public partial class SettingsMainView : ContentPage
         RefreshUpdateStatus();
     }
 
+    private INavigationService AppNavigation =>
+        App.Services?.GetService<INavigationService>() ?? new NavigationService();
+
     private async void SettingsCard_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (IsInNavigationPage && Parent is NavigationPage frame && sender is Control { DataContext: ISettingsGroup group })
-            await frame.PushAsync(new SettingsSubView(group));
+        if (sender is Control { DataContext: ISettingsGroup group })
+            await AppNavigation.PushAsync<SettingsSubView>(this, group);
     }
 
     private void SwitchAccountButton_OnClicked(object sender, RoutedEventArgs e)
@@ -282,21 +285,12 @@ public partial class SettingsMainView : ContentPage
         }));
     }
 
-    private async void AboutPageButton_OnClicked(object? sender, RoutedEventArgs e)
-    {
-        if (IsInNavigationPage && Parent is NavigationPage frame)
-            await frame.PushAsync(new AboutPage());
-    }
+    private async void AboutPageButton_OnClicked(object? sender, RoutedEventArgs e) =>
+        await AppNavigation.PushAsync<AboutPage>(this);
 
-    private async void HelpPageButton_OnClicked(object? sender, RoutedEventArgs e)
-    {
-        if (IsInNavigationPage && Parent is NavigationPage frame)
-            await frame.PushAsync(new HelpPage());
-    }
+    private async void HelpPageButton_OnClicked(object? sender, RoutedEventArgs e) =>
+        await AppNavigation.PushAsync<HelpPage>(this);
 
-    private async void NavigationSettingsButton_OnClicked(object? sender, RoutedEventArgs e)
-    {
-        if (IsInNavigationPage && Parent is NavigationPage frame)
-            await frame.PushAsync(new NavigationSettingsPage());
-    }
+    private async void NavigationSettingsButton_OnClicked(object? sender, RoutedEventArgs e) =>
+        await AppNavigation.PushAsync<NavigationSettingsPage>(this);
 }

@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using AnimatedControls.Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -23,6 +22,7 @@ using Pixeval.Models.Extensions;
 using Pixeval.Native.Booru;
 using Pixeval.Native.Cache;
 using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO;
 using Pixeval.Utilities.IO.Caching;
@@ -171,7 +171,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     private bool _thumbnailLoaded;
     private readonly string _platform;
     private readonly object _entry;
-    private readonly Func<Control?, int, Task> _saveImageAsync;
+    private readonly object _saveTarget;
 
     public int Index { get; }
 
@@ -198,11 +198,11 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         string platform,
         object entry,
         int index,
-        Func<Control?, int, Task> saveImageAsync)
+        object? saveTarget = null)
     {
         _platform = platform;
         _entry = entry;
-        _saveImageAsync = saveImageAsync;
+        _saveTarget = saveTarget ?? entry;
         Index = index;
         DisplaySource.Changed += DisplaySourceOnChanged;
         TransformerExtensionItems = [.. TransformerExtensions.Select(extension => new ImageTransformerExtensionCommandItem(this, extension))];
@@ -545,7 +545,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
             {
                 await extension.TransformAsync(source, destination);
                 destination.Position = 0;
-                var transformedSource = IAnimatedBitmap.Load(destination, true);
+                var transformedSource = Images.LoadAnimatedBitmap(destination);
                 var updatedSource = await DisplaySource.UpdateAsync(
                     _ => Task.FromResult<IAnimatedBitmap?>(transformedSource), _lifetimeCancellationTokenSource.Token);
                 if (_disposed)
@@ -593,49 +593,32 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand(CanExecute = nameof(LoadSuccessfully))]
-    private async Task CopyAsync(Control control)
+    private Task CopyAsync(Control control)
     {
         if (DisplaySource.Frames is not [var singleFrame])
-            return;
-        if (TopLevel.GetTopLevel(control) is not
-            { ViewContainer: { } viewContainer, Clipboard: { } clipboard })
-            return;
-        await clipboard.SetBitmapAsync(singleFrame);
-        await clipboard.FlushAsync();
-        viewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+            return Task.CompletedTask;
+
+        return ArtworkActions.CopyBitmapAsync(singleFrame, control);
     }
 
     [RelayCommand]
-    private Task SaveImageAsync(Control? control) => _saveImageAsync(control, Index);
+    private Task SaveImageAsync(Control? control)
+    {
+        var viewContainer = control is null ? null : TopLevel.GetTopLevel(control)?.ViewContainer;
+        return _saveTarget switch
+        {
+            Illustration illustration => ArtworkActions.SaveIllustrationAsync(illustration, Index, viewContainer),
+            _ => ArtworkActions.SaveWorkAsync(_saveTarget, viewContainer)
+        };
+    }
 
     [RelayCommand(CanExecute = nameof(LoadSuccessfully))]
-    private async Task SaveAsAsync(Control control)
+    private Task SaveAsAsync(Control control)
     {
         if (DisplaySource.Frames is not [var singleFrame])
-            return;
-        if (TopLevel.GetTopLevel(control) is not
-            { ViewContainer: { } viewContainer, StorageProvider: { } storageProvider })
-            return;
-        var file = await storageProvider.SaveFilePickerAsync(new()
-        {
-            FileTypeChoices =
-            [
-                new("PNG")
-                {
-                    Patterns = ["*.png"],
-                    MimeTypes = ["image/png"]
-                }
-            ],
-            DefaultExtension = "png",
-            SuggestedFileName = GetEntryIdString()
-        });
+            return Task.CompletedTask;
 
-        if (file is null)
-            return;
-
-        var stream = await file.OpenWriteAsync();
-        singleFrame.Save(stream, new PngBitmapEncoderOptions());
-        viewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.Saved), file.Path.OriginalString);
+        return ArtworkActions.SaveBitmapAsAsync(singleFrame, control, GetEntryIdString());
     }
 
     private string GetEntryIdString() => _entry switch
@@ -646,6 +629,13 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     };
 
     private static ExtensionService ExtensionService => App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>();
+
+    private static IArtworkActionService ArtworkActions =>
+        App.Services?.GetService<IArtworkActionService>() ?? NullArtworkActionService.Instance;
+
+    private static IImageProviderService Images =>
+        App.Services?.GetService<IImageProviderService>()
+        ?? throw new InvalidOperationException();
 }
 
 public sealed class ImageTransformerExtensionCommandItem

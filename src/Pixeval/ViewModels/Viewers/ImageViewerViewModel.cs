@@ -28,8 +28,8 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
 
         Images = entry switch
         {
-            Illustration { Pages.Count: > 1 } ill => ill.Pages.Select((t, i) => new SingleViewerViewModel(platform, t, i, (ctrl, idx) => WorkCommands.SaveImageAsync(entry, ctrl, idx))).ToArray(),
-            _ => [new(platform, entry, 0, (ctrl, idx) => WorkCommands.SaveImageAsync(entry, ctrl, idx))]
+            Illustration { Pages.Count: > 1 } ill => ill.Pages.Select((page, index) => new SingleViewerViewModel(platform, page, index, ill)).ToArray(),
+            _ => [new(platform, entry, 0)]
         };
 
         PageCount = Images.Count;

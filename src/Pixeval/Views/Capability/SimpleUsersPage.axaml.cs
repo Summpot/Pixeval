@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
@@ -107,16 +108,53 @@ public class UserFollowerPage : SimpleUsersPage
 
 public class UserMyPixivPage : SimpleUsersPage
 {
-    private readonly long _userId;
+    public static readonly StyledProperty<long> UserIdProperty =
+        AvaloniaProperty.Register<UserMyPixivPage, long>(nameof(UserId));
 
-    public UserMyPixivPage() : this(CurrentUserId)
+    private long _userId;
+    private bool _hasViewModel;
+
+    public UserMyPixivPage()
     {
     }
 
     public UserMyPixivPage(long id, UserViewViewModel? viewModel = null)
     {
+        if (viewModel is not null)
+        {
+            _hasViewModel = true;
+            InitializeSource(viewModel);
+        }
+
+        UserId = id;
+    }
+
+    public long UserId
+    {
+        get => GetValue(UserIdProperty);
+        set => SetValue(UserIdProperty, value);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == UserIdProperty)
+            ApplyUserId(change.GetNewValue<long>());
+    }
+
+    private void ApplyUserId(long id)
+    {
+        if (id == _userId && _userId > 0)
+            return;
+
         _userId = id;
-        InitializeSource(viewModel);
+        if (_hasViewModel)
+        {
+            _hasViewModel = false;
+            return;
+        }
+
+        ChangeSource();
     }
 
     protected override IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
@@ -129,14 +167,38 @@ public class UserMyPixivPage : SimpleUsersPage
 
 public class RelatedUsersPage : SimpleUsersPage
 {
-    private readonly long _userId;
+    public static readonly StyledProperty<long> UserIdProperty =
+        AvaloniaProperty.Register<RelatedUsersPage, long>(nameof(UserId));
 
-    public RelatedUsersPage() : this(CurrentUserId)
+    private long _userId;
+
+    public RelatedUsersPage()
     {
     }
 
     public RelatedUsersPage(long id)
     {
+        UserId = id;
+    }
+
+    public long UserId
+    {
+        get => GetValue(UserIdProperty);
+        set => SetValue(UserIdProperty, value);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == UserIdProperty)
+            ApplyUserId(change.GetNewValue<long>());
+    }
+
+    private void ApplyUserId(long id)
+    {
+        if (id == _userId && _userId > 0)
+            return;
+
         _userId = id;
         ChangeSource();
     }

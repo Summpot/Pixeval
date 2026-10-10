@@ -23,21 +23,62 @@ public partial class WorkRelatedPage : IconContentPage
         set => SetAndRaise(IsCommandBarCollapsedProperty, ref field, value);
     }
 
-    private readonly long _id;
-    private readonly SimpleWorkType _simpleWorkType;
+    public static readonly StyledProperty<long> WorkIdProperty =
+        AvaloniaProperty.Register<WorkRelatedPage, long>(nameof(WorkId));
 
-    public WorkRelatedPage() : this(0, PixevalSettings.SimpleWorkType)
+    public static readonly StyledProperty<SimpleWorkType> WorkTypeProperty =
+        AvaloniaProperty.Register<WorkRelatedPage, SimpleWorkType>(nameof(WorkType));
+
+    private long _id;
+    private SimpleWorkType _simpleWorkType;
+    private bool _suppressSourceChange;
+    private bool _hasViewModel;
+
+    public WorkRelatedPage()
     {
+        InitializeComponent();
     }
 
     public WorkRelatedPage(long id, SimpleWorkType simpleWorkType, IWorkViewViewModel? viewModel = null)
     {
-        _id = id;
-        _simpleWorkType = simpleWorkType;
         InitializeComponent();
         if (viewModel is not null)
+        {
+            _hasViewModel = true;
             WorkContainer.SetViewModel(viewModel);
-        else
+        }
+
+        _suppressSourceChange = true;
+        WorkType = simpleWorkType;
+        WorkId = id;
+        _suppressSourceChange = false;
+        if (!_hasViewModel)
+            ChangeSource();
+    }
+
+    public long WorkId
+    {
+        get => GetValue(WorkIdProperty);
+        set => SetValue(WorkIdProperty, value);
+    }
+
+    public SimpleWorkType WorkType
+    {
+        get => GetValue(WorkTypeProperty);
+        set => SetValue(WorkTypeProperty, value);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == WorkIdProperty)
+            _id = change.GetNewValue<long>();
+        else if (change.Property == WorkTypeProperty)
+            _simpleWorkType = change.GetNewValue<SimpleWorkType>();
+        else if (change.Property != IsVisibleProperty)
+            return;
+
+        if (!_suppressSourceChange && !_hasViewModel)
             ChangeSource();
     }
 
@@ -48,7 +89,7 @@ public partial class WorkRelatedPage : IconContentPage
 
     private void ChangeSource()
     {
-        var engine = _id is 0
+        var engine = !IsVisible || _id is 0
             ? (IAsyncEnumerable<object>) AsyncEnumerable.Empty<object>()
             : App.AppViewModel.MakoClient.WorkRelated(_id, _simpleWorkType);
         WorkContainer.ResetEngine(engine);

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,33 +23,75 @@ namespace Pixeval.Views.Capability;
 
 public partial class WorkBookmarksPage : IconContentPage
 {
-    private readonly User _user;
+    public static readonly StyledProperty<User?> UserProperty =
+        AvaloniaProperty.Register<WorkBookmarksPage, User?>(nameof(User));
+
+    private static User EmptyUser() =>
+        new(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []);
+
+    private User _user = EmptyUser();
     private readonly string? _initialTag;
+    private IWorkViewViewModel? _viewModel;
     private bool _suppressChangeSource;
+    private bool _initialized;
 
     public static IReadOnlyList<BookmarkTag> DefaultTags { get; } = [AllBookmarkTag.Instance, UncategorizedBookmarkTag.Instance];
 
     private static IWorkSubscriptionService SubscriptionService =>
         App.Services?.GetService<IWorkSubscriptionService>() ?? App.AppViewModel.AppServiceProvider.GetRequiredService<IWorkSubscriptionService>();
 
-    private static User GetCurrentOrFallbackUser() =>
-        App.Services?.GetService<IUserSessionService>()?.CurrentUserEntity ?? PixevalSettings.MyUser ?? new User(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []);
-
-    public WorkBookmarksPage() : this(GetCurrentOrFallbackUser())
+    public WorkBookmarksPage()
     {
+        InitializeComponent();
+        Configure(SimpleWorkType.Illustration, PrivacyPolicy.Public, null);
     }
 
     public WorkBookmarksPage(User user, SimpleWorkType simpleWorkType = SimpleWorkType.Illustration, PrivacyPolicy privacyPolicy = PrivacyPolicy.Public, string? tag = null, IWorkViewViewModel? viewModel = null)
     {
         InitializeComponent();
-
-        _user = user;
         _initialTag = tag;
+        Configure(simpleWorkType, privacyPolicy, viewModel);
+        User = user;
+    }
+
+    public User? User
+    {
+        get => GetValue(UserProperty);
+        set => SetValue(UserProperty, value);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == UserProperty)
+            ApplyUser(change.GetNewValue<User?>());
+    }
+
+    private void Configure(SimpleWorkType simpleWorkType, PrivacyPolicy privacyPolicy, IWorkViewViewModel? viewModel)
+    {
+        _suppressChangeSource = true;
         SimpleWorkTypeComboBox.SelectedValue = simpleWorkType;
         PrivacyPolicyComboBox.SelectedValue = privacyPolicy;
-        var myId = App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? PixevalSettings.MyId;
-        if (_user.Id <= 0 || _user.Id != myId)
-            PrivacyPolicyComboBox.IsEnabled = PrivacyPolicyComboBox.IsVisible = false;
+        _suppressChangeSource = false;
+        _viewModel = viewModel;
+    }
+
+    private void ApplyUser(User? user)
+    {
+        var next = user ?? EmptyUser();
+        if (_initialized && next.Id == _user.Id)
+            return;
+
+        _user = next;
+        UpdatePrivacyVisibility();
+        _initialized = true;
+        if (_viewModel is not null)
+        {
+            WorkContainer.SetViewModel(_viewModel);
+            UpdateSubscriptionButtons();
+            _viewModel = null;
+            return;
+        }
 
         if (_user.Id > 0)
             FetchTags();
@@ -60,13 +103,14 @@ public partial class WorkBookmarksPage : IconContentPage
             _suppressChangeSource = false;
         }
 
-        if (viewModel is not null)
-        {
-            WorkContainer.SetViewModel(viewModel);
-            UpdateSubscriptionButtons();
-        }
-        else
-            ChangeSource();
+        ChangeSource();
+    }
+
+    private void UpdatePrivacyVisibility()
+    {
+        var myId = App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? PixevalSettings.MyId;
+        var enabled = _user.Id > 0 && _user.Id == myId;
+        PrivacyPolicyComboBox.IsEnabled = PrivacyPolicyComboBox.IsVisible = enabled;
     }
 
     private void WorkTypeComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
@@ -124,6 +168,13 @@ public partial class WorkBookmarksPage : IconContentPage
 
     private void ChangeSource()
     {
+        if (_user.Id <= 0)
+        {
+            WorkContainer.ResetEngine(AsyncEnumerable.Empty<IWorkEntry>().ToFetchEngine());
+            UpdateSubscriptionButtons();
+            return;
+        }
+
         var tag = (TagComboBox.SelectedItem as BookmarkTag)?.Name;
         var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
         var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>() is PrivacyPolicy.Private ? "private" : "public";

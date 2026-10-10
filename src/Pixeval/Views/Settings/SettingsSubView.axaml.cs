@@ -14,6 +14,11 @@ public partial class SettingsSubView : ContentPage
 
     public SettingsSubView(ISettingsGroup group) : this()
     {
+        SetGroup(group);
+    }
+
+    public void SetGroup(ISettingsGroup group)
+    {
         Icon = new SymbolIcon
         {
             Symbol = group.Icon,

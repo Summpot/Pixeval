@@ -3,7 +3,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
@@ -131,12 +133,18 @@ public class WorkNewPage : WorkTypeWorksPage
 
 public class WorkPostsPage : WorkTypeWorksPage
 {
-    private static User GetCurrentOrFallbackUser() =>
-        App.Services?.GetService<IUserSessionService>()?.CurrentUserEntity ?? PixevalSettings.MyUser ?? new User(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []);
+    public static readonly StyledProperty<User?> UserProperty =
+        AvaloniaProperty.Register<WorkPostsPage, User?>(nameof(User));
 
-    private readonly User _user;
+    private static User EmptyUser() =>
+        new(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []);
 
-    public WorkPostsPage() : this(GetCurrentOrFallbackUser())
+    private User _user = EmptyUser();
+    private WorkType _workType = PixevalSettings.WorkType;
+    private IWorkViewViewModel? _viewModel;
+    private bool _initialized;
+
+    public WorkPostsPage()
     {
     }
 
@@ -146,16 +154,52 @@ public class WorkPostsPage : WorkTypeWorksPage
 
     public WorkPostsPage(User user, WorkType workType, IWorkViewViewModel? viewModel = null)
     {
-        _user = user;
+        _workType = workType;
+        _viewModel = viewModel;
+        User = user;
+    }
+
+    public User? User
+    {
+        get => GetValue(UserProperty);
+        set => SetValue(UserProperty, value);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == UserProperty)
+            ApplyUser(change.GetNewValue<User?>());
+    }
+
+    private void ApplyUser(User? user)
+    {
+        var next = user ?? EmptyUser();
+        if (_initialized && next.Id == _user.Id)
+            return;
+
+        _user = next;
+        if (!_initialized)
+        {
+            _initialized = true;
+            if (_user.Id > 0)
+                EnableAddSubscriptionButton();
+            InitializeSource(_workType, _viewModel);
+            if (_viewModel is not null && _user.Id > 0)
+                UpdateSubscriptionButtons(_user.Id, WorkSubscriptionType.Posts, GetSubscriptionWorkKind(_workType));
+            return;
+        }
+
         if (_user.Id > 0)
             EnableAddSubscriptionButton();
-        InitializeSource(workType, viewModel);
-        if (viewModel is not null && _user.Id > 0)
-            UpdateSubscriptionButtons(_user.Id, WorkSubscriptionType.Posts, GetSubscriptionWorkKind(workType));
+        ChangeSource();
     }
 
     protected override IAsyncEnumerable<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType)
     {
+        if (_user.Id <= 0)
+            return AsyncEnumerable.Empty<IWorkEntry>();
+
         return workType switch
         {
             WorkType.Novel => makoClient.NovelPosted(_user.Id),
