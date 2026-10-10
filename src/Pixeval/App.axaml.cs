@@ -172,18 +172,28 @@ public class App : Application
                 && !string.IsNullOrWhiteSpace(refreshToken))
             {
                 AppViewModel.MakoClient.SetRefreshToken(refreshToken);
-                var identifyResult = await AppViewModel.MakoClient.IdentifyTokenAsync();
-                if (identifyResult.Success)
+                var identifyTask = AppViewModel.MakoClient.IdentifyTokenAsync();
+                var completedTask = await Task.WhenAny(identifyTask, Task.Delay(TimeSpan.FromSeconds(8)));
+                if (completedTask == identifyTask)
                 {
-                    var tokenResponse = AppViewModel.MakoClient.GetTokenResponse()
-                        ?? (AppViewModel.MakoClient.GetUser() is { } user
-                            ? new TokenResponse("", 0, "Bearer", refreshToken, user)
-                            : null);
-                    AppViewModel.OnTokenRefreshed(tokenResponse);
-                    AppViewModel.AppServiceProvider.GetRequiredService<INavigationService>()
-                        .NavigateToHome(sourceControl: viewContainer);
-                    AppViewModel.QueueWorkSubscriptionSyncAll();
-                    return;
+                    var identifyResult = await identifyTask;
+                    if (identifyResult.Success)
+                    {
+                        var tokenResponse = AppViewModel.MakoClient.GetTokenResponse()
+                            ?? (AppViewModel.MakoClient.GetUser() is { } user
+                                ? new TokenResponse("", 0, "Bearer", refreshToken, user)
+                                : null);
+                        AppViewModel.OnTokenRefreshed(tokenResponse);
+                        AppViewModel.AppServiceProvider.GetRequiredService<INavigationService>()
+                            .NavigateToHome(sourceControl: viewContainer);
+                        AppViewModel.QueueWorkSubscriptionSyncAll();
+                        return;
+                    }
+                }
+                else
+                {
+                    AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+                        .LogWarning("IdentifyTokenAsync timed out after 8 seconds.", null);
                 }
 
                 AppViewModel.OnTokenRefreshed(null);

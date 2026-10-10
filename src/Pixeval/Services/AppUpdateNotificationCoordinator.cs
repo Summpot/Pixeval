@@ -25,37 +25,49 @@ public class AppUpdateNotificationCoordinator : IAppUpdateNotificationCoordinato
 
     public async Task CheckAndNotifyUpdatesAsync(ViewContainerBase viewContainer)
     {
-        if (AppInfo.AppVersion.UsesVelopack)
+        try
         {
-            StartAutomaticUpdate(viewContainer);
-            if (App.AppViewModel.AppSettings.IsNewVersion
-                && await AppInfo.AppVersion.GetCurrentAppReleaseModelAsync() is { } currentRelease)
+            if (AppInfo.AppVersion.UsesVelopack)
+            {
+                StartAutomaticUpdate(viewContainer);
+                if (App.AppViewModel.AppSettings.IsNewVersion
+                    && await AppInfo.AppVersion.GetCurrentAppReleaseModelAsync() is { } currentRelease)
+                {
+                    await viewContainer.CreateAcknowledgementAsync(
+                        SettingsPage.ReleaseTitle,
+                        SettingsPage.CreateReleaseNotes(currentRelease));
+                }
+
+                return;
+            }
+
+            var checkTask = AppInfo.AppVersion.CheckForUpdateAsync();
+            var completedTask = await Task.WhenAny(checkTask, Task.Delay(TimeSpan.FromSeconds(6)));
+            if (completedTask != checkTask)
+            {
+                _logger?.LogWarning("CheckForUpdateAsync timed out after 6 seconds.", null);
+                return;
+            }
+            await checkTask;
+
+            if (App.AppViewModel.AppSettings.IsNewVersion)
             {
                 await viewContainer.CreateAcknowledgementAsync(
                     SettingsPage.ReleaseTitle,
-                    SettingsPage.CreateReleaseNotes(currentRelease));
+                    SettingsPage.CreateReleaseNotes(AppInfo.AppVersion.CurrentAppReleaseModel));
             }
 
-            return;
+            if (AppInfo.AppVersion is { UpdateAvailable: true, NewestAppReleaseModel: { } release })
+            {
+                await viewContainer.CreateAcknowledgementAsync(
+                    SettingsPage.GetReleaseTitle(release.Version),
+                    SettingsPage.CreateReleaseNotes(release));
+            }
         }
-
-        await AppInfo.AppVersion.CheckForUpdateAsync();
-        var dialogTasks = new List<Task<ContentDialogResult>>();
-        if (App.AppViewModel.AppSettings.IsNewVersion)
+        catch (Exception ex)
         {
-            dialogTasks.Add(viewContainer.CreateAcknowledgementAsync(
-                SettingsPage.ReleaseTitle,
-                SettingsPage.CreateReleaseNotes(AppInfo.AppVersion.CurrentAppReleaseModel)));
+            _logger?.LogError(nameof(CheckAndNotifyUpdatesAsync), ex);
         }
-
-        if (AppInfo.AppVersion is { UpdateAvailable: true, NewestAppReleaseModel: { } release })
-        {
-            dialogTasks.Add(viewContainer.CreateAcknowledgementAsync(
-                SettingsPage.GetReleaseTitle(release.Version),
-                SettingsPage.CreateReleaseNotes(release)));
-        }
-
-        await Task.WhenAll(dialogTasks);
     }
 
     private void StartAutomaticUpdate(ViewContainerBase viewContainer)

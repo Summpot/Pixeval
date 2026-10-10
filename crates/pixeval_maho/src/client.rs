@@ -239,7 +239,11 @@ impl MahoHttpClient {
         })?;
 
         async_compat::Compat::new(async move {
-            let resp = self.inner.request(request).await?;
+            let resp = tokio::time::timeout(Duration::from_secs(30), self.inner.request(request))
+                .await
+                .map_err(|_| MahoError::Network {
+                    message: format!("HTTP request timed out: {}", builder.url),
+                })??;
             let (parts, body) = resp.into_parts();
             Ok(MahoResponse::new(parts.status, parts.headers, body))
         })

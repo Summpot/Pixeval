@@ -68,7 +68,7 @@ public partial class TabViewContainer : ViewContainerBase
         TabsControl.InterTabController = set ? new InterTabController { InterTabClient = new PixevalInterTabClient() } : null;
     }
 
-    protected override async void OnLoaded(RoutedEventArgs e)
+    protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
         Manager = new WindowNotificationManager(TopLevel.GetTopLevel(this))
@@ -79,7 +79,7 @@ public partial class TabViewContainer : ViewContainerBase
         FlushPendingNotifications();
         RegisterContentDialogHost(TopLevel.GetTopLevel(this));
 
-        await _updateCoordinator.CheckAndNotifyUpdatesAsync(this);
+        _ = _updateCoordinator.CheckAndNotifyUpdatesAsync(this);
     }
 
     public override void NavigateTo(Page page, bool removeCurrentPage = false)

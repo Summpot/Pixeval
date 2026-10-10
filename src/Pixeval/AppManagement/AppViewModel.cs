@@ -70,6 +70,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         NavigationService = AppServiceProvider.GetRequiredService<INavigationService>();
         AppUpdateNotificationCoordinator = AppServiceProvider.GetRequiredService<IAppUpdateNotificationCoordinator>();
         UserSession.UserRefreshed += u => UserRefreshed?.Invoke(u);
+        UserSession.UserRefreshed += _ => PixevalSettings.Instance.OnIsLoggedInChanged();
         SetNameResolvers();
         InitializePersistence();
         if (GetCurrentLoginUser() is { } currentUser)
@@ -77,6 +78,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             MakoClient.SetRefreshToken(currentUser.RefreshToken);
             MakoClient.SetUser(currentUser.TokenUser);
         }
+        PixevalSettings.Instance.OnIsLoggedInChanged();
         _ = AppServiceProvider.GetRequiredService<ExtensionService>();
         _ = CacheHelper.EnforceCacheSizeLimitAsync();
         CacheHelper.UpdateNetworkOptions(AppSettings.ToMakoConfiguration());

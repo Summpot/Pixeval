@@ -36,12 +36,17 @@ public class NavigationService : INavigationService
 
     public ViewContainerBase? ResolveViewContainer(Control? sourceControl = null)
     {
+        if (sourceControl is ViewContainerBase directContainer)
+            return directContainer;
+
         if (sourceControl is not null && TopLevel.GetTopLevel(sourceControl)?.ViewContainer is { } container)
             return container;
 
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var activeWindow = desktop.Windows.FirstOrDefault(static w => w.IsActive) ?? desktop.MainWindow;
+            var activeWindow = desktop.Windows.FirstOrDefault(static w => w.IsActive)
+                ?? desktop.Windows.FirstOrDefault(static w => w.IsVisible)
+                ?? desktop.MainWindow;
             if (activeWindow?.Content is ViewContainerBase windowContainer)
                 return windowContainer;
 

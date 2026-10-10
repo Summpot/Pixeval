@@ -180,14 +180,10 @@ impl MahoConnector {
                     .map(|ip| SocketAddr::new(ip, port))
                     .collect::<Vec<_>>()
             } else {
-                tokio::net::lookup_host((host, port))
-                    .await?
-                    .collect::<Vec<_>>()
+                Self::resolve_system_host(host, port).await?
             }
         } else {
-            tokio::net::lookup_host((host, port))
-                .await?
-                .collect::<Vec<_>>()
+            Self::resolve_system_host(host, port).await?
         };
 
         if addrs.is_empty() {
@@ -232,13 +228,26 @@ impl MahoConnector {
         let server_name = ServerName::try_from(host.to_string())
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.to_string()))?;
 
-        let tls_stream = self
-            .tls_connector
-            .connect(server_name, raw_stream)
-            .await
-            .map_err(|e| io::Error::new(io::ErrorKind::ConnectionReset, e))?;
+        let tls_stream = tokio::time::timeout(
+            Duration::from_secs(8),
+            self.tls_connector.connect(server_name, raw_stream),
+        )
+        .await
+        .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, format!("TLS handshake timed out for {host}")))?
+        .map_err(|e| io::Error::new(io::ErrorKind::ConnectionReset, e))?;
 
         Ok(TokioIo::new(MahoStream::Tls(tls_stream)))
+    }
+
+    async fn resolve_system_host(host: &str, port: u16) -> io::Result<Vec<SocketAddr>> {
+        match tokio::time::timeout(Duration::from_secs(4), tokio::net::lookup_host((host, port))).await {
+            Ok(Ok(addrs)) => Ok(addrs.collect()),
+            Ok(Err(e)) => Err(e),
+            Err(_) => Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                format!("DNS resolution timed out for {host}"),
+            )),
+        }
     }
 
     async fn connect_via_http_proxy(
@@ -256,7 +265,15 @@ impl MahoConnector {
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Missing proxy host"))?;
         let proxy_port = proxy_uri.port_u16().unwrap_or(80);
 
-        let mut client = TcpStream::connect((proxy_host, proxy_port)).await?;
+        let client = tokio::time::timeout(
+            Duration::from_secs(5),
+            TcpStream::connect((proxy_host, proxy_port)),
+        )
+        .await
+        .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, format!("Proxy connect timed out for {proxy_str}")))?
+        .map_err(|e| io::Error::new(io::ErrorKind::NotConnected, format!("Proxy connect failed: {e}")))?;
+
+        let mut client = client;
         let _ = client.set_nodelay(true);
 
         if is_tls {
@@ -265,12 +282,16 @@ impl MahoConnector {
             let connect_req = format!(
                 "CONNECT {host}:{port} HTTP/1.1\r\nHost: {host}:{port}\r\nProxy-Connection: Keep-Alive\r\n\r\n"
             );
-            client.write_all(connect_req.as_bytes()).await?;
+            tokio::time::timeout(Duration::from_secs(5), client.write_all(connect_req.as_bytes()))
+                .await
+                .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "Proxy CONNECT write timed out"))??;
 
             let mut buf = [0u8; 1024];
             let mut read_len = 0;
             loop {
-                let n = client.read(&mut buf[read_len..]).await?;
+                let n = tokio::time::timeout(Duration::from_secs(5), client.read(&mut buf[read_len..]))
+                    .await
+                    .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "Proxy CONNECT response timed out"))??;
                 if n == 0 {
                     return Err(io::Error::new(
                         io::ErrorKind::UnexpectedEof,
@@ -296,11 +317,13 @@ impl MahoConnector {
             let server_name = ServerName::try_from(host.to_string())
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.to_string()))?;
 
-            let tls_stream = self
-                .tls_connector
-                .connect(server_name, raw_stream)
-                .await
-                .map_err(|e| io::Error::new(io::ErrorKind::ConnectionReset, e))?;
+            let tls_stream = tokio::time::timeout(
+                Duration::from_secs(8),
+                self.tls_connector.connect(server_name, raw_stream),
+            )
+            .await
+            .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, format!("Proxy TLS handshake timed out for {host}")))?
+            .map_err(|e| io::Error::new(io::ErrorKind::ConnectionReset, e))?;
 
             Ok(TokioIo::new(MahoStream::Tls(tls_stream)))
         } else {
