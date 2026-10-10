@@ -10,9 +10,8 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
-using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
-using Avalonia.Platform.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using FluentIcons.Common;
 using Pixeval.I18N;
 using Pixeval.Config;
@@ -147,10 +146,11 @@ public static class AvaloniaHelper
     public static (Symbol Symbol, string Header) GetHomeCardHeader(HomePageCardSourceKind sourceKind) => HomeCardSourceKindToHeaderMap[sourceKind];
 
     public static EventHandler<RoutedEventArgs>? LaunchUriTagInWebBrowser { get; }
-        = (sender, e) =>
+        = (sender, _) =>
         {
-            if (sender is not Control { Tag: { } parameter } s
-                || TopLevel.GetTopLevel(s) is not { Launcher: { } launcher })
+            if (sender is not Control { Tag: { } parameter })
+                return;
+            if (App.Services?.GetService<ILauncherService>() is not { } launcher)
                 return;
             if (parameter is not Uri uri)
                 if (parameter is not string str || !Uri.TryCreate(str, UriKind.RelativeOrAbsolute, out uri!))
@@ -159,28 +159,26 @@ public static class AvaloniaHelper
         };
 
     public static EventHandler<RoutedEventArgs>? LaunchFileTagInWebBrowser { get; }
-        = (sender, e) =>
+        = (sender, _) =>
         {
-            if (sender is not Control { Tag: { } parameter } s
-                || TopLevel.GetTopLevel(s) is not { Launcher: { } launcher })
+            if (sender is not Control { Tag: { } parameter })
                 return;
-            if (parameter is not string str)
+            if (App.Services?.GetService<ILauncherService>() is not { } launcher)
                 return;
-            if (new FileInfo(str) is { Exists: true } file)
+            if (parameter is not string path)
+                return;
+            if (new FileInfo(path) is { Exists: true } file)
                 _ = launcher.LaunchFileInfoAsync(file);
-            else if (new DirectoryInfo(str) is { Exists: true } directory)
+            else if (new DirectoryInfo(path) is { Exists: true } directory)
                 _ = launcher.LaunchDirectoryInfoAsync(directory);
         };
 
     public static EventHandler<RoutedEventArgs>? CopyTagToClipboard { get; }
-        = (sender, e) =>
+        = (sender, _) =>
         {
-            if (sender is not Control { Tag: { } parameter } s
-                || TopLevel.GetTopLevel(s) is not
-                {
-                    ViewContainer: { } viewContainer,
-                    Clipboard: { } clipboard
-                })
+            if (sender is not Control { Tag: { } parameter })
+                return;
+            if (App.Services?.GetService<IClipboardService>() is not { } clipboard)
                 return;
 
             if (parameter is not string str)
@@ -189,8 +187,9 @@ public static class AvaloniaHelper
                 else
                     return;
 
+            var notifications = App.Services?.GetService<INotificationService>() ?? NullNotificationService.Instance;
             _ = clipboard.SetTextAsync(str)
-                .ContinueWith(_ => viewContainer.ShowSuccess(I18NManager.GetResource(MiscResources.Copied)),
+                .ContinueWith(_ => notifications.ShowSuccess(I18NManager.GetResource(MiscResources.Copied)),
                     TaskScheduler.FromCurrentSynchronizationContext());
         };
 
@@ -216,7 +215,7 @@ public static class AvaloniaHelper
         string headerResource,
         bool needLogin = true,
         bool inNavigation = true)
-        where TPage : Page, new()
+        where TPage : Page
     {
         var header = I18NManager.GetResource(headerResource);
         if (inNavigation)

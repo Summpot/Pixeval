@@ -1,7 +1,6 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 using Pixeval.Utilities;
@@ -11,12 +10,15 @@ namespace Pixeval.Views.Works;
 
 public partial class SpotlightPage : IconContentPage
 {
-    public SpotlightPage() : this(null)
+    private readonly MakoClient _client;
+
+    public SpotlightPage(MakoClient client) : this(null, client)
     {
     }
 
-    public SpotlightPage(SpotlightViewViewModel? viewModel)
+    public SpotlightPage(SpotlightViewViewModel? viewModel, MakoClient client)
     {
+        _client = client;
         InitializeComponent();
         if (viewModel is not null)
             SpotlightView.SetViewModel(viewModel);
@@ -28,7 +30,7 @@ public partial class SpotlightPage : IconContentPage
 
     private void ChangeSource()
     {
-        ResetEngine(App.Services!.GetRequiredService<MakoClient>().Spotlight().ToFetchEngine());
+        ResetEngine(_client.Spotlight().ToFetchEngine());
     }
 
     private void ResetEngine(IFetchEngine<SpotlightArticle> fetchEngine) =>

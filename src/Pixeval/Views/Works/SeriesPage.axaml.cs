@@ -3,7 +3,6 @@
 
 using System;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.Pixiv;
 using Pixeval.ViewModels;
@@ -12,9 +11,11 @@ namespace Pixeval.Views.Works;
 
 public partial class SeriesPage : IconContentPage
 {
+    private readonly MakoClient _client;
 
-    public SeriesPage()
+    public SeriesPage(MakoClient client)
     {
+        _client = client;
         InitializeComponent();
         ChangeSource();
     }
@@ -30,7 +31,7 @@ public partial class SeriesPage : IconContentPage
     {
         var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
         (SeriesView.DataContext as SeriesViewViewModel)?.ResetEngine(
-            App.Services!.GetRequiredService<MakoClient>().WorkSeriesWatchlist(workType is SimpleWorkType.Novel).ToFetchEngine(),
+            _client.WorkSeriesWatchlist(workType is SimpleWorkType.Novel).ToFetchEngine(),
             workType);
     }
 }

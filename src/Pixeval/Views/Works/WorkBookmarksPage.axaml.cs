@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
+using CommunityToolkit.Mvvm.Input;
 using Pixeval.Controls;
 using Pixeval.Config;
 using Pixeval.Pixiv;
@@ -28,6 +28,11 @@ public partial class WorkBookmarksPage : IconContentPage
     private static User EmptyUser() =>
         new(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []);
 
+    private readonly MakoClient _client;
+    private readonly IWorkSubscriptionService _subscriptions;
+    private readonly StorageEngine _storage;
+    private readonly IUserSessionService _session;
+    private readonly FileLogger _logger;
     private User _user = EmptyUser();
     private readonly string? _initialTag;
     private IWorkViewViewModel? _viewModel;
@@ -36,17 +41,41 @@ public partial class WorkBookmarksPage : IconContentPage
 
     public static IReadOnlyList<BookmarkTag> DefaultTags { get; } = [AllBookmarkTag.Instance, UncategorizedBookmarkTag.Instance];
 
-    private static IWorkSubscriptionService SubscriptionService =>
-        App.Services!.GetRequiredService<IWorkSubscriptionService>();
+    public IAsyncRelayCommand AddSubscriptionCommand { get; }
 
-    public WorkBookmarksPage()
+    public IAsyncRelayCommand RemoveSubscriptionCommand { get; }
+
+    public WorkBookmarksPage(
+        User user,
+        AppSettings settings,
+        MakoClient client,
+        IWorkSubscriptionService subscriptions,
+        StorageEngine storage,
+        IUserSessionService session,
+        FileLogger logger)
+        : this(user, settings.SearchSettings.DefaultSimpleWorkType, PrivacyPolicy.Public, null, client, subscriptions, storage, session, logger)
     {
-        InitializeComponent();
-        Configure(SimpleWorkType.Illustration, PrivacyPolicy.Public, null);
     }
 
-    public WorkBookmarksPage(User user, SimpleWorkType simpleWorkType = SimpleWorkType.Illustration, PrivacyPolicy privacyPolicy = PrivacyPolicy.Public, string? tag = null, IWorkViewViewModel? viewModel = null)
+    public WorkBookmarksPage(
+        User user,
+        SimpleWorkType simpleWorkType,
+        PrivacyPolicy privacyPolicy,
+        string? tag,
+        MakoClient client,
+        IWorkSubscriptionService subscriptions,
+        StorageEngine storage,
+        IUserSessionService session,
+        FileLogger logger,
+        IWorkViewViewModel? viewModel = null)
     {
+        _client = client;
+        _subscriptions = subscriptions;
+        _storage = storage;
+        _session = session;
+        _logger = logger;
+        AddSubscriptionCommand = new AsyncRelayCommand(AddSubscriptionAsync);
+        RemoveSubscriptionCommand = new AsyncRelayCommand(RemoveSubscriptionAsync);
         InitializeComponent();
         _initialTag = tag;
         Configure(simpleWorkType, privacyPolicy, viewModel);
@@ -107,7 +136,7 @@ public partial class WorkBookmarksPage : IconContentPage
 
     private void UpdatePrivacyVisibility()
     {
-        var myId = App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? 0;
+        var myId = _session.CurrentUserId;
         var enabled = _user.Id > 0 && _user.Id == myId;
         PrivacyPolicyComboBox.IsEnabled = PrivacyPolicyComboBox.IsVisible = enabled;
     }
@@ -131,7 +160,9 @@ public partial class WorkBookmarksPage : IconContentPage
         ChangeSource();
     }
 
-    public async void FetchTags()
+    private void FetchTags() => _ = FetchTagsAsync();
+
+    private async Task FetchTagsAsync()
     {
         if (_user.Id <= 0)
         {
@@ -144,7 +175,7 @@ public partial class WorkBookmarksPage : IconContentPage
 
         try
         {
-            var tags = await App.Services!.GetRequiredService<MakoClient>().GetBookmarkTagsAsync(
+            var tags = await _client.GetBookmarkTagsAsync(
                 _user.Id,
                 SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>(),
                 PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>());
@@ -156,8 +187,7 @@ public partial class WorkBookmarksPage : IconContentPage
         }
         catch (Exception ex)
         {
-            App.Services!.GetRequiredService<FileLogger>()
-                .LogError(nameof(FetchTags), ex);
+            _logger.LogError(nameof(FetchTags), ex);
             _suppressChangeSource = true;
             TagComboBox.ItemsSource = new List<BookmarkTag> { AllBookmarkTag.Instance, UncategorizedBookmarkTag.Instance };
             TagComboBox.SelectedItem = AllBookmarkTag.Instance;
@@ -178,10 +208,10 @@ public partial class WorkBookmarksPage : IconContentPage
         var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
         var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>() is PrivacyPolicy.Private ? "private" : "public";
         var engine = (workType is SimpleWorkType.Novel
-            ? (IAsyncEnumerable<IWorkEntry>) App.Services!.GetRequiredService<MakoClient>().NovelBookmarks(_user.Id, privacy, tag)
-            : App.Services!.GetRequiredService<MakoClient>().WorkBookmarks(_user.Id, privacy, tag)).ToFetchEngine();
+            ? (IAsyncEnumerable<IWorkEntry>) _client.NovelBookmarks(_user.Id, privacy, tag)
+            : _client.WorkBookmarks(_user.Id, privacy, tag)).ToFetchEngine();
         WorkContainer.ResetEngine(engine);
-        SubscriptionService.QueueSyncCurrentSource(
+        _subscriptions.QueueSyncCurrentSource(
             _user.Id,
             WorkSubscriptionType.Bookmarks,
             GetSubscriptionWorkKind(),
@@ -189,30 +219,27 @@ public partial class WorkBookmarksPage : IconContentPage
         UpdateSubscriptionButtons();
     }
 
-    private async void AddSubscriptionButton_OnClicked(object? sender, RoutedEventArgs e)
+    private Task AddSubscriptionAsync()
     {
         var workKind = GetSubscriptionWorkKind();
-
-        _ = await WorkSubscriptionButtonHelper.RunAsync(
+        return WorkSubscriptionButtonHelper.RunAsync(
             AddSubscriptionButton,
             RemoveSubscriptionButton,
             () => Task.FromResult(WorkSubscriptionHelper.TryAddOrUpdateUser(
                 _user,
                 WorkSubscriptionType.Bookmarks,
                 workKind,
-                App.Services!.GetRequiredService<StorageEngine>(),
-                SubscriptionService)),
+                _storage,
+                _subscriptions)),
             UpdateSubscriptionButtons);
     }
 
-    private async void RemoveSubscriptionButton_OnClicked(object? sender, RoutedEventArgs e)
-    {
-        _ = await WorkSubscriptionButtonHelper.RunAsync(
+    private Task RemoveSubscriptionAsync() =>
+        WorkSubscriptionButtonHelper.RunAsync(
             AddSubscriptionButton,
             RemoveSubscriptionButton,
             RemoveCurrentSubscriptionAsync,
             UpdateSubscriptionButtons);
-    }
 
     private void UpdateSubscriptionButtons()
     {
@@ -226,15 +253,15 @@ public partial class WorkBookmarksPage : IconContentPage
         WorkSubscriptionButtonHelper.UpdateVisibility(
             AddSubscriptionButton,
             RemoveSubscriptionButton,
-            SubscriptionService.TryGetSubscription(_user.Id, WorkSubscriptionType.Bookmarks, GetSubscriptionWorkKind()) is not null);
+            _subscriptions.TryGetSubscription(_user.Id, WorkSubscriptionType.Bookmarks, GetSubscriptionWorkKind()) is not null);
     }
 
     private async Task<bool> RemoveCurrentSubscriptionAsync()
     {
-        if (SubscriptionService.TryGetSubscription(_user.Id, WorkSubscriptionType.Bookmarks, GetSubscriptionWorkKind()) is not { HistoryEntryId: var historyEntryId })
+        if (_subscriptions.TryGetSubscription(_user.Id, WorkSubscriptionType.Bookmarks, GetSubscriptionWorkKind()) is not { HistoryEntryId: var historyEntryId })
             return false;
 
-        _ = await SubscriptionService.TryRemoveAsync(historyEntryId);
+        _ = await _subscriptions.TryRemoveAsync(historyEntryId);
         return true;
     }
 

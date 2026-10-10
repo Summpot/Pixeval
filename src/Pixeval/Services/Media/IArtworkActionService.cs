@@ -8,7 +8,6 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
-using Pixeval.Views.Shell;
 
 namespace Pixeval.Services.Media;
 
@@ -42,13 +41,13 @@ public interface IArtworkActionService
 
     Task<bool> AddToBookmarkAsync(IWorkEntry work, bool isPrivate, IReadOnlyList<string>? tags = null);
 
-    bool ToggleWatchLater(object work, ViewContainerBase? viewContainer = null);
+    bool ToggleWatchLater(object work);
 
-    Task SaveIllustrationAsync(Illustration illustration, int setIndex = -1, ViewContainerBase? viewContainer = null);
+    Task SaveIllustrationAsync(Illustration illustration, int setIndex = -1);
 
-    Task SaveNovelAsync(Mako.Novel novel, ViewContainerBase? viewContainer = null);
+    Task SaveNovelAsync(Mako.Novel novel);
 
-    Task SaveWorkAsync(object work, ViewContainerBase? viewContainer = null);
+    Task SaveWorkAsync(object work);
 
     Task<bool> ToggleFollowUserAsync(User user);
 
@@ -56,7 +55,7 @@ public interface IArtworkActionService
 
     Task CopyImageAsync(Image? image);
 
-    Task CopyBitmapAsync(Bitmap bitmap, Control anchor);
+    Task CopyBitmapAsync(Bitmap bitmap);
 
-    Task SaveBitmapAsAsync(Bitmap bitmap, Control anchor, string suggestedFileName);
+    Task SaveBitmapAsAsync(Bitmap bitmap, string suggestedFileName);
 }

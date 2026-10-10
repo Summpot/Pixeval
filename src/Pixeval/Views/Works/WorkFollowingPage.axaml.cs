@@ -3,7 +3,6 @@
 
 using System;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.Controls;
 using Pixeval.Utilities;
@@ -13,12 +12,16 @@ namespace Pixeval.Views.Works;
 
 public partial class WorkFollowingPage : IconContentPage
 {
-    public WorkFollowingPage() : this(App.Services!.GetRequiredService<AppSettings>().SearchSettings.DefaultSimpleWorkType, PrivacyPolicy.Public)
+    private readonly MakoClient _client;
+
+    public WorkFollowingPage(AppSettings settings, MakoClient client)
+        : this(settings.SearchSettings.DefaultSimpleWorkType, PrivacyPolicy.Public, client)
     {
     }
 
-    public WorkFollowingPage(SimpleWorkType simpleWorkType, PrivacyPolicy privacyPolicy, IWorkViewViewModel? viewModel = null)
+    public WorkFollowingPage(SimpleWorkType simpleWorkType, PrivacyPolicy privacyPolicy, MakoClient client, IWorkViewViewModel? viewModel = null)
     {
+        _client = client;
         InitializeComponent();
         SimpleWorkTypeComboBox.SelectedValue = simpleWorkType;
         PrivacyPolicyComboBox.SelectedValue = privacyPolicy;
@@ -42,7 +45,7 @@ public partial class WorkFollowingPage : IconContentPage
     {
         var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
         var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>();
-        var engine = App.Services!.GetRequiredService<MakoClient>().WorkFollowing(workType, privacy);
+        var engine = _client.WorkFollowing(workType, privacy);
         WorkContainer.ResetEngine(engine);
     }
 }

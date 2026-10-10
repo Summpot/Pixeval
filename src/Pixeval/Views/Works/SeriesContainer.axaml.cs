@@ -4,7 +4,7 @@
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
+using CommunityToolkit.Mvvm.Input;
 using Pixeval.Config;
 using Pixeval.Pixiv;
 using Pixeval.Services.Background;
@@ -16,21 +16,25 @@ namespace Pixeval.Views.Works;
 
 public partial class SeriesContainer : UserControl
 {
+    private readonly MakoClient _client;
+    private readonly IWorkSubscriptionService _subscriptions;
+    private readonly StorageEngine _storage;
     private readonly SimpleWorkType _workType;
     private readonly long _seriesId;
     private readonly Series? _seriesDetail;
     private readonly IWorkEntry? _firstWork;
 
-    private static IWorkSubscriptionService SubscriptionService =>
-        App.Services!.GetRequiredService<IWorkSubscriptionService>();
+    public IAsyncRelayCommand AddSubscriptionCommand { get; }
 
-    public SeriesContainer()
-    {
-        InitializeComponent();
-    }
+    public IAsyncRelayCommand RemoveSubscriptionCommand { get; }
 
-    public SeriesContainer(SimpleWorkType workType, long seriesId)
-        : this(workType, seriesId, null, null)
+    public SeriesContainer(
+        SimpleWorkType workType,
+        long seriesId,
+        MakoClient client,
+        IWorkSubscriptionService subscriptions,
+        StorageEngine storage)
+        : this(workType, seriesId, null, null, client, subscriptions, storage)
     {
         ChangeSource();
     }
@@ -40,8 +44,11 @@ public partial class SeriesContainer : UserControl
         long seriesId,
         IWorkViewViewModel viewModel,
         Series seriesDetail,
-        IWorkEntry firstWork)
-        : this(workType, seriesId, seriesDetail, firstWork)
+        IWorkEntry firstWork,
+        MakoClient client,
+        IWorkSubscriptionService subscriptions,
+        StorageEngine storage)
+        : this(workType, seriesId, seriesDetail, firstWork, client, subscriptions, storage)
     {
         WorkContainer.IsRefreshEnabled = false;
         WorkContainer.SetViewModel(viewModel);
@@ -53,8 +60,11 @@ public partial class SeriesContainer : UserControl
         long seriesId,
         IFetchEngine<IWorkEntry> engine,
         Series seriesDetail,
-        IWorkEntry firstWork)
-        : this(workType, seriesId, seriesDetail, firstWork)
+        IWorkEntry firstWork,
+        MakoClient client,
+        IWorkSubscriptionService subscriptions,
+        StorageEngine storage)
+        : this(workType, seriesId, seriesDetail, firstWork, client, subscriptions, storage)
     {
         WorkContainer.IsRefreshEnabled = false;
         SetEngine(engine);
@@ -64,23 +74,31 @@ public partial class SeriesContainer : UserControl
         SimpleWorkType workType,
         long seriesId,
         Series? seriesDetail,
-        IWorkEntry? firstWork)
+        IWorkEntry? firstWork,
+        MakoClient client,
+        IWorkSubscriptionService subscriptions,
+        StorageEngine storage)
     {
         _workType = workType;
         _seriesId = seriesId;
         _seriesDetail = seriesDetail;
         _firstWork = firstWork;
+        _client = client;
+        _subscriptions = subscriptions;
+        _storage = storage;
+        AddSubscriptionCommand = new AsyncRelayCommand(AddSubscriptionAsync);
+        RemoveSubscriptionCommand = new AsyncRelayCommand(RemoveSubscriptionAsync);
         InitializeComponent();
     }
 
     private void WorkContainer_OnRefreshRequested(object? sender, RoutedEventArgs e) => ChangeSource();
 
-    private void ChangeSource() => SetEngine(App.Services!.GetRequiredService<MakoClient>().WorkSeries(_workType, _seriesId));
+    private void ChangeSource() => SetEngine(_client.WorkSeries(_workType, _seriesId));
 
     private void SetEngine(IFetchEngine<IWorkEntry> engine)
     {
         WorkContainer.ResetEngine(engine);
-        SubscriptionService.QueueSyncCurrentSource(
+        _subscriptions.QueueSyncCurrentSource(
             _seriesId,
             WorkSubscriptionType.Series,
             GetSubscriptionWorkKind(),
@@ -88,43 +106,41 @@ public partial class SeriesContainer : UserControl
         UpdateSubscriptionButtons();
     }
 
-    private async void AddSubscriptionButton_OnClicked(object? sender, RoutedEventArgs e)
+    private Task AddSubscriptionAsync()
     {
         var workKind = GetSubscriptionWorkKind();
-        _ = await WorkSubscriptionButtonHelper.RunAsync(
+        return WorkSubscriptionButtonHelper.RunAsync(
             AddSubscriptionButton,
             RemoveSubscriptionButton,
             () => Task.FromResult(WorkSubscriptionHelper.TryAddOrUpdateSeries(
                 _seriesId,
                 workKind,
-                App.Services!.GetRequiredService<StorageEngine>(),
-                SubscriptionService,
+                _storage,
+                _subscriptions,
                 _seriesDetail,
                 _firstWork)),
             UpdateSubscriptionButtons);
     }
 
-    private async void RemoveSubscriptionButton_OnClicked(object? sender, RoutedEventArgs e)
-    {
-        _ = await WorkSubscriptionButtonHelper.RunAsync(
+    private Task RemoveSubscriptionAsync() =>
+        WorkSubscriptionButtonHelper.RunAsync(
             AddSubscriptionButton,
             RemoveSubscriptionButton,
             RemoveCurrentSubscriptionAsync,
             UpdateSubscriptionButtons);
-    }
 
     private void UpdateSubscriptionButtons() =>
         WorkSubscriptionButtonHelper.UpdateVisibility(
             AddSubscriptionButton,
             RemoveSubscriptionButton,
-            SubscriptionService.TryGetSubscription(_seriesId, WorkSubscriptionType.Series, GetSubscriptionWorkKind()) is not null);
+            _subscriptions.TryGetSubscription(_seriesId, WorkSubscriptionType.Series, GetSubscriptionWorkKind()) is not null);
 
     private async Task<bool> RemoveCurrentSubscriptionAsync()
     {
-        if (SubscriptionService.TryGetSubscription(_seriesId, WorkSubscriptionType.Series, GetSubscriptionWorkKind()) is not { HistoryEntryId: var historyEntryId })
+        if (_subscriptions.TryGetSubscription(_seriesId, WorkSubscriptionType.Series, GetSubscriptionWorkKind()) is not { HistoryEntryId: var historyEntryId })
             return false;
 
-        _ = await SubscriptionService.TryRemoveAsync(historyEntryId);
+        _ = await _subscriptions.TryRemoveAsync(historyEntryId);
         return true;
     }
 

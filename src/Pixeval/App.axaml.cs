@@ -121,7 +121,7 @@ public class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        var viewContainer = new TabViewContainer();
+        var viewContainer = ActivatorUtilities.CreateInstance<TabViewContainer>(AppViewModel.AppServiceProvider);
 
         switch (ApplicationLifetime)
         {

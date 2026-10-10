@@ -469,17 +469,17 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanViewOriginal))]
     private async Task ViewOriginalAsync(Control? control)
     {
-        var viewContainer = control is null ? null : TopLevel.GetTopLevel(control)?.ViewContainer;
+        _ = control;
         IsProcessingImage = true;
         try
         {
-            viewContainer?.ShowInformation(I18NManager.GetResource(ImageViewerPageResources.LoadingOriginalImage));
+            Notifications.ShowInformation(I18NManager.GetResource(ImageViewerPageResources.LoadingOriginalImage));
             LoadingProgress = null;
             var source = await DisplaySource.UpdateAsync(
                 token => LoadWithPreviewAsync(true, token), _lifetimeCancellationTokenSource.Token);
             if (source is null)
             {
-                viewContainer?.ShowError(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadFailed));
+                Notifications.ShowError(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadFailed));
                 return;
             }
 
@@ -490,14 +490,14 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
             }
 
             TransformedSource = source;
-            viewContainer?.ShowSuccess(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadedSuccessfully));
+            Notifications.ShowSuccess(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadedSuccessfully));
         }
         catch (OperationCanceledException) when (_lifetimeCancellationTokenSource.IsCancellationRequested)
         {
         }
         catch
         {
-            viewContainer?.ShowError(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadFailed));
+            Notifications.ShowError(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadFailed));
         }
         finally
         {
@@ -508,16 +508,16 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
 
     internal async Task ExecuteTransformerExtensionAsync(IImageTransformerCommandExtension extension, Control? control)
     {
-        var viewContainer = control is null ? null : TopLevel.GetTopLevel(control)?.ViewContainer;
+        _ = control;
         try
         {
-            viewContainer?.ShowInformation(I18NManager.GetResource(ImageViewerPageResources.ApplyingTransformerExtensions));
+            Notifications.ShowInformation(I18NManager.GetResource(ImageViewerPageResources.ApplyingTransformerExtensions));
             await TransformExtensionCommand.ExecuteAsync(extension);
-            viewContainer?.ShowSuccess(I18NManager.GetResource(ImageViewerPageResources.TransformerExtensionFinishedSuccessfully));
+            Notifications.ShowSuccess(I18NManager.GetResource(ImageViewerPageResources.TransformerExtensionFinishedSuccessfully));
         }
         catch
         {
-            viewContainer?.ShowError(I18NManager.GetResource(ImageViewerPageResources.TransformerExtensionFailed));
+            Notifications.ShowError(I18NManager.GetResource(ImageViewerPageResources.TransformerExtensionFailed));
         }
     }
 
@@ -593,30 +593,32 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(LoadSuccessfully))]
     private Task CopyAsync(Control control)
     {
+        _ = control;
         if (DisplaySource.Frames is not [var singleFrame])
             return Task.CompletedTask;
 
-        return ArtworkActions.CopyBitmapAsync(singleFrame, control);
+        return ArtworkActions.CopyBitmapAsync(singleFrame);
     }
 
     [RelayCommand]
     private Task SaveImageAsync(Control? control)
     {
-        var viewContainer = control is null ? null : TopLevel.GetTopLevel(control)?.ViewContainer;
+        _ = control;
         return _saveTarget switch
         {
-            Illustration illustration => ArtworkActions.SaveIllustrationAsync(illustration, Index, viewContainer),
-            _ => ArtworkActions.SaveWorkAsync(_saveTarget, viewContainer)
+            Illustration illustration => ArtworkActions.SaveIllustrationAsync(illustration, Index),
+            _ => ArtworkActions.SaveWorkAsync(_saveTarget)
         };
     }
 
     [RelayCommand(CanExecute = nameof(LoadSuccessfully))]
     private Task SaveAsAsync(Control control)
     {
+        _ = control;
         if (DisplaySource.Frames is not [var singleFrame])
             return Task.CompletedTask;
 
-        return ArtworkActions.SaveBitmapAsAsync(singleFrame, control, GetEntryIdString());
+        return ArtworkActions.SaveBitmapAsAsync(singleFrame, GetEntryIdString());
     }
 
     private string GetEntryIdString() => _entry switch
@@ -630,6 +632,9 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
 
     private static IArtworkActionService ArtworkActions =>
         App.Services?.GetService<IArtworkActionService>() ?? NullArtworkActionService.Instance;
+
+    private static INotificationService Notifications =>
+        App.Services?.GetService<INotificationService>() ?? NullNotificationService.Instance;
 
     private static IImageProviderService Images =>
         App.Services?.GetService<IImageProviderService>()

@@ -3,10 +3,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
 using Pixeval.Config;
@@ -19,7 +17,6 @@ using Pixeval.Mako;
 using Pixeval.SauceNao;
 using Pixeval.Storage;
 using Pixeval.Utilities;
-using Pixeval.Views.Shell;
 
 namespace Pixeval.Services.Media;
 
@@ -30,19 +27,28 @@ public sealed class ArtworkActionService : IArtworkActionService
     private readonly DownloadManager _downloadManager;
     private readonly AppSettings _appSettings;
     private readonly FileLogger _logger;
+    private readonly INotificationService _notifications;
+    private readonly IClipboardService _clipboard;
+    private readonly IStoragePickerService _storagePicker;
 
     public ArtworkActionService(
         MakoClient makoClient,
         StorageEngine storageEngine,
         DownloadManager downloadManager,
         AppSettings appSettings,
-        FileLogger logger)
+        FileLogger logger,
+        INotificationService notifications,
+        IClipboardService clipboard,
+        IStoragePickerService storagePicker)
     {
         _makoClient = makoClient;
         _storageEngine = storageEngine;
         _downloadManager = downloadManager;
         _appSettings = appSettings;
         _logger = logger;
+        _notifications = notifications;
+        _clipboard = clipboard;
+        _storagePicker = storagePicker;
 
         BookmarkCommand = new AsyncRelayCommand<IWorkEntry>(async work =>
         {
@@ -186,7 +192,7 @@ public sealed class ArtworkActionService : IArtworkActionService
         }
     }
 
-    public bool ToggleWatchLater(object work, ViewContainerBase? viewContainer = null)
+    public bool ToggleWatchLater(object work)
     {
         if (!WatchLaterRecord.TryCreateWorkKey(work, out _))
             return false;
@@ -204,12 +210,12 @@ public sealed class ArtworkActionService : IArtworkActionService
         }
 
         ArtworkUiStateStore.SetWatchLater(work, target);
-        (viewContainer ?? ResolveActiveViewContainer())?.ShowSuccess(
+        _notifications.ShowSuccess(
             I18NManager.GetResource(target ? MiscResources.AddedToWatchLater : MiscResources.RemovedFromWatchLater));
         return true;
     }
 
-    public Task SaveIllustrationAsync(Illustration illustration, int setIndex = -1, ViewContainerBase? viewContainer = null)
+    public Task SaveIllustrationAsync(Illustration illustration, int setIndex = -1)
     {
         if (BlockedContentHelper.IsBlockedPlaceholder(illustration))
             return Task.CompletedTask;
@@ -223,11 +229,11 @@ public sealed class ArtworkActionService : IArtworkActionService
             0,
             "");
         if (!string.IsNullOrEmpty(destination))
-            (viewContainer ?? ResolveActiveViewContainer())?.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
+            _notifications.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
         return Task.CompletedTask;
     }
 
-    public Task SaveNovelAsync(Mako.Novel novel, ViewContainerBase? viewContainer = null)
+    public Task SaveNovelAsync(Mako.Novel novel)
     {
         if (BlockedContentHelper.IsBlockedPlaceholder(novel))
             return Task.CompletedTask;
@@ -241,19 +247,19 @@ public sealed class ArtworkActionService : IArtworkActionService
             0,
             "");
         if (!string.IsNullOrEmpty(destination))
-            (viewContainer ?? ResolveActiveViewContainer())?.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
+            _notifications.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
         return Task.CompletedTask;
     }
 
-    public async Task SaveWorkAsync(object work, ViewContainerBase? viewContainer = null)
+    public async Task SaveWorkAsync(object work)
     {
         switch (work)
         {
             case Illustration illustration:
-                await SaveIllustrationAsync(illustration, -1, viewContainer);
+                await SaveIllustrationAsync(illustration);
                 break;
             case Mako.Novel novel:
-                await SaveNovelAsync(novel, viewContainer);
+                await SaveNovelAsync(novel);
                 break;
             case BooruPost post:
                 EnqueueExternalImage(
@@ -268,8 +274,7 @@ public sealed class ArtworkActionService : IArtworkActionService
                     post.SerializeKey,
                     post.SafeRating.IsR18,
                     post.SafeRating.IsR18G,
-                    post.CreateDateOffset.ToString("o"),
-                    viewContainer);
+                    post.CreateDateOffset.ToString("o"));
                 break;
             case SauceNaoItem sauce:
                 EnqueueExternalImage(
@@ -284,8 +289,7 @@ public sealed class ArtworkActionService : IArtworkActionService
                     sauce.SerializeKey,
                     sauce.SafeRating.IsR18,
                     sauce.SafeRating.IsR18G,
-                    "",
-                    viewContainer);
+                    "");
                 break;
         }
     }
@@ -302,8 +306,7 @@ public sealed class ArtworkActionService : IArtworkActionService
         string serializeKey,
         bool isR18,
         bool isR18G,
-        string createDate,
-        ViewContainerBase? viewContainer)
+        string createDate)
     {
         var destination = _downloadManager.EnqueueExternalImage(new ExternalImageRequest(
             artworkId,
@@ -323,7 +326,7 @@ public sealed class ArtworkActionService : IArtworkActionService
             isR18G,
             createDate));
         if (!string.IsNullOrEmpty(destination))
-            (viewContainer ?? ResolveActiveViewContainer())?.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
+            _notifications.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
     }
 
     public async Task<bool> ToggleFollowUserAsync(User user)
@@ -365,30 +368,19 @@ public sealed class ArtworkActionService : IArtworkActionService
         if (image is not { Source: Bitmap bitmap })
             return;
 
-        if (TopLevel.GetTopLevel(image) is not { Clipboard: { } clipboard } topLevel)
-            return;
-
-        await clipboard.SetBitmapAsync(bitmap);
-        await clipboard.FlushAsync();
-        topLevel.ViewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+        await CopyBitmapAsync(bitmap);
     }
 
-    public async Task CopyBitmapAsync(Bitmap bitmap, Control anchor)
+    public async Task CopyBitmapAsync(Bitmap bitmap)
     {
-        if (TopLevel.GetTopLevel(anchor) is not { ViewContainer: { } viewContainer, Clipboard: { } clipboard })
-            return;
-
-        await clipboard.SetBitmapAsync(bitmap);
-        await clipboard.FlushAsync();
-        viewContainer.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+        await _clipboard.SetBitmapAsync(bitmap);
+        await _clipboard.FlushAsync();
+        _notifications.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
     }
 
-    public async Task SaveBitmapAsAsync(Bitmap bitmap, Control anchor, string suggestedFileName)
+    public async Task SaveBitmapAsAsync(Bitmap bitmap, string suggestedFileName)
     {
-        if (TopLevel.GetTopLevel(anchor) is not { ViewContainer: { } viewContainer, StorageProvider: { } storageProvider })
-            return;
-
-        var file = await storageProvider.SaveFilePickerAsync(new()
+        var file = await _storagePicker.SaveFileAsync(new()
         {
             FileTypeChoices =
             [
@@ -407,19 +399,7 @@ public sealed class ArtworkActionService : IArtworkActionService
 
         await using var stream = await file.OpenWriteAsync();
         bitmap.Save(stream, new PngBitmapEncoderOptions());
-        viewContainer.ShowSuccess(I18NManager.GetResource(MiscResources.Saved), file.Path.OriginalString);
-    }
-
-    private static ViewContainerBase? ResolveActiveViewContainer()
-    {
-        if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            var activeWindow = desktop.Windows.FirstOrDefault(static w => w.IsActive) ?? desktop.MainWindow;
-            if (activeWindow?.Content is ViewContainerBase windowVc)
-                return windowVc;
-        }
-
-        return null;
+        _notifications.ShowSuccess(I18NManager.GetResource(MiscResources.Saved), file.Path.OriginalString);
     }
 }
 
@@ -439,13 +419,13 @@ public sealed class NullArtworkActionService : IArtworkActionService
 
     public Task<bool> ToggleBookmarkAsync(IWorkEntry work) => Task.FromResult(false);
     public Task<bool> AddToBookmarkAsync(IWorkEntry work, bool isPrivate, IReadOnlyList<string>? tags = null) => Task.FromResult(false);
-    public bool ToggleWatchLater(object work, ViewContainerBase? viewContainer = null) => false;
-    public Task SaveIllustrationAsync(Illustration entry, int setIndex, ViewContainerBase? viewContainer = null) => Task.CompletedTask;
-    public Task SaveNovelAsync(Mako.Novel entry, ViewContainerBase? viewContainer = null) => Task.CompletedTask;
-    public Task SaveWorkAsync(object work, ViewContainerBase? viewContainer = null) => Task.CompletedTask;
+    public bool ToggleWatchLater(object work) => false;
+    public Task SaveIllustrationAsync(Illustration entry, int setIndex = -1) => Task.CompletedTask;
+    public Task SaveNovelAsync(Mako.Novel entry) => Task.CompletedTask;
+    public Task SaveWorkAsync(object work) => Task.CompletedTask;
     public Task<bool> ToggleFollowUserAsync(User user) => Task.FromResult(false);
     public bool BlockUser(User user) => false;
     public Task CopyImageAsync(Image? image) => Task.CompletedTask;
-    public Task CopyBitmapAsync(Bitmap bitmap, Control anchor) => Task.CompletedTask;
-    public Task SaveBitmapAsAsync(Bitmap bitmap, Control anchor, string suggestedFileName) => Task.CompletedTask;
+    public Task CopyBitmapAsync(Bitmap bitmap) => Task.CompletedTask;
+    public Task SaveBitmapAsAsync(Bitmap bitmap, string suggestedFileName) => Task.CompletedTask;
 }

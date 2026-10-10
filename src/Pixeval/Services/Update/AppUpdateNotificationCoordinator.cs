@@ -2,40 +2,46 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Pixeval.Config;
-using Pixeval.Controls;
 using Pixeval.I18N;
+using Pixeval.Services.Core;
 using Pixeval.Utilities;
 using Pixeval.Views.Settings;
-using Pixeval.Views.Shell;
 
 namespace Pixeval.Services.Update;
 
 public class AppUpdateNotificationCoordinator : IAppUpdateNotificationCoordinator
 {
     private readonly AppSettings _appSettings;
+    private readonly IDialogService _dialogs;
+    private readonly INotificationService _notifications;
     private readonly FileLogger? _logger;
     private bool _automaticUpdateStarted;
 
-    public AppUpdateNotificationCoordinator(AppSettings appSettings, FileLogger? logger = null)
+    public AppUpdateNotificationCoordinator(
+        AppSettings appSettings,
+        IDialogService dialogs,
+        INotificationService notifications,
+        FileLogger? logger = null)
     {
         _appSettings = appSettings;
+        _dialogs = dialogs;
+        _notifications = notifications;
         _logger = logger;
     }
 
-    public async Task CheckAndNotifyUpdatesAsync(ViewContainerBase viewContainer)
+    public async Task CheckAndNotifyUpdatesAsync()
     {
         try
         {
             if (AppInfo.AppVersion.UsesVelopack)
             {
-                StartAutomaticUpdate(viewContainer);
+                StartAutomaticUpdate();
                 if (_appSettings.IsNewVersion
                     && await AppInfo.AppVersion.GetCurrentAppReleaseModelAsync() is { } currentRelease)
                 {
-                    await viewContainer.CreateAcknowledgementAsync(
+                    await _dialogs.CreateAcknowledgementAsync(
                         SettingsPage.ReleaseTitle,
                         SettingsPage.CreateReleaseNotes(currentRelease));
                 }
@@ -54,14 +60,14 @@ public class AppUpdateNotificationCoordinator : IAppUpdateNotificationCoordinato
 
             if (_appSettings.IsNewVersion)
             {
-                await viewContainer.CreateAcknowledgementAsync(
+                await _dialogs.CreateAcknowledgementAsync(
                     SettingsPage.ReleaseTitle,
                     SettingsPage.CreateReleaseNotes(AppInfo.AppVersion.CurrentAppReleaseModel));
             }
 
             if (AppInfo.AppVersion is { UpdateAvailable: true, NewestAppReleaseModel: { } release })
             {
-                await viewContainer.CreateAcknowledgementAsync(
+                await _dialogs.CreateAcknowledgementAsync(
                     SettingsPage.GetReleaseTitle(release.Version),
                     SettingsPage.CreateReleaseNotes(release));
             }
@@ -72,16 +78,16 @@ public class AppUpdateNotificationCoordinator : IAppUpdateNotificationCoordinato
         }
     }
 
-    private void StartAutomaticUpdate(ViewContainerBase viewContainer)
+    private void StartAutomaticUpdate()
     {
         if (_automaticUpdateStarted)
             return;
 
         _automaticUpdateStarted = true;
-        _ = DownloadVelopackUpdateAutomaticallyAsync(viewContainer);
+        _ = DownloadVelopackUpdateAutomaticallyAsync();
     }
 
-    private async Task DownloadVelopackUpdateAutomaticallyAsync(ViewContainerBase viewContainer)
+    private async Task DownloadVelopackUpdateAutomaticallyAsync()
     {
         try
         {
@@ -97,7 +103,7 @@ public class AppUpdateNotificationCoordinator : IAppUpdateNotificationCoordinato
                 return;
 
             var readyVersion = AppInfo.AppVersion.PendingUpdateVersion ?? version;
-            viewContainer.ShowSuccess(I18NManager.GetResource(
+            _notifications.ShowSuccess(I18NManager.GetResource(
                 SettingsMainViewResources.UpdateDownloadReadyFormatted,
                 readyVersion));
         }

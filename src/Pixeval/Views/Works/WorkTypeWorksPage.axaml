@@ -28,14 +28,14 @@
             <CommandBarButton
                 x:Name="AddSubscriptionButton"
                 VerticalAlignment="Stretch"
-                Click="AddSubscriptionButton_OnClicked"
+                Command="{Binding $parent[work:WorkTypeWorksPage].AddSubscriptionCommand}"
                 Icon="{markup:SymbolIcon Alert}"
                 IsVisible="False"
                 Label="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+AddSubscriptionButton.Label}}" />
             <CommandBarButton
                 x:Name="RemoveSubscriptionButton"
                 VerticalAlignment="Stretch"
-                Click="RemoveSubscriptionButton_OnClicked"
+                Command="{Binding $parent[work:WorkTypeWorksPage].RemoveSubscriptionCommand}"
                 Icon="{markup:SymbolIcon AlertOff}"
                 IsVisible="False"
                 Label="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+RemoveSubscriptionButton.Label}}" />

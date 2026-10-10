@@ -5,7 +5,6 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -59,12 +58,12 @@ public sealed partial class SauceNaoSearchPageViewModel : ViewModelBase, IDispos
     }
 
     [RelayCommand]
-    public async Task PasteAsync(Control control)
+    public async Task PasteAsync(Control? control)
     {
+        _ = control;
         ObjectDisposedException.ThrowIf(_isDisposed, this);
 
-        if (TopLevel.GetTopLevel(control) is not { Clipboard: { } clipboard })
-            return;
+        var clipboard = App.Services?.GetService<IClipboardService>() ?? NullClipboardService.Instance;
         if (await clipboard.TryGetBitmapAsync() is { } bitmap)
             try
             {

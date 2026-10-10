@@ -12,8 +12,6 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Config;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using TabView.Avalonia;
@@ -22,17 +20,21 @@ namespace Pixeval.Views.Shell;
 
 public partial class TabViewContainer : ViewContainerBase
 {
+    private static IUiHost? Host;
+    private static INavigationService? Navigation;
+
     private readonly IAppUpdateNotificationCoordinator _updateCoordinator;
+    private readonly IUiHost _uiHost;
+    private readonly INavigationService _navigation;
 
     public static ICommand OpenNavigationItemCommand { get; } = new RelayCommand<Control>(static control =>
     {
-        if (control is not null && TopLevel.GetTopLevel(control)?.ViewContainer is TabViewContainer { DataContext: TabViewContainerViewModel vm })
+        if (control is not null && Host?.Container is TabViewContainer { DataContext: TabViewContainerViewModel vm })
             vm.OpenNavigationItem(control);
-        else if (control?.DataContext is NavigationPageItem { PageType: { } type })
+        else if (control?.DataContext is NavigationPageItem { PageType: { } type } && Navigation is { } navigation)
         {
-            var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
-            if (!nav.TrySelectExisting(type, control))
-                nav.NavigateTo(type, null, false, control);
+            if (!navigation.TrySelectExisting(type))
+                navigation.NavigateTo(type);
         }
     });
 
@@ -46,17 +48,16 @@ public partial class TabViewContainer : ViewContainerBase
             handledEventsToo: true);
     }
 
-    public TabViewContainer() : this(
-        App.Services?.GetService<IAppUpdateNotificationCoordinator>()
-        ?? new AppUpdateNotificationCoordinator(
-            App.Services!.GetRequiredService<AppSettings>(),
-            App.Services!.GetService<FileLogger>()))
-    {
-    }
-
-    public TabViewContainer(IAppUpdateNotificationCoordinator updateCoordinator)
+    public TabViewContainer(
+        IAppUpdateNotificationCoordinator updateCoordinator,
+        IUiHost uiHost,
+        INavigationService navigation)
     {
         _updateCoordinator = updateCoordinator;
+        _uiHost = uiHost;
+        _navigation = navigation;
+        Host = uiHost;
+        Navigation = navigation;
         InitializeComponent();
 
         AddHandler(ViewModelDisposal.ViewModelDisposalEvent, OnViewModelDisposal, RoutingStrategies.Bubble, handledEventsToo: true);
@@ -67,21 +68,33 @@ public partial class TabViewContainer : ViewContainerBase
 
     public void SetInterTabController(bool set)
     {
-        TabsControl.InterTabController = set ? new InterTabController { InterTabClient = new PixevalInterTabClient() } : null;
+        TabsControl.InterTabController = set
+            ? new InterTabController { InterTabClient = new PixevalInterTabClient(_updateCoordinator, _uiHost, _navigation) }
+            : null;
     }
 
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
-        Manager = new WindowNotificationManager(TopLevel.GetTopLevel(this))
+        if (TopLevel.GetTopLevel(this) is not { } topLevel)
+            return;
+
+        Manager = new WindowNotificationManager(topLevel)
         {
             MaxItems = 3,
             Position = NotificationPosition.BottomRight
         };
         FlushPendingNotifications();
-        RegisterContentDialogHost(TopLevel.GetTopLevel(this));
+        RegisterContentDialogHost(topLevel);
+        _uiHost.Attach(this, topLevel);
 
-        _ = _updateCoordinator.CheckAndNotifyUpdatesAsync(this);
+        _ = _updateCoordinator.CheckAndNotifyUpdatesAsync();
+    }
+
+    protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
+    {
+        _uiHost.Detach(this);
+        base.OnDetachedFromVisualTree(e);
     }
 
     public override void NavigateTo(Page page, bool removeCurrentPage = false)
@@ -148,13 +161,12 @@ public partial class TabViewContainer : ViewContainerBase
 
     private static bool TryOpenNewTab(Control control)
     {
-        if (TopLevel.GetTopLevel(control)?.ViewContainer is TabViewContainer { DataContext: TabViewContainerViewModel vm })
+        if (Host?.Container is TabViewContainer { DataContext: TabViewContainerViewModel vm })
             return vm.TryOpenNavigationItem(control, openNew: true);
 
-        if (control.DataContext is NavigationPageItem { PageType: { } type })
+        if (control.DataContext is NavigationPageItem { PageType: { } type } && Navigation is { } navigation)
         {
-            var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
-            nav.NavigateTo(type, null, false, control);
+            navigation.NavigateTo(type);
             return true;
         }
 
@@ -210,16 +222,19 @@ public partial class TabViewContainer : ViewContainerBase
         e.Handled = true;
     }
 
-    private sealed class PixevalInterTabClient : IInterTabClient
+    private sealed class PixevalInterTabClient(
+        IAppUpdateNotificationCoordinator updateCoordinator,
+        IUiHost uiHost,
+        INavigationService navigation) : IInterTabClient
     {
         public TabsHost GetNewHost(InterTabController controller, TabsHost host)
         {
-            var container = new TabViewContainer();
+            var container = new TabViewContainer(updateCoordinator, uiHost, navigation);
             var window = new Window { Content = container }.Fork(host.Window);
             container.SetInterTabController(true);
             window.Closed += static (sender, _) =>
             {
-                if (sender is TopLevel { ViewContainer: TabViewContainer c })
+                if (sender is Window { Content: TabViewContainer c })
                 {
                     foreach (var page in c.TabsControl.Pages ?? [])
                         ViewModelDisposal.Dispose(page);

@@ -3,7 +3,6 @@
 
 using System;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.Controls;
 using Pixeval.Pixiv;
@@ -14,12 +13,16 @@ namespace Pixeval.Views.Works;
 
 public partial class WorkMyPixivPage : IconContentPage
 {
-    public WorkMyPixivPage() : this(App.Services!.GetRequiredService<AppSettings>().SearchSettings.DefaultSimpleWorkType)
+    private readonly MakoClient _client;
+
+    public WorkMyPixivPage(AppSettings settings, MakoClient client)
+        : this(settings.SearchSettings.DefaultSimpleWorkType, client)
     {
     }
 
-    public WorkMyPixivPage(SimpleWorkType simpleWorkType, IWorkViewViewModel? viewModel = null)
+    public WorkMyPixivPage(SimpleWorkType simpleWorkType, MakoClient client, IWorkViewViewModel? viewModel = null)
     {
+        _client = client;
         InitializeComponent();
         SimpleWorkTypeComboBox.SelectedValue = simpleWorkType;
         if (viewModel is not null)
@@ -41,7 +44,7 @@ public partial class WorkMyPixivPage : IconContentPage
     private void ChangeSource()
     {
         var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
-        var engine = App.Services!.GetRequiredService<MakoClient>().WorkMyPixiv(workType);
+        var engine = _client.WorkMyPixiv(workType);
         WorkContainer.ResetEngine(engine);
     }
 }

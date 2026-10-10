@@ -12,12 +12,24 @@ namespace Pixeval.Views.Viewers;
 
 public partial class SeriesViewerPage : IconContentPage
 {
-    public SeriesViewerPage() : this(null)
+    private readonly MakoClient _client;
+    private readonly IWorkSubscriptionService _subscriptions;
+    private readonly StorageEngine _storage;
+
+    public SeriesViewerPage(MakoClient client, IWorkSubscriptionService subscriptions, StorageEngine storage)
+        : this(null, client, subscriptions, storage)
     {
     }
 
-    public SeriesViewerPage(SeriesViewerPageViewModel? viewModel)
+    public SeriesViewerPage(
+        SeriesViewerPageViewModel? viewModel,
+        MakoClient client,
+        IWorkSubscriptionService subscriptions,
+        StorageEngine storage)
     {
+        _client = client;
+        _subscriptions = subscriptions;
+        _storage = storage;
         DataContext = viewModel;
         InitializeComponent();
         if (viewModel is null)
@@ -32,7 +44,10 @@ public partial class SeriesViewerPage : IconContentPage
                 viewModel.Id,
                 worksViewModel,
                 seriesDetail,
-                firstWork);
+                firstWork,
+                _client,
+                _subscriptions,
+                _storage);
         }
         else
         {
@@ -53,7 +68,7 @@ public partial class SeriesViewerPage : IconContentPage
     {
         SeriesContainerHost.Content = engine is not null
                                       && viewModel is { SeriesDetail: { } seriesDetail, FirstWork: { } firstWork }
-            ? new SeriesContainer(viewModel.WorkType, viewModel.Id, engine, seriesDetail, firstWork)
+            ? new SeriesContainer(viewModel.WorkType, viewModel.Id, engine, seriesDetail, firstWork, _client, _subscriptions, _storage)
             : null;
     }
 

@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
@@ -20,22 +19,31 @@ public partial class UserFollowingPage : IconContentPage
     public static readonly StyledProperty<long> UserIdProperty =
         AvaloniaProperty.Register<UserFollowingPage, long>(nameof(UserId));
 
-    private static long CurrentUserId =>
-        App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? 0;
-
+    private readonly MakoClient _client;
+    private readonly IUserSessionService _session;
     private long _userId;
     private bool _hasViewModel;
     private bool _suppressChangeSource;
 
-    public UserFollowingPage()
+    public UserFollowingPage(MakoClient client, IUserSessionService session)
+        : this(session.CurrentUserId, client, session)
     {
-        InitializeComponent();
-        PrivacyPolicyComboBox.SelectedValue = PrivacyPolicy.Public;
-        UpdatePrivacyVisibility();
     }
 
-    public UserFollowingPage(long id, PrivacyPolicy privacyPolicy = PrivacyPolicy.Public, UserViewViewModel? viewModel = null)
+    public UserFollowingPage(long id, MakoClient client, IUserSessionService session)
+        : this(id, PrivacyPolicy.Public, client, session)
     {
+    }
+
+    public UserFollowingPage(
+        long id,
+        PrivacyPolicy privacyPolicy,
+        MakoClient client,
+        IUserSessionService session,
+        UserViewViewModel? viewModel = null)
+    {
+        _client = client;
+        _session = session;
         InitializeComponent();
         _suppressChangeSource = true;
         PrivacyPolicyComboBox.SelectedValue = privacyPolicy;
@@ -81,7 +89,7 @@ public partial class UserFollowingPage : IconContentPage
 
     private void UpdatePrivacyVisibility()
     {
-        var visible = _userId > 0 && _userId == CurrentUserId;
+        var visible = _userId > 0 && _userId == _session.CurrentUserId;
         PrivacyPolicyComboBox.IsEnabled = PrivacyPolicyComboBox.IsVisible = visible;
     }
 
@@ -106,8 +114,7 @@ public partial class UserFollowingPage : IconContentPage
             return;
         }
         var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>();
-        var makoClient = App.Services!.GetRequiredService<MakoClient>();
-        ResetEngine(makoClient.UserFollowing(_userId, privacy));
+        ResetEngine(_client.UserFollowing(_userId, privacy));
     }
 
     private void ResetEngine(IAsyncEnumerable<Pixeval.Mako.User> fetchEngine) =>

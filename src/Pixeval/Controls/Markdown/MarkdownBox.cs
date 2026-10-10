@@ -25,9 +25,9 @@ using Markdown.Avalonia.SyntaxHigh;
 using Markdown.Avalonia.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Pixiv;
+using Pixeval.Services.Core;
 using Pixeval.Utilities;
 using Pixeval.Services.Update;
-using Pixeval.Views.Viewers;
 
 namespace Pixeval.Controls;
 
@@ -40,6 +40,18 @@ public sealed class MarkdownHyperlinkClickedEventArgs(string url) : EventArgs
 
 public class MarkdownBox : MarkdownScrollViewer
 {
+    private static IClipboardService Clipboard =>
+        App.Services?.GetService<IClipboardService>() ?? NullClipboardService.Instance;
+
+    private static ILauncherService Launcher =>
+        App.Services?.GetService<ILauncherService>() ?? NullLauncherService.Instance;
+
+    private static INavigationService? Navigation =>
+        App.Services?.GetService<INavigationService>();
+
+    private readonly AsyncRelayCommand<string> _copySelectionCommand = new(static text =>
+        text is null ? Task.CompletedTask : Clipboard.SetTextAsync(text));
+
     private const double AnchorScrollOffset = 12;
     private const string CodePadTypeName = "Markdown.Avalonia.SyntaxHigh.CodePad";
     private const string CodeBlockClass = "CodeBlock";
@@ -119,7 +131,7 @@ public class MarkdownBox : MarkdownScrollViewer
         Plugins.Plugins.Add(new PixevalHtmlPlugin());
         Plugins.Plugins.Add(new SvgFormat());
         Plugins.PathResolver = new PixevalPathResolver();
-        Plugins.HyperlinkCommand = new RelayCommand<string>(OnHyperlinkClicked);
+        Plugins.HyperlinkCommand = new AsyncRelayCommand<string>(OnHyperlinkClickedAsync);
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -144,26 +156,20 @@ public class MarkdownBox : MarkdownScrollViewer
         }
     }
 
-    protected override async void OnKeyDown(KeyEventArgs e)
+    protected override void OnKeyDown(KeyEventArgs e)
     {
         if (KeyboardShortcut.MatchesCopy(e)
-            && TryGetVisualSelectedText() is { Length: > 0 } selectedText
-            && TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+            && TryGetVisualSelectedText() is { Length: > 0 } selectedText)
         {
-            var item = new DataTransferItem();
-            item.Set(DataFormat.Text, selectedText);
-            var data = new DataTransfer();
-            data.Add(item);
-
             e.Handled = true;
-            await clipboard.SetDataAsync(data);
+            _copySelectionCommand.Execute(selectedText);
             return;
         }
 
         base.OnKeyDown(e);
     }
 
-    private async void OnHyperlinkClicked(string? url)
+    private async Task OnHyperlinkClickedAsync(string? url)
     {
         if (string.IsNullOrWhiteSpace(url))
             return;
@@ -179,17 +185,10 @@ public class MarkdownBox : MarkdownScrollViewer
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             return;
 
-        if (TopLevel.GetTopLevel(this) is not
-            {
-                ViewContainer: { } viewContainer,
-                Launcher: { } launcher
-            })
-            return;
-
         if (uri.Scheme is not AppInfo.AppProtocol)
-            await launcher.LaunchUriAsync(uri);
+            await Launcher.LaunchUriAsync(uri);
         else if (uri.Host is "illust" && uri.AbsolutePath.Trim('/') is { } id)
-            viewContainer.CreateIllustrationPage(id, PlatformConstants.Pixiv);
+            Navigation?.NavigateToIllustration(id, PlatformConstants.Pixiv);
     }
 
     private bool TryScrollToAnchor(string url)
@@ -463,18 +462,7 @@ public class MarkdownBox : MarkdownScrollViewer
         };
         copyButton.Classes.Add("CopyButton");
         ToolTip.SetTip(copyButton, "复制代码");
-        copyButton.Click += async (_, _) =>
-        {
-            if (TopLevel.GetTopLevel(textEditor)?.Clipboard is { } clipboard)
-            {
-                var item = new DataTransferItem();
-                item.Set(DataFormat.Text, textEditor.Text ?? "");
-                var data = new DataTransfer();
-                data.Add(item);
-
-                await clipboard.SetDataAsync(data);
-            }
-        };
+        copyButton.Command = new AsyncRelayCommand(() => Clipboard.SetTextAsync(textEditor.Text ?? ""));
 
         var toolbar = new StackPanel
         {

@@ -104,5 +104,7 @@ public interface INavigationService
 
     void NavigateToLogin(bool removeCurrentPage = false, Control? sourceControl = null);
 
+    void ReloadNavigation();
+
     #endregion
 }

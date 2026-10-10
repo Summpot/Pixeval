@@ -9,7 +9,6 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
-using Pixeval.Views.Shell;
 
 namespace Pixeval.ViewModels.Works;
 
@@ -43,22 +42,22 @@ public static class WorkCommands
     public static Task<bool> AddToBookmarkAsync(IWorkEntry work, bool isPrivate, IReadOnlyList<string>? tags = null) =>
         ActionService.AddToBookmarkAsync(work, isPrivate, tags);
 
-    public static bool ToggleWatchLater(object work, ViewContainerBase? viewContainer = null) =>
-        ActionService.ToggleWatchLater(work, viewContainer);
+    public static bool ToggleWatchLater(object work) =>
+        ActionService.ToggleWatchLater(work);
 
-    public static Task SaveIllustrationAsync(ViewContainerBase? viewContainerBase, Illustration entry, int setIndex) =>
-        ActionService.SaveIllustrationAsync(entry, setIndex, viewContainerBase);
+    public static Task SaveIllustrationAsync(Illustration entry, int setIndex) =>
+        ActionService.SaveIllustrationAsync(entry, setIndex);
 
-    public static Task SaveNovelAsync(ViewContainerBase? viewContainerBase, Mako.Novel entry) =>
-        ActionService.SaveNovelAsync(entry, viewContainerBase);
+    public static Task SaveNovelAsync(Mako.Novel entry) =>
+        ActionService.SaveNovelAsync(entry);
 
-    public static Task SaveWorkAsync(object work, ViewContainerBase? viewContainer = null) =>
-        ActionService.SaveWorkAsync(work, viewContainer);
+    public static Task SaveWorkAsync(object work) =>
+        ActionService.SaveWorkAsync(work);
 
     public static Task SaveImageAsync(object entry, object? parameter, int setIndex)
     {
         if (entry is Illustration illustration)
-            return SaveIllustrationAsync(null, illustration, setIndex);
+            return SaveIllustrationAsync(illustration, setIndex);
         return Task.CompletedTask;
     }
 

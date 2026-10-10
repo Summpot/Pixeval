@@ -4,7 +4,6 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.Controls;
 using Pixeval.Mako;
@@ -14,15 +13,24 @@ namespace Pixeval.Views.Works;
 
 public partial class WorkRankingPage : IconContentPage
 {
-    public WorkRankingPage() : this(
-        App.Services!.GetRequiredService<AppSettings>().SearchSettings.DefaultSimpleWorkType,
-        App.Services!.GetRequiredService<AppSettings>().SearchSettings.RankOptions.IllustrationRankOption,
-        MaxDate)
+    private readonly AppSettings _settings;
+    private readonly MakoClient _client;
+
+    public WorkRankingPage(AppSettings settings, MakoClient client)
+        : this(settings.SearchSettings.DefaultSimpleWorkType, settings.SearchSettings.RankOptions.IllustrationRankOption, MaxDate, settings, client)
     {
     }
 
-    public WorkRankingPage(SimpleWorkType simpleWorkType, RankOption rankOption, DateTime rankingDate, IWorkViewViewModel? viewModel = null)
+    public WorkRankingPage(
+        SimpleWorkType simpleWorkType,
+        RankOption rankOption,
+        DateTime rankingDate,
+        AppSettings settings,
+        MakoClient client,
+        IWorkViewViewModel? viewModel = null)
     {
+        _settings = settings;
+        _client = client;
         InitializeComponent();
         SimpleWorkTypeComboBox.SelectedValue = simpleWorkType;
         ChangeEnumSource();
@@ -49,8 +57,8 @@ public partial class WorkRankingPage : IconContentPage
         var selectedWorkType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
         RankOptionComboBox.ItemsSource = SymbolComboBoxItem.GetValues<RankOption>(selectedWorkType);
         RankOptionComboBox.SelectedValue = selectedWorkType is SimpleWorkType.Illustration
-            ? App.Services!.GetRequiredService<AppSettings>().SearchSettings.RankOptions.IllustrationRankOption
-            : App.Services!.GetRequiredService<AppSettings>().SearchSettings.RankOptions.NovelRankOption;
+            ? _settings.SearchSettings.RankOptions.IllustrationRankOption
+            : _settings.SearchSettings.RankOptions.NovelRankOption;
     }
 
     private void RankOptionComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
@@ -78,11 +86,11 @@ public partial class WorkRankingPage : IconContentPage
         var date = (RankDateTimeCalendarDatePicker.SelectedDate ?? MaxDate).ToString("yyyy-MM-dd");
         if (workType is SimpleWorkType.Novel)
         {
-            WorkContainer.ResetEngine(App.Services!.GetRequiredService<MakoClient>().NovelRanking(mode, date));
+            WorkContainer.ResetEngine(_client.NovelRanking(mode, date));
         }
         else
         {
-            WorkContainer.ResetEngine(App.Services!.GetRequiredService<MakoClient>().WorkRanking(mode, date));
+            WorkContainer.ResetEngine(_client.WorkRanking(mode, date));
         }
     }
 }

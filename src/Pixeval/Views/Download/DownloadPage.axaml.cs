@@ -2,7 +2,6 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Services.Background;
 using Pixeval.Storage;
 using Pixeval.Utilities;
@@ -20,10 +19,10 @@ public partial class DownloadPage : IconTabbedPage, IDisposable
 
     private bool _isDisposed;
 
-    public DownloadPage()
+    public DownloadPage(DownloadManager manager)
     {
         InitializeComponent();
-        _viewModel = new DownloadPageViewModel(App.Services!.GetRequiredService<DownloadManager>());
+        _viewModel = new DownloadPageViewModel(manager);
         DataContext = _viewModel;
 
         _ordinaryView = new(new DownloadItemPageViewModel(_viewModel));

@@ -6,9 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
@@ -27,10 +25,12 @@ namespace Pixeval.Services.Core;
 public class NavigationService : INavigationService
 {
     private readonly IServiceProvider? _serviceProvider;
+    private readonly IUiHost? _uiHost;
 
-    public NavigationService(IServiceProvider? serviceProvider = null)
+    public NavigationService(IServiceProvider? serviceProvider = null, IUiHost? uiHost = null)
     {
         _serviceProvider = serviceProvider;
+        _uiHost = uiHost;
     }
 
     public ViewContainerBase? ResolveViewContainer(Control? sourceControl = null)
@@ -38,22 +38,7 @@ public class NavigationService : INavigationService
         if (sourceControl is ViewContainerBase directContainer)
             return directContainer;
 
-        if (sourceControl is not null && TopLevel.GetTopLevel(sourceControl)?.ViewContainer is { } container)
-            return container;
-
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            var activeWindow = desktop.Windows.FirstOrDefault(static w => w.IsActive)
-                ?? desktop.Windows.FirstOrDefault(static w => w.IsVisible)
-                ?? desktop.MainWindow;
-            if (activeWindow?.Content is ViewContainerBase windowContainer)
-                return windowContainer;
-
-            if (activeWindow is not null && TopLevel.GetTopLevel(activeWindow)?.ViewContainer is { } topContainer)
-                return topContainer;
-        }
-
-        return null;
+        return _uiHost?.Container;
     }
 
     public void NavigateTo<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TPage>(
@@ -105,25 +90,21 @@ public class NavigationService : INavigationService
         if (parameter is null)
         {
             if (pageType == typeof(WorkPostsPage))
-                return new WorkPostsPage(CurrentOrFallbackUser());
+                return CreateServicePage<WorkPostsPage>(CurrentOrFallbackUser());
 
             if (pageType == typeof(WorkBookmarksPage))
-                return new WorkBookmarksPage(CurrentOrFallbackUser());
+                return CreateServicePage<WorkBookmarksPage>(CurrentOrFallbackUser());
 
             if (pageType == typeof(UserFollowingPage))
-                return new UserFollowingPage(CurrentUserId());
+                return CreateServicePage<UserFollowingPage>(CurrentUserId());
 
             if (pageType == typeof(UserMyPixivPage))
-                return new UserMyPixivPage(CurrentUserId());
+                return CreateServicePage<UserMyPixivPage>(CurrentUserId());
 
             if (pageType == typeof(RelatedUsersPage))
-                return new RelatedUsersPage(CurrentUserId());
+                return CreateServicePage<RelatedUsersPage>(CurrentUserId());
 
-            var diService = _serviceProvider?.GetService(pageType) ?? App.Services?.GetService(pageType);
-            if (diService is Page diPage)
-                return diPage;
-
-            return (Page) Activator.CreateInstance(pageType)!;
+            return CreateServicePage(pageType);
         }
 
         if (pageType == typeof(IllustrationViewerPage))
@@ -151,7 +132,7 @@ public class NavigationService : INavigationService
         if (pageType == typeof(SeriesViewerPage))
         {
             if (parameter is SeriesViewerPageViewModel seriesVm)
-                return new SeriesViewerPage(seriesVm);
+                return CreateServicePage<SeriesViewerPage>(seriesVm);
         }
 
         if (pageType == typeof(WorkSearchResultPage))
@@ -167,57 +148,61 @@ public class NavigationService : INavigationService
         }
 
         if (pageType == typeof(UserSearchResultPage) && parameter is string keyword)
-            return new UserSearchResultPage(keyword);
+            return CreateServicePage<UserSearchResultPage>(keyword);
 
         if (pageType == typeof(ArtworkSauceNaoSearchResultPage) && parameter is ValueTuple<string, byte[]> sauceParam)
             return new ArtworkSauceNaoSearchResultPage(sauceParam.Item1, sauceParam.Item2);
 
         if (pageType == typeof(WorkRecommendedPage) && parameter is WorkType recType)
-            return new WorkRecommendedPage(recType);
+            return CreateServicePage<WorkRecommendedPage>(recType);
 
         if (pageType == typeof(WorkNewPage) && parameter is WorkType newType)
-            return new WorkNewPage(newType);
+            return CreateServicePage<WorkNewPage>(newType);
 
         if (pageType == typeof(WorkPostsPage) && parameter is ValueTuple<User, WorkType> postParam)
-            return new WorkPostsPage(postParam.Item1, postParam.Item2);
+            return CreateServicePage<WorkPostsPage>(postParam.Item1, postParam.Item2);
 
         if (pageType == typeof(WorkBookmarksPage) && parameter is ValueTuple<User, SimpleWorkType, PrivacyPolicy, string?> bmParam)
-            return new WorkBookmarksPage(bmParam.Item1, bmParam.Item2, bmParam.Item3, bmParam.Item4);
+            return CreateServicePage<WorkBookmarksPage>(bmParam.Item1, bmParam.Item2, bmParam.Item3, bmParam.Item4);
 
         if (pageType == typeof(WorkRankingPage) && parameter is ValueTuple<SimpleWorkType, RankOption, DateTime> rkParam)
-            return new WorkRankingPage(rkParam.Item1, rkParam.Item2, rkParam.Item3);
+            return CreateServicePage<WorkRankingPage>(rkParam.Item1, rkParam.Item2, rkParam.Item3);
 
         if (pageType == typeof(WorkFollowingPage) && parameter is ValueTuple<SimpleWorkType, PrivacyPolicy> folParam)
-            return new WorkFollowingPage(folParam.Item1, folParam.Item2);
+            return CreateServicePage<WorkFollowingPage>(folParam.Item1, folParam.Item2);
 
         if (pageType == typeof(WorkMyPixivPage) && parameter is SimpleWorkType mpType)
-            return new WorkMyPixivPage(mpType);
+            return CreateServicePage<WorkMyPixivPage>(mpType);
 
         if (pageType == typeof(WorkRelatedPage) && parameter is ValueTuple<long, SimpleWorkType> relParam)
-            return new WorkRelatedPage(relParam.Item1, relParam.Item2);
+            return CreateServicePage<WorkRelatedPage>(relParam.Item1, relParam.Item2);
 
         if (pageType == typeof(UserFollowingPage) && parameter is ValueTuple<long, PrivacyPolicy> ufParam)
-            return new UserFollowingPage(ufParam.Item1, ufParam.Item2);
+            return CreateServicePage<UserFollowingPage>(ufParam.Item1, ufParam.Item2);
 
         if (pageType == typeof(UserMyPixivPage) && parameter is long umId)
-            return new UserMyPixivPage(umId);
+            return CreateServicePage<UserMyPixivPage>(umId);
 
         if (pageType == typeof(BookmarkUsersPage) && parameter is ValueTuple<long, bool, string> bmUsersParam)
-            return new BookmarkUsersPage(bmUsersParam.Item1, bmUsersParam.Item2, bmUsersParam.Item3);
+            return CreateServicePage<BookmarkUsersPage>(bmUsersParam.Item1, bmUsersParam.Item2, bmUsersParam.Item3);
 
-        try
-        {
-            return (Page) Activator.CreateInstance(pageType, parameter)!;
-        }
-        catch
-        {
-            var provider = _serviceProvider ?? App.Services;
-            if (provider is not null)
-                return (Page) ActivatorUtilities.CreateInstance(provider, pageType, parameter);
-
-            throw;
-        }
+        return CreateServicePage(pageType, parameter);
     }
+
+    private Page CreateServicePage(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type pageType,
+        params object[] arguments)
+    {
+        var provider = _serviceProvider ?? App.Services;
+        if (provider is not null)
+            return (Page) ActivatorUtilities.CreateInstance(provider, pageType, arguments);
+
+        return (Page) Activator.CreateInstance(pageType, arguments)!;
+    }
+
+    private TPage CreateServicePage<TPage>(params object[] arguments)
+        where TPage : Page =>
+        (TPage) CreateServicePage(typeof(TPage), arguments);
 
     public Task PushAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TPage>(
         Page host,
@@ -340,6 +325,12 @@ public class NavigationService : INavigationService
     public void NavigateToLogin(bool removeCurrentPage = false, Control? sourceControl = null)
     {
         NavigateTo<LoginPage>(null, removeCurrentPage, sourceControl);
+    }
+
+    public void ReloadNavigation()
+    {
+        if (_uiHost?.Container is TabViewContainer container)
+            container.ReloadNavigation();
     }
 
     #endregion

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
+using CommunityToolkit.Mvvm.Input;
 using Pixeval.Config;
 using Pixeval.Controls;
 using Pixeval.Pixiv;
@@ -22,7 +22,23 @@ namespace Pixeval.Views.Works;
 
 public abstract partial class WorkTypeWorksPage : IconContentPage
 {
-    protected WorkTypeWorksPage() => InitializeComponent();
+    private readonly MakoClient _client;
+    private readonly IWorkSubscriptionService _subscriptions;
+    private readonly StorageEngine _storage;
+
+    protected WorkTypeWorksPage(MakoClient client, IWorkSubscriptionService subscriptions, StorageEngine storage)
+    {
+        _client = client;
+        _subscriptions = subscriptions;
+        _storage = storage;
+        InitializeComponent();
+        AddSubscriptionCommand = new AsyncRelayCommand(AddSubscriptionAsync);
+        RemoveSubscriptionCommand = new AsyncRelayCommand(RemoveSubscriptionAsync);
+    }
+
+    public IAsyncRelayCommand AddSubscriptionCommand { get; }
+
+    public IAsyncRelayCommand RemoveSubscriptionCommand { get; }
 
     protected void InitializeSource(WorkType workType, IWorkViewViewModel? viewModel = null)
     {
@@ -47,7 +63,7 @@ public abstract partial class WorkTypeWorksPage : IconContentPage
     protected void ChangeSource()
     {
         var workType = WorkTypeComboBox.GetSelectedValue<WorkType>();
-        var engine = GetFetchEngine(App.Services!.GetRequiredService<MakoClient>(), workType);
+        var engine = GetFetchEngine(_client, workType);
         WorkContainer.ResetEngine(engine);
         OnSourceChanged(engine, workType);
     }
@@ -58,8 +74,9 @@ public abstract partial class WorkTypeWorksPage : IconContentPage
     {
     }
 
-    protected static IWorkSubscriptionService SubscriptionService =>
-        App.Services!.GetRequiredService<IWorkSubscriptionService>();
+    protected IWorkSubscriptionService SubscriptionService => _subscriptions;
+
+    protected StorageEngine Storage => _storage;
 
     protected void EnableAddSubscriptionButton() => AddSubscriptionButton.IsVisible = true;
 
@@ -81,10 +98,6 @@ public abstract partial class WorkTypeWorksPage : IconContentPage
             operation,
             updateButtons);
 
-    private async void AddSubscriptionButton_OnClicked(object? sender, RoutedEventArgs e) => await AddSubscriptionAsync();
-
-    private async void RemoveSubscriptionButton_OnClicked(object? sender, RoutedEventArgs e) => await RemoveSubscriptionAsync();
-
     protected virtual Task AddSubscriptionAsync() => Task.CompletedTask;
 
     protected virtual Task RemoveSubscriptionAsync() => Task.CompletedTask;
@@ -92,11 +105,18 @@ public abstract partial class WorkTypeWorksPage : IconContentPage
 
 public class WorkRecommendedPage : WorkTypeWorksPage
 {
-    public WorkRecommendedPage() : this(App.Services!.GetRequiredService<AppSettings>().SearchSettings.WorkType)
+    public WorkRecommendedPage(AppSettings settings, MakoClient client, IWorkSubscriptionService subscriptions, StorageEngine storage)
+        : this(settings.SearchSettings.WorkType, client, subscriptions, storage)
     {
     }
 
-    public WorkRecommendedPage(WorkType workType, IWorkViewViewModel? viewModel = null)
+    public WorkRecommendedPage(
+        WorkType workType,
+        MakoClient client,
+        IWorkSubscriptionService subscriptions,
+        StorageEngine storage,
+        IWorkViewViewModel? viewModel = null)
+        : base(client, subscriptions, storage)
     {
         InitializeSource(workType, viewModel);
     }
@@ -113,11 +133,18 @@ public class WorkRecommendedPage : WorkTypeWorksPage
 
 public class WorkNewPage : WorkTypeWorksPage
 {
-    public WorkNewPage() : this(App.Services!.GetRequiredService<AppSettings>().SearchSettings.WorkType)
+    public WorkNewPage(AppSettings settings, MakoClient client, IWorkSubscriptionService subscriptions, StorageEngine storage)
+        : this(settings.SearchSettings.WorkType, client, subscriptions, storage)
     {
     }
 
-    public WorkNewPage(WorkType workType, IWorkViewViewModel? viewModel = null)
+    public WorkNewPage(
+        WorkType workType,
+        MakoClient client,
+        IWorkSubscriptionService subscriptions,
+        StorageEngine storage,
+        IWorkViewViewModel? viewModel = null)
+        : base(client, subscriptions, storage)
     {
         InitializeSource(workType, viewModel);
     }
@@ -139,19 +166,23 @@ public class WorkPostsPage : WorkTypeWorksPage
         new(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []);
 
     private User _user = EmptyUser();
-    private WorkType _workType = App.Services!.GetRequiredService<AppSettings>().SearchSettings.WorkType;
-    private IWorkViewViewModel? _viewModel;
+    private readonly WorkType _workType;
+    private readonly IWorkViewViewModel? _viewModel;
     private bool _initialized;
 
-    public WorkPostsPage()
+    public WorkPostsPage(User user, AppSettings settings, MakoClient client, IWorkSubscriptionService subscriptions, StorageEngine storage)
+        : this(user, settings.SearchSettings.WorkType, client, subscriptions, storage)
     {
     }
 
-    public WorkPostsPage(User user) : this(user, App.Services!.GetRequiredService<AppSettings>().SearchSettings.WorkType)
-    {
-    }
-
-    public WorkPostsPage(User user, WorkType workType, IWorkViewViewModel? viewModel = null)
+    public WorkPostsPage(
+        User user,
+        WorkType workType,
+        MakoClient client,
+        IWorkSubscriptionService subscriptions,
+        StorageEngine storage,
+        IWorkViewViewModel? viewModel = null)
+        : base(client, subscriptions, storage)
     {
         _workType = workType;
         _viewModel = viewModel;
@@ -230,7 +261,7 @@ public class WorkPostsPage : WorkTypeWorksPage
                 _user,
                 WorkSubscriptionType.Posts,
                 workKind,
-                App.Services!.GetRequiredService<StorageEngine>(),
+                Storage,
                 SubscriptionService)),
             () => UpdateSubscriptionButtons(WorkTypeComboBox.GetSelectedValue<WorkType>()));
     }

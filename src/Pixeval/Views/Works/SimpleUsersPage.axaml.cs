@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
@@ -16,17 +15,24 @@ namespace Pixeval.Views.Works;
 
 public abstract partial class SimpleUsersPage : IconContentPage
 {
-    protected static long CurrentUserId =>
-        App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? 0;
+    private readonly MakoClient _client;
+    private readonly IUserSessionService _session;
 
-    protected SimpleUsersPage() => InitializeComponent();
+    protected SimpleUsersPage(MakoClient client, IUserSessionService session)
+    {
+        _client = client;
+        _session = session;
+        InitializeComponent();
+    }
+
+    protected long CurrentUserId => _session.CurrentUserId;
 
     protected void InitializeSource(UserViewViewModel? viewModel = null)
     {
         if (viewModel is not null)
             UserContainer.UserView.SetViewModel(viewModel);
         else
-            ResetEngine(GetFetchEngine(App.Services!.GetRequiredService<MakoClient>()));
+            ResetEngine(GetFetchEngine(_client));
     }
 
     private void UserContainer_OnRefreshRequested(object? sender, RoutedEventArgs e)
@@ -36,7 +42,7 @@ public abstract partial class SimpleUsersPage : IconContentPage
 
     protected void ChangeSource()
     {
-        ResetEngine(GetFetchEngine(App.Services!.GetRequiredService<MakoClient>()));
+        ResetEngine(GetFetchEngine(_client));
     }
 
     private void ResetEngine(IAsyncEnumerable<User> fetchEngine) =>
@@ -47,11 +53,12 @@ public abstract partial class SimpleUsersPage : IconContentPage
 
 public class UserRecommendedPage : SimpleUsersPage
 {
-    public UserRecommendedPage() : this(null)
+    public UserRecommendedPage(MakoClient client, IUserSessionService session) : base(client, session)
     {
+        InitializeSource();
     }
 
-    public UserRecommendedPage(UserViewViewModel? viewModel)
+    public UserRecommendedPage(UserViewViewModel viewModel, MakoClient client, IUserSessionService session) : base(client, session)
     {
         InitializeSource(viewModel);
     }
@@ -66,11 +73,12 @@ public class UserSearchResultPage : SimpleUsersPage
 {
     private readonly string? _searchText;
 
-    public UserSearchResultPage() : this(null)
+    public UserSearchResultPage(MakoClient client, IUserSessionService session) : this(null, client, session)
     {
     }
 
-    public UserSearchResultPage(string? searchText, UserViewViewModel? viewModel = null)
+    public UserSearchResultPage(string? searchText, MakoClient client, IUserSessionService session, UserViewViewModel? viewModel = null)
+        : base(client, session)
     {
         Header = I18NManager.GetResource(MainPageResources.SearchResultFormatted, searchText);
         _searchText = searchText;
@@ -87,11 +95,12 @@ public class UserSearchResultPage : SimpleUsersPage
 
 public class UserFollowerPage : SimpleUsersPage
 {
-    public UserFollowerPage() : this(null)
+    public UserFollowerPage(MakoClient client, IUserSessionService session) : base(client, session)
     {
+        InitializeSource();
     }
 
-    public UserFollowerPage(UserViewViewModel? viewModel)
+    public UserFollowerPage(UserViewViewModel viewModel, MakoClient client, IUserSessionService session) : base(client, session)
     {
         InitializeSource(viewModel);
     }
@@ -113,11 +122,8 @@ public class UserMyPixivPage : SimpleUsersPage
     private long _userId;
     private bool _hasViewModel;
 
-    public UserMyPixivPage()
-    {
-    }
-
-    public UserMyPixivPage(long id, UserViewViewModel? viewModel = null)
+    public UserMyPixivPage(long id, MakoClient client, IUserSessionService session, UserViewViewModel? viewModel = null)
+        : base(client, session)
     {
         if (viewModel is not null)
         {
@@ -171,11 +177,7 @@ public class RelatedUsersPage : SimpleUsersPage
 
     private long _userId;
 
-    public RelatedUsersPage()
-    {
-    }
-
-    public RelatedUsersPage(long id)
+    public RelatedUsersPage(long id, MakoClient client, IUserSessionService session) : base(client, session)
     {
         UserId = id;
     }
@@ -215,7 +217,8 @@ public class BookmarkUsersPage : SimpleUsersPage
     private readonly long _workId;
     private readonly bool _isNovel;
 
-    public BookmarkUsersPage(long workId, bool isNovel, string workTitle)
+    public BookmarkUsersPage(long workId, bool isNovel, string workTitle, MakoClient client, IUserSessionService session)
+        : base(client, session)
     {
         _workId = workId;
         _isNovel = isNovel;
