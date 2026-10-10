@@ -1,5 +1,6 @@
 <ContentPage
     x:Class="Pixeval.Views.Settings.SettingsMainView"
+    x:Name="Root"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:appManagement="using:Pixeval.Services.Core"
@@ -11,6 +12,7 @@
     xmlns:markup1="using:Pixeval.Common.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:models="using:AutoSettingsPage.Models"
+    xmlns:options="using:Pixeval.Config"
     xmlns:pixeval="using:Pixeval"
     xmlns:pixevalControls="using:Pixeval.Controls"
     xmlns:utilities="using:Pixeval.Common"
@@ -26,7 +28,7 @@
                 <controls:SettingsExpander.Header>
                     <HyperlinkButton
                         Padding="0"
-                        Click="ReleaseNotesHyperlink_OnClicked"
+                        Command="{Binding ShowReleaseNotesCommand}"
                         Content="{Binding CurrentVersion, Mode=OneTime}" />
                 </controls:SettingsExpander.Header>
                 <controls:SettingsExpander.Description>
@@ -38,7 +40,7 @@
                     </StackPanel>
                 </controls:SettingsExpander.Description>
                 <controls:SettingsExpander.Content>
-                    <Button Click="CheckForUpdateButton_OnClicked" Content="{I18N {x:Static pixeval:SettingsMainViewResources+CheckForUpdatesButton.Content}}" />
+                    <Button Command="{Binding CheckForUpdateCommand}" Content="{I18N {x:Static pixeval:SettingsMainViewResources+CheckForUpdatesButton.Content}}" />
                 </controls:SettingsExpander.Content>
                 <controls:SettingsExpander.Items>
                     <controls:SettingsCard
@@ -70,10 +72,7 @@
                     </controls:SettingsCard>
                 </controls:SettingsExpander.Items>
             </controls:SettingsExpander>
-            <pixevalControls:InfoBar
-                x:Name="UpdateStatusInfoBar"
-                Mode="Info"
-                Text="{I18N {x:Static pixeval:SettingsMainViewResources+UpdateAvailable.Unknown}}" />
+            <pixevalControls:InfoBar Mode="{Binding UpdateStatusMode}" Text="{Binding UpdateStatusText}" />
 
             <controls:SettingsExpander
                 Description="{I18N {x:Static pixeval:SettingsMainViewResources+BugReportEntry.Description}}"
@@ -165,7 +164,7 @@
 
             <controls:SettingsCard
                 ActionIcon="{markup:SymbolIcon ChevronRight}"
-                Click="SwitchAccountButton_OnClicked"
+                pixevalControls:ClickCommandBehavior.Command="{Binding SwitchAccountCommand}"
                 Description="{I18N {x:Static pixeval:SettingsMainViewResources+SwitchAccountEntry.Description}}"
                 Header="{I18N {x:Static pixeval:SettingsMainViewResources+SwitchAccountEntry.Header}}"
                 HeaderIcon="{markup:SymbolIcon PersonSwap}"
@@ -173,7 +172,7 @@
 
             <controls:SettingsCard
                 ActionIcon="{markup:SymbolIcon ArrowReset}"
-                Click="ResetDefaultSettings_OnClicked"
+                pixevalControls:ClickCommandBehavior.Command="{Binding ResetDefaultSettingsCommand}"
                 Description="{I18N {x:Static pixeval:SettingsMainViewResources+ResetDefaultSettingsEntry.Description}}"
                 Header="{I18N {x:Static pixeval:SettingsMainViewResources+ResetDefaultSettingsEntry.Header}}"
                 HeaderIcon="{markup:SymbolIcon Apps}"
@@ -194,14 +193,14 @@
                         Tag="{x:Static appManagement:AppInfo.SettingsFolder}" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
-                        Click="ExportSettingsPlainText_OnClicked"
+                        pixevalControls:ClickCommandBehavior.Command="{Binding ExportSettingsCommand}"
                         Description="{I18N {x:Static pixeval:SettingsMainViewResources+ExportSettingsPlaintextEntry.Description}}"
                         Header="{I18N {x:Static pixeval:SettingsMainViewResources+ExportSettingsPlaintextEntry.Header}}"
                         HeaderIcon="{markup:SymbolIcon ArrowExport}"
                         IsClickEnabled="True" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
-                        Click="ImportSettingsPlaintext_OnClicked"
+                        pixevalControls:ClickCommandBehavior.Command="{Binding ImportSettingsCommand}"
                         Description="{I18N {x:Static pixeval:SettingsMainViewResources+ImportSettingsPlaintextEntry.Description}}"
                         Header="{I18N {x:Static pixeval:SettingsMainViewResources+ImportSettingsPlaintextEntry.Header}}"
                         HeaderIcon="{markup:SymbolIcon ArrowImport}"
@@ -213,28 +212,28 @@
                 <controls:SettingsExpander.Items>
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon ChevronRight}"
-                        Click="DeleteFileCacheEntryButton_OnClicked"
+                        pixevalControls:ClickCommandBehavior.Command="{Binding ClearDataCommand}" pixevalControls:ClickCommandBehavior.CommandParameter="{x:Static options:ClearDataKind.FileCache}"
                         Description="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteFileCacheEntry.Description}}"
                         Header="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteFileCacheEntry.Header}}"
                         HeaderIcon="{markup:SymbolIcon HistoryDismiss}"
                         IsClickEnabled="True" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon ChevronRight}"
-                        Click="DeleteSearchHistoriesButton_OnClicked"
+                        pixevalControls:ClickCommandBehavior.Command="{Binding ClearDataCommand}" pixevalControls:ClickCommandBehavior.CommandParameter="{x:Static options:ClearDataKind.SearchHistory}"
                         Description="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteSearchHistoriesEntry.Description}}"
                         Header="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteSearchHistoriesEntry.Header}}"
                         HeaderIcon="{markup:SymbolIcon HistoryDismiss}"
                         IsClickEnabled="True" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon ChevronRight}"
-                        Click="DeleteBrowseHistoriesButton_OnClicked"
+                        pixevalControls:ClickCommandBehavior.Command="{Binding ClearDataCommand}" pixevalControls:ClickCommandBehavior.CommandParameter="{x:Static options:ClearDataKind.BrowseHistory}"
                         Description="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteBrowseHistoriesEntry.Description}}"
                         Header="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteBrowseHistoriesEntry.Header}}"
                         HeaderIcon="{markup:SymbolIcon HistoryDismiss}"
                         IsClickEnabled="True" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon ChevronRight}"
-                        Click="DeleteDownloadHistoriesButton_OnClicked"
+                        pixevalControls:ClickCommandBehavior.Command="{Binding ClearDataCommand}" pixevalControls:ClickCommandBehavior.CommandParameter="{x:Static options:ClearDataKind.DownloadHistory}"
                         Description="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteDownloadHistoriesEntry.Description}}"
                         Header="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteDownloadHistoriesEntry.Header}}"
                         HeaderIcon="{markup:SymbolIcon HistoryDismiss}"
@@ -243,21 +242,21 @@
             </controls:SettingsExpander>
             <controls:SettingsCard
                 ActionIcon="{markup:SymbolIcon ChevronRight}"
-                Click="AboutPageButton_OnClicked"
+                pixevalControls:ClickCommandBehavior.Command="{Binding #Root.OpenAboutCommand}"
                 Header="{I18N {x:Static pixeval:MainPageResources+Tab.About}}"
                 HeaderIcon="{markup:SymbolIcon PersonStarburst,
                                                IconVariant=Color}"
                 IsClickEnabled="True" />
             <controls:SettingsCard
                 ActionIcon="{markup:SymbolIcon ChevronRight}"
-                Click="HelpPageButton_OnClicked"
+                pixevalControls:ClickCommandBehavior.Command="{Binding #Root.OpenHelpCommand}"
                 Header="{I18N {x:Static pixeval:MainPageResources+Tab.Help}}"
                 HeaderIcon="{markup:SymbolIcon ChatBubblesQuestion,
                                                IconVariant=Color}"
                 IsClickEnabled="True" />
             <controls:SettingsCard
                 ActionIcon="{markup:SymbolIcon ChevronRight}"
-                Click="NavigationSettingsButton_OnClicked"
+                pixevalControls:ClickCommandBehavior.Command="{Binding #Root.OpenNavigationSettingsCommand}"
                 Header="{I18N {x:Static pixeval:MainPageResources+Tab.NavigationSettings}}"
                 HeaderIcon="{markup:SymbolIcon LocationRipple,
                                                IconVariant=Color}"
@@ -272,7 +271,8 @@
                     <DataTemplate x:DataType="{x:Type extensions:ExtensionSettingsGroup}">
                         <controls:SettingsCard
                             ActionIcon="{markup:SymbolIcon ChevronRight}"
-                            Click="SettingsCard_OnClick"
+                            pixevalControls:ClickCommandBehavior.Command="{Binding #Root.OpenGroupCommand}"
+                            pixevalControls:ClickCommandBehavior.CommandParameter="{Binding}"
                             Description="{Binding Description}"
                             Header="{Binding Header}"
                             HeaderIcon="{Binding Icon}"
@@ -281,7 +281,8 @@
                     <DataTemplate x:DataType="{x:Type models:ISettingsGroup}">
                         <controls:SettingsCard
                             ActionIcon="{markup:SymbolIcon ChevronRight}"
-                            Click="SettingsCard_OnClick"
+                            pixevalControls:ClickCommandBehavior.Command="{Binding #Root.OpenGroupCommand}"
+                            pixevalControls:ClickCommandBehavior.CommandParameter="{Binding}"
                             Description="{Binding Description}"
                             Header="{Binding Header}"
                             IsClickEnabled="True">

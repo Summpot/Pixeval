@@ -30,19 +30,7 @@ public partial class SettingsPage : NavigationPage
     /// <summary>
     /// 保存设置
     /// </summary>
-    private void ValueSaving(object? parent)
-    {
-        if (DataContext is not SettingsPageViewModel vm)
-            return;
-
-        foreach (var extensionGroup in vm.ExtensionGroups)
-            foreach (var settingsEntry in extensionGroup)
-                settingsEntry.ValueSaving(extensionGroup.Model.Values);
-
-        AppInfo.SaveSettings();
-        // Parent is TabsView
-        TopLevel.GetTopLevel(parent as Control)?.ViewContainer?.ShowSuccess(I18NManager.GetResource(SettingsMainViewResources.SettingsSaved));
-    }
+    private void ValueSaving(object? parent) => (DataContext as SettingsPageViewModel)?.SaveSettings();
 
     public static string ReleaseTitle => GetReleaseTitle(AppInfo.AppVersion.CurrentVersion);
 

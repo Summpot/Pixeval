@@ -1,293 +1,35 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using System;
-using System.IO;
+using System.Diagnostics.CodeAnalysis;
+using System.Threading.Tasks;
 using AutoSettingsPage.Models;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
-using Avalonia.Threading;
-using Pixeval.Config;
-using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Utilities;
-using Pixeval.ViewModels;
-using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
+using CommunityToolkit.Mvvm.Input;
 
 namespace Pixeval.Views.Settings;
 
+/// <summary>
+/// Settings landing page. Business interactions live in <see cref="ViewModels.Settings.SettingsPageViewModel"/>;
+/// this view only pushes sub pages onto its own navigation host, which is a purely visual concern.
+/// </summary>
 public partial class SettingsMainView : ContentPage
 {
-    public SettingsMainView()
-    {
-        InitializeComponent();
-        RefreshUpdateStatus();
-    }
+    public SettingsMainView() => InitializeComponent();
 
-    private INavigationService AppNavigation =>
-        App.Services?.GetService<INavigationService>() ?? new NavigationService();
+    private Task PushAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TPage>(object? parameter = null) where TPage : Page =>
+        this.AppNavigation?.PushAsync<TPage>(this, parameter) ?? Task.CompletedTask;
 
-    private async void SettingsCard_OnClick(object? sender, RoutedEventArgs e)
-    {
-        if (sender is Control { DataContext: ISettingsGroup group })
-            await AppNavigation.PushAsync<SettingsSubView>(this, group);
-    }
+    [RelayCommand]
+    private Task OpenGroupAsync(ISettingsGroup? group) =>
+        group is null ? Task.CompletedTask : PushAsync<SettingsSubView>(group);
 
-    private void SwitchAccountButton_OnClicked(object sender, RoutedEventArgs e)
-    {
-        var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
-        nav.NavigateToLogin(sourceControl: this);
-    }
+    [RelayCommand]
+    private Task OpenAboutAsync() => PushAsync<AboutPage>();
 
-    private async void ResetDefaultSettings_OnClicked(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is not SettingsPageViewModel vm)
-            return;
+    [RelayCommand]
+    private Task OpenHelpAsync() => PushAsync<HelpPage>();
 
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
-            return;
-
-        if (await viewContainer.CreateOkCancelAsync(
-                I18NManager.GetResource(SettingsMainViewResources.ResetSettingConfirmationDialogTitle),
-                I18NManager.GetResource(SettingsMainViewResources.ResetSettingConfirmationDialogContent))
-            is not ContentDialogResult.Primary)
-            return;
-
-        var settings = new AppSettings();
-        App.Services!.GetRequiredService<NavigationMenuDocument>().Text = NavigationMenuYaml.DefaultYaml;
-        App.Services!.GetRequiredService<HomePageCardSession>().Reset();
-        foreach (var localGroup in vm.LocalGroups)
-            foreach (var settingsEntry in localGroup)
-                settingsEntry.LocalValueReset(settings);
-        foreach (var extensionGroup in vm.ExtensionGroups)
-            foreach (var settingsEntry in extensionGroup)
-                settingsEntry.ValueReset();
-
-        if (viewContainer is TabViewContainer container)
-            container.ReloadNavigation();
-    }
-
-    private async void ReleaseNotesHyperlink_OnClicked(object? sender, RoutedEventArgs e)
-    {
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
-            _ = await viewContainer.CreateAcknowledgementTaskAsync(
-                I18NManager.GetResource(SettingsMainViewResources.ReleaseNoteDialog.Title),
-                async contentDialog =>
-                {
-                    var control = await SettingsPage.GetReleaseNotesAsync();
-                    RefreshUpdateStatus();
-                    contentDialog.Title = SettingsPage.ReleaseTitle;
-                    contentDialog.Content = control;
-                });
-    }
-
-    private async void CheckForUpdateButton_OnClicked(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button button)
-            return;
-
-        button.IsEnabled = false;
-        UpdateStatusInfoBar.Mode = InfoBarMode.Info;
-        UpdateStatusInfoBar.Text = I18NManager.GetResource(SettingsMainViewResources.CheckingForUpdate);
-        try
-        {
-            await AppInfo.AppVersion.CheckForUpdateAsync();
-            RefreshUpdateStatus();
-
-            if (AppInfo.AppVersion is not
-                {
-                    UpdateAvailable: true,
-                    NewestAppReleaseModel: { } release
-                }
-                || TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
-                return;
-
-            if (!AppInfo.AppVersion.UsesVelopack)
-            {
-                _ = await viewContainer.CreateAcknowledgementAsync(
-                    SettingsPage.GetReleaseTitle(release.Version),
-                    SettingsPage.CreateReleaseNotes(release));
-                return;
-            }
-
-            UpdateStatusInfoBar.Mode = InfoBarMode.Info;
-            UpdateStatusInfoBar.Text = I18NManager.GetResource(
-                SettingsMainViewResources.UpdateDownloadProgressFormatted,
-                0);
-            try
-            {
-                IProgress<int> progress = new Progress<int>(value => Dispatcher.UIThread.Post(() =>
-                {
-                    UpdateStatusInfoBar.Mode = InfoBarMode.Info;
-                    UpdateStatusInfoBar.Text = I18NManager.GetResource(
-                        SettingsMainViewResources.UpdateDownloadProgressFormatted,
-                        value);
-                }));
-                if (!await AppInfo.AppVersion.DownloadUpdateAsync(progress.Report))
-                    return;
-            }
-            catch (Exception exception)
-            {
-                UpdateStatusInfoBar.Mode = InfoBarMode.Error;
-                UpdateStatusInfoBar.Text = I18NManager.GetResource(SettingsMainViewResources.UpdateDownloadFailed);
-                viewContainer.ShowError(
-                    I18NManager.GetResource(SettingsMainViewResources.UpdateDownloadFailed),
-                    exception.Message);
-                return;
-            }
-
-            UpdateStatusInfoBar.Mode = InfoBarMode.Success;
-            var readyVersion = AppInfo.AppVersion.PendingUpdateVersion?.ToString() ?? release.Version;
-            var readyMessage = I18NManager.GetResource(
-                SettingsMainViewResources.UpdateDownloadReadyFormatted,
-                readyVersion);
-            UpdateStatusInfoBar.Text = readyMessage;
-            viewContainer.ShowSuccess(readyMessage);
-        }
-        finally
-        {
-            button.IsEnabled = true;
-        }
-    }
-
-    private void RefreshUpdateStatus()
-    {
-        if (DataContext is SettingsPageViewModel vm)
-            vm.RefreshLastCheckedUpdate();
-
-        var updateState = AppInfo.AppVersion.UpdateState;
-        var (mode, resource) = updateState switch
-        {
-            UpdateState.UpToDate => (InfoBarMode.Success, SettingsMainViewResources.IsUpToDate),
-            UpdateState.MajorUpdate => (InfoBarMode.Warning, SettingsMainViewResources.UpdateAvailable.Major),
-            UpdateState.MinorUpdate => (InfoBarMode.Warning, SettingsMainViewResources.UpdateAvailable.Minor),
-            UpdateState.BuildUpdate => (InfoBarMode.Warning, SettingsMainViewResources.UpdateAvailable.Build),
-            UpdateState.Insider => (InfoBarMode.Info, SettingsMainViewResources.IsInsider),
-            UpdateState.Unknown => (InfoBarMode.Info, SettingsMainViewResources.UpdateAvailable.Unknown),
-            _ => throw new ArgumentOutOfRangeException(nameof(updateState), updateState, null)
-        };
-        UpdateStatusInfoBar.Mode = mode;
-        UpdateStatusInfoBar.Text = I18NManager.GetResource(resource);
-    }
-
-    private async void ExportSettingsPlainText_OnClicked(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is not SettingsPageViewModel vm
-            || TopLevel.GetTopLevel(this) is not { ViewContainer: { } viewContainer, StorageProvider: { } provider })
-            return;
-        try
-        {
-            if (await provider.SaveFilePickerAsync(new()
-            {
-                FileTypeChoices =
-                    [
-                        new("YAML")
-                        {
-                            Patterns = ["*.yaml"],
-                            MimeTypes = ["text/yaml", "application/x-yaml"]
-                        }
-                    ],
-                DefaultExtension = "yaml",
-                SuggestedFileName = "settings"
-            }) is not { } file)
-                return;
-            await using var stream = await file.OpenWriteAsync();
-            var json = JsonSerializer.Serialize(vm.AppSettings, SettingsSerializerContext.Default.AppSettings);
-            var yaml = new ConfigEngine().JsonToYaml(json);
-            await using var writer = new StreamWriter(stream);
-            await writer.WriteAsync(yaml);
-
-            viewContainer.ShowSuccess(I18NManager.GetResource(SettingsMainViewResources.ExportSettingsSuccess));
-        }
-        catch (Exception exception)
-        {
-            viewContainer.ShowError(exception.Message, exception.StackTrace);
-        }
-    }
-
-    private async void ImportSettingsPlaintext_OnClicked(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is not SettingsPageViewModel vm
-            || TopLevel.GetTopLevel(this) is not { ViewContainer: { } viewContainer, StorageProvider: { } provider })
-            return;
-        try
-        {
-            if (await provider.OpenFilePickerAsync(new()
-            {
-                FileTypeFilter = [new("YAML") { Patterns = ["*.yaml"] }],
-                AllowMultiple = false
-            }) is not [{ } file])
-                return;
-
-            await using var stream = await file.OpenReadAsync();
-            using var reader = new StreamReader(stream);
-            var rawYaml = await reader.ReadToEndAsync();
-            var engine = new ConfigEngine();
-            var migratedYaml = engine.MigrateYaml(rawYaml);
-            var json = engine.YamlToJson(migratedYaml);
-
-            if (JsonSerializer.Deserialize(json, SettingsSerializerContext.Default.AppSettings) is { } appSettings)
-            {
-                foreach (var localGroup in vm.LocalGroups)
-                    foreach (var settingsEntry in localGroup)
-                        settingsEntry.LocalValueReset(appSettings);
-                viewContainer.ShowSuccess(I18NManager.GetResource(SettingsMainViewResources.ImportSettingsSuccess), file.Name);
-            }
-        }
-        catch (Exception exception)
-        {
-            viewContainer.ShowError(exception.Message, exception.StackTrace);
-        }
-    }
-
-    private async void DeleteFileCacheEntryButton_OnClicked(object sender, RoutedEventArgs e)
-    {
-        await App.Services!.GetRequiredService<IImageProviderService>().PurgeCacheAsync();
-        ShowClearData(ClearDataKind.FileCache);
-    }
-
-    private void DeleteSearchHistoriesButton_OnClicked(object sender, RoutedEventArgs e)
-    {
-        App.Services!.GetRequiredService<SearchHistorySession>().Clear();
-        ShowClearData(ClearDataKind.SearchHistory);
-    }
-
-    private void DeleteBrowseHistoriesButton_OnClicked(object sender, RoutedEventArgs e)
-    {
-        App.Services!.GetRequiredService<StorageEngine>().HistoryRepository.Clear();
-        ShowClearData(ClearDataKind.BrowseHistory);
-    }
-
-    private void DeleteDownloadHistoriesButton_OnClicked(object sender, RoutedEventArgs e)
-    {
-        var storage = App.Services!.GetRequiredService<StorageEngine>();
-        App.Services!.GetRequiredService<DownloadManager>().ClearTasks();
-        storage.ClearDownloadHistory();
-        storage.ClearSubscriptionDownloadHistory();
-        ShowClearData(ClearDataKind.DownloadHistory);
-    }
-
-    public void ShowClearData(ClearDataKind kind)
-    {
-        if (TopLevel.GetTopLevel(this) is not { ViewContainer: { } viewContainer })
-            return;
-        viewContainer.ShowSuccess(I18NManager.GetResource(kind switch
-        {
-            ClearDataKind.FileCache => EnumResources.ClearDataKind.FileCache,
-            ClearDataKind.BrowseHistory => EnumResources.ClearDataKind.BrowseHistory,
-            ClearDataKind.SearchHistory => EnumResources.ClearDataKind.SearchHistory,
-            ClearDataKind.DownloadHistory => EnumResources.ClearDataKind.DownloadHistory,
-            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
-        }));
-    }
-
-    private async void AboutPageButton_OnClicked(object? sender, RoutedEventArgs e) =>
-        await AppNavigation.PushAsync<AboutPage>(this);
-
-    private async void HelpPageButton_OnClicked(object? sender, RoutedEventArgs e) =>
-        await AppNavigation.PushAsync<HelpPage>(this);
-
-    private async void NavigationSettingsButton_OnClicked(object? sender, RoutedEventArgs e) =>
-        await AppNavigation.PushAsync<NavigationSettingsPage>(this);
+    [RelayCommand]
+    private Task OpenNavigationSettingsAsync() => PushAsync<NavigationSettingsPage>();
 }
