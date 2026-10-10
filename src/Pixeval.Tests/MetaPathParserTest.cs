@@ -3,7 +3,6 @@ using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
-using Pixeval.Download;
 using Pixeval.Models.Download;
 using Pixeval.Models.Options;
 using Pixeval.Utilities;

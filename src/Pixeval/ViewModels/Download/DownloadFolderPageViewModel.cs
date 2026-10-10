@@ -10,9 +10,8 @@ public sealed class DownloadFolderPageViewModel(DownloadPageViewModel pageViewMo
 {
     public DownloadPageViewModel PageViewModel { get; } = pageViewModel;
 
-    public ObservableCollection<DownloadFolderViewModel> View => PageViewModel.SubscriptionFolders;
+    public ObservableCollection<DownloadFolderSnapshot> View => PageViewModel.Folders;
 
-    /// <inheritdoc />
     public void Dispose()
     {
         GC.SuppressFinalize(this);

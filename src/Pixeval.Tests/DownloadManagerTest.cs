@@ -1,21 +1,11 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Channels;
-using System.Threading.Tasks;
+using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Download;
-using Pixeval.Models.Download.Tasks;
-using Pixeval.Native.Booru;
-using Pixeval.Native.Download;
 using Pixeval.Models.Options;
 using Pixeval.Models.Subscriptions;
+using Pixeval.Native.Download;
 using Pixeval.Native.Storage;
-using Pixeval.Native.Subscription;
 using Pixeval.ViewModels;
 
 namespace Pixeval.Tests;
@@ -24,225 +14,151 @@ namespace Pixeval.Tests;
 public sealed class DownloadManagerTest
 {
     [TestMethod]
-    public void QueueTask_ReplacesViewModelAndStaleRemovalRemovesReplacement()
+    public void ApplyPageSnapshot_KeepsEqualItemsAndReplacesChanges()
     {
-        using var httpClient = new HttpClient();
-        using var manager = new DownloadManager(httpClient, 1);
-        using var storage = new StorageEngine(":memory:");
-        using var viewModel = new DownloadPageViewModel(
-            manager.QueuedTasks,
-            storage,
-            new TestWorkSubscriptionService());
-        var original = new TestDownloadTaskGroup("same", "1");
-        var other = new TestDownloadTaskGroup("other", "2");
-        var replacement = new TestDownloadTaskGroup("same", "3");
+        using var manager = new DownloadManager(null, 1);
+        var kept = Item("kept", "1", DownloadState.Running, 10);
+        var removed = Item("removed", "2", DownloadState.Queued);
+        manager.ApplyPageSnapshot(Page([kept, removed], []));
 
-        manager.QueueTask(original);
-        manager.QueueTask(other);
-        manager.QueueTask(replacement);
+        var keptAgain = Item("kept", "1", DownloadState.Running, 10);
+        var inserted = Item("inserted", "3", DownloadState.Completed, 100);
+        manager.ApplyPageSnapshot(Page([inserted, keptAgain], []));
 
-        Assert.HasCount(2, manager.QueuedTasks);
-        Assert.IsTrue(original.IsCancelled);
-        Assert.AreSame(replacement, manager.QueuedTasks[0]);
-        Assert.HasCount(2, viewModel.OrdinaryItems);
-        Assert.AreSame(replacement, viewModel.OrdinaryItems[0].DownloadTask);
+        Assert.HasCount(2, manager.OrdinaryItems);
+        Assert.AreSame(inserted, manager.OrdinaryItems[0]);
+        Assert.AreSame(kept, manager.OrdinaryItems[1]);
 
-        Assert.IsTrue(manager.TryRemoveTask(original));
-        Assert.IsTrue(replacement.IsCancelled);
-        Assert.HasCount(1, manager.QueuedTasks);
-        Assert.AreSame(other, manager.QueuedTasks[0]);
-        Assert.HasCount(1, viewModel.OrdinaryItems);
-        Assert.AreSame(other, viewModel.OrdinaryItems[0].DownloadTask);
-        Assert.IsFalse(manager.TryRemoveTask(original));
+        var progressed = Item("kept", "1", DownloadState.Running, 40);
+        manager.ApplyPageSnapshot(Page([inserted, progressed], []));
+
+        Assert.AreSame(inserted, manager.OrdinaryItems[0]);
+        Assert.AreNotSame(kept, manager.OrdinaryItems[1]);
+        Assert.AreEqual(40, manager.OrdinaryItems[1].ProgressPercentage, 0.001);
     }
 
     [TestMethod]
-    public void QueueTask_SubscriptionIdentityAllowsSameDestinationToCoexist()
+    public void ApplyPageSnapshot_PutsSubscriptionItemsInTheirFolder()
     {
-        using var httpClient = new HttpClient();
-        using var manager = new DownloadManager(httpClient, 1);
-        var first = new TestDownloadTaskGroup("same", "artwork", 1);
-        var otherSubscription = new TestDownloadTaskGroup("same", "artwork", 2);
-        var otherArtwork = new TestDownloadTaskGroup("same", "other", 1);
-        var replacement = new TestDownloadTaskGroup("same", "artwork", 1);
+        using var manager = new DownloadManager(null, 1);
+        var ordinary = Item("ordinary", "ordinary", DownloadState.Queued);
+        var subscriptionItem = Item("subscription", "subscription", DownloadState.Completed, 100, 7);
+        var folder = Folder(7, [subscriptionItem], "Subscription");
 
-        manager.QueueTask(first);
-        manager.QueueTask(otherSubscription);
-        manager.QueueTask(otherArtwork);
-        manager.QueueTask(replacement);
+        manager.ApplyPageSnapshot(Page([ordinary], [folder]));
 
-        Assert.HasCount(3, manager.QueuedTasks);
-        Assert.AreSame(replacement, manager.QueuedTasks[0]);
-        Assert.Contains(otherSubscription, manager.QueuedTasks);
-        Assert.Contains(otherArtwork, manager.QueuedTasks);
+        Assert.HasCount(1, manager.OrdinaryItems);
+        Assert.AreSame(ordinary, manager.OrdinaryItems[0]);
+        Assert.HasCount(1, manager.Folders);
+        Assert.AreEqual(7, manager.Folders[0].SubscriptionId);
+        Assert.HasCount(1, manager.Folders[0].Items);
+        Assert.AreSame(subscriptionItem, manager.Folders[0].Items[0]);
     }
 
     [TestMethod]
-    public async Task ViewModel_ProjectsOrdinaryAndSubscriptionSources()
+    public void Page_FiltersByStateAndSearchAndFollowsSnapshotChanges()
     {
-        using var httpClient = new HttpClient();
-        using var manager = new DownloadManager(httpClient, 1);
+        using var manager = new DownloadManager(null, 1);
+        using var page = new DownloadPageViewModel(manager);
+        var running = Item("running", "1", DownloadState.Running, 10, title: "Alpha");
+        var completed = Item("completed", "2", DownloadState.Completed, 100, title: "Beta");
+        manager.ApplyPageSnapshot(Page([running, completed], []));
+
+        using var items = new DownloadItemPageViewModel(page);
+        Assert.HasCount(2, items.View);
+
+        items.CurrentOption = DownloadListOption.Running;
+        Assert.HasCount(1, items.View);
+        Assert.AreSame(running, items.View[0]);
+
+        var progressed = Item("running", "1", DownloadState.Running, 40, title: "Alpha");
+        manager.ApplyPageSnapshot(Page([progressed, completed], []));
+        Assert.HasCount(1, items.View);
+        Assert.AreSame(progressed, items.View[0]);
+        Assert.AreEqual(40, items.View[0].ProgressPercentage, 0.001);
+
+        items.CurrentOption = DownloadListOption.CustomSearch;
+        items.FilterText = "beta";
+        Assert.HasCount(1, items.View);
+        Assert.AreEqual("2", items.View[0].ArtworkId);
+
+        items.FilterText = "   ";
+        Assert.HasCount(2, items.View);
+    }
+
+    [TestMethod]
+    public void FolderPage_ShowsOnlyThatSubscription()
+    {
+        using var manager = new DownloadManager(null, 1);
+        using var page = new DownloadPageViewModel(manager);
+        var first = Item("first", "1", DownloadState.Completed, 100, 4, "First");
+        var second = Item("second", "2", DownloadState.Queued, subscriptionId: 9, title: "Second");
+        manager.ApplyPageSnapshot(Page([], [Folder(4, [first], "First"), Folder(9, [second], "Second")]));
+
+        using var items = new DownloadItemPageViewModel(page, 4);
+        Assert.HasCount(1, items.View);
+        Assert.AreSame(first, items.View[0]);
+
+        var replacement = Item("first", "1", DownloadState.Error, 100, 4, "First");
+        manager.ApplyPageSnapshot(Page([], [Folder(4, [replacement], "First"), Folder(9, [second], "Second")]));
+        Assert.HasCount(1, items.View);
+        Assert.AreSame(replacement, items.View[0]);
+        Assert.AreEqual(DownloadState.Error, items.View[0].State);
+    }
+
+    [TestMethod]
+    public void SetSubscriptions_PublishesFoldersAndFetchFlags()
+    {
         using var storage = new StorageEngine(":memory:");
-        var subscription = storage.UpsertSubscription(
-            1,
+        var unnamed = storage.UpsertSubscription(
+            8,
             (uint)WorkSubscriptionType.Posts,
             (uint)WorkSubscriptionWorkKind.Illustration,
-            "Subscription",
-            "author",
             "",
+            "author",
+            "avatar",
             "",
             null);
-        using var viewModel = new DownloadPageViewModel(
-            manager.QueuedTasks,
-            storage,
-            new TestWorkSubscriptionService());
-        await viewModel.SubscriptionFoldersLoadTask;
-        var ordinary = new TestDownloadTaskGroup("ordinary", "ordinary");
-        var subscriptionTask = new TestDownloadTaskGroup(
-            "subscription",
-            "subscription",
-            (int)subscription.HistoryEntryId);
+        var named = storage.UpsertSubscription(
+            9,
+            (uint)WorkSubscriptionType.Bookmarks,
+            (uint)WorkSubscriptionWorkKind.Novel,
+            "Named",
+            "author",
+            "named-avatar",
+            "",
+            null);
+        var metas = WorkSubscriptionDownloadService.CreateFolderMetas(storage);
+        Assert.HasCount(2, metas);
+        Assert.AreEqual(named.HistoryEntryId, metas[0].SubscriptionId);
+        Assert.AreEqual("Named", metas[0].DisplayName);
+        Assert.AreEqual("named-avatar", metas[0].AvatarUrl);
+        Assert.AreEqual((uint)WorkSubscriptionType.Bookmarks, metas[0].SubscriptionType);
+        Assert.AreEqual((uint)WorkSubscriptionWorkKind.Novel, metas[0].WorkKind);
+        Assert.AreEqual(unnamed.HistoryEntryId, metas[1].SubscriptionId);
+        Assert.AreEqual("8", metas[1].DisplayName);
 
-        manager.QueueTask(ordinary);
-        manager.QueueTask(subscriptionTask);
+        using var manager = new DownloadManager(null, 1);
+        manager.SetSubscriptions(metas);
+        manager.SetFolderFetch(named.HistoryEntryId, true, 42u, null);
+        manager.ApplyPageSnapshot(manager.CurrentPageSnapshot());
 
-        Assert.HasCount(1, viewModel.OrdinaryItems);
-        Assert.AreSame(ordinary, viewModel.OrdinaryItems[0].DownloadTask);
-        Assert.HasCount(1, viewModel.SubscriptionFolders);
-        var folder = viewModel.SubscriptionFolders[0];
-        Assert.HasCount(1, folder.Items);
-        Assert.AreSame(subscriptionTask, folder.Items[0].DownloadTask);
+        Assert.HasCount(2, manager.Folders);
+        Assert.AreEqual(named.HistoryEntryId, manager.Folders[0].SubscriptionId);
+        Assert.IsTrue(manager.Folders[0].IsFetching);
+        Assert.AreEqual(42u, manager.Folders[0].FetchedCount);
+        Assert.AreEqual(0u, manager.Folders[0].TotalCount);
+        Assert.AreEqual(DownloadState.Completed, manager.Folders[0].CurrentState);
+        Assert.IsFalse(manager.Folders[1].IsFetching);
 
-        Assert.HasCount(1, viewModel.OrdinaryItems);
-        Assert.AreSame(ordinary, viewModel.OrdinaryItems[0].DownloadTask);
-
-        Assert.IsTrue(manager.TryRemoveTask(subscriptionTask));
-        Assert.HasCount(1, viewModel.SubscriptionFolders);
-        Assert.IsEmpty(viewModel.SubscriptionFolders[0].Items);
+        manager.SetFolderFetch(named.HistoryEntryId, false, 0u, null);
+        manager.ApplyPageSnapshot(manager.CurrentPageSnapshot());
+        Assert.IsFalse(manager.Folders[0].IsFetching);
+        Assert.AreEqual(0u, manager.Folders[0].FetchedCount);
     }
 
     [TestMethod]
-    public async Task ViewModel_PreservesSubscriptionSourceOrderDuringInitialProjection()
-    {
-        using var storage = new StorageEngine(":memory:");
-        var subscription = storage.UpsertSubscription(
-            1,
-            (uint)WorkSubscriptionType.Posts,
-            (uint)WorkSubscriptionWorkKind.Illustration,
-            "Subscription",
-            "author",
-            "",
-            "",
-            null);
-        var newest = new TestDownloadTaskGroup("newest", "newest", (int)subscription.HistoryEntryId);
-        var older = new TestDownloadTaskGroup("older", "older", (int)subscription.HistoryEntryId);
-        ObservableCollection<IDownloadTaskGroupBase> source = [newest, older];
-        using var viewModel = new DownloadPageViewModel(
-            source,
-            storage,
-            new TestWorkSubscriptionService());
-        await viewModel.SubscriptionFoldersLoadTask;
-
-        var folder = viewModel.SubscriptionFolders[0];
-        Assert.AreSame(newest, folder.Items[0].DownloadTask);
-        Assert.AreSame(older, folder.Items[1].DownloadTask);
-    }
-
-    [TestMethod]
-    public async Task ViewModel_DisplaysSubscriptionsWithoutTasks()
-    {
-        using var storage = new StorageEngine(":memory:");
-        _ = storage.UpsertSubscription(
-            1,
-            (uint)WorkSubscriptionType.Posts,
-            (uint)WorkSubscriptionWorkKind.Illustration,
-            "Subscription",
-            "author",
-            "",
-            "",
-            null);
-        using var httpClient = new HttpClient();
-        using var manager = new DownloadManager(httpClient, 1);
-        using var viewModel = new DownloadPageViewModel(
-            manager.QueuedTasks,
-            storage,
-            new TestWorkSubscriptionService());
-
-        await viewModel.SubscriptionFoldersLoadTask;
-
-        Assert.HasCount(1, viewModel.SubscriptionFolders);
-        Assert.IsEmpty(viewModel.SubscriptionFolders[0].Items);
-    }
-
-    [TestMethod]
-    public async Task ViewModel_TracksSubscriptionFetchState()
-    {
-        using var storage = new StorageEngine(":memory:");
-        var subscription = storage.UpsertSubscription(
-            1,
-            (uint)WorkSubscriptionType.Posts,
-            (uint)WorkSubscriptionWorkKind.Illustration,
-            "Subscription",
-            "author",
-            "",
-            "",
-            null);
-        using var httpClient = new HttpClient();
-        using var manager = new DownloadManager(httpClient, 1);
-        var fetchStateSource = new TestWorkSubscriptionService();
-        fetchStateSource.Update(new(subscription.HistoryEntryId, 1, 42, SubscriptionStatus.Fetching));
-        using var viewModel = new DownloadPageViewModel(
-            manager.QueuedTasks,
-            storage,
-            fetchStateSource);
-
-        await viewModel.SubscriptionFoldersLoadTask;
-
-        var folder = viewModel.SubscriptionFolders[0];
-        Assert.IsTrue(folder.IsFetching);
-        Assert.AreEqual(42, folder.FetchedCount);
-
-        fetchStateSource.Update(new(subscription.HistoryEntryId, 1, 42, SubscriptionStatus.Completed));
-
-        Assert.IsFalse(folder.IsFetching);
-        Assert.AreEqual(0, folder.FetchedCount);
-    }
-
-    [TestMethod]
-    public async Task ViewModel_AddsNewSubscriptionWhenFetchingStarts()
-    {
-        using var storage = new StorageEngine(":memory:");
-        using var httpClient = new HttpClient();
-        using var manager = new DownloadManager(httpClient, 1);
-        var fetchStateSource = new TestWorkSubscriptionService();
-        using var viewModel = new DownloadPageViewModel(
-            manager.QueuedTasks,
-            storage,
-            fetchStateSource);
-
-        await viewModel.SubscriptionFoldersLoadTask;
-        Assert.IsEmpty(viewModel.SubscriptionFolders);
-
-        var subscription = storage.UpsertSubscription(
-            1,
-            (uint)WorkSubscriptionType.Posts,
-            (uint)WorkSubscriptionWorkKind.Illustration,
-            "Subscription",
-            "author",
-            "",
-            "",
-            null);
-        fetchStateSource.Update(new(subscription.HistoryEntryId, 1, 0, SubscriptionStatus.Fetching));
-
-        Assert.HasCount(1, viewModel.SubscriptionFolders);
-        Assert.AreEqual(
-            subscription.HistoryEntryId,
-            viewModel.SubscriptionFolders[0].Subscription.HistoryEntryId);
-        Assert.IsTrue(viewModel.SubscriptionFolders[0].IsFetching);
-    }
-
-    [TestMethod]
-    public async Task ViewModel_RemovesFolderWhenSubscriptionIsRemoved()
+    public void EnqueuePixiv_PlacesSubscriptionWorkInItsFolder()
     {
         using var storage = new StorageEngine(":memory:");
         var subscription = storage.UpsertSubscription(
@@ -254,207 +170,107 @@ public sealed class DownloadManagerTest
             "",
             "",
             null);
-        using var httpClient = new HttpClient();
-        using var manager = new DownloadManager(httpClient, 1);
-        var subscriptionService = new TestWorkSubscriptionService();
-        using var viewModel = new DownloadPageViewModel(
-            manager.QueuedTasks,
-            storage,
-            subscriptionService);
-        await viewModel.SubscriptionFoldersLoadTask;
-        Assert.HasCount(1, viewModel.SubscriptionFolders);
+        using var manager = new DownloadManager(null, 1);
+        manager.BindStorage(storage);
+        manager.SetSubscriptions(WorkSubscriptionDownloadService.CreateFolderMetas(storage));
 
-        _ = storage.DeleteSubscription(subscription.HistoryEntryId);
-        subscriptionService.Remove((int)subscription.HistoryEntryId);
-
-        Assert.IsEmpty(viewModel.SubscriptionFolders);
-    }
-
-    [TestMethod]
-    public async Task ViewModel_UpdatesSubscriptionMetadata()
-    {
-        using var storage = new StorageEngine(":memory:");
-        var subscription = storage.UpsertSubscription(
-            1,
-            (uint)WorkSubscriptionType.Posts,
-            (uint)WorkSubscriptionWorkKind.Illustration,
-            "Old",
-            "author",
-            "old-avatar",
-            "",
-            null);
-        using var httpClient = new HttpClient();
-        using var manager = new DownloadManager(httpClient, 1);
-        var subscriptionService = new TestWorkSubscriptionService();
-        using var viewModel = new DownloadPageViewModel(
-            manager.QueuedTasks,
-            storage,
-            subscriptionService);
-        await viewModel.SubscriptionFoldersLoadTask;
-        var folder = viewModel.SubscriptionFolders[0];
-        var changedProperties = new List<string?>();
-        folder.PropertyChanged += (_, args) => changedProperties.Add(args.PropertyName);
-
-        subscriptionService.UpdateSubscription(subscription with
+        var directory = Path.Combine(Path.GetTempPath(), "pixeval-snapshot-" + Guid.NewGuid().ToString("N"));
+        var macro = Path.Combine(directory, "@{id}.@{ext}");
+        try
         {
-            Title = "New",
-            Avatar = "new-avatar"
-        });
+            var ordinary = manager.EnqueuePixiv(IllustrationJson(11, "Ordinary"), false, -1, macro, "", 0, "");
+            var subscribed = manager.EnqueuePixiv(
+                IllustrationJson(22, "Subscribed"),
+                false,
+                -1,
+                macro,
+                "",
+                subscription.HistoryEntryId,
+                "Posts");
+            Assert.IsFalse(string.IsNullOrEmpty(ordinary));
+            Assert.IsFalse(string.IsNullOrEmpty(subscribed));
 
-        Assert.AreEqual("New", folder.Subscription.Name);
-        Assert.AreEqual("new-avatar", folder.Subscription.AvatarUrl);
-        CollectionAssert.Contains(changedProperties, nameof(DownloadFolderViewModel.Title));
-        CollectionAssert.Contains(changedProperties, nameof(DownloadFolderViewModel.Subscription));
-    }
+            manager.ApplyPageSnapshot(manager.CurrentPageSnapshot());
+            Assert.HasCount(1, manager.OrdinaryItems);
+            Assert.AreEqual("11", manager.OrdinaryItems[0].ArtworkId);
+            Assert.AreEqual("Ordinary", manager.OrdinaryItems[0].Title);
+            Assert.HasCount(1, manager.Folders);
+            Assert.HasCount(1, manager.Folders[0].Items);
+            Assert.AreEqual("22", manager.Folders[0].Items[0].ArtworkId);
+            Assert.AreEqual(subscription.HistoryEntryId, manager.Folders[0].Items[0].WorkSubscriptionId);
 
-    private sealed class TestWorkSubscriptionService : IWorkSubscriptionService
-    {
-        public SubscriptionFetchState? CurrentFetchState { get; private set; }
-
-        public event EventHandler<SubscriptionFetchState>? FetchStateChanged;
-
-        public event EventHandler<WorkSubscriptionRecord>? SubscriptionUpdated;
-
-        public event EventHandler<long>? SubscriptionRemoved;
-
-        public event EventHandler<uint>? NewWorksIngested
-        {
-            add { }
-            remove { }
+            manager.CancelWork(manager.OrdinaryItems[0].Key);
+            manager.CancelWork(manager.Folders[0].Items[0].Key);
         }
-
-        public event EventHandler<bool>? DaemonStateChanged
+        finally
         {
-            add { }
-            remove { }
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, true);
         }
-
-        public bool IsDaemonRunning { get; private set; }
-
-        public void StartDaemon(ulong intervalSecs = 1800) => IsDaemonRunning = true;
-
-        public void StopDaemon() => IsDaemonRunning = false;
-
-        public void SetDaemonInterval(ulong intervalSecs) { }
-
-        public WorkSubscriptionType? LastQueryType { get; private set; }
-
-        public WorkSubscriptionRecord? TryGetSubscription(
-            long targetId,
-            WorkSubscriptionType subscriptionType,
-            WorkSubscriptionWorkKind workKind) => null;
-
-        public Task<WorkSubscriptionRecord?> TryRemoveAsync(long historyEntryId) =>
-            Task.FromResult<WorkSubscriptionRecord?>(null);
-
-        public void Update(SubscriptionFetchState state)
-        {
-            CurrentFetchState = state.Status == SubscriptionStatus.Fetching ? state : null;
-            FetchStateChanged?.Invoke(this, state);
-        }
-
-        public void Remove(long workSubscriptionId) =>
-            SubscriptionRemoved?.Invoke(this, workSubscriptionId);
-
-        public void UpdateSubscription(WorkSubscriptionRecord subscription) =>
-            SubscriptionUpdated?.Invoke(this, subscription);
     }
 
-    private sealed class TestDownloadTaskGroup(
+    private static DownloadPageSnapshot Page(
+        List<DownloadItemSnapshot> ordinary,
+        List<DownloadFolderSnapshot> folders) =>
+        new(ordinary, folders);
+
+    private static DownloadItemSnapshot Item(
         string destination,
-        string id,
-        int? workSubscriptionId = null) : IDownloadTaskGroup
-    {
-        public IDownloadHistoryEntry DatabaseEntry { get; } =
-            IDownloadHistoryEntry.Create(destination, CreatePost(id), workSubscriptionId);
+        string artworkId,
+        DownloadState state,
+        double progress = 0,
+        long subscriptionId = 0,
+        string title = "title") =>
+        new(
+            new DownloadTaskKey(destination, (int)subscriptionId, artworkId),
+            title,
+            "author",
+            "",
+            "",
+            "",
+            state,
+            progress,
+            1u,
+            state == DownloadState.Completed ? 1u : 0u,
+            state == DownloadState.Error ? 1u : 0u,
+            null,
+            destination,
+            false,
+            artworkId,
+            subscriptionId);
 
-        public string Id => (DatabaseEntry.Entry as BooruPost)?.Id ?? id;
+    private static DownloadFolderSnapshot Folder(
+        long subscriptionId,
+        List<DownloadItemSnapshot> items,
+        string displayName) =>
+        new(
+            subscriptionId,
+            displayName,
+            "",
+            (uint)WorkSubscriptionType.Posts,
+            (uint)WorkSubscriptionWorkKind.Illustration,
+            items,
+            (uint)items.Count,
+            0u,
+            0u,
+            0u,
+            100,
+            DownloadState.Completed,
+            false,
+            0u,
+            null);
 
-        public double ProgressPercentage => 100;
-
-        public DownloadState CurrentState => DownloadState.Completed;
-
-        public string Destination => DatabaseEntry.Destination;
-
-        public string? ErrorMessage => null;
-
-        public string OpenLocalDestination => Destination;
-
-        public bool IsProcessing => false;
-
-        public int ActiveCount => 0;
-
-        public int CompletedCount => 1;
-
-        public int ErrorCount => 0;
-
-        public int Count => 0;
-
-        public bool IsCancelled { get; private set; }
-
-        event PropertyChangedEventHandler? INotifyPropertyChanged.PropertyChanged
+    private static string IllustrationJson(long id, string title) =>
+        $$"""
         {
-            add { }
-            remove { }
+          "Id": {{id}},
+          "Title": "{{title}}",
+          "IllustType": "illust",
+          "ImageUrls": { "Large": "https://127.0.0.1:1/{{id}}.jpg" },
+          "User": { "Id": 9, "Name": "Author", "Account": "author" },
+          "CreateDate": "2020-01-02T03:04:05+00:00",
+          "PageCount": 1,
+          "MetaSinglePage": { "OriginalImageUrl": "https://127.0.0.1:1/{{id}}.jpg" }
         }
-
-        event PropertyChangingEventHandler? INotifyPropertyChanging.PropertyChanging
-        {
-            add { }
-            remove { }
-        }
-
-        public ValueTask InitializeTaskGroupAsync() => ValueTask.CompletedTask;
-
-        public void Reset()
-        {
-        }
-
-        public void Pause()
-        {
-        }
-
-        public void Resume()
-        {
-        }
-
-        public void Cancel() => IsCancelled = true;
-
-        public void Delete()
-        {
-        }
-
-        public void Dispose()
-        {
-        }
-
-        public IEnumerator<ISingleDownloadTaskBase> GetEnumerator() =>
-            ((IEnumerable<ISingleDownloadTaskBase>) []).GetEnumerator();
-
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-    }
-
-    private static BooruPost CreatePost(string id) => new(
-        id,
-        $"hash-{id}",
-        BooruPlatform.Danbooru,
-        $"https://example.com/{id}.jpg",
-        null,
-        null,
-        100,
-        100,
-        0,
-        "jpg",
-        DateTimeOffset.UtcNow.ToString("O"),
-        "1",
-        "uploader",
-        null,
-        "general",
-        [],
-        null,
-        false,
-        0,
-        false,
-        false,
-        null);
+        """;
 }

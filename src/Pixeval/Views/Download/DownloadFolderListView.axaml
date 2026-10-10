@@ -8,6 +8,7 @@
     xmlns:local="using:Pixeval.Views.Download"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
+    xmlns:download="using:Pixeval.Native.Download"
     xmlns:viewModels="using:Pixeval.ViewModels"
     x:DataType="{x:Type viewModels:DownloadFolderPageViewModel}"
     x:Name="Root"
@@ -22,7 +23,7 @@
                     </Style>
                 </ListBox.Styles>
                 <ListBox.DataTemplates>
-                    <DataTemplate x:DataType="{x:Type viewModels:DownloadFolderViewModel}">
+                    <DataTemplate x:DataType="{x:Type download:DownloadFolderSnapshot}">
                         <local:DownloadFolder OpenRequested="DownloadFolder_OnOpenRequested">
                             <local:DownloadFolder.ContextMenu>
                                 <ContextMenu DataContext="{Binding}">

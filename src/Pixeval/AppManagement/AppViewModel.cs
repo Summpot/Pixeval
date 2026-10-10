@@ -10,8 +10,6 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement.Settings;
-using Pixeval.Models.Download;
-using Pixeval.Models.Download.Tasks;
 using Pixeval.Models.Extensions;
 using Pixeval.Native.Config;
 #if PIXEVAL_MCP
@@ -111,6 +109,12 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         MakoClient.SetSessionCallback(new MakoSessionCallbackHandler(this, logger));
         MahoClient = new MahoClient(CreateMahoClientOptions());
         DownloadManager = new DownloadManager(null, AppSettings.DownloadSettings.MaxDownloadTaskConcurrencyLevel);
+        DownloadManager.BindStorage(StorageEngine);
+        DownloadManager.BindMako(MakoClient);
+        DownloadManager.SetDownloadPolicy(CreateDownloadPolicy(AppSettings));
+        DownloadManager.AttachPageSnapshotCallback();
+        var extensionService = new ExtensionService(logger, AppSettings);
+        DownloadManager.SetFormatEncoder(new DownloadFormatEncoderAdapter(extensionService));
 
         try
         {
@@ -143,9 +147,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             .AddSingleton<WorkSubscriptionDownloadService>()
             .AddSingleton<IWorkSubscriptionService>(provider =>
                 provider.GetRequiredService<WorkSubscriptionDownloadService>())
-            .AddSingleton<IllustrationDownloadTaskFactory>()
-            .AddSingleton<NovelDownloadTaskFactory>()
-            .AddSingleton(provider => new ExtensionService(provider.GetRequiredService<FileLogger>(), AppSettings))
+            .AddSingleton(extensionService)
             .AddTransient<ViewModels.SettingsPageViewModel>()
 #if PIXEVAL_MCP
             .AddSingleton<IPixevalMcpService>(t =>
@@ -169,19 +171,11 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             foreach (var s in searches)
                 SearchHistoryEntries.Add(s);
 
-            var regular = await Task.Run(() => StorageEngine.DownloadRepository.StreamDownloadHistoryCursor(null, 50));
-            foreach (var r in regular)
+            await Task.Run(() =>
             {
-                if (r.Entry is not null && r.ToTaskGroup() is { } task)
-                    _ = DownloadManager.TryRestoreTask(task);
-            }
-
-            var sub = await Task.Run(() => StorageEngine.DownloadRepository.StreamSubscriptionDownloadHistoryCursor(null, 50));
-            foreach (var s in sub)
-            {
-                if (s.Entry is not null && s.ToTaskGroup() is { } task)
-                    _ = DownloadManager.TryRestoreTask(task);
-            }
+                DownloadManager.SetSubscriptions(WorkSubscriptionDownloadService.CreateFolderMetas(StorageEngine));
+                DownloadManager.RestoreHistories();
+            });
         }
         catch (Exception ex)
         {
@@ -215,38 +209,28 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
 
     public bool RemoveWatchLater(object entry) => StorageEngine.WatchLaterRepository.RemoveWatchLater(entry);
 
-    public void UpdateDownloadHistory(IDownloadHistoryEntry entry) => StorageEngine.DownloadRepository.Update(entry);
-
-    public async Task QueueSubscriptionDownloadBatchAsync(IReadOnlyList<IDownloadTaskGroup> taskGroups)
+    public static DownloadPolicy CreateDownloadPolicy(AppSettings? settings = null)
     {
-        ArgumentNullException.ThrowIfNull(taskGroups);
-        if (taskGroups.Count is 0)
-            return;
-
-        var entries = taskGroups
-            .Select(static task => task.DatabaseEntry)
-            .OfType<SubscriptionDownloadHistoryRecord>()
-            .ToList();
-
-        await Task.Run(() => StorageEngine.DownloadRepository.AddOrReplaceSubscriptionDownloadHistoryBatch(entries)).ConfigureAwait(false);
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            foreach (var taskGroup in taskGroups)
-                DownloadManager.QueueTask(taskGroup);
-        });
+        var download = (settings ?? App.AppViewModel.AppSettings).DownloadSettings;
+        return new DownloadPolicy(
+            download.OverwriteDownloadedFile,
+            download.DownloadFormats.IllustrationDownloadFormat,
+            download.DownloadFormats.UgoiraDownloadFormat,
+            download.DownloadFormats.NovelDownloadFormat);
     }
 
-    public async Task RemoveWorkSubscriptionDownloadsAsync(int workSubscriptionId)
+    public void ClearDownloadHistories()
+    {
+        DownloadManager.ClearTasks();
+        StorageEngine.ClearDownloadHistory();
+        StorageEngine.ClearSubscriptionDownloadHistory();
+    }
+
+    public Task RemoveWorkSubscriptionDownloadsAsync(long workSubscriptionId)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(workSubscriptionId);
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            foreach (var task in DownloadManager.QueuedTasks
-                         .Where(task => task is IDownloadTaskGroup { DatabaseEntry: SubscriptionDownloadHistoryRecord { WorkSubscriptionId: var id } } && id == workSubscriptionId)
-                         .ToArray())
-                _ = DownloadManager.TryRemoveTask(task);
-        });
-        await Task.Run(() => StorageEngine.DownloadRepository.DeleteSubscriptionDownloadsByWorkSubscriptionId(workSubscriptionId)).ConfigureAwait(false);
+        DownloadManager.RemoveSubscription(workSubscriptionId);
+        return Task.CompletedTask;
     }
 
     public void OnTokenRefreshed(TokenResponse? tokenResponse) =>

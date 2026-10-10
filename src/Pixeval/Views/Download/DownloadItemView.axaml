@@ -11,6 +11,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:options="using:Pixeval.Models.Options"
     xmlns:pixeval="using:Pixeval"
+    xmlns:download="using:Pixeval.Native.Download"
     xmlns:viewModels="using:Pixeval.ViewModels"
     x:DataType="{x:Type viewModels:DownloadItemPageViewModel}"
     x:Name="Root"
@@ -93,7 +94,7 @@
                     <controls:ItemsViewListBoxStyles />
                 </ListBox.Styles>
                 <ListBox.DataTemplates>
-                    <DataTemplate x:DataType="{x:Type viewModels:DownloadItemViewModel}">
+                    <DataTemplate x:DataType="{x:Type download:DownloadItemSnapshot}">
                         <Border Padding="16" Background="Transparent">
                             <local:DownloadItem OpenIllustrationRequested="DownloadItem_OnOpenIllustrationRequested" />
                         </Border>

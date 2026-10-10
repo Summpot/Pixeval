@@ -163,14 +163,14 @@ public class SettingsPageViewModel : ViewModelBase
                             t => t.NovelRankOption,
                             SimpleWorkType.Novel)))
             .NewGroup(t => t.DownloadSettings, group => group
-                .Bool(t => t.OverwriteDownloadedFile)
+                .Bool(t => t.OverwriteDownloadedFile, entry => entry.ValueChanged += _ => PushDownloadPolicy())
                 .Int(t => t.MaxDownloadTaskConcurrencyLevel, 1, Environment.ProcessorCount, 1,
                     entry => entry.ValueChanged += t => _downloadManager.ConcurrencyDegree = t)
                 .DownloadMacro(t => t.DownloadPathMacro)
                 .MultiValues(t => t.DownloadFormats, entry =>
-                    entry.IllustrationDownloadFormat()
-                        .UgoiraDownloadFormat()
-                        .NovelDownloadFormat())
+                    entry.IllustrationDownloadFormat(format => format.ValueChanged += _ => PushDownloadPolicy())
+                        .UgoiraDownloadFormat(format => format.ValueChanged += _ => PushDownloadPolicy())
+                        .NovelDownloadFormat(format => format.ValueChanged += _ => PushDownloadPolicy()))
                 .Bool(t => t.EnableSubscriptionDaemon, entry => entry.ValueChanged += enabled =>
                 {
                     if (_serviceProvider.GetService<IWorkSubscriptionService>() is { } subService)
@@ -204,6 +204,9 @@ public class SettingsPageViewModel : ViewModelBase
 #endif
             .Build();
     }
+
+    private void PushDownloadPolicy() =>
+        _downloadManager.SetDownloadPolicy(AppViewModel.CreateDownloadPolicy(_appSettings));
 
 #if PIXEVAL_MCP
     private async Task ApplyMcpSettingsAsync()

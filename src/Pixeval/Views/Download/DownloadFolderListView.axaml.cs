@@ -9,6 +9,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Models.Subscriptions;
+using Pixeval.Native.Download;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 
@@ -58,53 +59,55 @@ public partial class DownloadFolderListView : ContentPage, IDisposable
         UpdateItemsSourceSubscription();
     }
 
-    private async void DownloadFolder_OnOpenRequested(DownloadFolder sender, DownloadFolderViewModel folder)
+    private async void DownloadFolder_OnOpenRequested(DownloadFolder sender, DownloadFolderSnapshot folder)
     {
         if (DataContext is not DownloadFolderPageViewModel vm
             || !IsInNavigationPage
             || Parent is not NavigationPage frame)
             return;
 
-        await frame.PushAsync(new DownloadItemView(new DownloadItemPageViewModel(vm.PageViewModel, folder)));
+        await frame.PushAsync(new DownloadItemView(new DownloadItemPageViewModel(vm.PageViewModel, folder.SubscriptionId)));
     }
 
     private void ResumeAll_OnClicked(object? sender, RoutedEventArgs e) =>
-        ExecuteForFolder(sender, item => item.DownloadTask.Resume());
+        ExecuteForFolder(sender, static (page, key) => page.Resume(key));
 
     private void PauseAll_OnClicked(object? sender, RoutedEventArgs e) =>
-        ExecuteForFolder(sender, item => item.DownloadTask.Pause());
+        ExecuteForFolder(sender, static (page, key) => page.Pause(key));
 
     private void CancelAll_OnClicked(object? sender, RoutedEventArgs e) =>
-        ExecuteForFolder(sender, item => item.DownloadTask.Cancel());
+        ExecuteForFolder(sender, static (page, key) => page.Cancel(key));
 
     private void ResetAll_OnClicked(object? sender, RoutedEventArgs e) =>
-        ExecuteForFolder(sender, item => item.DownloadTask.Reset());
+        ExecuteForFolder(sender, static (page, key) => page.Reset(key));
 
     private static void SyncSubscription_OnClicked(object? sender, RoutedEventArgs e)
     {
-        if (sender is not MenuItem { Tag: DownloadFolderViewModel { Subscription: var subscription } })
+        if (sender is not MenuItem { Tag: DownloadFolderSnapshot folder })
             return;
 
-        App.AppViewModel.QueueWorkSubscriptionSync(subscription);
+        if (App.AppViewModel.StorageEngine.GetSubscriptionByHistoryId(folder.SubscriptionId) is { } subscription)
+            App.AppViewModel.QueueWorkSubscriptionSync(subscription);
     }
 
     private static async void RemoveSubscription_OnClicked(object? sender, RoutedEventArgs e)
     {
-        if (sender is not MenuItem { Tag: DownloadFolderViewModel { Subscription: var subscription } })
+        if (sender is not MenuItem { Tag: DownloadFolderSnapshot folder })
             return;
 
         _ = await App.AppViewModel.AppServiceProvider
             .GetRequiredService<IWorkSubscriptionService>()
-            .TryRemoveAsync(subscription.HistoryEntryId);
+            .TryRemoveAsync(folder.SubscriptionId);
     }
 
-    private static void ExecuteForFolder(object? sender, Action<DownloadItemViewModel> action)
+    private void ExecuteForFolder(object? sender, Action<DownloadPageViewModel, DownloadTaskKey> action)
     {
-        if (sender is not MenuItem { Tag: DownloadFolderViewModel folder })
+        if (sender is not MenuItem { Tag: DownloadFolderSnapshot folder }
+            || DataContext is not DownloadFolderPageViewModel { PageViewModel: var page })
             return;
 
-        foreach (var item in folder.DownloadItems)
-            action(item);
+        foreach (var item in folder.Items)
+            action(page, item.Key);
     }
 
     private void UpdateItemsSourceSubscription()
@@ -133,7 +136,6 @@ public partial class DownloadFolderListView : ContentPage, IDisposable
         _subscribedItemsSource = null;
     }
 
-    /// <inheritdoc />
     public void Dispose()
     {
         GC.SuppressFinalize(this);

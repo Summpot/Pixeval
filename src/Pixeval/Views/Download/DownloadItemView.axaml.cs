@@ -4,6 +4,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using Avalonia;
@@ -13,10 +14,12 @@ using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Pixeval.I18N;
+using Pixeval.Models;
 using Pixeval.Models.Options;
-using Pixeval.Models.Pixiv;
+using Pixeval.Native.Download;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
+using Pixeval.Views.ViewContainers;
 using Pixeval.Views.Viewers;
 
 namespace Pixeval.Views.Download;
@@ -45,11 +48,15 @@ public partial class DownloadItemView : ContentPage, IDisposable
             view => view.DeleteLocalFiles,
             (view, value) => view.DeleteLocalFiles = value);
 
+    private readonly HashSet<DownloadTaskKey> _selectedKeys = [];
+
     private INotifyPropertyChanged? _subscribedItemsSource;
 
-    private bool _isDisposed;
+    private DownloadItemPageViewModel? _itemPage;
 
-    public DownloadFolderViewModel? Folder => (DataContext as DownloadItemPageViewModel)?.Folder;
+    private bool _restoringSelection;
+
+    private bool _isDisposed;
 
     public int SelectedCount
     {
@@ -86,8 +93,6 @@ public partial class DownloadItemView : ContentPage, IDisposable
         : this()
     {
         DataContext = viewModel;
-        if (viewModel.Folder is { } folder)
-            Header = folder.Title;
     }
 
     public void SelectAll() => ListBox.SelectAll();
@@ -111,19 +116,34 @@ public partial class DownloadItemView : ContentPage, IDisposable
             return;
 
         UpdateItemsSourceSubscription();
-        if (DataContext is DownloadItemPageViewModel { Folder: { } folder })
-            Header = folder.Title;
+        UpdateFolderHeader();
     }
 
-    private void DownloadItem_OnOpenIllustrationRequested(DownloadItem sender, DownloadItemViewModel viewModel)
+    private void DownloadItem_OnOpenIllustrationRequested(DownloadItem sender, DownloadItemSnapshot item)
     {
         if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
             return;
 
-        if (viewModel.Entry is Novel novel)
-            viewContainer.CreateNovelPage(novel.Id);
-        else
-            viewContainer.CreateIllustrationPage(viewModel.Entry);
+        OpenWork(viewContainer, item);
+    }
+
+    private static void OpenWork(ViewContainerBase viewContainer, DownloadItemSnapshot item)
+    {
+        if (!Uri.TryCreate(item.AppUri, UriKind.Absolute, out var uri) || uri.Scheme != "pixeval")
+            return;
+
+        var id = uri.AbsolutePath.Trim('/');
+        if (uri.Host.Equals("novel", StringComparison.OrdinalIgnoreCase) && long.TryParse(id, out var novelId))
+        {
+            viewContainer.CreateNovelPage(novelId);
+            return;
+        }
+
+        var platform = uri.Host.Equals("illust", StringComparison.OrdinalIgnoreCase)
+            ? PlatformConstants.Pixiv
+            : uri.Host;
+        if (!string.IsNullOrWhiteSpace(id))
+            viewContainer.CreateIllustrationPage(id, platform);
     }
 
     private void FilterTextBox_OnKeyDown(object? sender, KeyEventArgs e)
@@ -140,42 +160,30 @@ public partial class DownloadItemView : ContentPage, IDisposable
     }
 
     private void PauseAllButton_OnClicked(object? sender, RoutedEventArgs e) =>
-        ExecuteForSelectedDownloadTasks(item => item.DownloadTask.Pause());
+        ExecuteForSelectedDownloadTasks(item => Page?.Pause(item.Key));
 
     private void ResumeAllButton_OnClicked(object? sender, RoutedEventArgs e) =>
-        ExecuteForSelectedDownloadTasks(item => item.DownloadTask.Resume());
+        ExecuteForSelectedDownloadTasks(item => Page?.Resume(item.Key));
 
     private void CancelAllButton_OnClicked(object? sender, RoutedEventArgs e) =>
-        ExecuteForSelectedDownloadTasks(item => item.DownloadTask.Cancel());
+        ExecuteForSelectedDownloadTasks(item => Page?.Cancel(item.Key));
 
     private void ResetAllButton_OnClicked(object? sender, RoutedEventArgs e) =>
-        ExecuteForSelectedDownloadTasks(item => item.DownloadTask.Reset());
+        ExecuteForSelectedDownloadTasks(item => Page?.Reset(item.Key));
 
     private void DeleteAllButton_OnClicked(object? sender, RoutedEventArgs e)
     {
-        if (SelectedCount is var count and not 0)
-        {
-            foreach (var item in GetSelectedEntries().SelectMany(entry => entry.DownloadItems))
-            {
-                if (DeleteLocalFiles)
-                {
-                    try
-                    {
-                        item.DownloadTask.Delete();
-                    }
-                    catch
-                    {
-                        // A missing or locked local file does not prevent history removal.
-                    }
-                }
+        if (Page is not { } page || SelectedCount == 0)
+            return;
 
-                _ = App.AppViewModel.DownloadManager.TryRemoveTask(item.DownloadTask);
-            }
+        var count = SelectedCount;
+        foreach (var item in GetSelectedEntries())
+            page.Remove(item.Key, DeleteLocalFiles);
 
-            UnselectAll();
-            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
-                I18NManager.GetResource(DownloadPageResources.DeleteDownloadHistoryRecordsFormatted, count));
-        }
+        UnselectAll();
+        _selectedKeys.Clear();
+        TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
+            I18NManager.GetResource(DownloadPageResources.DeleteDownloadHistoryRecordsFormatted, count));
     }
 
     private void SelectAllButton_OnClicked(object? sender, RoutedEventArgs e) => SelectAll();
@@ -203,13 +211,68 @@ public partial class DownloadItemView : ContentPage, IDisposable
 
     private void CancelSelectButton_OnClicked(object? sender, RoutedEventArgs e) => UnselectAll();
 
+    private DownloadPageViewModel? Page =>
+        (DataContext as DownloadItemPageViewModel)?.PageViewModel;
+
+    private void UpdateFolderHeader()
+    {
+        if (DataContext is DownloadItemPageViewModel { Folder: { } folder })
+            Header = folder.Title;
+    }
+
     private void UpdateItemsSourceSubscription()
     {
-        UnsubscribeFromItemsSource();
+        DetachItemPage();
         if (DataContext is not DownloadItemPageViewModel vm)
             return;
 
+        _itemPage = vm;
+        vm.ViewRefreshStarting += OnViewRefreshStarting;
+        vm.ViewRefreshCompleted += OnViewRefreshCompleted;
+        vm.PageViewModel.Folders.CollectionChanged += OnFoldersChanged;
         SetDownloadItemsSource(vm.View);
+        UpdateFolderHeader();
+    }
+
+    private void OnFoldersChanged(object? sender, NotifyCollectionChangedEventArgs e) => UpdateFolderHeader();
+
+    private void OnViewRefreshStarting()
+    {
+        _restoringSelection = true;
+        _selectedKeys.Clear();
+        if (ListBox.SelectedItems is null)
+            return;
+
+        foreach (var item in ListBox.SelectedItems.OfType<DownloadItemSnapshot>())
+            _selectedKeys.Add(item.Key);
+    }
+
+    private void OnViewRefreshCompleted()
+    {
+        try
+        {
+            var desired = ListBox.Items.OfType<DownloadItemSnapshot>()
+                .Where(item => _selectedKeys.Contains(item.Key))
+                .ToList();
+            var current = ListBox.SelectedItems?.OfType<DownloadItemSnapshot>().ToList() ?? [];
+            var alreadySelected = current.Count == desired.Count
+                && current.All(item => _selectedKeys.Contains(item.Key));
+            if (!alreadySelected)
+            {
+                ListBox.SelectedItems?.Clear();
+                foreach (var item in desired)
+                    ListBox.SelectedItems?.Add(item);
+            }
+
+            _selectedKeys.Clear();
+            foreach (var item in desired)
+                _selectedKeys.Add(item.Key);
+            SelectedCount = desired.Count;
+        }
+        finally
+        {
+            _restoringSelection = false;
+        }
     }
 
     private void ItemsSource_OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -243,19 +306,34 @@ public partial class DownloadItemView : ContentPage, IDisposable
         _subscribedItemsSource = null;
     }
 
-    private IReadOnlyList<DownloadItemViewModel> GetSelectedEntries() =>
-        [.. ListBox.SelectedItems?.OfType<DownloadItemViewModel>() ?? []];
+    private void DetachItemPage()
+    {
+        if (_itemPage is null)
+            return;
 
-    private void ExecuteForSelectedDownloadTasks(Action<DownloadItemViewModel> action)
+        _itemPage.ViewRefreshStarting -= OnViewRefreshStarting;
+        _itemPage.ViewRefreshCompleted -= OnViewRefreshCompleted;
+        _itemPage.PageViewModel.Folders.CollectionChanged -= OnFoldersChanged;
+        _itemPage = null;
+    }
+
+    private IReadOnlyList<DownloadItemSnapshot> GetSelectedEntries() =>
+        [.. ListBox.SelectedItems?.OfType<DownloadItemSnapshot>() ?? []];
+
+    private void ExecuteForSelectedDownloadTasks(Action<DownloadItemSnapshot> action)
     {
         foreach (var item in GetSelectedEntries())
             action(item);
     }
 
-    private void ListBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e) =>
-        SelectedCount = ListBox.SelectedItems?.OfType<DownloadItemViewModel>().Count() ?? 0;
+    private void ListBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_restoringSelection)
+            return;
 
-    /// <inheritdoc />
+        SelectedCount = ListBox.SelectedItems?.OfType<DownloadItemSnapshot>().Count() ?? 0;
+    }
+
     public void Dispose()
     {
         GC.SuppressFinalize(this);
@@ -264,6 +342,7 @@ public partial class DownloadItemView : ContentPage, IDisposable
 
         _isDisposed = true;
         UnsubscribeFromItemsSource();
+        DetachItemPage();
         if (DataContext is IDisposable disposable)
             disposable.Dispose();
     }

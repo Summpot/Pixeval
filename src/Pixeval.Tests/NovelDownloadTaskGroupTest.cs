@@ -1,106 +1,15 @@
 using System;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Download;
-using Pixeval.Native.Storage;
-using Pixeval.Models.Download;
-using Pixeval.Models.Download.Tasks;
-using Pixeval.Models.Options;
-using Pixeval.Models.Pixiv;
-using Pixeval.Native.Mako;
-using Pixeval.Utilities;
-using Pixeval.Utilities.IO;
-using Pixeval.ViewModels;
 using Pixeval.AppManagement;
+using Pixeval.Native.Mako;
+using Pixeval.ViewModels;
 
 namespace Pixeval.Tests;
 
 [TestClass]
 public sealed class NovelDownloadTaskGroupTest
 {
-    [TestMethod]
-    [DataRow(NovelDownloadFormat.OriginalTxt, "txt")]
-    [DataRow(NovelDownloadFormat.Html, "html")]
-    [DataRow(NovelDownloadFormat.Md, "md")]
-    public void BuiltInFormatShouldUseMacroFileNameAsFolder(NovelDownloadFormat format, string extension)
-    {
-        var tokenizedDestination = Path.Combine("downloads", "work.<ext>");
-
-        var paths = NovelDownloadTaskGroup.GetOutputPaths(
-            tokenizedDestination,
-            NovelDownloadFormatToken.BuiltIn(format));
-
-        var expectedFolder = Path.Combine("downloads", "work");
-        Assert.AreEqual(Path.Combine(expectedFolder, $"novel.{extension}"), paths.NovelFile);
-        Assert.AreEqual(expectedFolder, paths.ImageFolderPath);
-    }
-
-    [TestMethod]
-    public void ExtensionFormatShouldUseMacroFileNameAndTemporaryImageFolder()
-    {
-        var tokenizedDestination = Path.Combine("downloads", "work.<ext>");
-
-        var paths = NovelDownloadTaskGroup.GetOutputPaths(
-            tokenizedDestination,
-            new(NovelDownloadFormatToken.ExtensionPrefix + "pdf"));
-
-        var expectedFile = Path.Combine("downloads", "work.pdf");
-        Assert.AreEqual(expectedFile, paths.NovelFile);
-        Assert.AreEqual(expectedFile + IoHelper.PixevalTempExtension, paths.ImageFolderPath);
-    }
-
-    [TestMethod]
-    public void BeforeResetShouldRemoveExistingNovelFile()
-    {
-        var directory = Directory.CreateTempSubdirectory().FullName;
-        try
-        {
-            var tokenizedDestination = Path.Combine(directory, "work.<ext>");
-            var format = NovelDownloadFormatToken.BuiltIn(NovelDownloadFormat.OriginalTxt);
-            var entry = IDownloadHistoryEntry.Create(tokenizedDestination, DesignHelper.DesignNovel);
-            entry.FormatToken = format.Value;
-            var novelFile = NovelDownloadTaskGroup.GetOutputPaths(tokenizedDestination, format).NovelFile;
-            Directory.CreateDirectory(Path.GetDirectoryName(novelFile)!);
-            File.WriteAllText(novelFile, "old");
-
-            using var task = new TestNovelDownloadTaskGroup(entry);
-            task.InvokeBeforeReset();
-
-            Assert.IsFalse(File.Exists(novelFile));
-        }
-        finally
-        {
-            if (Directory.Exists(directory))
-                Directory.Delete(directory, true);
-        }
-    }
-
-    [TestMethod]
-    public void BeforeResetShouldRemoveExistingUgoiraIntervalsFile()
-    {
-        var directory = Directory.CreateTempSubdirectory().FullName;
-        try
-        {
-            var tokenizedDestination = Path.Combine(directory, "work.<ext>");
-            var entry = IDownloadHistoryEntry.Create(tokenizedDestination, DesignHelper.DesignIllustration);
-            entry.FormatToken = UgoiraDownloadFormatToken.DefaultToken;
-            var folder = IoHelper.RemoveTokenExtension(tokenizedDestination);
-            var intervalsFile = Path.Combine(folder, "intervals in milliseconds.csv");
-            Directory.CreateDirectory(folder);
-            File.WriteAllText(intervalsFile, "old");
-
-            using var task = new TestUgoiraDownloadTaskGroup(entry);
-            task.InvokeBeforeReset();
-
-            Assert.IsFalse(File.Exists(intervalsFile));
-        }
-        finally
-        {
-            if (Directory.Exists(directory))
-                Directory.Delete(directory, true);
-        }
-    }
-
     [TestMethod]
     public void BuiltInDocumentsShouldReferenceDownloadedOriginalImageNames()
     {
@@ -189,14 +98,4 @@ public sealed class NovelDownloadTaskGroupTest
                 new("", "", "https://i.pximg.net/c/1200x1200/novel/101.jpg?token=thumbnail", "", "https://i.pximg.net/img-original/novel/101.png?token=original"))
         ]
     };
-
-    private sealed class TestNovelDownloadTaskGroup(IDownloadHistoryEntry entry) : NovelDownloadTaskGroup(entry)
-    {
-        public void InvokeBeforeReset() => BeforeReset();
-    }
-
-    private sealed class TestUgoiraDownloadTaskGroup(IDownloadHistoryEntry entry) : UgoiraDownloadTaskGroup(entry)
-    {
-        public void InvokeBeforeReset() => BeforeReset();
-    }
 }

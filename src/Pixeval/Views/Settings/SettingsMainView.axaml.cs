@@ -264,7 +264,7 @@ public partial class SettingsMainView : ContentPage
 
     private void DeleteDownloadHistoriesButton_OnClicked(object sender, RoutedEventArgs e)
     {
-        App.AppViewModel.DownloadManager.ClearTasks();
+        App.AppViewModel.ClearDownloadHistories();
         ShowClearData(ClearDataKind.DownloadHistory);
     }
 

@@ -8,8 +8,8 @@
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:viewModels="using:Pixeval.ViewModels"
-    x:DataType="{x:Type viewModels:DownloadItemViewModel}"
+    xmlns:download="using:Pixeval.Native.Download"
+    x:DataType="{x:Type download:DownloadItemSnapshot}"
     mc:Ignorable="d"
     d:DesignHeight="90"
     d:DesignWidth="800">
@@ -68,12 +68,12 @@
             <TextBlock
                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                 MaxLines="1"
-                Text="{Binding AuthorsText}"
+                Text="{Binding Author}"
                 TextTrimming="CharacterEllipsis" />
             <ProgressBar
                 IsIndeterminate="{Binding IsPending}"
                 Maximum="100"
-                Value="{Binding DownloadTask.ProgressPercentage}" />
+                Value="{Binding ProgressPercentage}" />
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                 <TextBlock
                     Grid.Column="0"
@@ -91,16 +91,16 @@
                     <controls:DigitalSignalItem
                         x:Name="StateDigitalSignalItem"
                         Fill="{markup1:BindingDynamicResource {Binding StateBrushKey}}"
-                        IsVisible="{Binding !!DownloadTask.ActiveCount}"
-                        Text="{Binding DownloadTask.ActiveCount}" />
+                        IsVisible="{Binding !!ActiveCount}"
+                        Text="{Binding ActiveCount}" />
                     <controls:DigitalSignalItem
                         Fill="{DynamicResource SystemFillColorSuccessBrush}"
-                        IsVisible="{Binding !!DownloadTask.CompletedCount}"
-                        Text="{Binding DownloadTask.CompletedCount}" />
+                        IsVisible="{Binding !!CompletedCount}"
+                        Text="{Binding CompletedCount}" />
                     <controls:DigitalSignalItem
                         Fill="{DynamicResource SystemFillColorCriticalBrush}"
-                        IsVisible="{Binding !!DownloadTask.ErrorCount}"
-                        Text="{Binding DownloadTask.ErrorCount}" />
+                        IsVisible="{Binding !!ErrorCount}"
+                        Text="{Binding ErrorCount}" />
                 </StackPanel>
             </Grid>
         </StackPanel>

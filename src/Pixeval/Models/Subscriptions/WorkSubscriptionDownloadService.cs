@@ -2,16 +2,15 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
-using Pixeval.Models.Download;
-using Pixeval.Models.Download.Tasks;
 using Pixeval.Models.Options;
 using Pixeval.Native.Download;
-using Pixeval.Native.Mako;
 using Pixeval.Native.Storage;
 using Pixeval.Native.Subscription;
 using Pixeval.Services;
@@ -22,7 +21,7 @@ namespace Pixeval.Models.Subscriptions;
 public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, ISubscriptionProgressCallback, IAsyncDisposable
 {
     private readonly StorageEngine _storageEngine;
-    private readonly MakoClient _makoClient;
+    private readonly DownloadManager _downloadManager;
     private readonly FileLogger _logger;
     private readonly IUserSessionService _userSessionService;
     private readonly AppSettings _appSettings;
@@ -30,6 +29,7 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
     private readonly Lock _gate = new();
     private readonly SemaphoreSlim _mutationGate = new(1, 1);
     private SubscriptionFetchState? _currentFetchState;
+    private long? _fetchingSubscriptionId;
     private bool _isDisposed;
 
     public SubscriptionFetchState? CurrentFetchState
@@ -68,7 +68,7 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
         AppSettings appSettings)
     {
         _storageEngine = storageEngine;
-        _makoClient = makoClient;
+        _downloadManager = downloadManager;
         _logger = logger;
         _userSessionService = userSessionService;
         _appSettings = appSettings;
@@ -87,7 +87,19 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
             var intervalMinutes = Math.Max(1, settings.SubscriptionDaemonIntervalMinutes);
             _syncEngine.StartDaemon((ulong)(intervalMinutes * 60));
         }
+
+        PublishSubscriptions();
     }
+
+    public static List<DownloadFolderMeta> CreateFolderMetas(StorageEngine storage) =>
+        storage.GetAllSubscriptions()
+            .Select(record => new DownloadFolderMeta(
+                record.HistoryEntryId,
+                record.DisplayName,
+                record.AvatarUrl,
+                (uint)record.Type,
+                (uint)record.Kind))
+            .ToList();
 
     public void StartDaemon(ulong intervalSecs = 1800)
     {
@@ -183,7 +195,7 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
             subscription = persistedSubscription;
             wasDeleted = true;
             if (App.AppViewModel is { } app)
-                await app.RemoveWorkSubscriptionDownloadsAsync((int)historyEntryId).ConfigureAwait(false);
+                await app.RemoveWorkSubscriptionDownloadsAsync(historyEntryId).ConfigureAwait(false);
             return subscription;
         }
         finally
@@ -225,14 +237,27 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
     public void OnFetchStateChanged(SubscriptionFetchState state)
     {
         var isFetching = state.Status == SubscriptionStatus.Fetching;
-
+        long? previousFetchingId;
         lock (_gate)
         {
             _currentFetchState = isFetching ? state : null;
+            previousFetchingId = _fetchingSubscriptionId;
+            _fetchingSubscriptionId = isFetching
+                ? state.SubscriptionId
+                : _fetchingSubscriptionId == state.SubscriptionId ? null : _fetchingSubscriptionId;
         }
 
         try
         {
+            PublishSubscriptions();
+            if (previousFetchingId is { } previousId && previousId != state.SubscriptionId)
+                _downloadManager.SetFolderFetch(previousId, false, 0u, null);
+            _downloadManager.SetFolderFetch(
+                state.SubscriptionId,
+                isFetching,
+                isFetching ? state.TotalFetched : 0u,
+                null);
+
             void Notify() => FetchStateChanged?.Invoke(this, state);
             if (Dispatcher.UIThread.CheckAccess())
                 Notify();
@@ -253,6 +278,7 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
             {
                 var updated = entry with { Title = name, Author = account, Avatar = avatarUrl };
                 _storageEngine.UpsertSubscription(updated);
+                PublishSubscriptions();
 
                 void Notify() => SubscriptionUpdated?.Invoke(this, updated);
                 if (Dispatcher.UIThread.CheckAccess())
@@ -269,28 +295,6 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
 
     public void OnItemFetched(SubscriptionDownloadItem item)
     {
-        try
-        {
-            var macro = App.AppViewModel?.AppSettings?.DownloadSettings?.DownloadPathMacro ?? string.Empty;
-            var sub = _storageEngine.GetSubscriptionByHistoryId(item.WorkSubscriptionId);
-            IDownloadTaskGroup task;
-            if (item.IsNovel)
-            {
-                var novel = Novel.Deserialize(item.PayloadJson);
-                task = new NovelDownloadTaskFactory().Create(new ParserContext(novel, sub), macro, null);
-            }
-            else
-            {
-                var illust = Illustration.Deserialize(item.PayloadJson);
-                task = new IllustrationDownloadTaskFactory().Create(new ParserContext(illust, sub), macro);
-            }
-            if (App.AppViewModel is { } app)
-                _ = app.QueueSubscriptionDownloadBatchAsync([task]);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(nameof(OnItemFetched), ex);
-        }
     }
 
     public void OnDuplicateStopped(long subscriptionId, uint duplicateCount)
@@ -299,10 +303,16 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
 
     public void OnSyncFinished()
     {
+        long? fetchingId;
         lock (_gate)
         {
+            fetchingId = _fetchingSubscriptionId;
             _currentFetchState = null;
+            _fetchingSubscriptionId = null;
         }
+
+        if (fetchingId is { } id)
+            _downloadManager.SetFolderFetch(id, false, 0u, null);
     }
 
     public void OnNewWorksIngested(uint totalCount)
@@ -352,6 +362,9 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
             _logger.LogError(nameof(NotifySubscriptionRemoved), exception);
         }
     }
+
+    private void PublishSubscriptions() =>
+        _downloadManager.SetSubscriptions(CreateFolderMetas(_storageEngine));
 
     private SubscriptionSyncConfig CreateSyncConfig()
     {

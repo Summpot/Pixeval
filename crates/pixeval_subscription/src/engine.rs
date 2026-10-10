@@ -6,8 +6,7 @@ use std::sync::{Arc, LazyLock};
 use parking_lot::Mutex;
 use tokio_util::sync::CancellationToken;
 
-use pixeval_download::metapath::MacroContext;
-use pixeval_download::{DownloadManager, DownloadTaskKey};
+use pixeval_download::DownloadManager;
 use pixeval_mako::MakoClient;
 use pixeval_storage::{StorageEngine, WorkSubscriptionRecord};
 
@@ -22,19 +21,12 @@ static SUBSCRIPTION_RUNTIME: LazyLock<tokio::runtime::Runtime> = LazyLock::new(|
         .expect("Failed to build Tokio runtime for subscription sync engine")
 });
 
-fn resolve_tokens(path: &str, ext: &str, set_index: i32) -> String {
-    let mut resolved = path
-        .replace("<ext>", ext)
-        .replace("<ext:l>", &ext.to_lowercase())
-        .replace("<ext:u>", &ext.to_uppercase());
-    if set_index >= 0 {
-        resolved = resolved
-            .replace("<pic_set_index>", &set_index.to_string())
-            .replace("<pic_set_index:00>", &format!("{:02}", set_index))
-            .replace("<pic_set_index:000>", &format!("{:03}", set_index))
-            .replace("<pic_set_index:0000>", &format!("{:04}", set_index));
+fn subscription_type_name(subscription_type: u32) -> String {
+    match subscription_type {
+        0 => "Bookmarks".to_string(),
+        1 => "Posts".to_string(),
+        _ => "Series".to_string(),
     }
-    resolved
 }
 
 struct EngineInner {
@@ -552,6 +544,8 @@ impl SubscriptionSyncEngine {
         cancel_token: CancellationToken,
     ) -> u32 {
         let history_id = sub.history_entry_id;
+        download.set_overwrite(config.overwrite);
+        let subscription_type = subscription_type_name(sub.subscription_type);
 
         // 1. Initial Fetch State
         {
@@ -626,60 +620,26 @@ impl SubscriptionSyncEngine {
                         break 'outer_novel;
                     }
 
-                    let mut macro_ctx = MacroContext::default();
-                    macro_ctx.artwork_id = novel.id.to_string();
-                    macro_ctx.title = novel.title.clone();
-                    macro_ctx.author_ids = vec![novel.user.id.to_string()];
-                    macro_ctx.author_names = vec![novel.user.name.clone()];
-                    macro_ctx.create_date = novel.create_date.clone();
-                    macro_ctx.image_type = "Other".to_string();
-                    macro_ctx.is_novel = true;
-                    macro_ctx.is_ai = novel.novel_ai_type == 2;
-                    macro_ctx.is_r18 = novel.x_restrict == 1 || novel.x_restrict == 2;
-                    macro_ctx.is_r18g = novel.x_restrict == 2;
-                    if let Some(ref series) = novel.series {
-                        macro_ctx.has_series = true;
-                        macro_ctx.series_id = Some(series.id.to_string());
-                        macro_ctx.series_title = Some(series.title.clone());
-                    }
-                    macro_ctx.work_subscription_id = Some(history_id);
-                    macro_ctx.work_subscription_type = Some(match sub.subscription_type {
-                        0 => "Bookmarks".to_string(),
-                        1 => "Posts".to_string(),
-                        _ => "Series".to_string(),
-                    });
-
-                    let rel_path = pixeval_download::metapath::reduce(
-                        &config.download_path_macro,
-                        &macro_ctx,
-                    )
-                    .unwrap_or_else(|_| format!("{}.txt", novel.id));
-                    let resolved_rel = resolve_tokens(&rel_path, "txt", -1);
-                    let base_dir = config.base_download_dir.trim_end_matches(['/', '\\']);
-                    let clean_rel = resolved_rel.trim_start_matches(['/', '\\']);
-                    let destination = if base_dir.is_empty() {
-                        clean_rel.to_string()
-                    } else {
-                        format!("{base_dir}/{clean_rel}")
-                    };
-
-                    let novel_folder = destination
-                        .replace("<ext>", "")
-                        .replace("<ext:l>", "")
-                        .replace("<ext:u>", "")
-                        .trim_end_matches(['.', '/', '\\'])
-                        .to_string();
-                    let is_real_file_present = std::path::Path::new(&destination).exists()
-                        || std::path::Path::new(&format!("{novel_folder}/novel.txt")).exists()
-                        || std::path::Path::new(&format!("{novel_folder}/novel.html")).exists()
-                        || std::path::Path::new(&format!("{novel_folder}/novel.md")).exists()
-                        || std::path::Path::new(&format!("{novel_folder}.txt")).exists();
+                    let payload_json = serde_json::to_string(&novel).unwrap_or_default();
+                    let probe = download.plan_pixiv_probe(
+                        payload_json.clone(),
+                        true,
+                        -1,
+                        config.download_path_macro.clone(),
+                        config.base_download_dir.clone(),
+                        history_id,
+                        subscription_type.clone(),
+                    );
+                    let is_real_file_present = probe
+                        .probe_paths
+                        .iter()
+                        .any(|path| std::path::Path::new(path).is_file());
 
                     let is_dup = storage
                         .contains_subscription_download_identity(
                             history_id,
                             novel.id.to_string(),
-                            destination.clone(),
+                            probe.destination.clone(),
                         )
                         .unwrap_or(false)
                         || is_real_file_present;
@@ -700,32 +660,17 @@ impl SubscriptionSyncEngine {
                         break 'outer_novel;
                     }
 
-                    let download_url = novel
-                        .image_urls
-                        .large
-                        .clone()
-                        .or(novel.image_urls.medium.clone())
-                        .unwrap_or_default();
-                    let payload_json = serde_json::to_string(&novel).unwrap_or_default();
-                    let _ = storage.add_or_replace_subscription_download_history(
-                        novel.id.to_string(),
-                        Some("Mako.Model.Novel".to_string()),
-                        destination.clone(),
-                        1,
-                        None,
-                        None,
-                        history_id,
-                        novel.id.to_string(),
+                    let destination = download.enqueue_pixiv(
                         payload_json.clone(),
+                        true,
+                        -1,
+                        config.download_path_macro.clone(),
+                        config.base_download_dir.clone(),
+                        history_id,
+                        subscription_type.clone(),
                     );
-
-                    let key = DownloadTaskKey::new_subscription(
-                        &destination,
-                        history_id as i32,
-                        novel.id.to_string(),
-                    );
-                    if callback.is_none() {
-                        download.enqueue_task(key, download_url, destination.clone(), config.overwrite);
+                    if destination.is_empty() {
+                        continue;
                     }
 
                     total_fetched += 1;
@@ -783,94 +728,26 @@ impl SubscriptionSyncEngine {
                         break 'outer_illust;
                     }
 
-                    let mut macro_ctx = MacroContext::default();
-                    macro_ctx.artwork_id = illust.id.to_string();
-                    macro_ctx.title = illust.title.clone();
-                    macro_ctx.author_ids = vec![illust.user.id.to_string()];
-                    macro_ctx.author_names = vec![illust.user.name.clone()];
-                    macro_ctx.create_date = illust.create_date.clone();
-                    macro_ctx.image_type = if illust.page_count > 1 {
-                        "ImageSet".to_string()
-                    } else if illust.illust_type == "ugoira" {
-                        "SingleAnimatedImage".to_string()
-                    } else {
-                        "SingleImage".to_string()
-                    };
-                    macro_ctx.is_ai = illust.illust_ai_type == 2;
-                    macro_ctx.is_r18 = illust.x_restrict == 1 || illust.x_restrict == 2;
-                    macro_ctx.is_r18g = illust.x_restrict == 2;
-                    if let Some(ref series) = illust.series {
-                        macro_ctx.has_series = true;
-                        macro_ctx.series_id = Some(series.id.to_string());
-                        macro_ctx.series_title = Some(series.title.clone());
-                    }
-                    macro_ctx.work_subscription_id = Some(history_id);
-                    macro_ctx.work_subscription_type = Some(match sub.subscription_type {
-                        0 => "Bookmarks".to_string(),
-                        1 => "Posts".to_string(),
-                        _ => "Series".to_string(),
-                    });
-
-                    let download_url = if illust.page_count <= 1 {
-                        illust
-                            .meta_single_page
-                            .original_image_url
-                            .clone()
-                            .or(illust.image_urls.large.clone())
-                            .or(illust.image_urls.medium.clone())
-                            .unwrap_or_default()
-                    } else if let Some(first_page) = illust.meta_pages.first() {
-                        first_page
-                            .image_urls
-                            .original
-                            .clone()
-                            .or(first_page.image_urls.large.clone())
-                            .or(first_page.image_urls.medium.clone())
-                            .unwrap_or_default()
-                    } else {
-                        illust
-                            .image_urls
-                            .large
-                            .clone()
-                            .or(illust.image_urls.medium.clone())
-                            .unwrap_or_default()
-                    };
-
-                    let ext = if download_url.contains(".png") {
-                        "png"
-                    } else if download_url.contains(".gif") {
-                        "gif"
-                    } else if download_url.contains(".zip") {
-                        "zip"
-                    } else {
-                        "jpg"
-                    };
-
-                    let rel_path = pixeval_download::metapath::reduce(
-                        &config.download_path_macro,
-                        &macro_ctx,
-                    )
-                    .unwrap_or_else(|_| format!("{}.jpg", illust.id));
-                    let resolved_rel = resolve_tokens(&rel_path, ext, 0);
-                    let base_dir = config.base_download_dir.trim_end_matches(['/', '\\']);
-                    let clean_rel = resolved_rel.trim_start_matches(['/', '\\']);
-                    let destination = if base_dir.is_empty() {
-                        clean_rel.to_string()
-                    } else {
-                        format!("{base_dir}/{clean_rel}")
-                    };
-
-                    let resolved_p0 = resolve_tokens(&destination, ext, 0);
-                    let is_real_file_present = std::path::Path::new(&destination).exists()
-                        || std::path::Path::new(&resolved_p0).exists()
-                        || std::path::Path::new(&resolve_tokens(&destination, "jpg", 0)).exists()
-                        || std::path::Path::new(&resolve_tokens(&destination, "png", 0)).exists();
+                    let payload_json = serde_json::to_string(&illust).unwrap_or_default();
+                    let probe = download.plan_pixiv_probe(
+                        payload_json.clone(),
+                        false,
+                        -1,
+                        config.download_path_macro.clone(),
+                        config.base_download_dir.clone(),
+                        history_id,
+                        subscription_type.clone(),
+                    );
+                    let is_real_file_present = probe
+                        .probe_paths
+                        .iter()
+                        .any(|path| std::path::Path::new(path).is_file());
 
                     let is_dup = storage
                         .contains_subscription_download_identity(
                             history_id,
                             illust.id.to_string(),
-                            destination.clone(),
+                            probe.destination.clone(),
                         )
                         .unwrap_or(false)
                         || is_real_file_present;
@@ -891,46 +768,17 @@ impl SubscriptionSyncEngine {
                         break 'outer_illust;
                     }
 
-                    let payload_json = serde_json::to_string(&illust).unwrap_or_default();
-                    let _ = storage.add_or_replace_subscription_download_history(
-                        illust.id.to_string(),
-                        Some("Mako.Model.Illustration".to_string()),
-                        destination.clone(),
-                        1,
-                        None,
-                        None,
-                        history_id,
-                        illust.id.to_string(),
+                    let destination = download.enqueue_pixiv(
                         payload_json.clone(),
+                        false,
+                        -1,
+                        config.download_path_macro.clone(),
+                        config.base_download_dir.clone(),
+                        history_id,
+                        subscription_type.clone(),
                     );
-
-                    let key = DownloadTaskKey::new_subscription(
-                        &destination,
-                        history_id as i32,
-                        illust.id.to_string(),
-                    );
-                    if callback.is_none() {
-                        if illust.page_count <= 1 || illust.meta_pages.is_empty() {
-                            download.enqueue_task(key, download_url, destination.clone(), config.overwrite);
-                        } else {
-                            for (page_idx, page) in illust.meta_pages.iter().enumerate() {
-                                let page_url = page
-                                    .image_urls
-                                    .original
-                                    .clone()
-                                    .or(page.image_urls.large.clone())
-                                    .or(page.image_urls.medium.clone())
-                                    .unwrap_or_default();
-                                let page_ext = if page_url.contains(".png") { "png" } else { "jpg" };
-                                let page_dest = resolve_tokens(&destination, page_ext, page_idx as i32);
-                                let page_key = DownloadTaskKey::new_subscription(
-                                    &page_dest,
-                                    history_id as i32,
-                                    format!("{}_{page_idx}", illust.id),
-                                );
-                                download.enqueue_task(page_key, page_url, page_dest, config.overwrite);
-                            }
-                        }
+                    if destination.is_empty() {
+                        continue;
                     }
 
                     total_fetched += 1;

@@ -2,7 +2,6 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using Pixeval.Models.Download.Tasks;
 using Pixeval.Native.Download;
 using Pixeval.Native.Mako;
 using MakoNovel = Pixeval.Native.Mako.Novel;
@@ -76,19 +75,5 @@ public interface IDownloadHistoryEntry
             EntryOverride = entry
         };
         return dlRecord;
-    }
-}
-
-public static class DownloadHistoryEntryExtensions
-{
-    public static IDownloadTaskGroup ToTaskGroup(this IDownloadHistoryEntry entry)
-    {
-        return entry.Entry switch
-        {
-            MakoNovel => new NovelDownloadTaskGroup(entry),
-            Illustration illust when illust.IsPicGif => new UgoiraDownloadTaskGroup(entry),
-            Illustration illust when illust.IsPicSet && illust.SetIndex == -1 => new MangaDownloadTaskGroup(entry),
-            _ => new SingleImageDownloadTaskGroup(entry)
-        };
     }
 }

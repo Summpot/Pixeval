@@ -5,6 +5,7 @@ uniffi::setup_scaffolding!();
 
 pub mod engine;
 pub mod metapath;
+pub mod plan;
 
 pub use engine::*;
 pub use metapath::*;

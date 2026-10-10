@@ -3,8 +3,8 @@
 
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, LazyLock};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::{Arc, LazyLock, Weak};
 
 use futures_util::StreamExt;
 use parking_lot::RwLock;
@@ -37,11 +37,19 @@ pub struct DownloadNetworkOptions {
 #[derive(uniffi::Object)]
 pub struct DownloadManager {
     concurrency_degree: Arc<AtomicUsize>,
-    semaphore: Arc<Semaphore>,
+    pub(crate) semaphore: Arc<Semaphore>,
     tasks: Arc<RwLock<HashMap<DownloadTaskKey, DownloadTaskItem>>>,
     cancel_tokens: Arc<RwLock<HashMap<DownloadTaskKey, CancellationToken>>>,
     callback: Option<Arc<dyn DownloadProgressCallback>>,
-    client: Arc<RwLock<MahoHttpClient>>,
+    pub(crate) client: Arc<RwLock<MahoHttpClient>>,
+    pub(crate) me: Weak<DownloadManager>,
+    pub(crate) book: Arc<RwLock<crate::plan::WorkBook>>,
+    pub(crate) page_callback: Arc<RwLock<Option<Arc<dyn crate::plan::DownloadPageCallback>>>>,
+    pub(crate) encoder: Arc<RwLock<Option<Arc<dyn crate::plan::DownloadFormatEncoder>>>>,
+    pub(crate) policy: Arc<RwLock<crate::plan::DownloadPolicy>>,
+    pub(crate) storage: Arc<RwLock<Option<Arc<pixeval_storage::StorageEngine>>>>,
+    pub(crate) mako: Arc<RwLock<Option<Arc<pixeval_mako::MakoClient>>>>,
+    pub(crate) snapshot_emit_scheduled: Arc<AtomicBool>,
 }
 
 #[uniffi::export]
@@ -56,13 +64,21 @@ impl DownloadManager {
         let client = Self::build_client(network_options.as_ref());
         let cb: Option<Arc<dyn DownloadProgressCallback>> = callback.map(Arc::from);
 
-        Arc::new(Self {
+        Arc::new_cyclic(|weak| Self {
             concurrency_degree: Arc::new(AtomicUsize::new(concurrency)),
             semaphore: Arc::new(Semaphore::new(concurrency)),
             tasks: Arc::new(RwLock::new(HashMap::new())),
             cancel_tokens: Arc::new(RwLock::new(HashMap::new())),
             callback: cb,
             client: Arc::new(RwLock::new(client)),
+            me: weak.clone(),
+            book: Arc::new(RwLock::new(crate::plan::WorkBook::default())),
+            page_callback: Arc::new(RwLock::new(None)),
+            encoder: Arc::new(RwLock::new(None)),
+            policy: Arc::new(RwLock::new(crate::plan::DownloadPolicy::default())),
+            storage: Arc::new(RwLock::new(None)),
+            mako: Arc::new(RwLock::new(None)),
+            snapshot_emit_scheduled: Arc::new(AtomicBool::new(false)),
         })
     }
 
@@ -301,23 +317,25 @@ impl DownloadManager {
                 }
                 drop(file);
 
-                // Rename temp file to final destination
-                if overwrite && Path::new(&destination).exists() {
-                    let _ = fs::remove_file(&destination).await;
-                }
-
-                if let Err(e) = fs::rename(&temp_dest, &destination).await {
-                    let err_msg = format!("Rename error: {e}");
-                    Self::handle_error(
-                        &tasks,
-                        &cancel_tokens,
-                        &key,
-                        &temp_dest,
-                        &err_msg,
-                        callback.as_deref(),
-                    )
-                    .await;
-                    return;
+                if Path::new(&destination).exists() && !overwrite {
+                    let _ = fs::remove_file(&temp_dest).await;
+                } else {
+                    if Path::new(&destination).exists() {
+                        let _ = fs::remove_file(&destination).await;
+                    }
+                    if let Err(e) = fs::rename(&temp_dest, &destination).await {
+                        let err_msg = format!("Rename error: {e}");
+                        Self::handle_error(
+                            &tasks,
+                            &cancel_tokens,
+                            &key,
+                            &temp_dest,
+                            &err_msg,
+                            callback.as_deref(),
+                        )
+                        .await;
+                        return;
+                    }
                 }
 
                 {
@@ -556,5 +574,12 @@ impl DownloadManager {
 
     pub fn list_tasks(&self) -> Vec<DownloadTaskItem> {
         self.tasks.read().values().cloned().collect()
+    }
+
+    pub(crate) fn spawn_worker<F>(future: F)
+    where
+        F: std::future::Future<Output = ()> + Send + 'static,
+    {
+        DOWNLOAD_RUNTIME.spawn(future);
     }
 }

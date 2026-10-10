@@ -12,10 +12,13 @@ using CommunityToolkit.Mvvm.Input;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Controls;
 using Pixeval.I18N;
+using Pixeval.Models;
 using Pixeval.Models.Blocking;
-using Pixeval.Models.Download;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Booru;
+using Pixeval.Native.Download;
 using Pixeval.Native.Mako;
+using Pixeval.Native.SauceNao;
 using Pixeval.Native.Storage;
 using Pixeval.Utilities;
 using Pixeval.Views.ViewContainers;
@@ -28,8 +31,6 @@ public sealed class ArtworkActionService : IArtworkActionService
     private readonly StorageEngine _storageEngine;
     private readonly DownloadManager _downloadManager;
     private readonly AppSettings _appSettings;
-    private readonly IllustrationDownloadTaskFactory _illustrationDownloadTaskFactory;
-    private readonly NovelDownloadTaskFactory _novelDownloadTaskFactory;
     private readonly FileLogger _logger;
 
     public ArtworkActionService(
@@ -37,16 +38,12 @@ public sealed class ArtworkActionService : IArtworkActionService
         StorageEngine storageEngine,
         DownloadManager downloadManager,
         AppSettings appSettings,
-        IllustrationDownloadTaskFactory illustrationDownloadTaskFactory,
-        NovelDownloadTaskFactory novelDownloadTaskFactory,
         FileLogger logger)
     {
         _makoClient = makoClient;
         _storageEngine = storageEngine;
         _downloadManager = downloadManager;
         _appSettings = appSettings;
-        _illustrationDownloadTaskFactory = illustrationDownloadTaskFactory;
-        _novelDownloadTaskFactory = novelDownloadTaskFactory;
         _logger = logger;
 
         BookmarkCommand = new AsyncRelayCommand<IWorkEntry>(async work =>
@@ -214,27 +211,40 @@ public sealed class ArtworkActionService : IArtworkActionService
         return true;
     }
 
-    public async Task SaveIllustrationAsync(Illustration illustration, int setIndex = -1, ViewContainerBase? viewContainer = null)
+    public Task SaveIllustrationAsync(Illustration illustration, int setIndex = -1, ViewContainerBase? viewContainer = null)
     {
         if (BlockedContentHelper.IsBlockedPlaceholder(illustration))
-            return;
+            return Task.CompletedTask;
 
-        var path = _appSettings.DownloadSettings.DownloadPathMacro;
-        var task = _illustrationDownloadTaskFactory.Create(illustration, path, setIndex);
-        _downloadManager.QueueTask(task);
-        (viewContainer ?? ResolveActiveViewContainer())?.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
+        var destination = _downloadManager.EnqueuePixiv(
+            illustration.Serialize(),
+            false,
+            setIndex,
+            _appSettings.DownloadSettings.DownloadPathMacro,
+            "",
+            0,
+            "");
+        if (!string.IsNullOrEmpty(destination))
+            (viewContainer ?? ResolveActiveViewContainer())?.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
+        return Task.CompletedTask;
     }
 
-    public async Task SaveNovelAsync(Novel novel, ViewContainerBase? viewContainer = null)
+    public Task SaveNovelAsync(Novel novel, ViewContainerBase? viewContainer = null)
     {
         if (BlockedContentHelper.IsBlockedPlaceholder(novel))
-            return;
+            return Task.CompletedTask;
 
-        var path = _appSettings.DownloadSettings.DownloadPathMacro;
-        var content = await _makoClient.GetNovelContentStructuredAsync(novel.RawId);
-        var task = _novelDownloadTaskFactory.Create(novel, path, content);
-        _downloadManager.QueueTask(task);
-        (viewContainer ?? ResolveActiveViewContainer())?.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
+        var destination = _downloadManager.EnqueuePixiv(
+            novel.Serialize(),
+            true,
+            -1,
+            _appSettings.DownloadSettings.DownloadPathMacro,
+            "",
+            0,
+            "");
+        if (!string.IsNullOrEmpty(destination))
+            (viewContainer ?? ResolveActiveViewContainer())?.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
+        return Task.CompletedTask;
     }
 
     public async Task SaveWorkAsync(object work, ViewContainerBase? viewContainer = null)
@@ -247,7 +257,75 @@ public sealed class ArtworkActionService : IArtworkActionService
             case Novel novel:
                 await SaveNovelAsync(novel, viewContainer);
                 break;
+            case BooruPost post:
+                EnqueueExternalImage(
+                    post.Id,
+                    post.Title,
+                    post.UploaderName,
+                    post.ThumbnailUrl ?? "",
+                    post.WebsiteUri.OriginalString,
+                    post.AppUri.OriginalString,
+                    post.OriginalUrl ?? post.SampleUrl ?? post.PreviewUrl ?? "",
+                    post.Serialize(),
+                    post.SerializeKey,
+                    post.SafeRating.IsR18,
+                    post.SafeRating.IsR18G,
+                    post.CreateDateOffset.ToString("o"),
+                    viewContainer);
+                break;
+            case SauceNaoItem sauce:
+                EnqueueExternalImage(
+                    sauce.RawId,
+                    sauce.TitleText,
+                    sauce.AuthorName,
+                    sauce.ThumbnailUrl,
+                    sauce.WebsiteUri.OriginalString,
+                    sauce.AppUri.OriginalString,
+                    string.IsNullOrWhiteSpace(sauce.ThumbnailUrl) ? "" : sauce.ThumbnailUrl,
+                    sauce.Serialize(),
+                    sauce.SerializeKey,
+                    sauce.SafeRating.IsR18,
+                    sauce.SafeRating.IsR18G,
+                    "",
+                    viewContainer);
+                break;
         }
+    }
+
+    private void EnqueueExternalImage(
+        string artworkId,
+        string title,
+        string author,
+        string thumbnailUrl,
+        string websiteUri,
+        string appUri,
+        string originalUrl,
+        string payloadJson,
+        string serializeKey,
+        bool isR18,
+        bool isR18G,
+        string createDate,
+        ViewContainerBase? viewContainer)
+    {
+        var destination = _downloadManager.EnqueueExternalImage(new ExternalImageRequest(
+            artworkId,
+            title,
+            author,
+            thumbnailUrl,
+            websiteUri,
+            appUri,
+            originalUrl,
+            _appSettings.DownloadSettings.DownloadPathMacro,
+            "",
+            payloadJson,
+            serializeKey,
+            0,
+            "",
+            isR18,
+            isR18G,
+            createDate));
+        if (!string.IsNullOrEmpty(destination))
+            (viewContainer ?? ResolveActiveViewContainer())?.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
     }
 
     public async Task<bool> ToggleFollowUserAsync(User user)
