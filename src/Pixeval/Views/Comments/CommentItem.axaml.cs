@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
@@ -38,8 +39,8 @@ public partial class CommentItem : UserControl
 
     private void PosterButton_OnClicked(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is CommentRecord comment && TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
-            viewContainer.CreateUserPage(comment.User.Id);
+        if (DataContext is CommentRecord comment && this.AppNavigation is { } navigator)
+            navigator.CreateUserPage(comment.User.Id);
     }
 
     private void OpenRepliesButton_OnClicked(object? sender, RoutedEventArgs e)
@@ -48,7 +49,10 @@ public partial class CommentItem : UserControl
             OpenRepliesButtonClick?.Invoke(comment);
     }
 
-    private async void DeleteReplyButton_OnClicked(object? sender, RoutedEventArgs e)
+    private void DeleteReplyButton_OnClicked(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => DeleteReplyButton_OnClickedAsync(sender, e));
+
+    private async Task DeleteReplyButton_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
         if (ListViewModel is not { } list || DataContext is not CommentRecord comment)
             return;

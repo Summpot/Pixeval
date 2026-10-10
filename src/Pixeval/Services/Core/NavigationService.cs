@@ -163,7 +163,7 @@ public class NavigationService : INavigationService
             return CreateServicePage<WorkPostsPage>(postParam.Item1, postParam.Item2);
 
         if (pageType == typeof(WorkBookmarksPage) && parameter is ValueTuple<User, SimpleWorkType, PrivacyPolicy, string?> bmParam)
-            return CreateServicePage<WorkBookmarksPage>(bmParam.Item1, bmParam.Item2, bmParam.Item3, bmParam.Item4);
+            return CreateServicePage<WorkBookmarksPage>(bmParam.Item1, bmParam.Item2, bmParam.Item3, bmParam.Item4 ?? string.Empty);
 
         if (pageType == typeof(WorkRankingPage) && parameter is ValueTuple<SimpleWorkType, RankOption, DateTime> rkParam)
             return CreateServicePage<WorkRankingPage>(rkParam.Item1, rkParam.Item2, rkParam.Item3);
@@ -200,7 +200,7 @@ public class NavigationService : INavigationService
         return (Page) Activator.CreateInstance(pageType, arguments)!;
     }
 
-    private TPage CreateServicePage<TPage>(params object[] arguments)
+    private TPage CreateServicePage<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TPage>(params object[] arguments)
         where TPage : Page =>
         (TPage) CreateServicePage(typeof(TPage), arguments);
 

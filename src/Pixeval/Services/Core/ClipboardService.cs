@@ -17,7 +17,7 @@ public sealed class ClipboardService : IClipboardService
         _host.TopLevel?.Clipboard?.SetTextAsync(text) ?? Task.CompletedTask;
 
     public Task<string?> GetTextAsync() =>
-        _host.TopLevel?.Clipboard?.GetTextAsync() ?? Task.FromResult<string?>(null);
+        _host.TopLevel?.Clipboard?.TryGetTextAsync() ?? Task.FromResult<string?>(null);
 
     public Task SetBitmapAsync(Bitmap bitmap) =>
         _host.TopLevel?.Clipboard?.SetBitmapAsync(bitmap) ?? Task.CompletedTask;

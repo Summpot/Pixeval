@@ -30,8 +30,8 @@ public partial class UserView : UserControl
     {
         if (sender is not Control { DataContext: User vm })
             return;
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
-            viewContainer.CreateUserPage(vm.UserId);
+        if (this.AppNavigation is { } navigator)
+            navigator.CreateUserPage(vm.UserId);
     }
 
     private void ListBox_OnContainerPrepared(object? sender, ContainerPreparedEventArgs e)

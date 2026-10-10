@@ -32,21 +32,21 @@ public partial class McpHelpSection
     } = "";
 
     /// <inheritdoc />
-    protected override async void OnLoaded(RoutedEventArgs e)
+    protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
-        await ReloadMcpToolsAsync();
+        this.RunInteraction(ReloadMcpToolsAsync);
     }
 
-    private async void RefreshMcpToolsButton_OnClicked(object? sender, RoutedEventArgs e) =>
-        await ReloadMcpToolsAsync();
+    private void RefreshMcpToolsButton_OnClicked(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(ReloadMcpToolsAsync);
 
     private async Task ReloadMcpToolsAsync()
     {
         if (_isLoadingMcpTools)
             return;
 
-        var settings = App.Services!.GetRequiredService<AppSettings>().McpSettings;
+        var settings = this.GetRequiredUiService<AppSettings>().McpSettings;
         if (!settings.EnableServer)
         {
             McpTools.Clear();
@@ -54,7 +54,7 @@ public partial class McpHelpSection
             return;
         }
 
-        if (App.Services!.GetService<IPixevalMcpService>() is not { } service)
+        if (this.GetUiService<IPixevalMcpService>() is not { } service)
         {
             McpTools.Clear();
             McpToolsStatus = I18NManager.GetResource(HelpPageResources.McpToolsStatus.Unavailable);

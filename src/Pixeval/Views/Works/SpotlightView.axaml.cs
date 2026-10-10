@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -25,7 +26,10 @@ public partial class SpotlightView : UserControl
             RegisterViewModelDisposal(viewModel);
     }
 
-    private async void SpotlightItem_OnTapped(object? sender, TappedEventArgs e)
+    private void SpotlightItem_OnTapped(object? sender, TappedEventArgs e) =>
+        this.RunInteraction(() => SpotlightItem_OnTappedAsync(sender, e));
+
+    private async Task SpotlightItem_OnTappedAsync(object? sender, TappedEventArgs e)
     {
         if (sender is Control { DataContext: SpotlightArticle vm } control)
             TopLevel.GetTopLevel(control)?.Launcher.LaunchUriAsync(new Uri(vm.ArticleUrl));

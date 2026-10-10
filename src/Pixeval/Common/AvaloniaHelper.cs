@@ -146,12 +146,11 @@ public static class AvaloniaHelper
     public static (Symbol Symbol, string Header) GetHomeCardHeader(HomePageCardSourceKind sourceKind) => HomeCardSourceKindToHeaderMap[sourceKind];
 
     public static EventHandler<RoutedEventArgs>? LaunchUriTagInWebBrowser { get; }
-        = (sender, _) =>
+        = (sender, e) =>
         {
-            if (sender is not Control { Tag: { } parameter })
+            if (sender is not Control { Tag: { } parameter } control)
                 return;
-            if (App.Services?.GetService<ILauncherService>() is not { } launcher)
-                return;
+            var launcher = control.LauncherService;
             if (parameter is not Uri uri)
                 if (parameter is not string str || !Uri.TryCreate(str, UriKind.RelativeOrAbsolute, out uri!))
                     return;
@@ -159,12 +158,11 @@ public static class AvaloniaHelper
         };
 
     public static EventHandler<RoutedEventArgs>? LaunchFileTagInWebBrowser { get; }
-        = (sender, _) =>
+        = (sender, e) =>
         {
-            if (sender is not Control { Tag: { } parameter })
+            if (sender is not Control { Tag: { } parameter } control)
                 return;
-            if (App.Services?.GetService<ILauncherService>() is not { } launcher)
-                return;
+            var launcher = control.LauncherService;
             if (parameter is not string path)
                 return;
             if (new FileInfo(path) is { Exists: true } file)
@@ -174,12 +172,11 @@ public static class AvaloniaHelper
         };
 
     public static EventHandler<RoutedEventArgs>? CopyTagToClipboard { get; }
-        = (sender, _) =>
+        = (sender, e) =>
         {
-            if (sender is not Control { Tag: { } parameter })
+            if (sender is not Control { Tag: { } parameter } control)
                 return;
-            if (App.Services?.GetService<IClipboardService>() is not { } clipboard)
-                return;
+            var clipboard = control.ClipboardService;
 
             if (parameter is not string str)
                 if (parameter is Uri uri)
@@ -187,7 +184,7 @@ public static class AvaloniaHelper
                 else
                     return;
 
-            var notifications = App.Services?.GetService<INotificationService>() ?? NullNotificationService.Instance;
+            var notifications = control.Notifications;
             _ = clipboard.SetTextAsync(str)
                 .ContinueWith(_ => notifications.ShowSuccess(I18NManager.GetResource(MiscResources.Copied)),
                     TaskScheduler.FromCurrentSynchronizationContext());

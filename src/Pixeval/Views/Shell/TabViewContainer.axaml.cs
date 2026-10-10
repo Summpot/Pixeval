@@ -25,6 +25,7 @@ public partial class TabViewContainer : ViewContainerBase
 
     private readonly IAppUpdateNotificationCoordinator _updateCoordinator;
     private readonly IUiHost _uiHost;
+    private readonly IServiceProvider _services;
     private readonly INavigationService _navigation;
 
     public static ICommand OpenNavigationItemCommand { get; } = new RelayCommand<Control>(static control =>
@@ -51,8 +52,11 @@ public partial class TabViewContainer : ViewContainerBase
     public TabViewContainer(
         IAppUpdateNotificationCoordinator updateCoordinator,
         IUiHost uiHost,
-        INavigationService navigation)
+        INavigationService navigation,
+        IServiceProvider services)
     {
+        _services = services;
+        UiServices.SetProvider(this, services);
         _updateCoordinator = updateCoordinator;
         _uiHost = uiHost;
         _navigation = navigation;
@@ -69,7 +73,7 @@ public partial class TabViewContainer : ViewContainerBase
     public void SetInterTabController(bool set)
     {
         TabsControl.InterTabController = set
-            ? new InterTabController { InterTabClient = new PixevalInterTabClient(_updateCoordinator, _uiHost, _navigation) }
+            ? new InterTabController { InterTabClient = new PixevalInterTabClient(_updateCoordinator, _uiHost, _navigation, _services) }
             : null;
     }
 
@@ -225,11 +229,12 @@ public partial class TabViewContainer : ViewContainerBase
     private sealed class PixevalInterTabClient(
         IAppUpdateNotificationCoordinator updateCoordinator,
         IUiHost uiHost,
-        INavigationService navigation) : IInterTabClient
+        INavigationService navigation,
+        IServiceProvider services) : IInterTabClient
     {
         public TabsHost GetNewHost(InterTabController controller, TabsHost host)
         {
-            var container = new TabViewContainer(updateCoordinator, uiHost, navigation);
+            var container = new TabViewContainer(updateCoordinator, uiHost, navigation, services);
             var window = new Window { Content = container }.Fork(host.Window);
             container.SetInterTabController(true);
             window.Closed += static (sender, _) =>

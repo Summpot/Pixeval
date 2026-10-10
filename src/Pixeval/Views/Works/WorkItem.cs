@@ -51,14 +51,14 @@ public class WorkItem : EntryItem, IWorkAnimatable
     protected void OpenSeriesPage_OnClicked(object? sender, RoutedEventArgs e)
     {
         if (sender is not Control { DataContext: { } work }
-            || TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
+            || this.AppNavigation is not { } navigator)
             return;
 
         var series = (work as IWorkEntry)?.Series;
         if (series is not { Id: > 0 })
             return;
 
-        viewContainer.CreateSeriesPage(
+        navigator.CreateSeriesPage(
             work is Mako.Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration,
             series.Id);
     }

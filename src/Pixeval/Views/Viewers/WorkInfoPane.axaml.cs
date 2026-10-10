@@ -194,7 +194,7 @@ public class WorkInfoPane : TemplatedControl
 
     private void ViewLikedUsers()
     {
-        var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
+        var nav = this.GetUiService<INavigationService>() ?? new NavigationService();
 
         if (ArtworkInfo is Illustration illust && illust.Id > 0)
         {
@@ -215,21 +215,20 @@ public class WorkInfoPane : TemplatedControl
 
     private async Task OpenAuthorAsync(object? user)
     {
-        if (TopLevel.GetTopLevel(this) is not { Launcher: { } launcher, ViewContainer: { } viewContainer }
-            || user is null)
+        if (user is null || this.AppNavigation is not { } navigation)
             return;
 
         if (user is User u && u.Id > 0)
         {
-            viewContainer.CreateUserPage(u.Id);
+            navigation.CreateUserPage(u.Id);
         }
         else if (user is BooruUser bu)
         {
-            await launcher.LaunchUriAsync(bu.WebsiteUri);
+            await this.LauncherService.LaunchUriAsync(bu.WebsiteUri);
         }
         else if (user is TokenUser tu && tu.RawId > 0)
         {
-            viewContainer.CreateUserPage(tu.RawId);
+            navigation.CreateUserPage(tu.RawId);
         }
     }
 
@@ -239,8 +238,8 @@ public class WorkInfoPane : TemplatedControl
             return;
 
         var type = ArtworkInfo is Mako.Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
-        App.Services!.GetRequiredService<SearchHistorySession>().Add(tag.Name, tag.TranslatedName);
-        var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
+        this.GetRequiredUiService<SearchHistorySession>().Add(tag.Name, tag.TranslatedName);
+        var nav = this.GetUiService<INavigationService>() ?? new NavigationService();
         nav.NavigateToWorkSearch(tag.Name, type, this);
     }
 
@@ -249,11 +248,11 @@ public class WorkInfoPane : TemplatedControl
         if (tag is null)
             return;
 
-        var blockedTags = App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.BlockedTags;
+        var blockedTags = this.GetRequiredUiService<AppSettings>().BrowsingExperienceSettings.BlockedTags;
         if (!blockedTags.Contains(tag.Name))
         {
             blockedTags.Add(tag.Name);
-            AppInfo.SaveAppSettings(App.Services!.GetRequiredService<AppSettings>());
+            AppInfo.SaveAppSettings(this.GetRequiredUiService<AppSettings>());
         }
     }
 

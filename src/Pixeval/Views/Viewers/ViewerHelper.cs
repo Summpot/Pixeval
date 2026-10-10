@@ -17,11 +17,7 @@ namespace Pixeval.Views.Viewers;
 
 public static class ViewerHelper
 {
-    private static INavigationService NavigationService =>
-        App.Services?.GetService<INavigationService>() ?? new NavigationService();
-
-    /// <param name="control"></param>
-    extension(ViewContainerBase control)
+    extension(INavigationService navigation)
     {
         #region Illustration
 
@@ -30,7 +26,7 @@ public static class ViewerHelper
         /// </summary>
         public void CreateIllustrationPage(string id, string platform)
         {
-            NavigationService.NavigateToIllustration(id, platform, control);
+            navigation.NavigateToIllustration(id, platform);
         }
 
         /// <summary>
@@ -40,7 +36,7 @@ public static class ViewerHelper
         /// <param name="needRefresh"></param>
         public void CreateIllustrationPage(object illustrationViewModel, bool needRefresh = false)
         {
-            NavigationService.NavigateToIllustration(illustrationViewModel, null, needRefresh, control);
+            navigation.NavigateToIllustration(illustrationViewModel, null, needRefresh);
         }
 
         /// <summary>
@@ -51,7 +47,7 @@ public static class ViewerHelper
         /// <param name="needRefresh">是否需要刷新插画（如从数据库中加载的则需要刷新）</param>
         public void CreateIllustrationPage(object illustrationViewModel, IReadOnlyList<object> items, bool needRefresh = false)
         {
-            NavigationService.NavigateToIllustration(illustrationViewModel, items, needRefresh, control);
+            navigation.NavigateToIllustration(illustrationViewModel, items, needRefresh);
         }
 
         #endregion
@@ -63,7 +59,7 @@ public static class ViewerHelper
         /// </summary>
         public void CreateNovelPage(long id)
         {
-            NavigationService.NavigateToNovel(id, control);
+            navigation.NavigateToNovel(id);
         }
 
         /// <summary>
@@ -73,7 +69,7 @@ public static class ViewerHelper
         /// <param name="needRefresh">是否需要刷新小说（如从数据库中加载的则需要刷新）</param>
         public void CreateNovelPage(Mako.Novel novel, bool needRefresh = false)
         {
-            NavigationService.NavigateToNovel(novel, null, needRefresh, control);
+            navigation.NavigateToNovel(novel, null, needRefresh);
         }
 
         /// <summary>
@@ -84,7 +80,7 @@ public static class ViewerHelper
         /// <param name="needRefresh">是否需要刷新小说（如从数据库中加载的则需要刷新）</param>
         public void CreateNovelPage(Mako.Novel novel, IReadOnlyList<Mako.Novel> items, bool needRefresh = false)
         {
-            NavigationService.NavigateToNovel(novel, items, needRefresh, control);
+            navigation.NavigateToNovel(novel, items, needRefresh);
         }
 
         #endregion
@@ -93,7 +89,7 @@ public static class ViewerHelper
 
         public void CreateSeriesPage(SimpleWorkType workType, long seriesId)
         {
-            NavigationService.NavigateToSeries(workType, seriesId, control);
+            navigation.NavigateToSeries(workType, seriesId);
         }
 
         public void CreateSeriesPage(
@@ -103,7 +99,7 @@ public static class ViewerHelper
             IWorkEntry? firstWork,
             IWorkViewViewModel worksViewModel)
         {
-            NavigationService.NavigateToSeries(workType, seriesId, seriesDetail, firstWork, worksViewModel, control);
+            navigation.NavigateToSeries(workType, seriesId, seriesDetail, firstWork, worksViewModel);
         }
 
         #endregion
@@ -112,12 +108,12 @@ public static class ViewerHelper
 
         public void CreateUserPage(long userId)
         {
-            NavigationService.NavigateToUser(userId, control);
+            navigation.NavigateToUser(userId);
         }
 
         public void CreateUserPage(SingleUserResponse userDetail)
         {
-            NavigationService.NavigateToUser(userDetail, control);
+            navigation.NavigateToUser(userDetail);
         }
 
         #endregion

@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -15,7 +16,10 @@ public partial class SauceNaoSearchPage : ContentPage
         InitializeComponent();
     }
 
-    private async void OpenFileButton_OnClick(object? sender, RoutedEventArgs e)
+    private void OpenFileButton_OnClick(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => OpenFileButton_OnClickAsync(sender, e));
+
+    private async Task OpenFileButton_OnClickAsync(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not SauceNaoSearchPageViewModel viewModel
             || TopLevel.GetTopLevel(this) is not { StorageProvider: { } provider })
@@ -31,7 +35,7 @@ public partial class SauceNaoSearchPage : ContentPage
         if (DataContext is not SauceNaoSearchPageViewModel viewModel)
             return;
 
-        var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
+        var nav = this.GetUiService<INavigationService>() ?? new NavigationService();
         nav.NavigateTo<ArtworkSauceNaoSearchResultPage>((SauceNaoSearchPageViewModel.ApiKey, viewModel.File), sourceControl: this);
     }
 

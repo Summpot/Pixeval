@@ -32,7 +32,7 @@ public sealed partial class HomePage
             if (!TryFindFreePosition(width, height, out var column, out var row)
                 && !TryFindBestFittingFreePosition(width, height, out width, out height, out column, out row))
             {
-                TopLevel.GetTopLevel(this)?.ViewContainer?.ShowWarning(
+                this.Notifications.ShowWarning(
                     I18NManager.GetResource(HomePageResources.NoSpaceWarning.Title),
                     I18NManager.GetResource(HomePageResources.NoSpaceWarning.Content));
                 return;
@@ -68,14 +68,14 @@ public sealed partial class HomePage
     {
         var rows = DecimalToPositiveInt(decimal.Clamp(ViewModel.GridRowsValue, MinimumGridSize, MaximumGridSize));
         var columns = DecimalToPositiveInt(decimal.Clamp(ViewModel.GridColumnsValue, MinimumGridSize, MaximumGridSize));
-        var settings = App.Services!.GetRequiredService<AppSettings>().ApplicationSettings.HomePage;
+        var settings = this.GetRequiredUiService<AppSettings>().ApplicationSettings.HomePage;
         if (settings.HomePageRows == rows && settings.HomePageColumns == columns)
             return;
 
         if (!CanResizeGrid(rows, columns))
         {
             UpdateGridSizeControls();
-            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowWarning(
+            this.Notifications.ShowWarning(
                 I18NManager.GetResource(HomePageResources.GridShrinkBlockedWarning.Title),
                 I18NManager.GetResource(HomePageResources.GridShrinkBlockedWarning.Content));
             return;
@@ -109,7 +109,7 @@ public sealed partial class HomePage
                               || !CanPlace(_selectedCard, newColumn, newRow, newColumnSpan, newRowSpan))
         {
             UpdateSelectedCardControls();
-            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowWarning(
+            this.Notifications.ShowWarning(
                 I18NManager.GetResource(HomePageResources.LayoutConflictWarning.Title),
                 I18NManager.GetResource(HomePageResources.LayoutConflictWarning.Content));
             return;
@@ -255,7 +255,7 @@ public sealed partial class HomePage
 
     private void ShowInvalidParameterWarning()
     {
-        TopLevel.GetTopLevel(this)?.ViewContainer?.ShowWarning(
+        this.Notifications.ShowWarning(
             I18NManager.GetResource(HomePageResources.InvalidSourceParameterWarning.Title),
             I18NManager.GetResource(HomePageResources.InvalidSourceParameterWarning.Content));
     }
@@ -264,9 +264,9 @@ public sealed partial class HomePage
 
     private static int DecimalToPositiveInt(decimal? value) => int.Max(1, (int) (value ?? 1));
 
-    private static void SaveLayout()
+    private void SaveLayout()
     {
-        AppInfo.SaveAppSettings(App.Services!.GetRequiredService<AppSettings>());
-        AppInfo.SaveHomePageCards(App.Services!.GetRequiredService<HomePageCardSession>().Cards);
+        AppInfo.SaveAppSettings(this.GetRequiredUiService<AppSettings>());
+        AppInfo.SaveHomePageCards(this.GetRequiredUiService<HomePageCardSession>().Cards);
     }
 }

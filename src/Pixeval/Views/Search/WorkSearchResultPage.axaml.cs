@@ -80,7 +80,7 @@ public partial class WorkSearchResultPage : IconContentPage
         {
             if (type is SimpleWorkType.Novel)
             {
-                var novels = await App.Services!.GetRequiredService<MakoClient>().PopularPreviewNovelAsync(word, null, null, null, null);
+                var novels = await this.GetRequiredUiService<MakoClient>().PopularPreviewNovelAsync(word, null, null, null, null);
                 if (novels.Count > 0)
                 {
                     PopularPreviewItemsControl.ItemsSource = novels;
@@ -90,7 +90,7 @@ public partial class WorkSearchResultPage : IconContentPage
             }
             else
             {
-                var illusts = await App.Services!.GetRequiredService<MakoClient>().PopularPreviewIllustAsync(word, null, null, null, null);
+                var illusts = await this.GetRequiredUiService<MakoClient>().PopularPreviewIllustAsync(word, null, null, null, null);
                 if (illusts.Count > 0)
                 {
                     PopularPreviewItemsControl.ItemsSource = illusts;
@@ -109,12 +109,12 @@ public partial class WorkSearchResultPage : IconContentPage
 
     private void PopularPreviewItem_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (sender is Avalonia.Controls.Control { DataContext: object artwork } && TopLevel.GetTopLevel(this) is { } topLevel)
+        if (sender is Avalonia.Controls.Control { DataContext: object artwork } && this.AppNavigation is { } navigation)
         {
             if (artwork is Pixeval.Mako.Novel novel)
-                topLevel.ViewContainer?.CreateNovelPage(novel);
+                navigation.CreateNovelPage(novel);
             else if (artwork is Pixeval.Mako.Illustration illust)
-                topLevel.ViewContainer?.CreateIllustrationPage(illust);
+                navigation.CreateIllustrationPage(illust);
         }
     }
 
@@ -124,13 +124,13 @@ public partial class WorkSearchResultPage : IconContentPage
     {
         IAsyncEnumerable<object> engine = (_illustrationArguments, _novelArguments) switch
         {
-            (null, null) => App.Services!.GetRequiredService<MakoClient>().Computed(AsyncEnumerable.Empty<object>()),
-            (_, null) => App.Services!.GetRequiredService<MakoClient>().IllustrationSearch(_illustrationArguments!),
-            (null, _) => App.Services!.GetRequiredService<MakoClient>().NovelSearch(_novelArguments!),
+            (null, null) => this.GetRequiredUiService<MakoClient>().Computed(AsyncEnumerable.Empty<object>()),
+            (_, null) => this.GetRequiredUiService<MakoClient>().IllustrationSearch(_illustrationArguments!),
+            (null, _) => this.GetRequiredUiService<MakoClient>().NovelSearch(_novelArguments!),
             _ => SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>() switch
             {
-                SimpleWorkType.Novel => App.Services!.GetRequiredService<MakoClient>().NovelSearch(_novelArguments!),
-                _ => App.Services!.GetRequiredService<MakoClient>().IllustrationSearch(_illustrationArguments!),
+                SimpleWorkType.Novel => this.GetRequiredUiService<MakoClient>().NovelSearch(_novelArguments!),
+                _ => this.GetRequiredUiService<MakoClient>().IllustrationSearch(_illustrationArguments!),
             }
         };
 

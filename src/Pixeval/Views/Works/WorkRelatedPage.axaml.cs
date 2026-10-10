@@ -29,11 +29,18 @@ public partial class WorkRelatedPage : IconContentPage
     public static readonly StyledProperty<SimpleWorkType> WorkTypeProperty =
         AvaloniaProperty.Register<WorkRelatedPage, SimpleWorkType>(nameof(WorkType));
 
-    private readonly MakoClient _client;
+    private MakoClient? _client;
+    private bool _sourcePending;
     private long _id;
     private SimpleWorkType _simpleWorkType;
     private bool _suppressSourceChange;
     private bool _hasViewModel;
+
+    /// <summary>XAML constructor: services are resolved from <see cref="UiServices.ProviderProperty"/> once the page is attached under the shell.</summary>
+    public WorkRelatedPage()
+    {
+        InitializeComponent();
+    }
 
     public WorkRelatedPage(MakoClient client)
     {
@@ -78,6 +85,11 @@ public partial class WorkRelatedPage : IconContentPage
             _id = change.GetNewValue<long>();
         else if (change.Property == WorkTypeProperty)
             _simpleWorkType = change.GetNewValue<SimpleWorkType>();
+        else if (change.Property == UiServices.ProviderProperty)
+        {
+            if (!_sourcePending)
+                return;
+        }
         else if (change.Property != IsVisibleProperty)
             return;
 
@@ -92,7 +104,9 @@ public partial class WorkRelatedPage : IconContentPage
 
     private void ChangeSource()
     {
-        var engine = !IsVisible || _id is 0
+        _client ??= this.GetUiService<MakoClient>();
+        _sourcePending = _client is null;
+        var engine = !IsVisible || _id is 0 || _client is null
             ? (IAsyncEnumerable<object>) AsyncEnumerable.Empty<object>()
             : _client.WorkRelated(_id, _simpleWorkType);
         WorkContainer.ResetEngine(engine);

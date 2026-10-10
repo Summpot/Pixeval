@@ -33,25 +33,25 @@ public partial class ExtensionsPage : IconContentPage
         if (_firstTime && ExtensionService.OutDateExtensionHostsCount is var count and not 0)
         {
             _firstTime = false;
-            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowWarning(
+            this.Notifications.ShowWarning(
                 I18NManager.GetResource(ExtensionsPageResources.SomeExtensionsOutdatedFormatted, count));
         }
     }
 
-    private async void AddExtensionsOnClick(object? sender, RoutedEventArgs e)
-    {
-        if (TopLevel.GetTopLevel(this) is not { ViewContainer: { } viewContainer, StorageProvider: { } provider })
-            return;
+    private void AddExtensionsOnClick(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => AddExtensionsOnClickAsync(sender, e));
 
-        if (ExtensionService.NativeLibraryExtension is not { } extension)
+    private async Task AddExtensionsOnClickAsync(object? sender, RoutedEventArgs e)
+    {
+                if (ExtensionService.NativeLibraryExtension is not { } extension)
         {
-            viewContainer.ShowError(I18NManager.GetResource(ExtensionsPageResources.PlatformNotSupportExtensions));
+            this.Notifications.ShowError(I18NManager.GetResource(ExtensionsPageResources.PlatformNotSupportExtensions));
             return;
         }
 
-        var logger = App.Services!.GetRequiredService<FileLogger>();
+        var logger = this.GetRequiredUiService<FileLogger>();
 
-        var files = await provider.OpenFilePickerAsync(new()
+        var files = await this.StoragePicker.OpenFilesAsync(new()
         {
             FileTypeFilter =
             [
@@ -72,7 +72,7 @@ public partial class ExtensionsPage : IconContentPage
 
                 if (installResult.InstalledHostLibraries.Count is 0)
                 {
-                    viewContainer.ShowWarning(
+                    this.Notifications.ShowWarning(
                         I18NManager.GetResource(ExtensionsPageResources.ZipContainsNoExtension), fileName);
                     continue;
                 }
@@ -84,7 +84,7 @@ public partial class ExtensionsPage : IconContentPage
             }
             catch (Exception ex)
             {
-                viewContainer.ShowError(I18NManager.GetResource(ExtensionsPageResources.ExtensionLoadFailed),
+                this.Notifications.ShowError(I18NManager.GetResource(ExtensionsPageResources.ExtensionLoadFailed),
                     $"{fileName}: {ex.Message}");
             }
         }
@@ -99,12 +99,12 @@ public partial class ExtensionsPage : IconContentPage
                     ExtensionService.TryLoadHostWithResult(libraryPath, logger, out _, out var outdatedVersion);
                 if (result is ExtensionHostLoadResult.Loaded)
                 {
-                    viewContainer.ShowSuccess(
+                    this.Notifications.ShowSuccess(
                         I18NManager.GetResource(ExtensionsPageResources.ExtensionLoadedSuccessfully), fileName);
                     return;
                 }
 
-                viewContainer.ShowError(
+                this.Notifications.ShowError(
                     outdatedVersion is null
                         ? I18NManager.GetResource(ExtensionsPageResources.ExtensionLoadFailed)
                         : I18NManager.GetResource(ExtensionsPageResources.ExtensionOutdatedFormatted, outdatedVersion),
@@ -112,7 +112,7 @@ public partial class ExtensionsPage : IconContentPage
             }
             catch (Exception ex)
             {
-                viewContainer.ShowError(I18NManager.GetResource(ExtensionsPageResources.ExtensionLoadFailed),
+                this.Notifications.ShowError(I18NManager.GetResource(ExtensionsPageResources.ExtensionLoadFailed),
                     $"{fileName}: {ex.Message}");
             }
         }
@@ -123,18 +123,17 @@ public partial class ExtensionsPage : IconContentPage
         if (sender is not Control { DataContext: ExtensionsHostModel model })
             return;
 
-        var viewContainer = TopLevel.GetTopLevel(this)?.ViewContainer;
         if (model.IsPendingUninstall)
         {
             if (ExtensionService.CancelHostUninstall(model))
-                viewContainer?.ShowInformation(
+                this.Notifications.ShowInformation(
                     I18NManager.GetResource(ExtensionsPageResources.ExtensionPendingUninstallCancelled),
                     model.Name);
             return;
         }
 
         if (ExtensionService.ScheduleHostUninstall(model))
-            viewContainer?.ShowInformation(
+            this.Notifications.ShowInformation(
                 I18NManager.GetResource(ExtensionsPageResources.ExtensionWillUninstallOnNextStartup),
                 model.Name);
     }
@@ -142,7 +141,7 @@ public partial class ExtensionsPage : IconContentPage
     private void UninstallAllExtensionsOnClick(object? sender, RoutedEventArgs e)
     {
         var count = ExtensionService.ScheduleAllHostUninstalls();
-        TopLevel.GetTopLevel(this)?.ViewContainer?.ShowInformation(count is 0
+        this.Notifications.ShowInformation(count is 0
             ? I18NManager.GetResource(ExtensionsPageResources.NoExtensionsToUninstall)
             : I18NManager.GetResource(ExtensionsPageResources.MarkedExtensionsPendingUninstallFormatted, count));
     }
@@ -150,7 +149,7 @@ public partial class ExtensionsPage : IconContentPage
     private void UninstallOutdatedExtensionsOnClick(object? sender, RoutedEventArgs e)
     {
         var count = ExtensionService.ScheduleOutdatedHostUninstalls();
-        TopLevel.GetTopLevel(this)?.ViewContainer?.ShowInformation(count is 0
+        this.Notifications.ShowInformation(count is 0
             ? I18NManager.GetResource(ExtensionsPageResources.NoOutdatedExtensionsToUninstall)
             : I18NManager.GetResource(ExtensionsPageResources.MarkedOutdatedExtensionsPendingUninstallFormatted,
                 count));

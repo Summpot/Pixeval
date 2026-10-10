@@ -221,7 +221,7 @@ internal sealed class PixevalCodeBlockElement : DocumentElement
         copyButton.Classes.Add("CopyButton");
         ToolTip.SetTip(copyButton, "复制代码");
         copyButton.Command = new AsyncRelayCommand(() =>
-            (App.Services?.GetService<IClipboardService>() ?? NullClipboardService.Instance).SetTextAsync(_code));
+            copyButton.ClipboardService.SetTextAsync(_code));
         toolbar.Children.Add(copyButton);
 
         return toolbar;

@@ -57,7 +57,10 @@ public partial class NovelViewerPage : IconContentPage
             ViewModel.CurrentPageIndex = pageIndex;
     }
 
-    private async void AddToBookmarkButton_OnClick(object? sender, ContextRequestedEventArgs e)
+    private void AddToBookmarkButton_OnClick(object? sender, ContextRequestedEventArgs e) =>
+        this.RunInteraction(() => AddToBookmarkButton_OnClickAsync(sender, e));
+
+    private async Task AddToBookmarkButton_OnClickAsync(object? sender, ContextRequestedEventArgs e)
     {
         if (sender is Control c && ViewModel.CurrentNovel is { Id: var id })
             await BookmarkTagSelectorFlyoutHelper.ShowAsync(
@@ -73,7 +76,7 @@ public partial class NovelViewerPage : IconContentPage
         if (ViewModel.CurrentNovel is { } current)
         {
             await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
-            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
+            this.Notifications.ShowSuccess(
                 I18NManager.GetResource(MiscResources.AddedToBookmark));
         }
     }

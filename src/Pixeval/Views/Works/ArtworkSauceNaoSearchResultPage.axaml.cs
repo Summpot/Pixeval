@@ -30,8 +30,6 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage
 
     public async IAsyncEnumerable<object> GetResults(string apiKey, ReadOnlyMemory<byte> file)
     {
-        var viewContainer = TopLevel.GetTopLevel(this)?.ViewContainer;
-
         List<SauceNaoItem>? sauceNaoResults = null;
         try
         {
@@ -40,7 +38,7 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage
         }
         catch (Exception e)
         {
-            viewContainer?.ShowError(I18NManager.GetResource(MiscResources.ExceptionEncountered), e.Message);
+            this.Notifications.ShowError(I18NManager.GetResource(MiscResources.ExceptionEncountered), e.Message);
         }
 
         if (sauceNaoResults is not null)

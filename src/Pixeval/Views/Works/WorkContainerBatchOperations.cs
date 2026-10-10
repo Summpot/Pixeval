@@ -59,21 +59,21 @@ public static class WorkContainerBatchOperations
         object? target,
         (bool IsPrivate, IReadOnlyList<string>? Tags) options)
     {
-        var viewContainer = TopLevel.GetTopLevel(sourceControl)?.ViewContainer;
+        var notifications = sourceControl.Notifications;
+        var dialogs = sourceControl.Dialogs;
 
         if (target is IWorkEntry workTarget)
         {
             await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(workTarget, options.IsPrivate, options.Tags));
-            viewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.AddedToBookmark));
+            notifications.ShowSuccess(I18NManager.GetResource(MiscResources.AddedToBookmark));
             return;
         }
 
         if (viewModel is null)
             return;
 
-        if (viewContainer is not null
-            && viewModel.SelectedEntries.Count >= 20
-            && await viewContainer.CreateOkCancelAsync(
+        if (viewModel.SelectedEntries.Count >= 20
+            && await dialogs.CreateOkCancelAsync(
                 I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.ForBookmarkTitle),
                 I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.Content)) is not ContentDialogResult.Primary)
             return;
@@ -85,7 +85,7 @@ public static class WorkContainerBatchOperations
         }
 
         if (viewModel.SelectedEntries.Count is var c and > 0)
-            viewContainer?.ShowSuccess(I18NManager.GetResource(WorkContainerResources.AddedAllToBookmarkContentFormatted, c));
+            notifications.ShowSuccess(I18NManager.GetResource(WorkContainerResources.AddedAllToBookmarkContentFormatted, c));
     }
 
     public static async Task SaveAllAsync(Control sourceControl, IOperableViewViewModel? viewModel)
@@ -93,10 +93,8 @@ public static class WorkContainerBatchOperations
         if (viewModel is null)
             return;
 
-        var viewContainer = TopLevel.GetTopLevel(sourceControl)?.ViewContainer;
-        if (viewContainer is not null
-            && viewModel.SelectedEntries.Count >= 20
-            && await viewContainer.CreateOkCancelAsync(
+        if (viewModel.SelectedEntries.Count >= 20
+            && await sourceControl.Dialogs.CreateOkCancelAsync(
                 I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.ForSaveTitle),
                 I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.Content)) is not ContentDialogResult.Primary)
             return;
@@ -104,7 +102,7 @@ public static class WorkContainerBatchOperations
         foreach (var i in viewModel.SelectedEntries)
             WorkCommands.SaveCommand.Execute(i);
 
-        viewContainer?.ShowInformation(
+        sourceControl.Notifications.ShowInformation(
             I18NManager.GetResource(WorkContainerResources.DownloadItemsQueuedFormatted, viewModel.SelectedEntries.Count));
     }
 
@@ -113,10 +111,8 @@ public static class WorkContainerBatchOperations
         if (viewModel is null)
             return;
 
-        var topLevel = TopLevel.GetTopLevel(sourceControl);
-        if (topLevel?.ViewContainer is { } viewContainer
-            && viewModel.SelectedEntries.Count > 15
-            && await viewContainer.CreateOkCancelAsync(
+        if (viewModel.SelectedEntries.Count > 15
+            && await sourceControl.Dialogs.CreateOkCancelAsync(
                 I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.ForOpenInBrowser.Title),
                 I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.ForOpenInBrowser.Content)) is not ContentDialogResult.Primary)
             return;
@@ -130,8 +126,8 @@ public static class WorkContainerBatchOperations
                 BooruPost booru => booru.WebsiteUri,
                 _ => null
             };
-            if (uri is not null && topLevel is not null)
-                _ = await topLevel.Launcher.LaunchUriAsync(uri);
+            if (uri is not null)
+                await sourceControl.LauncherService.LaunchUriAsync(uri);
         }
     }
 }

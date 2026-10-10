@@ -161,7 +161,7 @@ public partial class WorkContainer : UserControl
     private void RefreshButton_OnClick(object? sender, RoutedEventArgs e) => RefreshRequested?.Invoke(sender, e);
 
     private void WorkFilterAutoSuggestBox_OnSearchRequested(object? sender, WorkFilterSearchRequestedEventArgs e) =>
-        _filterCoordinator.PerformSearch(DataContext as IOperableViewViewModel, WorkFilterAutoSuggestBox, TopLevel.GetTopLevel(this)?.ViewContainer, e.Text, e.CaretIndex);
+        _filterCoordinator.PerformSearch(DataContext as IOperableViewViewModel, WorkFilterAutoSuggestBox, this.Notifications, e.Text, e.CaretIndex);
 
     private FilterAnalysisResult AnalyzeFilter(string? text, int caret) =>
         _filterCoordinator.AnalyzeFilter(DataContext as IOperableViewViewModel, text, caret);
