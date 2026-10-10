@@ -2,13 +2,16 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 using AnimatedControls.Avalonia;
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Models;
+using Pixeval.Models.Navigation;
 using Pixeval.Native.Mako;
 using Pixeval.Services;
 using Pixeval.Utilities.IO.Caching;
@@ -19,21 +22,89 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
 {
     private readonly IUserSessionService _sessionService;
     private readonly MakoClient _makoClient;
+    private readonly INavigationService _navigationService;
+    private NavigationConfiguration? _navigationConfiguration;
     private CancellationTokenSource? _avatarLoadCancellationTokenSource;
     private bool _isDisposed;
 
+    public ObservableCollection<NavigationMenuItem> HeaderNavigationItems { get; } = [];
+
+    public ObservableCollection<NavigationMenuItem> FooterNavigationItems { get; } = [];
+
+    [ObservableProperty]
+    public partial bool CanCreateNewTab { get; private set; }
+
     public TabViewContainerViewModel() : this(
         App.Services?.GetService<IUserSessionService>() ?? App.AppViewModel.AppServiceProvider.GetRequiredService<IUserSessionService>(),
-        App.Services?.GetService<MakoClient>() ?? App.AppViewModel.MakoClient)
+        App.Services?.GetService<MakoClient>() ?? App.AppViewModel.MakoClient,
+        App.Services?.GetService<INavigationService>() ?? new NavigationService())
     {
     }
 
-    public TabViewContainerViewModel(IUserSessionService sessionService, MakoClient makoClient)
+    public TabViewContainerViewModel(
+        IUserSessionService sessionService,
+        MakoClient makoClient,
+        INavigationService navigationService)
     {
         _sessionService = sessionService;
         _makoClient = makoClient;
+        _navigationService = navigationService;
+        RebuildNavigation();
         OnUserRefreshed(_sessionService.CurrentUser);
         _sessionService.UserRefreshed += OnUserRefreshed;
+    }
+
+    public void RebuildNavigation()
+    {
+        _navigationConfiguration = NavigationYamlParser.ParseOrDefault(App.AppViewModel.NavigationMenuYamlText);
+        HeaderNavigationItems.Clear();
+        FooterNavigationItems.Clear();
+        foreach (var item in _navigationConfiguration.HeaderItems)
+            HeaderNavigationItems.Add(item);
+        foreach (var item in _navigationConfiguration.FooterItems)
+            FooterNavigationItems.Add(item);
+        CanCreateNewTab = _navigationConfiguration.NewTabPage is not null;
+    }
+
+    [RelayCommand]
+    public void OpenNavigationItem(Control? control) => _ = TryOpenNavigationItem(control, openNew: false);
+
+    public bool TryOpenNavigationItem(Control? control, bool openNew)
+    {
+        if (control is not { DataContext: NavigationPageItem { PageType: { } type } })
+            return false;
+
+        if (!openNew && _navigationService.TrySelectExisting(type, control))
+            return true;
+
+        _navigationService.NavigateTo(type, null, false, control);
+        return true;
+    }
+
+    [RelayCommand]
+    public void CreateNewTab()
+    {
+        if (_navigationConfiguration?.NewTabPage is { PageType: { } type })
+            _navigationService.NavigateTo(type);
+    }
+
+    [RelayCommand]
+    public void OpenMyPage()
+    {
+        var myId = _sessionService.CurrentUserId;
+        if (myId <= 0)
+        {
+            _navigationService.NavigateToLogin();
+            return;
+        }
+
+        _navigationService.NavigateToUser(myId);
+    }
+
+    [RelayCommand]
+    public void SwitchAccount()
+    {
+        _navigationService.NavigateToLogin();
     }
 
     private async void OnUserRefreshed(TokenUser? user)
@@ -86,7 +157,6 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        // await ToggleRestrictedModeAsync(true);
         await RefreshAiShowAsync(cancellationTokenSource);
     }
 

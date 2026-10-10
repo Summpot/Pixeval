@@ -27,6 +27,9 @@ namespace Pixeval.Views.Home;
 
 public static class HomeCardDefinitions
 {
+    private static INavigationService NavigationService =>
+        App.Services?.GetService<INavigationService>() ?? new NavigationService();
+
     private static readonly FrozenDictionary<HomePageCardSourceKind, HomeCardDefinition> _BySourceKind;
 
     static HomeCardDefinitions()
@@ -260,110 +263,108 @@ public static class HomeCardDefinitions
 
     private static void OpenWorkRecommendedPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkRecommendedPage(card.WorkType));
+        NavigationService.NavigateTo<WorkRecommendedPage>(card.WorkType, sourceControl: topLevel);
     }
 
     private static void OpenWorkNewPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkNewPage(card.WorkType));
+        NavigationService.NavigateTo<WorkNewPage>(card.WorkType, sourceControl: topLevel);
     }
 
     private static void OpenWorkPostsPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkPostsPage(CreateUserBasicInfo(card), card.WorkType));
+        NavigationService.NavigateTo<WorkPostsPage>((CreateUserBasicInfo(card), card.WorkType), sourceControl: topLevel);
     }
 
     private static void OpenWorkBookmarksPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkBookmarksPage(
-            CreateUserBasicInfo(card),
-            card.SimpleWorkType,
-            card.PrivacyPolicy,
-            card.Tag));
+        NavigationService.NavigateTo<WorkBookmarksPage>(
+            (CreateUserBasicInfo(card), card.SimpleWorkType, card.PrivacyPolicy, card.Tag),
+            sourceControl: topLevel);
     }
 
     private static void OpenWorkRankingPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkRankingPage(
-            card.SimpleWorkType,
-            card.RankOption,
-            card.GetRankingDate().LocalDateTime));
+        NavigationService.NavigateTo<WorkRankingPage>(
+            (card.SimpleWorkType, card.RankOption, card.GetRankingDate().LocalDateTime),
+            sourceControl: topLevel);
     }
 
     private static void OpenWorkFollowingPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkFollowingPage(card.SimpleWorkType, card.PrivacyPolicy));
+        NavigationService.NavigateTo<WorkFollowingPage>((card.SimpleWorkType, card.PrivacyPolicy), sourceControl: topLevel);
     }
 
     private static void OpenWorkMyPixivPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkMyPixivPage(card.SimpleWorkType));
+        NavigationService.NavigateTo<WorkMyPixivPage>(card.SimpleWorkType, sourceControl: topLevel);
     }
 
     private static void OpenWorkRelatedPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkRelatedPage(card.EntryId, card.SimpleWorkType));
+        NavigationService.NavigateTo<WorkRelatedPage>((card.EntryId, card.SimpleWorkType), sourceControl: topLevel);
     }
 
     private static void OpenSingleSeries(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
-        topLevel.ViewContainer?.CreateSeriesPage(card.SimpleWorkType, card.SeriesId);
+        NavigationService.NavigateToSeries(card.SimpleWorkType, card.SeriesId, topLevel);
     }
 
     private static void OpenWorkSearchPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
         var searchText = card.SearchText ?? "";
-        topLevel.ViewContainer?.NavigateTo(new WorkSearchResultPage(
+        NavigationService.NavigateToWorkSearch(
             searchText,
             new IllustrationSearchArguments(searchText),
             new NovelSearchArguments(searchText),
-            card.SimpleWorkType));
+            card.SimpleWorkType,
+            topLevel);
     }
 
     private static void OpenUserRecommendedPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
-        topLevel.ViewContainer?.NavigateTo(new UserRecommendedPage());
+        NavigationService.NavigateTo<UserRecommendedPage>(sourceControl: topLevel);
     }
 
     private static void OpenUserSearchPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
-        topLevel.ViewContainer?.NavigateTo(new UserSearchResultPage(card.SearchText));
+        NavigationService.NavigateToUserSearch(card.SearchText, topLevel);
     }
 
     private static void OpenUserFollowingPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
-        topLevel.ViewContainer?.NavigateTo(new UserFollowingPage(card.UserId, card.PrivacyPolicy));
+        NavigationService.NavigateTo<UserFollowingPage>((card.UserId, card.PrivacyPolicy), sourceControl: topLevel);
     }
 
     private static void OpenUserFollowerPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
-        topLevel.ViewContainer?.NavigateTo(new UserFollowerPage());
+        NavigationService.NavigateTo<UserFollowerPage>(sourceControl: topLevel);
     }
 
     private static void OpenUserMyPixivPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
-        topLevel.ViewContainer?.NavigateTo(new UserMyPixivPage(card.UserId));
+        NavigationService.NavigateTo<UserMyPixivPage>(card.UserId, sourceControl: topLevel);
     }
 
     private static void OpenSpotlightPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
-        topLevel.ViewContainer?.NavigateTo(new SpotlightPage());
+        NavigationService.NavigateTo<SpotlightPage>(sourceControl: topLevel);
     }
 
     private static void OpenSingleImage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
         if (source.GetViewModel<IllustrationViewViewModel>().Source.FirstOrDefault() is { } viewModel)
-            topLevel.ViewContainer?.CreateIllustrationPage(viewModel);
+            NavigationService.NavigateToIllustration(viewModel, sourceControl: topLevel);
     }
 
     private static void OpenSingleNovel(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {
         if (source.GetViewModel<NovelViewViewModel>().Source.FirstOrDefault() is { } viewModel)
-            topLevel.ViewContainer?.CreateNovelPage(viewModel);
+            NavigationService.NavigateToNovel(viewModel, sourceControl: topLevel);
     }
 
     private static void OpenSingleUser(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel) =>
-        topLevel.ViewContainer?.CreateUserPage(source.GetOpeningContext<SingleUserOpeningContext>().UserDetail);
+        NavigationService.NavigateToUser(source.GetOpeningContext<SingleUserOpeningContext>().UserDetail, topLevel);
 
     private static User CreateUserBasicInfo(HomePageCardLayout card)
     {

@@ -9,8 +9,8 @@ namespace Pixeval.Models.Navigation;
 
 public sealed record NavigationPageDefinition(
     string Key,
-    [property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]
-    [param: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]
+    [property: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
+    [param: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
     Type PageType,
     Symbol Icon,
     string HeaderResource,

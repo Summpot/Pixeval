@@ -20,6 +20,7 @@ using Pixeval.I18N;
 using Pixeval.Models.Options;
 using Pixeval.Models.Subscriptions;
 using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.Views.Home;
 using Pixeval.Views.Login;
@@ -179,7 +180,8 @@ public class App : Application
                             ? new TokenResponse("", 0, "Bearer", refreshToken, user)
                             : null);
                     AppViewModel.OnTokenRefreshed(tokenResponse);
-                    viewContainer.NavigateTo(new HomePage());
+                    AppViewModel.AppServiceProvider.GetRequiredService<INavigationService>()
+                        .NavigateToHome(sourceControl: viewContainer);
                     AppViewModel.QueueWorkSubscriptionSyncAll();
                     return;
                 }
@@ -196,7 +198,8 @@ public class App : Application
             viewContainer.ShowError(I18NManager.GetResource(MainPageResources.LoggingIn.Failed));
         }
 
-        viewContainer.NavigateTo(new LoginPage());
+        AppViewModel.AppServiceProvider.GetRequiredService<INavigationService>()
+            .NavigateToLogin(sourceControl: viewContainer);
     }
 
     private bool IsLastVisibleWindow(Window window) =>

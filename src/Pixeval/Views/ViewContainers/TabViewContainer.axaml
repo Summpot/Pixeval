@@ -50,7 +50,7 @@
             <tabView:TabsView.ShowDefaultAddButton>
                 <MultiBinding Converter="{x:Static BoolConverters.And}">
                     <Binding Path="IsLoggedIn" Source="{x:Static views:PixevalSettings.Instance}" />
-                    <Binding Path="#Root.CanCreateNewTab" />
+                    <Binding Path="CanCreateNewTab" />
                 </MultiBinding>
             </tabView:TabsView.ShowDefaultAddButton>
             <tabView:TabsView.LeftHeaderContent>
@@ -80,7 +80,7 @@
                                 IsEnabled="{Binding IsLoggedIn, Source={x:Static views:PixevalSettings.Instance}}"
                                 Tag="{Binding IdText}" />
                             <MenuItem
-                                Click="OpenMyPage_OnClick"
+                                Command="{Binding OpenMyPageCommand}"
                                 Header="{I18N {x:Static pixeval:MainPageResources+OpenMyPageItem.Text}}"
                                 Icon="{markup:SymbolIcon Open}"
                                 IsEnabled="{Binding IsLoggedIn, Source={x:Static views:PixevalSettings.Instance}}" />
@@ -115,7 +115,7 @@
                                 Tag="https://www.pixiv.net/settings/viewing" />
                             <Separator />
                             <MenuItem
-                                Click="SwitchAccount_OnClicked"
+                                Command="{Binding SwitchAccountCommand}"
                                 Header="{I18N {x:Static pixeval:MainPageResources+SwitchAccountItem.Text}}"
                                 Icon="{markup:SymbolIcon PersonSwap}" />
                         </MenuFlyout>
@@ -205,8 +205,8 @@
                     <ItemsControl
                         HorizontalAlignment="Stretch"
                         DockPanel.Dock="Bottom"
-                        ItemsSource="{Binding #Root.FooterNavigationItems}" />
-                    <ItemsControl HorizontalAlignment="Stretch" ItemsSource="{Binding #Root.HeaderNavigationItems}" />
+                        ItemsSource="{Binding FooterNavigationItems}" />
+                    <ItemsControl HorizontalAlignment="Stretch" ItemsSource="{Binding HeaderNavigationItems}" />
                 </DockPanel>
             </tabView:TabsView.LeftContent>
         </tabView:TabsView>

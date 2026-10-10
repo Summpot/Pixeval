@@ -13,10 +13,12 @@ using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
 using Pixeval.Models;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Storage;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Search;
@@ -27,6 +29,9 @@ namespace Pixeval.Views.Search;
 
 public partial class SearchPage : IconContentPage
 {
+    private static INavigationService NavigationService =>
+        App.Services?.GetService<INavigationService>() ?? new NavigationService();
+
     private const string SearchTextBoxPart = "PART_TextBox";
     private const string SearchSelectingItemsControlPart = "PART_SelectingItemsControl";
     private static readonly TimeSpan _SearchTagCompletionDelay = TimeSpan.FromSeconds(1);
@@ -92,12 +97,10 @@ public partial class SearchPage : IconContentPage
     {
         if (sender is not Control { DataContext: TrendingTag tag })
             return;
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
-            return;
         if (DataContext is not SearchPageViewModel viewModel)
             return;
 
-        viewContainer.NavigateTo(new WorkSearchResultPage(tag.Tag, viewModel.SelectedTrendingTagsType));
+        NavigationService.NavigateToWorkSearch(tag.Tag, viewModel.SelectedTrendingTagsType, this);
     }
 
     private void SearchButton_OnClick(object? sender, RoutedEventArgs e)
@@ -368,7 +371,7 @@ public partial class SearchPage : IconContentPage
         {
             if (!advanced)
             {
-                viewContainer.NavigateTo(new WorkSearchResultPage(searchText, viewModel.SelectedAdvancedOptionsType));
+                NavigationService.NavigateToWorkSearch(searchText, viewModel.SelectedAdvancedOptionsType, this);
                 return;
             }
 
@@ -382,7 +385,7 @@ public partial class SearchPage : IconContentPage
 
                 var arguments = viewModel.NovelForm.BuildArguments(searchText);
                 App.AppViewModel.AddSearchHistory(searchText);
-                viewContainer.NavigateTo(new WorkSearchResultPage(arguments));
+                NavigationService.NavigateToWorkSearch(arguments, this);
             }
             else
             {
@@ -394,7 +397,7 @@ public partial class SearchPage : IconContentPage
 
                 var arguments = viewModel.IllustrationForm.BuildArguments(searchText);
                 App.AppViewModel.AddSearchHistory(searchText);
-                viewContainer.NavigateTo(new WorkSearchResultPage(arguments));
+                NavigationService.NavigateToWorkSearch(arguments, this);
             }
         }
         catch (Exception ex)
@@ -438,37 +441,34 @@ public partial class SearchPage : IconContentPage
 
     private bool TryOpenIllustrationPage()
     {
-        if (!TryGetSearchId(out var id) || TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
+        if (!TryGetSearchId(out var id))
             return false;
 
-        viewContainer.CreateIllustrationPage(id.ToString(), PlatformConstants.Pixiv);
+        NavigationService.NavigateToIllustration(id.ToString(), PlatformConstants.Pixiv, this);
         return true;
     }
 
     private bool TryOpenNovelPage()
     {
-        if (!TryGetSearchId(out var id) || TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
+        if (!TryGetSearchId(out var id))
             return false;
 
-        viewContainer.CreateNovelPage(id);
+        NavigationService.NavigateToNovel(id, this);
         return true;
     }
 
     private bool TryOpenUserPage()
     {
-        if (!TryGetSearchId(out var id) || TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
+        if (!TryGetSearchId(out var id))
             return false;
 
-        viewContainer.CreateUserPage(id);
+        NavigationService.NavigateToUser(id, this);
         return true;
     }
 
     private void OpenUserSearchPage()
     {
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
-            return;
-
-        viewContainer.NavigateTo(new UserSearchResultPage(SearchAutoCompleteBox.Text?.Trim()));
+        NavigationService.NavigateToUserSearch(SearchAutoCompleteBox.Text?.Trim(), this);
     }
 
     private void CommitTagCompletion(string tag)

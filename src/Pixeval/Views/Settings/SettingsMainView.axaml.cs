@@ -17,8 +17,9 @@ using Pixeval.Models.Settings;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO.Caching;
 using Pixeval.ViewModels;
-using Pixeval.Views.Login;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.Services;
 
 namespace Pixeval.Views.Settings;
 
@@ -38,7 +39,8 @@ public partial class SettingsMainView : ContentPage
 
     private void SwitchAccountButton_OnClicked(object sender, RoutedEventArgs e)
     {
-        TopLevel.GetTopLevel(this)?.ViewContainer?.NavigateTo(new LoginPage());
+        var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
+        nav.NavigateToLogin(sourceControl: this);
     }
 
     private async void ResetDefaultSettings_OnClicked(object sender, RoutedEventArgs e)

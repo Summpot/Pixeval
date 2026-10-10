@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement;
 using Pixeval.I18N;
 using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.Utilities.Network;
 using Pixeval.ViewModels;
@@ -161,8 +162,8 @@ public partial class LoginPage : IconContentPage
 
     public void LoginNavigate()
     {
-        var viewContainer = TopLevel.GetTopLevel(this)?.ViewContainer;
-        viewContainer?.NavigateTo(new HomePage(), true);
+        var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
+        nav.NavigateToHome(removeCurrentPage: true, sourceControl: this);
         App.AppViewModel.QueueWorkSubscriptionSyncAll();
     }
 

@@ -10,6 +10,7 @@ using Pixeval.Models.Pixiv;
 using Pixeval.Native.Booru;
 using Pixeval.Native.Mako;
 using Pixeval.Utilities;
+using Pixeval.Services;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.ViewContainers;
@@ -18,6 +19,9 @@ namespace Pixeval.Views.Viewers;
 
 public static class ViewerHelper
 {
+    private static INavigationService NavigationService =>
+        App.Services?.GetService<INavigationService>() ?? new NavigationService();
+
     /// <param name="control"></param>
     extension(ViewContainerBase control)
     {
@@ -28,7 +32,7 @@ public static class ViewerHelper
         /// </summary>
         public void CreateIllustrationPage(string id, string platform)
         {
-            control.NavigateTo(new IllustrationViewerPage(new(id, platform)));
+            NavigationService.NavigateToIllustration(id, platform, control);
         }
 
         /// <summary>
@@ -38,7 +42,7 @@ public static class ViewerHelper
         /// <param name="needRefresh"></param>
         public void CreateIllustrationPage(object illustrationViewModel, bool needRefresh = false)
         {
-            control.NavigateTo(new IllustrationViewerPage(new(illustrationViewModel, needRefresh)));
+            NavigationService.NavigateToIllustration(illustrationViewModel, null, needRefresh, control);
         }
 
         /// <summary>
@@ -49,8 +53,7 @@ public static class ViewerHelper
         /// <param name="needRefresh">是否需要刷新插画（如从数据库中加载的则需要刷新）</param>
         public void CreateIllustrationPage(object illustrationViewModel, IReadOnlyList<object> items, bool needRefresh = false)
         {
-            var index = IndexOf(items, illustrationViewModel);
-            control.NavigateTo(new IllustrationViewerPage(new(items, index, needRefresh)));
+            NavigationService.NavigateToIllustration(illustrationViewModel, items, needRefresh, control);
         }
 
         #endregion
@@ -62,7 +65,7 @@ public static class ViewerHelper
         /// </summary>
         public void CreateNovelPage(long id)
         {
-            control.NavigateTo(new NovelViewerPage(new(id)));
+            NavigationService.NavigateToNovel(id, control);
         }
 
         /// <summary>
@@ -72,7 +75,7 @@ public static class ViewerHelper
         /// <param name="needRefresh">是否需要刷新小说（如从数据库中加载的则需要刷新）</param>
         public void CreateNovelPage(Novel novel, bool needRefresh = false)
         {
-            control.NavigateTo(new NovelViewerPage(new(novel, needRefresh)));
+            NavigationService.NavigateToNovel(novel, null, needRefresh, control);
         }
 
         /// <summary>
@@ -83,8 +86,7 @@ public static class ViewerHelper
         /// <param name="needRefresh">是否需要刷新小说（如从数据库中加载的则需要刷新）</param>
         public void CreateNovelPage(Novel novel, IReadOnlyList<Novel> items, bool needRefresh = false)
         {
-            var index = IndexOf(items, novel);
-            control.NavigateTo(new NovelViewerPage(new(items, index, needRefresh)));
+            NavigationService.NavigateToNovel(novel, items, needRefresh, control);
         }
 
         #endregion
@@ -93,7 +95,7 @@ public static class ViewerHelper
 
         public void CreateSeriesPage(SimpleWorkType workType, long seriesId)
         {
-            control.NavigateTo(new SeriesViewerPage(new(workType, seriesId)));
+            NavigationService.NavigateToSeries(workType, seriesId, control);
         }
 
         public void CreateSeriesPage(
@@ -103,7 +105,7 @@ public static class ViewerHelper
             IWorkEntry? firstWork,
             IWorkViewViewModel worksViewModel)
         {
-            control.NavigateTo(new SeriesViewerPage(new(workType, seriesId, seriesDetail, firstWork, worksViewModel)));
+            NavigationService.NavigateToSeries(workType, seriesId, seriesDetail, firstWork, worksViewModel, control);
         }
 
         #endregion
@@ -112,13 +114,12 @@ public static class ViewerHelper
 
         public void CreateUserPage(long userId)
         {
-            control.NavigateTo(new UserViewerPage(new(userId)));
+            NavigationService.NavigateToUser(userId, control);
         }
 
         public void CreateUserPage(SingleUserResponse userDetail)
         {
-            var viewModel = new UserViewerPageViewModel(userDetail);
-            control.NavigateTo(new UserViewerPage(viewModel));
+            NavigationService.NavigateToUser(userDetail, control);
         }
 
         #endregion

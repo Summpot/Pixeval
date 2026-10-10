@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -213,7 +214,7 @@ public static class AvaloniaHelper
     /// <param name="needLogin">需要登录后才能打开的页面</param>
     /// <param name="inNavigation">需要参数而无法直接从导航栏打开的页</param>
     /// <returns></returns>
-    private static KeyValuePair<Type, (Symbol Symbol, string Header)> Page<TPage>(
+    private static KeyValuePair<Type, (Symbol Symbol, string Header)> Page<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TPage>(
         Symbol icon,
         string headerResource,
         bool needLogin = true,

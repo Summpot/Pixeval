@@ -10,8 +10,10 @@ using Avalonia.Controls.Selection;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Viewers;
@@ -20,6 +22,9 @@ namespace Pixeval.Views.Work;
 
 public sealed partial class WorkView : UserControl, IDisposable
 {
+    private static INavigationService NavigationService =>
+        App.Services?.GetService<INavigationService>() ?? new NavigationService();
+
     private bool _isDisposed;
 
     public event EventHandler<Control, object>? RequestAddToBookmark;
@@ -51,7 +56,7 @@ public sealed partial class WorkView : UserControl, IDisposable
         PseudoClasses.Set(":masonry", !isNovel && LayoutType is ThumbnailLayoutType.Masonry);
     }
 
-    private async void WorkItem_OnTapped(object? sender, TappedEventArgs tappedEventArgs)
+    private void WorkItem_OnTapped(object? sender, TappedEventArgs tappedEventArgs)
     {
         if (sender is not ListBoxItem { DataContext: { } vm } lbi)
             return;
@@ -62,7 +67,7 @@ public sealed partial class WorkView : UserControl, IDisposable
             return;
         }
 
-        await CreateWorkViewerPage(vm);
+        CreateWorkViewerPage(vm);
     }
 
     private void UpdateSelection(ListBoxItem item, TappedEventArgs e)
@@ -81,7 +86,7 @@ public sealed partial class WorkView : UserControl, IDisposable
         WorkListBox.Selection.SelectRange(anchorIndex, index);
     }
 
-    private async void WorkItem_OnDoubleTapped(object? sender, TappedEventArgs e)
+    private void WorkItem_OnDoubleTapped(object? sender, TappedEventArgs e)
     {
         if (sender is not ListBoxItem { DataContext: { } vm })
             return;
@@ -89,33 +94,30 @@ public sealed partial class WorkView : UserControl, IDisposable
         if (WorkListBox.SelectionMode.HasFlag(SelectionMode.Single))
             return;
 
-        await CreateWorkViewerPage(vm);
+        CreateWorkViewerPage(vm);
     }
 
-    private async Task CreateWorkViewerPage(object vm)
+    private void CreateWorkViewerPage(object vm)
     {
-        if (TopLevel.GetTopLevel(this) is not { ViewContainer: { } viewContainer })
-            return;
-
         switch (vm, DataContext)
         {
             case (Novel novel, NovelViewViewModel viewViewModel):
-                viewContainer.CreateNovelPage(novel, (IReadOnlyList<Novel>) viewViewModel.View);
+                NavigationService.NavigateToNovel(novel, (IReadOnlyList<Novel>) viewViewModel.View, false, this);
                 break;
             case (Novel novel, SimpleOperableViewViewModel<Novel> viewViewModel):
-                viewContainer.CreateNovelPage(novel, viewViewModel.View.OfType<Novel>().ToList(), viewViewModel.NeedRefreshOnOpen);
+                NavigationService.NavigateToNovel(novel, viewViewModel.View.OfType<Novel>().ToList(), viewViewModel.NeedRefreshOnOpen, this);
                 break;
             case (object illustration, IllustrationViewViewModel viewViewModel):
-                viewContainer.CreateIllustrationPage(illustration, viewViewModel.View);
+                NavigationService.NavigateToIllustration(illustration, viewViewModel.View, false, this);
                 break;
             case (object illustration, SimpleOperableViewViewModel<object> viewViewModel):
-                viewContainer.CreateIllustrationPage(illustration, viewViewModel.View, viewViewModel.NeedRefreshOnOpen);
+                NavigationService.NavigateToIllustration(illustration, viewViewModel.View, viewViewModel.NeedRefreshOnOpen, this);
                 break;
             case (Novel { Id: var id }, _):
-                viewContainer.CreateNovelPage(id);
+                NavigationService.NavigateToNovel(id, this);
                 break;
             case (object illustration, _):
-                viewContainer.CreateIllustrationPage(illustration);
+                NavigationService.NavigateToIllustration(illustration, null, false, this);
                 break;
         }
     }
@@ -171,8 +173,7 @@ public sealed partial class WorkView : UserControl, IDisposable
     {
         if (e is IWorkEntry { User.Id: var id })
         {
-            if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
-                viewContainer.CreateUserPage(id);
+            NavigationService.NavigateToUser(id, this);
         }
     }
 

@@ -1,6 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Search;
 using Pixeval.Views.Work;
@@ -27,10 +29,11 @@ public partial class SauceNaoSearchPage : ContentPage
 
     private void SearchButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not SauceNaoSearchPageViewModel viewModel
-            || TopLevel.GetTopLevel(this) is not { ViewContainer: { } viewContainer })
+        if (DataContext is not SauceNaoSearchPageViewModel viewModel)
             return;
-        viewContainer.NavigateTo(new ArtworkSauceNaoSearchResultPage(SauceNaoSearchPageViewModel.ApiKey, viewModel.File));
+
+        var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
+        nav.NavigateTo<ArtworkSauceNaoSearchResultPage>((SauceNaoSearchPageViewModel.ApiKey, viewModel.File), sourceControl: this);
     }
 
     #region Disposal

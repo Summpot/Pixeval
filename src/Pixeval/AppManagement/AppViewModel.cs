@@ -41,6 +41,8 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
 
     public ServiceProvider AppServiceProvider { get; private set; } = null!;
     public IUserSessionService UserSession { get; private set; } = null!;
+    public INavigationService NavigationService { get; private set; } = null!;
+    public IAppUpdateNotificationCoordinator AppUpdateNotificationCoordinator { get; private set; } = null!;
     public App App { get; } = app;
     public StorageEngine StorageEngine { get; } = new(AppInfo.DatabaseFilePath);
     public DownloadManager DownloadManager { get; private set; } = null!;
@@ -65,6 +67,8 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         AppSettings.Initialize();
         AppServiceProvider = CreateServiceProvider();
         UserSession = AppServiceProvider.GetRequiredService<IUserSessionService>();
+        NavigationService = AppServiceProvider.GetRequiredService<INavigationService>();
+        AppUpdateNotificationCoordinator = AppServiceProvider.GetRequiredService<IAppUpdateNotificationCoordinator>();
         UserSession.UserRefreshed += u => UserRefreshed?.Invoke(u);
         SetNameResolvers();
         InitializePersistence();
@@ -132,6 +136,8 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             .AddSingleton<IImageProviderService, ImageProviderService>()
             .AddSingleton<IDownloadFormatService, DownloadFormatService>()
             .AddSingleton<IArtworkActionService, ArtworkActionService>()
+            .AddSingleton<INavigationService, NavigationService>()
+            .AddSingleton<IAppUpdateNotificationCoordinator, AppUpdateNotificationCoordinator>()
             .AddSingleton<WorkSubscriptionDownloadService>()
             .AddSingleton<IWorkSubscriptionService>(provider =>
                 provider.GetRequiredService<WorkSubscriptionDownloadService>())

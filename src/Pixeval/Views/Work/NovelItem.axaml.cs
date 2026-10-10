@@ -5,10 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Pixeval.Native.Mako;
-using Pixeval.Utilities;
 using Pixeval.ViewModels;
-using Pixeval.Views.Search;
-using Pixeval.Views.Viewers;
 
 namespace Pixeval.Views.Work;
 
@@ -27,19 +24,15 @@ public partial class NovelItem : WorkItem
     {
         if (sender is not Control { DataContext: Tag tag })
             return;
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
-            return;
         App.AppViewModel.AddSearchHistory(tag.Name, tag.TranslatedName);
-        viewContainer.NavigateTo(new WorkSearchResultPage(tag.Name, SimpleWorkType.Novel));
+        App.AppViewModel.NavigationService.NavigateToWorkSearch(tag.Name, SimpleWorkType.Novel, this);
     }
 
     private void AuthorButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not Control { DataContext: Novel vm })
             return;
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
-            return;
-        viewContainer.CreateUserPage(vm.Entry.User.Id);
+        App.AppViewModel.NavigationService.NavigateToUser(vm.Entry.User.Id, this);
     }
 
     private void InputElement_OnPointerEntered(object? sender, PointerEventArgs e)

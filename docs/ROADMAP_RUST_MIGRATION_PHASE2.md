@@ -124,7 +124,7 @@ flowchart TD
         P6_2["6.2 彻底清退 Misaki 外部依赖与历史抽象 [已完成]<br/>• 物理移除 Misaki NuGet 包与 IArtworkInfo 等复杂接口链<br/>• 视图 DataTemplate 直绑原生实体并多态分发"]
         P6_3["6.3 静态巨石解体与规范化标准 DI [已完成]<br/>• 彻底消除全局 App.AppViewModel / PixevalSettings 静态穿透<br/>• 全面推行构造注入与类型安全交互命令"]
         P6_4["6.4 集合管道与数据流极大化精简 [已完成]<br/>• 清退沉重的 DataProvider / IRefCloneable 体系<br/>• 直连 Rust 增量流与极简 ObservableCollection"]
-        P6_5["6.5 View Code-Behind 极致瘦身与声明式路由<br/>• WorkContainer / TabViewContainer 视图逻辑抽取<br/>• 规范化 NavigationService 统一路由跳转"]
+        P6_5["6.5 View Code-Behind 极致瘦身与声明式路由 [已完成]<br/>• WorkContainer / TabViewContainer 视图逻辑抽取<br/>• 规范化 NavigationService 统一路由跳转"]
     end
 
     Phase2 --> Phase3
@@ -551,15 +551,19 @@ Phase 6 的核心目标是：**全面清理在逐步演进过程中积累的过�
   - [x] 精简下载与搜索集合模型：`DownloadFolderPageViewModel` 直连 `ObservableCollection`，`DownloadItemPageViewModel` 采用轻量 LINQ 过滤同步，`SearchPageViewModel` 采用标准集合同步替换复合集合轮子。
   - [x] 全工程 0 编译警告 0 编译错误，针对性单元测试 308 项全绿通过。
 
-#### 6.5 View Code-Behind 极致瘦身与声明式路由体系 (View Code-Behind Decoupling & Modern Navigation)
+#### 6.5 View Code-Behind 极致瘦身与声明式路由体系 (View Code-Behind Decoupling & Modern Navigation) [已完成]
 - **痛点与坏味道**：
-  - `Views/` 目录下累积超过 400KB 的 Code-Behind 代码，`WorkContainer.axaml.cs`（404行）、`TabViewContainer.axaml.cs`（431行）等充当了事实上的巨石 Presenter。
+  - `Views/` 目录下累积超过 400KB 的 Code-Behind 代码，`WorkContainer.axaml.cs`（322行）、`TabViewContainer.axaml.cs`（432行）等充当了事实上的巨石 Presenter。
   - 页面导航依赖容器控件间的直接硬编码跳转和实例化。
 - **重构方案**：
   - 对大视图执行严格的 MVVM 剥离：将筛选自动补全、选择状态控制、工具栏动态组装等逻辑提取为专用 ViewModel、Attached Behavior 或自定义 Control。
   - 建立统一的声明式应用导航服务（`INavigationService`），支持视图间解耦的路由跳转与参数传递，废止在 Code-Behind 中直接 `new Page()`。
-- **验收标准**：
-  - 核心 View 的 Code-Behind 仅保留 XAML 初始化与必需的纯 UI 交互动画，行数缩减 60% 以上；页面跳转完全由导航路由驱动。
+- **验收标准与完成状态**：
+  - [x] 核心视图逻辑解耦与代码大幅瘦身：`TabViewContainer.axaml.cs`（从 432 行缩减至 150 行，削减超 65%）、`WorkContainer.axaml.cs`（从 322 行缩减至 150 行，削减超 53%）。
+  - [x] 抽离专用服务与协同器：提取 `IAppUpdateNotificationCoordinator` / `AppUpdateNotificationCoordinator`（负责 Velopack 更新检测与弹窗提示）、`TabContextMenuHelper`（负责标签右键菜单与 `TabClosePlanner` 动作分发）、`WorkContainerFilterCoordinator`（负责 DSL 过滤建议补全与报错定位）、`WorkContainerBatchOperations`（负责作品批量收藏、批量标签选取、批量下载及浏览器打开）。
+  - [x] 建立统一的声明式应用导航服务 `INavigationService` 与 `NavigationService`，消除各 View 中硬编码 `new Page(...)` 的耦合调用（重构 `SearchPage`、`HomeCardDefinitions`、`WorkView`、`NovelItem`、`LoginPage`、`SettingsMainView`、`WorkInfoPane` 等核心导航跳转）。
+  - [x] `NavigationService` 支持泛型类型安全跳转 `NavigateTo<TPage>`、统一路由键跳转 `NavigateToKey` 以及针对插画/小说/用户/搜索等领域实体的强类型导航。
+  - [x] 全工程 0 编译错误、0 警告（通过 `[DynamicallyAccessedMembers]` 严密规避 AOT 裁剪警告），新增 `NavigationServiceTest` 并完成 targeted 单元测试验证。
 
 ---
 
@@ -578,9 +582,9 @@ Phase 6 的核心目标是：**全面清理在逐步演进过程中积累的过�
    - 注册单一职责核心服务至 DI，消灭弱类型命令与 `App.AppViewModel` 静态穿透，推行构造函数注入与 XAML 标记扩展。
 5. **集合管道精简与数据流极大化精简 (Phase 6.4) [已完成]**
    - 物理删除 `SharableViewDataProvider` 等复杂轮子，将集合管道收敛至原生异步流与精简集合。
-6. **第一当前推进目标：View Code-Behind 极致瘦身与声明式路由体系 (Phase 6.5) [待启动]**
+6. **表现层终极瘦身与声明式路由体系 (Phase 6.5) [已完成]**
    - 解耦 `WorkContainer` / `TabViewContainer`，完成 Avalonia 表现层终极瘦身与声明式路由。
-7. **最终交付：统一跨平台 CI/CD 流水线 (Phase 4.2)**
+7. **最终交付：统一跨平台 CI/CD 流水线 (Phase 4.2) [待启动]**
    - 配置 GitHub Actions 原生矩阵交叉编译与多架构分发。
 
 

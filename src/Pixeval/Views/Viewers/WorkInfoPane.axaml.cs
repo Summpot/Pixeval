@@ -16,7 +16,8 @@ using Pixeval.Models;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Booru;
-using Pixeval.Native.Mako;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.Views.Capability;
 using Pixeval.Views.Search;
@@ -196,23 +197,22 @@ public class WorkInfoPane : TemplatedControl
 
     private void ViewLikedUsers()
     {
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
-            return;
+        var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
 
         if (ArtworkInfo is Illustration illust && illust.Id > 0)
         {
-            viewContainer.NavigateTo(new BookmarkUsersPage(illust.Id, false, illust.Title));
+            nav.NavigateTo<BookmarkUsersPage>((illust.Id, false, illust.Title), sourceControl: this);
         }
         else if (ArtworkInfo is Novel novel && novel.Id > 0)
         {
-            viewContainer.NavigateTo(new BookmarkUsersPage(novel.Id, true, novel.Title));
+            nav.NavigateTo<BookmarkUsersPage>((novel.Id, true, novel.Title), sourceControl: this);
         }
         else if (ArtworkInfo is WorkEntry we)
         {
             if (we.AsWorkEntry is Illustration i && i.Id > 0)
-                viewContainer.NavigateTo(new BookmarkUsersPage(i.Id, false, i.Title));
+                nav.NavigateTo<BookmarkUsersPage>((i.Id, false, i.Title), sourceControl: this);
             else if (we.AsWorkEntry is Novel n && n.Id > 0)
-                viewContainer.NavigateTo(new BookmarkUsersPage(n.Id, true, n.Title));
+                nav.NavigateTo<BookmarkUsersPage>((n.Id, true, n.Title), sourceControl: this);
         }
     }
 
@@ -238,14 +238,13 @@ public class WorkInfoPane : TemplatedControl
 
     private void OpenTag(WorkInfoTag? tag)
     {
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
-            return;
         if (tag is null)
             return;
 
         var type = ArtworkInfo is Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
         App.AppViewModel.AddSearchHistory(tag.Name, tag.TranslatedName);
-        viewContainer.NavigateTo(new WorkSearchResultPage(tag.Name, type));
+        var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
+        nav.NavigateToWorkSearch(tag.Name, type, this);
     }
 
     private void BlockTag(WorkInfoTag? tag)
