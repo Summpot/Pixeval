@@ -215,7 +215,7 @@ mod tests {
     }
 
     struct TestCallback {
-        daemon_states: std::sync::Mutex<Vec<bool>>,
+        daemon_states: std::sync::Arc<std::sync::Mutex<Vec<bool>>>,
     }
 
     impl SubscriptionProgressCallback for TestCallback {
@@ -249,11 +249,10 @@ mod tests {
 
     #[test]
     fn test_daemon_callback_notification() {
-        let states_arc = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let daemon_states = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
         let cb = TestCallback {
-            daemon_states: std::sync::Mutex::new(Vec::new()),
+            daemon_states: std::sync::Arc::clone(&daemon_states),
         };
-        let states_ptr = &cb.daemon_states as *const _;
         let engine = SubscriptionSyncEngine::new(None, Some(Box::new(cb)));
 
         engine.start_daemon(10);
@@ -261,5 +260,8 @@ mod tests {
 
         engine.stop_daemon();
         assert!(!engine.is_daemon_running());
+
+        let states = daemon_states.lock().unwrap().clone();
+        assert_eq!(states, vec![true, false]);
     }
 }

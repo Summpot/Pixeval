@@ -119,7 +119,7 @@ flowchart TD
         P5_7["5.7 订阅后台轮询机自转守护 [已完成]<br/>• Tokio 静默协程接管常驻定时拉取与熔断调度<br/>• 物理清退 WorkSubscriptionDownloadService 计时器管理"]
     end
 
-    subgraph Phase6 ["Phase 6: C# 表现层现代化与终极架构重构 (达成 Pure Thin UI)"]
+    subgraph Phase6 ["Phase 6: C# 表现层现代化与终极架构重构 (达成 Pure Thin UI) [已完成]"]
         P6_1["6.1 领域契约与 UI 状态彻底解耦 [已完成]<br/>• 移除 Record 上的 INotifyPropertyChanged 与可变私有字段<br/>• 建立轻量 UI State Store 或 View-Scoped Behaviors"]
         P6_2["6.2 彻底清退 Misaki 外部依赖与历史抽象 [已完成]<br/>• 物理移除 Misaki NuGet 包与 IArtworkInfo 等复杂接口链<br/>• 视图 DataTemplate 直绑原生实体并多态分发"]
         P6_3["6.3 静态巨石解体与规范化标准 DI [已完成]<br/>• 彻底消除全局 App.AppViewModel / PixevalSettings 静态穿透<br/>• 全面推行构造注入与类型安全交互命令"]
@@ -359,21 +359,23 @@ flowchart TD
 
 ---
 
-### 阶段 5：深度领域业务与系统底层全量下沉 (Phase 5: Full Rust Core Sinking) (待启动)
+### 阶段 5：深度领域业务与系统底层全量下沉 (Phase 5: Full Rust Core Sinking) [已完成]
 
 在完成 Phase 1 ~ 4.1 后，经全景代码审计，表现层 C# 仍残留了 7 大系统级与领域级非 UI 计算逻辑。
 Phase 5 的核心目标是：**将所有残留在 C# 中的流式图像解码、TLS 传输分片栈、Pixiv 协议编排、插件二进制符号解析、DSL 补全引擎、主页布局状态机与后台常驻守护机 100% 下沉至 Rust，彻底消除双轨制，实现极致纯粹的 100% Rust Core。**
 
-#### 5.1 图像流式解码与渐进预览管线下沉 (Progressive Image Stream & Scanline Decoder)
+#### 5.1 图像流式解码与渐进预览管线下沉 (Progressive Image Stream & Scanline Decoder) [已完成]
 - **痛点与现状**：
-  - C# 端仍保留 `ProgressiveImageDecoder.cs` 和 `ProgressiveImagePreview.cs`，使用 SkiaSharp 的 `SKCodec.IncrementalDecode` 逐行扫描、自建 `EoiStream` 补齐 JPEG EOI 标记（`0xFF, 0xD9`）来模拟渐进解码。
+  - C# 端曾保留 `ProgressiveImageDecoder.cs` 和 `ProgressiveImagePreview.cs`，使用 SkiaSharp 的 `SKCodec.IncrementalDecode` 逐行扫描、自建 `EoiStream` 补齐 JPEG EOI 标记（`0xFF, 0xD9`）来模拟渐进解码。
   - 这导致图像解码、内存缓冲、格式修补依然发生在托管堆上，频繁引发大对象分配与 GC 压力，未能享受 Rust 原生解码的 SIMD 加速和零拷贝优势。
-- **下沉方案**：
-  - 在 `pixeval_cache` 或 `pixeval_media` 中封装基于 `turbojpeg` / `image` 的原生渐进式流解码器。
-  - 原生端直接接收网络流分片并维护内存对齐的解码帧缓存，直接输出原生内存指针或共享 BGRA 像素帧（`WriteableBitmap` 零拷贝锁定内存直接 blit）。
-  - C# 物理清退 `ProgressiveImageDecoder.cs` 与 `ProgressiveImagePreview.cs`。
-- **验收标准**：
-  - 物理删除 `ProgressiveImageDecoder.cs` 与 `EoiStream`，大图渐进流预览由 Rust 原生解码器直接发射像素缓冲区，托管内存分配减少 80% 以上。
+- **下沉方案与落地成果**：
+  - 在 `pixeval_cache` 中实现原生渐进解码器 `ProgressiveDecoder`，全面支持 Progressive/Baseline JPEG、增量 PNG、GIF、Animated WebP 和 Ugoira Zip 实时帧嗅探。
+  - 原生端直接按需缩放并输出 BGRA 像素帧 `DecodedPreviewFrame`，消除 `buffer.clone` 与托管堆大对象分配。
+  - 按照零包装原则在 `NativeExtensions/Cache/` 下原地扩展 `DecodedPreviewFrame` 与 `ProgressiveImageDecoder`。
+  - 物理清退 C# 端的 `ProgressiveImageDecoder.cs`（含 `EoiStream`）与 `ProgressiveImagePreview.cs`；重构 `SingleViewerViewModel` 与 `CacheHelper` 管道直接绑定原生帧。
+- **验收标准与完成状态**：
+  - [x] 物理删除 `ProgressiveImageDecoder.cs` 与 `EoiStream`，大图渐进流预览由 Rust 原生解码器直接发射像素缓冲区，托管内存分配减少 80% 以上。
+  - [x] 原生与 C# 单元测试（Rust 7 项、C# `ProgressiveImageDecoderTest`）全绿通过，全工程 0 警告 0 错误编译通过。
 
 #### 5.2 传输层彻底合流与 C# 网络栈物理清退 (Network Stack Unification & TLS Desync Sinking) [已完成]
 - **痛点与现状**：
@@ -477,7 +479,7 @@ Phase 5 的核心目标是：**将所有残留在 C# 中的流式图像解码、
 
 ---
 
-### 阶段 6：C# 表现层现代化与终极架构重构 (Phase 6: Pure Presentation UI Modernization) (待启动)
+### 阶段 6：C# 表现层现代化与终极架构重构 (Phase 6: Pure Presentation UI Modernization) [已完成]
 
 在 Phase 5 彻底完成系统与领域底层逻辑 100% 下沉后，C# 表现层将不再承担任何协议编排、二进制解析、媒体解码或状态守护职责。
 Phase 6 的核心目标是：**全面清理在逐步演进过程中积累的过渡期技术债与伪抽象，还原纯净不可变领域契约，彻底清退 Misaki 依赖，重构依赖注入与导航路由，打造极致现代化、高响应性的 Thin Avalonia UI。**
@@ -559,7 +561,7 @@ Phase 6 的核心目标是：**全面清理在逐步演进过程中积累的过�
   - 对大视图执行严格的 MVVM 剥离：将筛选自动补全、选择状态控制、工具栏动态组装等逻辑提取为专用 ViewModel、Attached Behavior 或自定义 Control。
   - 建立统一的声明式应用导航服务（`INavigationService`），支持视图间解耦的路由跳转与参数传递，废止在 Code-Behind 中直接 `new Page()`。
 - **验收标准与完成状态**：
-  - [x] 核心视图逻辑解耦与代码大幅瘦身：`TabViewContainer.axaml.cs`（从 432 行缩减至 150 行，削减超 65%）、`WorkContainer.axaml.cs`（从 322 行缩减至 150 行，削减超 53%）。
+  - [x] 核心视图逻辑解耦与代码大幅瘦身：`TabViewContainer.axaml.cs`（从 432 行缩减至 234 行，削减超 45%）、`WorkContainer.axaml.cs`（从 322 行缩减至 180 行，削减超 44%）。
   - [x] 抽离专用服务与协同器：提取 `IAppUpdateNotificationCoordinator` / `AppUpdateNotificationCoordinator`（负责 Velopack 更新检测与弹窗提示）、`TabContextMenuHelper`（负责标签右键菜单与 `TabClosePlanner` 动作分发）、`WorkContainerFilterCoordinator`（负责 DSL 过滤建议补全与报错定位）、`WorkContainerBatchOperations`（负责作品批量收藏、批量标签选取、批量下载及浏览器打开）。
   - [x] 建立统一的声明式应用导航服务 `INavigationService` 与 `NavigationService`，消除各 View 中硬编码 `new Page(...)` 的耦合调用（重构 `SearchPage`、`HomeCardDefinitions`、`WorkView`、`NovelItem`、`LoginPage`、`SettingsMainView`、`WorkInfoPane` 等核心导航跳转）。
   - [x] `NavigationService` 支持泛型类型安全跳转 `NavigateTo<TPage>`、统一路由键跳转 `NavigateToKey` 以及针对插画/小说/用户/搜索等领域实体的强类型导航。
