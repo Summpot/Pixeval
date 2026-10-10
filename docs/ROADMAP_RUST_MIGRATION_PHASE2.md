@@ -814,7 +814,7 @@ src/Pixeval/
 
 ---
 
-### 阶段 9：Avalonia 表现层现代化与反模式消除 (Phase 9: Avalonia Modernization & Anti-Pattern Remediation) [待启动]
+### 阶段 9：Avalonia 表现层现代化与反模式消除 (Phase 9: Avalonia Modernization & Anti-Pattern Remediation) [进行中]
 
 在 Phase 2 至 Phase 7 的 Rust 下沉以及 Phase 8 的目录拓扑与命名空间彻底规范化之后，Pixeval 的领域内核与 Rust 运行时已经完全稳固（UniFFI 直绑，无 DTO/Adapter 包装）。然而，表现层代码中仍遗留着大量由于历史演化和 WPF/UWP 习惯带来的 Avalonia 反模式：
 
@@ -837,7 +837,7 @@ src/Pixeval/
   - **卡片交互声明式重构**：`WorkView` DataTemplate 中的卡片彻底移除自定义 C# 事件转发机制，改用 RoutedCommand、强类型 Attached Behavior 或直接数据绑定到统一的强类型命令（如 `IArtworkActionService` 关联命令或顶级路由命令）。
 - **验收标准**：
   - [ ] `SearchPage.axaml.cs` 与 `SettingsMainView.axaml.cs` 代码量显著削减（原则上仅保留必要的纯视觉交互与初始化），业务逻辑全部在对应 ViewModel 闭环。
-  - [ ] 整个 `Views/` 目录下消除所有非 Avalonia 框架必需的 `async void` 方法，全面转为 `IAsyncRelayCommand` 或 `Task` 封装。
+  - [x] 整个 `Views/` 目录下消除所有非 Avalonia 框架必需的 `async void` 方法，全面转为 `IAsyncRelayCommand` 或 `Task` 封装。
   - [ ] `WorkView.axaml` 模板中不再声明自定义 C# 事件监听，卡片操作通过声明式命令或行为触发。
 
 #### 9.2 UI 上下文解耦与视觉树硬依赖拔除 (Visual Tree Decoupling & UI Services)
@@ -854,9 +854,9 @@ src/Pixeval/
   - **视觉树解耦与生命周期安全托管**：由顶级窗口/主外壳容器（`MainWindow` / `TabViewContainer`）在初始化与生命周期挂载时作为提供者向 UI 服务注入 `TopLevel` / 宿主引用，ViewModel 与辅助逻辑直接注入 UI 服务接口，彻底移除代码中的 `TopLevel.GetTopLevel(this)?.ViewContainer` 链式调用。
   - **彻底拔除 View Code-Behind 中的伪 IoC 服务定位**：属于页面呈现与布局参数的，通过 `{di:Service}` 标记扩展在 XAML 声明式消费；属于业务交互与数据拉取的，由对应 ViewModel 统一通过构造函数依赖注入，View 不再负责业务客户端的解析。
 - **验收标准**：
-  - [ ] 消除业务 View 中对 `TopLevel.GetTopLevel(this)?.ViewContainer` 的直接调用，跨视图弹窗与通知全部经由统一 UI 服务分发。
+  - [x] 消除业务 View 中对 `TopLevel.GetTopLevel(this)?.ViewContainer` 的直接调用，跨视图弹窗与通知全部经由统一 UI 服务分发。
   - [ ] 业务 View Code-Behind 中不再出现裸调 `App.Services!.GetRequiredService<...>()` 拉取领域引擎或网络客户端的行为。
-  - [ ] 新增的 UI 服务抽象支持单元测试 Mock / Stub 注入，确保无 UI 树环境下核心交互可测试。
+  - [x] 新增的 UI 服务抽象支持单元测试 Mock / Stub 注入，确保无 UI 树环境下核心交互可测试。
 
 #### 9.3 虚拟化面板与容器回收现代化 (Modern Virtualization & Clean Container Recycling)
 - **痛点与反模式**：
