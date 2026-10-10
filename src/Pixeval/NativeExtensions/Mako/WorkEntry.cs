@@ -60,11 +60,7 @@ public abstract partial record WorkEntry : IArtworkInfo, IWorkEntry
 
     public int Height => AsWorkEntry.Height;
 
-    public bool IsFavorite
-    {
-        get => AsWorkEntry.IsFavorite;
-        set { }
-    }
+    public bool IsFavorite => AsWorkEntry.IsFavorite;
 
     public bool IsAiGenerated => AsWorkEntry.IsAiGenerated;
 

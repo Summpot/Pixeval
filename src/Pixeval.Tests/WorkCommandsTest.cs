@@ -14,6 +14,7 @@ using Pixeval.ViewModels.Viewers;
 namespace Pixeval.Tests;
 
 [TestClass]
+[DoNotParallelize]
 public sealed class WorkCommandsTest
 {
     [TestMethod]

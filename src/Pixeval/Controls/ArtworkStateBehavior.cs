@@ -10,6 +10,7 @@ using FluentIcons.Avalonia;
 using FluentIcons.Common;
 using Misaki;
 using Pixeval.Services;
+using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Markup;
 
@@ -223,17 +224,6 @@ public static class ArtworkStateBehavior
             icon.IconVariant = isInWatchLater
                 ? IconVariant.Filled
                 : IconVariant.Regular;
-        }
-    }
-
-    private sealed class ActionDisposable(Action action) : IDisposable
-    {
-        private Action? _action = action;
-
-        public void Dispose()
-        {
-            var a = System.Threading.Interlocked.Exchange(ref _action, null);
-            a?.Invoke();
         }
     }
 }

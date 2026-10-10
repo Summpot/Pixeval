@@ -10,6 +10,7 @@ using FluentIcons.Avalonia;
 using FluentIcons.Common;
 using Pixeval.Native.Mako;
 using Pixeval.Services;
+using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Markup;
 
@@ -131,17 +132,6 @@ public static class UserStateBehavior
             icon.IconVariant = (state & HeartButtonState.Checked) is not 0
                 ? IconVariant.Filled
                 : IconVariant.Regular;
-        }
-    }
-
-    private sealed class ActionDisposable(Action action) : IDisposable
-    {
-        private Action? _action = action;
-
-        public void Dispose()
-        {
-            var a = System.Threading.Interlocked.Exchange(ref _action, null);
-            a?.Invoke();
         }
     }
 }

@@ -60,7 +60,7 @@ public partial record SauceNaoItem : IArtworkInfo, ISingleImage, IImageFrame, II
     public int TotalView => -1;
 
     [JsonIgnore]
-    public bool IsFavorite { get; set; }
+    public bool IsFavorite => false;
 
     [JsonIgnore]
     public bool IsAiGenerated => false;

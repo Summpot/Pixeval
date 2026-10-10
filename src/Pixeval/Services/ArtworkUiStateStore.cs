@@ -34,9 +34,10 @@ public static class ArtworkUiStateStore
 
     public static string GetKey(IArtworkInfo entry)
     {
-        if (WatchLaterRecord.TryCreateWorkKey(entry, out var key))
+        var targetEntry = entry is WorkEntry we ? we.AsWorkEntry : entry;
+        if (WatchLaterRecord.TryCreateWorkKey(targetEntry, out var key))
             return key;
-        return $"{entry.Platform}:{entry.Id}";
+        return $"{targetEntry.Platform}:{targetEntry.Id}";
     }
 
     public static ArtworkUiState GetOrCreate(IArtworkInfo entry)
@@ -45,14 +46,15 @@ public static class ArtworkUiStateStore
         var key = GetKey(entry);
         return s_states.GetOrAdd(key, _ =>
         {
-            var bookmarkState = entry switch
+            var targetEntry = entry is WorkEntry we ? we.AsWorkEntry : entry;
+            var bookmarkState = targetEntry switch
             {
                 Illustration ill => ill.IsBookmarked ? HeartButtonState.Checked : HeartButtonState.Unchecked,
                 Novel nov => nov.IsBookmarked ? HeartButtonState.Checked : HeartButtonState.Unchecked,
-                _ => HeartButtonState.Unchecked
+                _ => targetEntry.IsFavorite ? HeartButtonState.Checked : HeartButtonState.Unchecked
             };
 
-            var inWatchLater = App.AppViewModel?.ContainsWatchLater(entry) is true;
+            var inWatchLater = App.AppViewModel?.ContainsWatchLater(targetEntry) is true;
             return new ArtworkUiState(bookmarkState, inWatchLater);
         });
     }

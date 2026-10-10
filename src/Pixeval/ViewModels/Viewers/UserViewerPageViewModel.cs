@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -32,13 +33,18 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     public partial string? LoadErrorMessage { get; private set; }
 
+    private IDisposable? _userUiStateSubscription;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Id))]
     [NotifyPropertyChangedFor(nameof(Header))]
     [NotifyPropertyChangedFor(nameof(AvatarUrl))]
     [NotifyPropertyChangedFor(nameof(BackgroundUrl))]
     [NotifyPropertyChangedFor(nameof(TabPages))]
+    [NotifyPropertyChangedFor(nameof(CurrentUiState))]
     public partial SingleUserResponse? UserDetail { get; private set; }
+
+    public UserUiState? CurrentUiState => UserDetail?.User is { } u ? UserUiStateStore.GetOrCreate(u) : null;
 
     public string Header => UserDetail?.User.Name ?? Id.ToString();
 
@@ -73,8 +79,25 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
 
     partial void OnUserDetailChanged(SingleUserResponse? value)
     {
-        if (value is not null)
-            IsFollowed = value.User.IsFollowed;
+        _userUiStateSubscription?.Dispose();
+        _userUiStateSubscription = null;
+
+        if (value?.User is { } user)
+        {
+            var state = UserUiStateStore.GetOrCreate(user);
+            IsFollowed = (state.FollowState & HeartButtonState.Checked) is not 0;
+
+            void OnStateChanged(object? _, PropertyChangedEventArgs e)
+            {
+                if (e.PropertyName == nameof(UserUiState.FollowState))
+                {
+                    IsFollowed = (state.FollowState & HeartButtonState.Checked) is not 0;
+                }
+            }
+
+            state.PropertyChanged += OnStateChanged;
+            _userUiStateSubscription = new ActionDisposable(() => state.PropertyChanged -= OnStateChanged);
+        }
 
         FollowCommand.NotifyCanExecuteChanged();
         FollowPrivatelyCommand.NotifyCanExecuteChanged();
@@ -173,6 +196,8 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
             return;
 
         _disposed = true;
+        _userUiStateSubscription?.Dispose();
+        _userUiStateSubscription = null;
         IsLoading = false;
         _loadingCts.Cancel();
         _loadingCts.Dispose();

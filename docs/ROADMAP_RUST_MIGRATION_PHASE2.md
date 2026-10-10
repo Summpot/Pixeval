@@ -109,18 +109,18 @@ flowchart TD
         P4_2["4.2 统一跨平台 CI/CD (Windows / Linux / macOS) [待启动]"]
     end
 
-    subgraph Phase5 ["Phase 5: 深度领域业务与系统底层全量下沉 (达成 100% Rust Core) [待启动]"]
-        P5_1["5.1 图像流式解码与渐进预览管线下沉<br/>• 下沉逐行扫描与帧嗅探至 pixeval_cache<br/>• 物理清退 ProgressiveImageDecoder 与 EoiStream"]
+    subgraph Phase5 ["Phase 5: 深度领域业务与系统底层全量下沉 (达成 100% Rust Core) [已完成]"]
+        P5_1["5.1 图像流式解码与渐进预览管线下沉 [已完成]<br/>• 下沉逐行扫描与帧嗅探至 pixeval_cache<br/>• 物理清退 ProgressiveImageDecoder 与 EoiStream"]
         P5_2["5.2 传输层彻底合流与 C# 网络栈物理清退 [已完成]<br/>• 全面收敛网络栈至 pixeval_maho<br/>• 物理清退 C# MahoSocketsHttpHandler / Stream 分片"]
         P5_3["5.3 Mako 高阶业务门面与协议编排下沉 [已完成]<br/>• Pixiv 领域规则与数据清洗收敛至 Rust<br/>• 彻底解构 765 行 MakoHelper.cs 静态巨石"]
         P5_4["5.4 动态库插件符号分析与解压规划下沉 [已完成]<br/>• 在 pixeval_plugin 中使用安全库解析 PE/ELF 导出表<br/>• 物理清退 ExtensionService 滑动窗口扫描"]
-        P5_5["5.5 DSL 动态建议生成与光标上下文感知下沉<br/>• 补全引擎下沉至 pixeval_filters<br/>• 消除 C# 端硬编码语法映射与复杂分词分析"]
-        P5_6["5.6 主页卡片配置持久化与布局状态机下沉<br/>• 卡片元数据、吸附状态与默认配置收敛至 pixeval_config<br/>• 物理清退 HomeCardDefinitions.cs 与布局状态代码"]
-        P5_7["5.7 订阅后台轮询机自转守护<br/>• Tokio 静默协程接管常驻定时拉取与熔断调度<br/>• 物理清退 WorkSubscriptionDownloadService 计时器管理"]
+        P5_5["5.5 DSL 动态建议生成与光标上下文感知下沉 [已完成]<br/>• 补全引擎下沉至 pixeval_filters<br/>• 消除 C# 端硬编码语法映射与复杂分词分析"]
+        P5_6["5.6 主页卡片配置持久化与布局状态机下沉 [已完成]<br/>• 卡片元数据、吸附状态与默认配置收敛至 pixeval_config<br/>• 物理清退 HomeCardDefinitions.cs 与布局状态代码"]
+        P5_7["5.7 订阅后台轮询机自转守护 [已完成]<br/>• Tokio 静默协程接管常驻定时拉取与熔断调度<br/>• 物理清退 WorkSubscriptionDownloadService 计时器管理"]
     end
 
-    subgraph Phase6 ["Phase 6: C# 表现层现代化与终极架构重构 (达成 Pure Thin UI) [待启动]"]
-        P6_1["6.1 领域契约与 UI 状态彻底解耦<br/>• 移除 Record 上的 INotifyPropertyChanged 与可变私有字段<br/>• 建立轻量 UI State Store 或 View-Scoped Behaviors"]
+    subgraph Phase6 ["Phase 6: C# 表现层现代化与终极架构重构 (达成 Pure Thin UI)"]
+        P6_1["6.1 领域契约与 UI 状态彻底解耦 [已完成]<br/>• 移除 Record 上的 INotifyPropertyChanged 与可变私有字段<br/>• 建立轻量 UI State Store 或 View-Scoped Behaviors"]
         P6_2["6.2 彻底清退 Misaki 外部依赖与历史抽象<br/>• 物理移除 Misaki NuGet 包与 IArtworkInfo 等复杂接口链<br/>• 视图 DataTemplate 直绑原生实体并多态分发"]
         P6_3["6.3 静态巨石解体与规范化标准 DI<br/>• 彻底消除全局 App.AppViewModel / PixevalSettings 静态穿透<br/>• 全面推行构造注入与类型安全交互命令"]
         P6_4["6.4 集合管道与数据流极大化精简<br/>• 清退沉重的 DataProvider / IRefCloneable 体系<br/>• 直连 Rust 增量流与极简 ObservableCollection"]
@@ -482,16 +482,23 @@ Phase 5 的核心目标是：**将所有残留在 C# 中的流式图像解码、
 在 Phase 5 彻底完成系统与领域底层逻辑 100% 下沉后，C# 表现层将不再承担任何协议编排、二进制解析、媒体解码或状态守护职责。
 Phase 6 的核心目标是：**全面清理在逐步演进过程中积累的过渡期技术债与伪抽象，还原纯净不可变领域契约，彻底清退 Misaki 依赖，重构依赖注入与导航路由，打造极致现代化、高响应性的 Thin Avalonia UI。**
 
-#### 6.1 领域契约与 UI 状态彻底解耦 (Decouple Native Extensions from UI State) (已完成)
+#### 6.1 领域契约与 UI 状态彻底解耦 (Decouple Native Extensions from UI State) [已完成]
 - **痛点与坏味道**：
-  - 在 Phase 4.1 消除 `*ItemViewModel` 过程中，`NativeExtensions`（如 `Illustration.cs`、`Novel.cs`、`BooruPost.cs`）被塞入了大量原本属于 ViewModel 的职责：实现了 `INotifyPropertyChanged`、`IWorkViewModel`，持有了 `_isBookmarkedDisplay`、`_isInWatchLater`、`_isFavorite` 等私有可变字段，绑定了 UI 命令（`AddToBookmarkCommand`）乃至持有并发锁执行网络懒加载。
+  - 在 Phase 4.1 消除 `*ItemViewModel` 过程中，`NativeExtensions`（如 `Illustration.cs`、`Novel.cs`、`BooruPost.cs`、`SauceNaoItem.cs`）被塞入了大量原本属于 ViewModel 的职责：实现了 `INotifyPropertyChanged`、`IWorkViewModel`，持有了 `_isBookmarkedDisplay`、`_isInWatchLater`、`_isFavorite` 等私有可变字段，绑定了 UI 命令（`AddToBookmarkCommand`）乃至持有并发锁执行网络懒加载。
   - 这破坏了 UniFFI 生成的 `record` 的不可变值契约与纯净性，导致领域模型充当微型状态机。
-- **重构方案**：
-  - **还原本色**：将 `Illustration`、`Novel`、`BooruPost` 剥离 `INotifyPropertyChanged` 及所有私有可变字段，使其回归为 100% 纯净、不可变的数据契约（Data Contracts）。
-  - **状态外置与响应式总线**：作品的高频交互状态（收藏 `IsBookmarked`、稍后再看 `IsInWatchLater` 等）统一收敛至集中式 UI 状态仓（`ArtworkUiStateStore`）或直接监听 Rust `IStorageObserver` 事件。
-  - **命令层级化 (View-Scoped Commands)**：列表项不再挂载独立 Command 实例，交互操作通过 XAML Attached Behavior 或页面级（如 `WorkViewViewModel` / `WorkContainer`）路由命令统一派发，参数直传不可变原生模型。
-- **验收标准**：
-  - `NativeExtensions` 中的 Record 没有任何私有可变字段，不实现 `INotifyPropertyChanged`，不直接持有 UI 命令。
+- **重构方案与落地成果**：
+  - **还原本色与契约绝对不可变**：
+    - 将 `Illustration`、`Novel`、`BooruPost`、`User`、`Series`、`SpotlightArticle`、`WorkEntry`、`SauceNaoItem` 全面剥离 `INotifyPropertyChanged` 及所有私有可变字段，所有 record 属性均为只读表达式或 `init` 属性，彻底回归为 100% 纯净、不可变的数据契约（Data Contracts）。
+    - 物理清除 `WorkEntry.IsFavorite` 的空 setter 与 `SauceNaoItem.IsFavorite` 的可变属性。
+  - **状态外置与响应式总线 (UI State Store)**：
+    - 作品的高频交互状态（收藏 `BookmarkState`、稍后再看 `IsInWatchLater`）统一收敛至集中式 UI 状态仓（`ArtworkUiStateStore`），支持多态包装类型 `WorkEntry` 原生解包水合与统一哈希键检索，并实时接驳 Rust `IStorageObserver` 数据库变更通知。
+    - 用户关注状态（`FollowState`）收敛至 `UserUiStateStore`，`UserViewerPageViewModel` 通过响应式观察者与状态仓双向同步。
+  - **命令层级化与行为驱动 (View-Scoped Commands & Attached Behaviors)**：
+    - 列表项不再挂载独立 Command 实例，交互操作通过 XAML Attached Behavior（`ArtworkStateBehavior`、`UserStateBehavior`）驱动状态指示，页面级/静态路由命令（`WorkCommands`）统一派发，参数直传不可变原生模型。
+- **验收标准与完成状态**：
+  - [x] `NativeExtensions` 中的 Record 没有任何私有可变字段或可变属性，不实现 `INotifyPropertyChanged`，不直接持有 UI 命令。
+  - [x] 建立 `ArtworkUiStateStore` 与 `UserUiStateStore`，实现跨视图与后端的响应式交互状态同步。
+  - [x] 针对性单元测试（`ArtworkUiStateStoreTest` 与 `WorkCommandsTest` 16 项测试）全部通过，全工程 0 编译警告 0 编译错误。
 
 #### 6.2 彻底清退 `Misaki` 外部依赖与历史抽象包袱 (Eliminate Misaki Legacy Abstractions)
 - **痛点与坏味道**：
@@ -544,18 +551,18 @@ Phase 6 的核心目标是：**全面清理在逐步演进过程中积累的过�
 在 Phase 1 ~ 4.1 的全量攻坚下，Pixeval 已完成绝大多数底层架构向 Rust 的跨越，并修复了 17 个关键技术缺陷。
 为了彻底消除历史技术债务并实现极致精简的 Avalonia 表现层，后续建议按照**“先下沉残留核心系统，再解耦模型与清退外部抽象，最后解构静态巨石与精简表现层”**的战略步骤推进：
 
-1. **第一优先级：底层核心业务与协议栈全量下沉 (Phase 5: 5.1 ~ 5.7)**
-   - **理由**：若底层仍保留 C# 图像解码、TLS 分片栈与 MakoHelper 业务门面，C# 表现层就永远无法做到“纯粹”。先将这 7 项非 UI 逻辑彻底下沉至 Rust，使 C# 真正成为不含任何协议和二进制计算的“轻客户端”。
-   - **成果**：达成真正的 **100% Rust Core**；消灭 C# 网络双轨制与大图解码大对象分配。
-2. **第二优先级：模型契约还原与清退 Misaki 依赖 (Phase 6.1 & 6.2)**
-   - **理由**：拔除 `Misaki` 并解耦 `NativeExtensions` 中的可变状态，是理清整个 C# 表现层数据流动的第一步，切断领域实体与 UI 状态机的反模式耦合。
-   - **成果**：彻底移除 `Misaki` 包；原生 Record 恢复纯净不可变契约；XAML 依托强类型 DataTemplate 纯粹直连。
-3. **第三优先级：静态巨石解体与标准 DI 落地 (Phase 6.3)**
-   - **理由**：消灭 `IoHelper` 与 `App.AppViewModel` 静态穿透，建立正规的 Service 服务层，为后续视图与集合重构铺平依赖路径。
-4. **第四优先级：集合管道精简与 View Code-Behind 瘦身 (Phase 6.4 & 6.5)**
-   - **理由**：废除复杂的 `SharableViewDataProvider` 历史轮子，解耦 `WorkContainer` / `TabViewContainer`，完成 Avalonia 表现层极致轻量化的终局重构。
-5. **最终交付：统一跨平台 CI/CD 流水线 (Phase 4.2)**
-   - **目标**：配置 GitHub Actions 原生矩阵交叉编译与多架构分发。
+1. **底层核心业务与协议栈全量下沉 (Phase 5: 5.1 ~ 5.7) [已完成]**
+   - 达成 100% Rust Core 底层闭环，C# 网络栈、图像解码、协议辅助与动态库扫描全部下沉。
+2. **领域契约还原与 UI 状态解耦 (Phase 6.1) [已完成]**
+   - 原生 Record 恢复纯净只读不可变契约；交互状态完全收敛至集中式 UI 状态仓与附加行为。
+3. **第一当前推进目标：彻底清退 Misaki 依赖与历史抽象 (Phase 6.2) [待启动]**
+   - 物理移除 `Misaki` NuGet 包与 `IArtworkInfo` 等接口链；视图 DataTemplate 纯粹直绑原生实体。
+4. **后续演进：静态巨石解体与标准 DI 落地 (Phase 6.3)**
+   - 消灭 `IoHelper` 与 `App.AppViewModel` 静态穿透，建立正规 Service 注入。
+5. **后续演进：集合管道精简与 View Code-Behind 瘦身 (Phase 6.4 & 6.5)**
+   - 废除复杂的 `SharableViewDataProvider` 历史轮子，解耦 `WorkContainer` / `TabViewContainer`，完成 Avalonia 表现层终极瘦身。
+6. **最终交付：统一跨平台 CI/CD 流水线 (Phase 4.2)**
+   - 配置 GitHub Actions 原生矩阵交叉编译与多架构分发。
 
 
 
