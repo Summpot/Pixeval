@@ -19,11 +19,17 @@ public partial class UserFollowingPage : IconContentPage
     public static readonly StyledProperty<long> UserIdProperty =
         AvaloniaProperty.Register<UserFollowingPage, long>(nameof(UserId));
 
-    private readonly MakoClient _client;
-    private readonly IUserSessionService _session;
+    private MakoClient? _client;
+    private IUserSessionService? _session;
+    private bool _sourcePending;
     private long _userId;
     private bool _hasViewModel;
     private bool _suppressChangeSource;
+
+    /// <summary>XAML constructor: services are resolved from <see cref="UiServices.ProviderProperty"/> once the page is attached under the shell.</summary>
+    public UserFollowingPage() : this(0, PrivacyPolicy.Public, null, null)
+    {
+    }
 
     public UserFollowingPage(MakoClient client, IUserSessionService session)
         : this(session.CurrentUserId, client, session)
@@ -38,8 +44,8 @@ public partial class UserFollowingPage : IconContentPage
     public UserFollowingPage(
         long id,
         PrivacyPolicy privacyPolicy,
-        MakoClient client,
-        IUserSessionService session,
+        MakoClient? client,
+        IUserSessionService? session,
         UserViewViewModel? viewModel = null)
     {
         _client = client;
@@ -68,6 +74,11 @@ public partial class UserFollowingPage : IconContentPage
         base.OnPropertyChanged(change);
         if (change.Property == UserIdProperty)
             ApplyUserId(change.GetNewValue<long>());
+        else if (change.Property == UiServices.ProviderProperty && _sourcePending)
+        {
+            UpdatePrivacyVisibility();
+            ChangeSource();
+        }
     }
 
     private void ApplyUserId(long id)
@@ -89,7 +100,8 @@ public partial class UserFollowingPage : IconContentPage
 
     private void UpdatePrivacyVisibility()
     {
-        var visible = _userId > 0 && _userId == _session.CurrentUserId;
+        _session ??= this.GetUiService<IUserSessionService>();
+        var visible = _userId > 0 && _userId == _session?.CurrentUserId;
         PrivacyPolicyComboBox.IsEnabled = PrivacyPolicyComboBox.IsVisible = visible;
     }
 
@@ -113,8 +125,11 @@ public partial class UserFollowingPage : IconContentPage
             ResetEngine(AsyncEnumerable.Empty<Pixeval.Mako.User>());
             return;
         }
+        _client ??= this.GetUiService<MakoClient>();
+        if (_sourcePending = _client is null)
+            return;
         var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>();
-        ResetEngine(_client.UserFollowing(_userId, privacy));
+        ResetEngine(_client!.UserFollowing(_userId, privacy));
     }
 
     private void ResetEngine(IAsyncEnumerable<Pixeval.Mako.User> fetchEngine) =>

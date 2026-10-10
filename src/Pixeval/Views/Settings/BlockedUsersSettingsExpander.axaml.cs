@@ -44,7 +44,7 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
         Users.Clear();
         try
         {
-            foreach (var entry in App.Services!.GetRequiredService<StorageEngine>().GetAllBlockedUsers())
+            foreach (var entry in this.GetRequiredUiService<StorageEngine>().GetAllBlockedUsers())
             {
                 token.ThrowIfCancellationRequested();
                 Users.Add(entry);
@@ -55,12 +55,15 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
         }
         catch (Exception e)
         {
-            App.Services!.GetRequiredService<FileLogger>()
+            this.GetRequiredUiService<FileLogger>()
                 .LogError(nameof(ReloadAsync), e);
         }
     }
 
-    private async void AddButton_OnClicked(object? sender, RoutedEventArgs e)
+    private void AddButton_OnClicked(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => AddButton_OnClickedAsync(sender, e));
+
+    private async Task AddButton_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
         HideError();
         if (!long.TryParse(TargetIdTextBox.Text, out var userId) || userId <= 0)
@@ -71,8 +74,8 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
 
         try
         {
-            var user = (await App.Services!.GetRequiredService<MakoClient>().GetUserFromIdAsync(userId)).User;
-            App.Services!.GetRequiredService<StorageEngine>().AddOrUpdateBlockedUser(BlockedContentModelHelper.CreateBlockedUserRecord(user));
+            var user = (await this.GetRequiredUiService<MakoClient>().GetUserFromIdAsync(userId)).User;
+            this.GetRequiredUiService<StorageEngine>().AddOrUpdateBlockedUser(BlockedContentModelHelper.CreateBlockedUserRecord(user));
             TargetIdTextBox.Text = "";
             await ReloadAsync();
         }
@@ -82,13 +85,19 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
         }
     }
 
-    private async void RefreshButton_OnClicked(object? sender, RoutedEventArgs e)
+    private void RefreshButton_OnClicked(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => RefreshButton_OnClickedAsync(sender, e));
+
+    private async Task RefreshButton_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: BlockedUserRecord item })
             await RefreshUserAsync(item);
     }
 
-    private async void RefreshAllButton_OnClicked(object? sender, RoutedEventArgs e)
+    private void RefreshAllButton_OnClicked(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => RefreshAllButton_OnClickedAsync(sender, e));
+
+    private async Task RefreshAllButton_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
         HideError();
         foreach (var item in Users.ToArray())
@@ -99,8 +108,8 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
     {
         try
         {
-            var user = (await App.Services!.GetRequiredService<MakoClient>().GetUserFromIdAsync(item.Id)).User;
-            var entry = App.Services!.GetRequiredService<StorageEngine>().AddOrUpdateBlockedUser(BlockedContentModelHelper.CreateBlockedUserRecord(user));
+            var user = (await this.GetRequiredUiService<MakoClient>().GetUserFromIdAsync(item.Id)).User;
+            var entry = this.GetRequiredUiService<StorageEngine>().AddOrUpdateBlockedUser(BlockedContentModelHelper.CreateBlockedUserRecord(user));
             ReplaceUser(entry);
         }
         catch (Exception exception)
@@ -121,12 +130,15 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
         }
     }
 
-    private async void DeleteButton_OnClicked(object? sender, RoutedEventArgs e)
+    private void DeleteButton_OnClicked(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => DeleteButton_OnClickedAsync(sender, e));
+
+    private async Task DeleteButton_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: BlockedUserRecord item })
             return;
 
-        _ = App.Services!.GetRequiredService<StorageEngine>().TryDeleteBlockedUser(item.Id);
+        _ = this.GetRequiredUiService<StorageEngine>().TryDeleteBlockedUser(item.Id);
         await ReloadAsync();
     }
 

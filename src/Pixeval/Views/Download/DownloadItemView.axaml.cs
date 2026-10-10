@@ -121,13 +121,13 @@ public partial class DownloadItemView : ContentPage, IDisposable
 
     private void DownloadItem_OnOpenIllustrationRequested(DownloadItem sender, DownloadItemSnapshot item)
     {
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
+        if (this.AppNavigation is not { } navigator)
             return;
 
-        OpenWork(viewContainer, item);
+        OpenWork(navigator, item);
     }
 
-    private static void OpenWork(ViewContainerBase viewContainer, DownloadItemSnapshot item)
+    private static void OpenWork(INavigationService navigator, DownloadItemSnapshot item)
     {
         if (!Uri.TryCreate(item.AppUri, UriKind.Absolute, out var uri) || uri.Scheme != "pixeval")
             return;
@@ -135,7 +135,7 @@ public partial class DownloadItemView : ContentPage, IDisposable
         var id = uri.AbsolutePath.Trim('/');
         if (uri.Host.Equals("novel", StringComparison.OrdinalIgnoreCase) && long.TryParse(id, out var novelId))
         {
-            viewContainer.CreateNovelPage(novelId);
+            navigator.CreateNovelPage(novelId);
             return;
         }
 
@@ -143,7 +143,7 @@ public partial class DownloadItemView : ContentPage, IDisposable
             ? PlatformConstants.Pixiv
             : uri.Host;
         if (!string.IsNullOrWhiteSpace(id))
-            viewContainer.CreateIllustrationPage(id, platform);
+            navigator.CreateIllustrationPage(id, platform);
     }
 
     private void FilterTextBox_OnKeyDown(object? sender, KeyEventArgs e)
@@ -182,7 +182,7 @@ public partial class DownloadItemView : ContentPage, IDisposable
 
         UnselectAll();
         _selectedKeys.Clear();
-        TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
+        this.Notifications.ShowSuccess(
             I18NManager.GetResource(DownloadPageResources.DeleteDownloadHistoryRecordsFormatted, count));
     }
 

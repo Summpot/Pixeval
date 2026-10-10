@@ -15,24 +15,39 @@ namespace Pixeval.Views.Works;
 
 public abstract partial class SimpleUsersPage : IconContentPage
 {
-    private readonly MakoClient _client;
-    private readonly IUserSessionService _session;
+    private MakoClient? _client;
+    private IUserSessionService? _session;
+    private bool _sourcePending;
 
-    protected SimpleUsersPage(MakoClient client, IUserSessionService session)
+    protected SimpleUsersPage(MakoClient? client, IUserSessionService? session)
     {
         _client = client;
         _session = session;
         InitializeComponent();
     }
 
-    protected long CurrentUserId => _session.CurrentUserId;
+    protected long CurrentUserId => EnsureServices() ? _session!.CurrentUserId : 0;
+
+    private bool EnsureServices()
+    {
+        _client ??= this.GetUiService<MakoClient>();
+        _session ??= this.GetUiService<IUserSessionService>();
+        return _client is not null && _session is not null;
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == UiServices.ProviderProperty && _sourcePending)
+            ChangeSource();
+    }
 
     protected void InitializeSource(UserViewViewModel? viewModel = null)
     {
         if (viewModel is not null)
             UserContainer.UserView.SetViewModel(viewModel);
         else
-            ResetEngine(GetFetchEngine(_client));
+            ChangeSource();
     }
 
     private void UserContainer_OnRefreshRequested(object? sender, RoutedEventArgs e)
@@ -42,7 +57,8 @@ public abstract partial class SimpleUsersPage : IconContentPage
 
     protected void ChangeSource()
     {
-        ResetEngine(GetFetchEngine(_client));
+        if (!(_sourcePending = !EnsureServices()))
+            ResetEngine(GetFetchEngine(_client!));
     }
 
     private void ResetEngine(IAsyncEnumerable<User> fetchEngine) =>
@@ -122,6 +138,11 @@ public class UserMyPixivPage : SimpleUsersPage
     private long _userId;
     private bool _hasViewModel;
 
+    /// <summary>XAML constructor: services are resolved from <see cref="UiServices.ProviderProperty"/> once the page is attached under the shell.</summary>
+    public UserMyPixivPage() : base(null, null)
+    {
+    }
+
     public UserMyPixivPage(long id, MakoClient client, IUserSessionService session, UserViewViewModel? viewModel = null)
         : base(client, session)
     {
@@ -176,6 +197,11 @@ public class RelatedUsersPage : SimpleUsersPage
         AvaloniaProperty.Register<RelatedUsersPage, long>(nameof(UserId));
 
     private long _userId;
+
+    /// <summary>XAML constructor: services are resolved from <see cref="UiServices.ProviderProperty"/> once the page is attached under the shell.</summary>
+    public RelatedUsersPage() : base(null, null)
+    {
+    }
 
     public RelatedUsersPage(long id, MakoClient client, IUserSessionService session) : base(client, session)
     {

@@ -22,11 +22,12 @@ namespace Pixeval.Views.Works;
 
 public abstract partial class WorkTypeWorksPage : IconContentPage
 {
-    private readonly MakoClient _client;
-    private readonly IWorkSubscriptionService _subscriptions;
-    private readonly StorageEngine _storage;
+    private MakoClient? _client;
+    private IWorkSubscriptionService? _subscriptions;
+    private StorageEngine? _storage;
+    private bool _sourcePending;
 
-    protected WorkTypeWorksPage(MakoClient client, IWorkSubscriptionService subscriptions, StorageEngine storage)
+    protected WorkTypeWorksPage(MakoClient? client, IWorkSubscriptionService? subscriptions, StorageEngine? storage)
     {
         _client = client;
         _subscriptions = subscriptions;
@@ -60,10 +61,27 @@ public abstract partial class WorkTypeWorksPage : IconContentPage
         ChangeSource();
     }
 
+    private bool EnsureServices()
+    {
+        _client ??= this.GetUiService<MakoClient>();
+        _subscriptions ??= this.GetUiService<IWorkSubscriptionService>();
+        _storage ??= this.GetUiService<StorageEngine>();
+        return _client is not null && _subscriptions is not null && _storage is not null;
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == UiServices.ProviderProperty && _sourcePending)
+            ChangeSource();
+    }
+
     protected void ChangeSource()
     {
+        if (_sourcePending = !EnsureServices())
+            return;
         var workType = WorkTypeComboBox.GetSelectedValue<WorkType>();
-        var engine = GetFetchEngine(_client, workType);
+        var engine = GetFetchEngine(_client!, workType);
         WorkContainer.ResetEngine(engine);
         OnSourceChanged(engine, workType);
     }
@@ -74,9 +92,11 @@ public abstract partial class WorkTypeWorksPage : IconContentPage
     {
     }
 
-    protected IWorkSubscriptionService SubscriptionService => _subscriptions;
+    protected IWorkSubscriptionService SubscriptionService =>
+        EnsureServices() ? _subscriptions! : throw new InvalidOperationException("Services are not available before the page is attached to the shell.");
 
-    protected StorageEngine Storage => _storage;
+    protected StorageEngine Storage =>
+        EnsureServices() ? _storage! : throw new InvalidOperationException("Services are not available before the page is attached to the shell.");
 
     protected void EnableAddSubscriptionButton() => AddSubscriptionButton.IsVisible = true;
 
@@ -169,6 +189,12 @@ public class WorkPostsPage : WorkTypeWorksPage
     private readonly WorkType _workType;
     private readonly IWorkViewViewModel? _viewModel;
     private bool _initialized;
+
+    /// <summary>XAML constructor: services are resolved from <see cref="UiServices.ProviderProperty"/> once the page is attached under the shell.</summary>
+    public WorkPostsPage() : base(null, null, null)
+    {
+        _workType = WorkType.Illustration;
+    }
 
     public WorkPostsPage(User user, AppSettings settings, MakoClient client, IWorkSubscriptionService subscriptions, StorageEngine storage)
         : this(user, settings.SearchSettings.WorkType, client, subscriptions, storage)

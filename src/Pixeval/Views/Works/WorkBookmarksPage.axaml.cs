@@ -28,11 +28,12 @@ public partial class WorkBookmarksPage : IconContentPage
     private static User EmptyUser() =>
         new(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []);
 
-    private readonly MakoClient _client;
-    private readonly IWorkSubscriptionService _subscriptions;
-    private readonly StorageEngine _storage;
-    private readonly IUserSessionService _session;
-    private readonly FileLogger _logger;
+    private MakoClient? _client;
+    private IWorkSubscriptionService? _subscriptions;
+    private StorageEngine? _storage;
+    private IUserSessionService? _session;
+    private FileLogger? _logger;
+    private bool _userPending;
     private User _user = EmptyUser();
     private readonly string? _initialTag;
     private IWorkViewViewModel? _viewModel;
@@ -44,6 +45,15 @@ public partial class WorkBookmarksPage : IconContentPage
     public IAsyncRelayCommand AddSubscriptionCommand { get; }
 
     public IAsyncRelayCommand RemoveSubscriptionCommand { get; }
+
+    /// <summary>XAML constructor: services are resolved from <see cref="UiServices.ProviderProperty"/> once the page is attached under the shell.</summary>
+    public WorkBookmarksPage()
+    {
+        AddSubscriptionCommand = new AsyncRelayCommand(AddSubscriptionAsync);
+        RemoveSubscriptionCommand = new AsyncRelayCommand(RemoveSubscriptionAsync);
+        InitializeComponent();
+        Configure(SimpleWorkType.Illustration, PrivacyPolicy.Public, null);
+    }
 
     public WorkBookmarksPage(
         User user,
@@ -93,6 +103,18 @@ public partial class WorkBookmarksPage : IconContentPage
         base.OnPropertyChanged(change);
         if (change.Property == UserProperty)
             ApplyUser(change.GetNewValue<User?>());
+        else if (change.Property == UiServices.ProviderProperty && _userPending)
+            ApplyUser(User);
+    }
+
+    private bool EnsureServices()
+    {
+        _client ??= this.GetUiService<MakoClient>();
+        _subscriptions ??= this.GetUiService<IWorkSubscriptionService>();
+        _storage ??= this.GetUiService<StorageEngine>();
+        _session ??= this.GetUiService<IUserSessionService>();
+        _logger ??= this.GetUiService<FileLogger>();
+        return _client is not null && _subscriptions is not null && _storage is not null && _session is not null && _logger is not null;
     }
 
     private void Configure(SimpleWorkType simpleWorkType, PrivacyPolicy privacyPolicy, IWorkViewViewModel? viewModel)
@@ -106,6 +128,8 @@ public partial class WorkBookmarksPage : IconContentPage
 
     private void ApplyUser(User? user)
     {
+        if (_userPending = !EnsureServices())
+            return;
         var next = user ?? EmptyUser();
         if (_initialized && next.Id == _user.Id)
             return;
@@ -136,13 +160,15 @@ public partial class WorkBookmarksPage : IconContentPage
 
     private void UpdatePrivacyVisibility()
     {
-        var myId = _session.CurrentUserId;
+        var myId = _session!.CurrentUserId;
         var enabled = _user.Id > 0 && _user.Id == myId;
         PrivacyPolicyComboBox.IsEnabled = PrivacyPolicyComboBox.IsVisible = enabled;
     }
 
     private void WorkTypeComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
     {
+        if (!_initialized || !EnsureServices())
+            return;
         FetchTags();
         ChangeSource();
     }
@@ -157,6 +183,8 @@ public partial class WorkBookmarksPage : IconContentPage
 
     private void WorkContainer_OnRefreshRequested(object? sender, RoutedEventArgs e)
     {
+        if (!EnsureServices())
+            return;
         ChangeSource();
     }
 
@@ -175,7 +203,7 @@ public partial class WorkBookmarksPage : IconContentPage
 
         try
         {
-            var tags = await _client.GetBookmarkTagsAsync(
+            var tags = await _client!.GetBookmarkTagsAsync(
                 _user.Id,
                 SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>(),
                 PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>());
@@ -187,7 +215,7 @@ public partial class WorkBookmarksPage : IconContentPage
         }
         catch (Exception ex)
         {
-            _logger.LogError(nameof(FetchTags), ex);
+            _logger!.LogError(nameof(FetchTags), ex);
             _suppressChangeSource = true;
             TagComboBox.ItemsSource = new List<BookmarkTag> { AllBookmarkTag.Instance, UncategorizedBookmarkTag.Instance };
             TagComboBox.SelectedItem = AllBookmarkTag.Instance;
@@ -208,10 +236,10 @@ public partial class WorkBookmarksPage : IconContentPage
         var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
         var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>() is PrivacyPolicy.Private ? "private" : "public";
         var engine = (workType is SimpleWorkType.Novel
-            ? (IAsyncEnumerable<IWorkEntry>) _client.NovelBookmarks(_user.Id, privacy, tag)
-            : _client.WorkBookmarks(_user.Id, privacy, tag)).ToFetchEngine();
+            ? (IAsyncEnumerable<IWorkEntry>) _client!.NovelBookmarks(_user.Id, privacy, tag)
+            : _client!.WorkBookmarks(_user.Id, privacy, tag)).ToFetchEngine();
         WorkContainer.ResetEngine(engine);
-        _subscriptions.QueueSyncCurrentSource(
+        _subscriptions!.QueueSyncCurrentSource(
             _user.Id,
             WorkSubscriptionType.Bookmarks,
             GetSubscriptionWorkKind(),
@@ -229,8 +257,8 @@ public partial class WorkBookmarksPage : IconContentPage
                 _user,
                 WorkSubscriptionType.Bookmarks,
                 workKind,
-                _storage,
-                _subscriptions)),
+                _storage!,
+                _subscriptions!)),
             UpdateSubscriptionButtons);
     }
 
@@ -253,15 +281,15 @@ public partial class WorkBookmarksPage : IconContentPage
         WorkSubscriptionButtonHelper.UpdateVisibility(
             AddSubscriptionButton,
             RemoveSubscriptionButton,
-            _subscriptions.TryGetSubscription(_user.Id, WorkSubscriptionType.Bookmarks, GetSubscriptionWorkKind()) is not null);
+            _subscriptions!.TryGetSubscription(_user.Id, WorkSubscriptionType.Bookmarks, GetSubscriptionWorkKind()) is not null);
     }
 
     private async Task<bool> RemoveCurrentSubscriptionAsync()
     {
-        if (_subscriptions.TryGetSubscription(_user.Id, WorkSubscriptionType.Bookmarks, GetSubscriptionWorkKind()) is not { HistoryEntryId: var historyEntryId })
+        if (_subscriptions!.TryGetSubscription(_user.Id, WorkSubscriptionType.Bookmarks, GetSubscriptionWorkKind()) is not { HistoryEntryId: var historyEntryId })
             return false;
 
-        _ = await _subscriptions.TryRemoveAsync(historyEntryId);
+        _ = await _subscriptions!.TryRemoveAsync(historyEntryId);
         return true;
     }
 

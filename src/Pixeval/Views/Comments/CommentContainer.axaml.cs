@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
@@ -18,14 +19,20 @@ public partial class CommentContainer : ContentPage
         InitializeComponent();
     }
 
-    private async void ReplyBar_OnSendButtonClick(string replyContent)
+    private void ReplyBar_OnSendButtonClick(string replyContent) =>
+        this.RunInteraction(() => ReplyBar_OnSendButtonClickAsync(replyContent));
+
+    private async Task ReplyBar_OnSendButtonClickAsync(string replyContent)
     {
         if (DataContext is not CommentsViewViewModel viewModel)
             return;
         AddComment(await viewModel.AddCommentAsync(replyContent), viewModel);
     }
 
-    private async void ReplyBar_OnStickerClick(int stickerId)
+    private void ReplyBar_OnStickerClick(int stickerId) =>
+        this.RunInteraction(() => ReplyBar_OnStickerClickAsync(stickerId));
+
+    private async Task ReplyBar_OnStickerClickAsync(int stickerId)
     {
         if (DataContext is not CommentsViewViewModel viewModel)
             return;
@@ -35,12 +42,15 @@ public partial class CommentContainer : ContentPage
     private void AddComment(CommentRecord comment, CommentsViewViewModel viewModel)
     {
         if (comment.Id is 0)
-            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowError("评论发送失败"); //TODO i18n
+            this.Notifications.ShowError("评论发送失败"); //TODO i18n
         else
             viewModel.AddComment(comment);
     }
 
-    private async void CommentView_OnOpenRepliesButtonClick(CommentRecord comment)
+    private void CommentView_OnOpenRepliesButtonClick(CommentRecord comment) =>
+        this.RunInteraction(() => CommentView_OnOpenRepliesButtonClickAsync(comment));
+
+    private async Task CommentView_OnOpenRepliesButtonClickAsync(CommentRecord comment)
     {
         if (DataContext is not CommentsViewViewModel parent)
             return;

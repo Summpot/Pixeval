@@ -55,7 +55,10 @@ public partial class IllustrationViewerInfoPane : UserControl
             PseudoClasses.Set(":locked", IsLocked);
     }
 
-    private async void AddToBookmarkButton_OnRightClick(object? sender, ContextRequestedEventArgs e)
+    private void AddToBookmarkButton_OnRightClick(object? sender, ContextRequestedEventArgs e) =>
+        this.RunInteraction(() => AddToBookmarkButton_OnRightClickAsync(sender, e));
+
+    private async Task AddToBookmarkButton_OnRightClickAsync(object? sender, ContextRequestedEventArgs e)
     {
         if (sender is Control c && ViewModel?.CurrentIllustration is Illustration ill)
             await BookmarkTagSelectorFlyoutHelper.ShowAsync(
@@ -72,7 +75,7 @@ public partial class IllustrationViewerInfoPane : UserControl
             return;
 
         await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
-        TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
+        this.Notifications.ShowSuccess(
             I18NManager.GetResource(MiscResources.AddedToBookmark));
     }
     

@@ -41,10 +41,11 @@ public static class BookmarkTagSelectorFlyoutHelper
         await tagSelector.ResetSourceAsync();
         return;
 
-        async void OnTagsSelected(TagSelector sender, (bool IsPrivate, IReadOnlyList<string>? Tags) e)
-        {
-            await onTagsSelected(e);
-            flyout.Hide();
-        }
+        void OnTagsSelected(TagSelector sender, (bool IsPrivate, IReadOnlyList<string>? Tags) e) =>
+            placementTarget.RunInteraction(async () =>
+            {
+                await onTagsSelected(e);
+                flyout.Hide();
+            });
     }
 }

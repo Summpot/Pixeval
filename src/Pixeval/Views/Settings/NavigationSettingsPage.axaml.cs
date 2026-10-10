@@ -45,13 +45,12 @@ public sealed partial class NavigationSettingsPage : ContentPage
         if (result.Configuration is null)
             return false;
 
-        App.Services!.GetRequiredService<NavigationMenuDocument>().Text = YamlEditor.Text ?? "";
-        AppInfo.SaveNavigationMenuYaml(App.Services!.GetRequiredService<NavigationMenuDocument>().Text);
-        TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
+        this.GetRequiredUiService<NavigationMenuDocument>().Text = YamlEditor.Text ?? "";
+        AppInfo.SaveNavigationMenuYaml(this.GetRequiredUiService<NavigationMenuDocument>().Text);
+        this.Notifications.ShowSuccess(
             I18NManager.GetResource(NavigationSettingsPageResources.Applied));
 
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is TabViewContainer container)
-            container.ReloadNavigation();
+        this.AppNavigation?.ReloadNavigation();
 
         return true;
     }

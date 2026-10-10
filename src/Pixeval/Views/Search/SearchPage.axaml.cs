@@ -49,7 +49,10 @@ public partial class SearchPage : IconContentPage
         InitializeComponent();
     }
 
-    private async void CopyButton_OnClick(object? sender, RoutedEventArgs e)
+    private void CopyButton_OnClick(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => CopyButton_OnClickAsync(sender, e));
+
+    private async Task CopyButton_OnClickAsync(object? sender, RoutedEventArgs e)
     {
         var value = sender switch
         {
@@ -57,39 +60,38 @@ public partial class SearchPage : IconContentPage
             Control { DataContext: string tag } => tag,
             _ => null
         };
-        if (value is null
-            || TopLevel.GetTopLevel(this) is not { ViewContainer: { } viewContainer, Clipboard: { } clipboard })
+        if (value is null)
             return;
 
-        await clipboard.SetTextAsync(value);
-        viewContainer.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+        await this.ClipboardService.SetTextAsync(value);
+        this.Notifications.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
     }
 
-    private static void AddPinnedTagButton_OnClick(object? sender, RoutedEventArgs e)
+    private void AddPinnedTagButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not Control { DataContext: SearchHistoryRecord entry })
             return;
 
-        var pinnedTags = App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.PinnedTags;
+        var pinnedTags = this.GetRequiredUiService<AppSettings>().BrowsingExperienceSettings.PinnedTags;
         if (!pinnedTags.Contains(entry.Value))
             pinnedTags.Add(entry.Value);
-        _ = App.Services!.GetRequiredService<SearchHistorySession>().Entries.Remove(entry);
+        _ = this.GetRequiredUiService<SearchHistorySession>().Entries.Remove(entry);
     }
 
-    private static void UnpinButton_OnClick(object? sender, RoutedEventArgs e)
+    private void UnpinButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not Control { DataContext: string tag })
             return;
 
-        if (App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.PinnedTags.Remove(tag))
-            App.Services!.GetRequiredService<SearchHistorySession>().Add(tag);
+        if (this.GetRequiredUiService<AppSettings>().BrowsingExperienceSettings.PinnedTags.Remove(tag))
+            this.GetRequiredUiService<SearchHistorySession>().Add(tag);
     }
 
     private void DeleteButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not Control { DataContext: SearchHistoryRecord entry })
             return;
-        _ = App.Services!.GetRequiredService<SearchHistorySession>().Entries.Remove(entry);
+        _ = this.GetRequiredUiService<SearchHistorySession>().Entries.Remove(entry);
     }
 
     private void TrendingTagButton_OnClick(object? sender, RoutedEventArgs e)
@@ -274,7 +276,7 @@ public partial class SearchPage : IconContentPage
                 return;
 
             await Task.Delay(_SearchTagCompletionDelay, token).ConfigureAwait(false);
-            var tags = await App.Services!.GetRequiredService<MakoClient>()
+            var tags = await this.GetRequiredUiService<MakoClient>()
                 .GetAutoCompletionForKeyword(keyword, true, token)
                 .ConfigureAwait(false);
             token.ThrowIfCancellationRequested();
@@ -353,14 +355,12 @@ public partial class SearchPage : IconContentPage
 
     private void ExecuteSearch(string? searchText, bool advanced)
     {
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
-            return;
         if (DataContext is not SearchPageViewModel viewModel)
             return;
 
         if (string.IsNullOrWhiteSpace(searchText))
         {
-            viewContainer.ShowWarning(
+            this.Notifications.ShowWarning(
                 I18NManager.GetResource(MainPageResources.SearchKeywordCannotBeBlank.Title),
                 I18NManager.GetResource(MainPageResources.SearchKeywordCannotBeBlank.Content));
             return;
@@ -378,30 +378,30 @@ public partial class SearchPage : IconContentPage
             {
                 if (!viewModel.NovelForm.TryValidate(out var title, out var content))
                 {
-                    viewContainer.ShowWarning(title, content);
+                    this.Notifications.ShowWarning(title, content);
                     return;
                 }
 
                 var arguments = viewModel.NovelForm.BuildArguments(searchText);
-                App.Services!.GetRequiredService<SearchHistorySession>().Add(searchText);
+                this.GetRequiredUiService<SearchHistorySession>().Add(searchText);
                 NavigationService.NavigateToWorkSearch(arguments, this);
             }
             else
             {
                 if (!viewModel.IllustrationForm.TryValidate(out var title, out var content))
                 {
-                    viewContainer.ShowWarning(title, content);
+                    this.Notifications.ShowWarning(title, content);
                     return;
                 }
 
                 var arguments = viewModel.IllustrationForm.BuildArguments(searchText);
-                App.Services!.GetRequiredService<SearchHistorySession>().Add(searchText);
+                this.GetRequiredUiService<SearchHistorySession>().Add(searchText);
                 NavigationService.NavigateToWorkSearch(arguments, this);
             }
         }
         catch (Exception ex)
         {
-            viewContainer.ShowError(I18NManager.GetResource(SearchResources.Validation.SearchFailed.Title), ex.Message);
+            this.Notifications.ShowError(I18NManager.GetResource(SearchResources.Validation.SearchFailed.Title), ex.Message);
         }
     }
 

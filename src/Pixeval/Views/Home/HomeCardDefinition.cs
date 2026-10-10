@@ -16,7 +16,7 @@ namespace Pixeval.Views.Home;
 public sealed class HomeCardDefinition(
     HomePageCardSourceKind sourceKind,
     Func<HomePageCardLayout, Task<HomeCardPreviewSource>> previewSourceFactory,
-    Action<HomePageCardLayout, HomeCardPreviewSource, TopLevel> pageOpener,
+    Action<HomePageCardLayout, HomeCardPreviewSource> pageOpener,
     Func<HomePageCardLayout, IReadOnlyList<string>>? titleParameterFactory = null)
 {
     private static readonly ConfigEngine ConfigEngine = new();
@@ -51,11 +51,11 @@ public sealed class HomeCardDefinition(
     public Task<HomeCardPreviewSource> CreatePreviewSourceAsync(HomePageCardLayout card) =>
         previewSourceFactory(card);
 
-    public void OpenCardPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    public void OpenCardPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
         try
         {
-            pageOpener(card, source, topLevel);
+            pageOpener(card, source);
         }
         finally
         {

@@ -29,7 +29,10 @@ public partial class DownloadItem : UserControl
             ? itemPage.PageViewModel
             : null;
 
-    private async void ActionButton_OnClicked(object? sender, RoutedEventArgs e)
+    private void ActionButton_OnClicked(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => ActionButton_OnClickedAsync(sender, e));
+
+    private async Task ActionButton_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
         if (Item is not { } item || Page is not { } page)
             return;
@@ -52,7 +55,10 @@ public partial class DownloadItem : UserControl
             page.Cancel(item.Key);
     }
 
-    private async void OpenDownloadLocationItem_OnClicked(object? sender, RoutedEventArgs e)
+    private void OpenDownloadLocationItem_OnClicked(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => OpenDownloadLocationItem_OnClickedAsync(sender, e));
+
+    private async Task OpenDownloadLocationItem_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
         if (Item is not { } item)
             return;
@@ -68,13 +74,15 @@ public partial class DownloadItem : UserControl
             OpenIllustrationRequested?.Invoke(this, item);
     }
 
-    private async void CheckErrorMessageInDetail_OnClicked(object? sender, RoutedEventArgs e)
+    private void CheckErrorMessageInDetail_OnClicked(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => CheckErrorMessageInDetail_OnClickedAsync(sender, e));
+
+    private async Task CheckErrorMessageInDetail_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
         if (Item is not { } item)
             return;
 
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
-            _ = await viewContainer.CreateAcknowledgementAsync(
+        _ = await this.Dialogs.CreateAcknowledgementAsync(
                 I18NManager.GetResource(DownloadItemResources.ErrorMessageDialogTitle),
                 item.ErrorMessage);
     }
@@ -119,13 +127,13 @@ public partial class DownloadItem : UserControl
                 return;
             }
 
-            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowError(
+            this.Notifications.ShowError(
                 I18NManager.GetResource(DownloadItemResources.ActionButtonContentOpen),
                 path);
         }
         catch
         {
-            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowError(
+            this.Notifications.ShowError(
                 I18NManager.GetResource(DownloadItemResources.ActionButtonContentOpen),
                 path);
         }

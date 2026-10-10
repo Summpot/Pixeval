@@ -105,9 +105,19 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
         CardBorder.Background = new SolidColorBrush(Color.FromUInt32(Card.BackgroundColor));
     }
 
-    protected override async void OnLoaded(RoutedEventArgs e)
+    protected override void OnLoaded(RoutedEventArgs e)
+
     {
+
         base.OnLoaded(e);
+
+        this.RunInteraction(() => OnLoadedAsync(e));
+
+    }
+
+
+    private async Task OnLoadedAsync(RoutedEventArgs e)
+    {
         if (_loadPreview)
             await PreviewViewModel.LoadAsync();
     }
@@ -122,25 +132,21 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
     private void OpenPreviewItem(object? parameter)
     {
         if (parameter is not Control control
-            || TopLevel.GetTopLevel(control) is not { } topLevel)
+            || control.AppNavigation is not { } navigation)
             return;
 
-        HomeCardDefinitions.OpenPreviewItem(topLevel, control.DataContext, PreviewViewModel.ViewModel);
+        HomeCardDefinitions.OpenPreviewItem(navigation, control.LauncherService, control.DataContext, PreviewViewModel.ViewModel);
     }
 
     [RelayCommand]
     private async Task OpenCardPageAsync()
     {
-        if (TopLevel.GetTopLevel(this) is not { } topLevel
-            || topLevel.ViewContainer is null)
-            return;
-
         await PreviewViewModel.EnsureLoadedAsync();
         var source = PreviewViewModel.Source;
         if (source is null)
             return;
 
-        Definition.OpenCardPage(Card, source, topLevel);
+        Definition.OpenCardPage(Card, source);
     }
 
     public void Dispose()

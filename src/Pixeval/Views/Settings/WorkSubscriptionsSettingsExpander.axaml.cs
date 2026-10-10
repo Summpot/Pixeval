@@ -82,7 +82,10 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         }
     }
 
-    private async void AddButton_OnClicked(object? sender, RoutedEventArgs e)
+    private void AddButton_OnClicked(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => AddButton_OnClickedAsync(sender, e));
+
+    private async Task AddButton_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
         ErrorTextBlock.IsVisible = false;
         if (!long.TryParse(TargetIdTextBox.Text, out var targetId) || targetId <= 0)
@@ -121,7 +124,10 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         await ReloadAsync();
     }
 
-    private async void DeleteButton_OnClicked(object? sender, RoutedEventArgs e)
+    private void DeleteButton_OnClicked(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => DeleteButton_OnClickedAsync(sender, e));
+
+    private async Task DeleteButton_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: WorkSubscriptionRecord item })
             return;

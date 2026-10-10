@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Threading.Tasks;
 using System.Collections;
 using System.ComponentModel;
 using Avalonia;
@@ -59,7 +60,10 @@ public partial class DownloadFolderListView : ContentPage, IDisposable
         UpdateItemsSourceSubscription();
     }
 
-    private async void DownloadFolder_OnOpenRequested(DownloadFolder sender, DownloadFolderSnapshot folder)
+    private void DownloadFolder_OnOpenRequested(DownloadFolder sender, DownloadFolderSnapshot folder) =>
+        this.RunInteraction(() => DownloadFolder_OnOpenRequestedAsync(sender, folder));
+
+    private async Task DownloadFolder_OnOpenRequestedAsync(DownloadFolder sender, DownloadFolderSnapshot folder)
     {
         if (DataContext is not DownloadFolderPageViewModel vm
             || !IsInNavigationPage
@@ -81,21 +85,24 @@ public partial class DownloadFolderListView : ContentPage, IDisposable
     private void ResetAll_OnClicked(object? sender, RoutedEventArgs e) =>
         ExecuteForFolder(sender, static (page, key) => page.Reset(key));
 
-    private static void SyncSubscription_OnClicked(object? sender, RoutedEventArgs e)
+    private void SyncSubscription_OnClicked(object? sender, RoutedEventArgs e)
     {
         if (sender is not MenuItem { Tag: DownloadFolderSnapshot folder })
             return;
 
-        if (App.Services!.GetRequiredService<StorageEngine>().GetSubscriptionByHistoryId(folder.SubscriptionId) is { } subscription)
-            App.Services!.GetRequiredService<IWorkSubscriptionService>().QueueSyncSubscription(subscription);
+        if (this.GetRequiredUiService<StorageEngine>().GetSubscriptionByHistoryId(folder.SubscriptionId) is { } subscription)
+            this.GetRequiredUiService<IWorkSubscriptionService>().QueueSyncSubscription(subscription);
     }
 
-    private static async void RemoveSubscription_OnClicked(object? sender, RoutedEventArgs e)
+    private void RemoveSubscription_OnClicked(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => RemoveSubscription_OnClickedAsync(sender, e));
+
+    private async Task RemoveSubscription_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
         if (sender is not MenuItem { Tag: DownloadFolderSnapshot folder })
             return;
 
-        _ = await App.Services!.GetRequiredService<IWorkSubscriptionService>()
+        _ = await this.GetRequiredUiService<IWorkSubscriptionService>()
             .TryRemoveAsync(folder.SubscriptionId);
     }
 

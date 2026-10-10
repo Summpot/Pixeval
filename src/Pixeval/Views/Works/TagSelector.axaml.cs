@@ -101,7 +101,7 @@ public partial class TagSelector : UserControl
             }
             else
             {
-                var makoClient = App.Services!.GetRequiredService<MakoClient>();
+                var makoClient = this.GetRequiredUiService<MakoClient>();
                 var bookmarkDetail = await makoClient.GetWorkBookmarkDetailAsync(WorkType, WorkId);
                 IsPrivate = bookmarkDetail.Restrict.Equals("private", StringComparison.OrdinalIgnoreCase);
                 var tags = bookmarkDetail.Tags.Select(BookmarkDetailBookmarkTag.Create).ToArray();
@@ -118,9 +118,9 @@ public partial class TagSelector : UserControl
 
         async Task<AvaloniaList<BookmarkTag>> GetTagsAsync(PrivacyPolicy policy)
         {
-            var session = App.Services?.GetService<IUserSessionService>();
+            var session = this.GetUiService<IUserSessionService>();
             var myId = session?.CurrentUserId ?? 0;
-            var makoClient = App.Services!.GetRequiredService<MakoClient>();
+            var makoClient = this.GetRequiredUiService<MakoClient>();
             return myId > 0
                 ? [.. await makoClient.WorkBookmarkTags(WorkType, myId, policy).ToListAsync(token)]
                 : [];

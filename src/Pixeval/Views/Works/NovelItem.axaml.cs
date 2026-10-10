@@ -25,8 +25,8 @@ public partial class NovelItem : WorkItem
     {
         if (sender is not Control { DataContext: Tag tag })
             return;
-        App.Services!.GetRequiredService<SearchHistorySession>().Add(tag.Name, tag.TranslatedName);
-        var nav = App.Services!.GetService<INavigationService>() ?? new NavigationService();
+        this.GetRequiredUiService<SearchHistorySession>().Add(tag.Name, tag.TranslatedName);
+        var nav = this.GetUiService<INavigationService>() ?? new NavigationService();
         nav.NavigateToWorkSearch(tag.Name, SimpleWorkType.Novel, this);
     }
 
@@ -34,7 +34,7 @@ public partial class NovelItem : WorkItem
     {
         if (sender is not Control { DataContext: Mako.Novel vm })
             return;
-        var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
+        var nav = this.GetUiService<INavigationService>() ?? new NavigationService();
         nav.NavigateToUser(vm.User.Id, this);
     }
 

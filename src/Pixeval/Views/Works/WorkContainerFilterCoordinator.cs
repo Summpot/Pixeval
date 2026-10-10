@@ -29,7 +29,7 @@ public class WorkContainerFilterCoordinator
     public void PerformSearch(
         IOperableViewViewModel? viewModel,
         WorkFilterAutoSuggestBox suggestBox,
-        ViewContainerBase? viewContainer,
+        INotificationService notifications,
         string? text,
         int caret)
     {
@@ -51,7 +51,7 @@ public class WorkContainerFilterCoordinator
             if (analysis.Diagnostics.Count > 0)
             {
                 suggestBox.HighlightDiagnostic(analysis.Diagnostics[0].Span);
-                viewContainer?.ShowError(
+                notifications.ShowError(
                     I18NManager.GetResource(FilterResources.FilterQueryError),
                     FormatDiagnosticMessage(analysis));
             }

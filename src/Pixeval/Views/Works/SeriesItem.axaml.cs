@@ -18,16 +18,16 @@ public partial class SeriesItem : EntryItem
     private void LatestContentButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not Control { DataContext: Series viewModel }
-            || TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
+            || this.AppNavigation is not { } navigator)
             return;
 
         if (viewModel.LatestContentId is not { } latestContentId)
             return;
 
         if (viewModel.WorkType is SimpleWorkType.Novel)
-            viewContainer.CreateNovelPage(latestContentId);
+            navigator.CreateNovelPage(latestContentId);
         else
-            viewContainer.CreateIllustrationPage(
+            navigator.CreateIllustrationPage(
                 latestContentId.ToString(CultureInfo.InvariantCulture),
                 PlatformConstants.Pixiv);
     }
@@ -36,10 +36,10 @@ public partial class SeriesItem : EntryItem
     {
         if (sender is not Control { DataContext: Series viewModel })
             return;
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
+        if (this.AppNavigation is not { } navigator)
             return;
 
         if (viewModel.User is { } user)
-            viewContainer.CreateUserPage(user.Id);
+            navigator.CreateUserPage(user.Id);
     }
 }
