@@ -127,11 +127,11 @@ flowchart TD
         P6_5["6.5 View Code-Behind 极致瘦身与声明式路由 [已完成]<br/>• WorkContainer / TabViewContainer 视图逻辑抽取<br/>• 规范化 NavigationService 统一路由跳转"]
     end
 
-    subgraph Phase7 ["Phase 7: Thin UI 收口 (职责边界) [待启动]"]
-        P7_1["7.1 下载任务编排下沉与进度树直绑"]
-        P7_2["7.2 评论与设置行去掉平行模型"]
-        P7_3["7.3 查看器子页声明式组合"]
-        P7_4["7.4 静态服务定位器退出业务代码"]
+    subgraph Phase7 ["Phase 7: Thin UI 收口 (职责边界) [已完成]"]
+        P7_1["7.1 下载任务编排下沉与进度树直绑 [已完成]"]
+        P7_2["7.2 评论与设置行去掉平行模型 [已完成]"]
+        P7_3["7.3 查看器子页声明式组合 [已完成]"]
+        P7_4["7.4 静态服务定位器退出业务代码 [已完成]"]
         P7_5["7.5 残留编解码、缓存所有权与更新下载 [已完成]"]
         P7_6["7.6 作品记录上的重复投影收敛 [已完成]"]
     end
@@ -580,7 +580,7 @@ Phase 6 的核心目标是：**全面清理在逐步演进过程中积累的过�
 
 ---
 
-### 阶段 7：Thin UI 收口 (Phase 7) [待启动]
+### 阶段 7：Thin UI 收口 (Phase 7) [已完成]
 
 Phase 2 至 Phase 6 已经把作品列表收成原生模型直绑，并清掉了点名的 `*ItemViewModel`、Misaki 和旧集合克隆管道。对照 §1.3，表现层仍在做四类不该留在 C# 的事：下载任务编排、与原生记录平行的一行一模型、在视图里 `new Page()`，以及把 `App.AppViewModel` 当服务定位器。
 
@@ -595,7 +595,7 @@ Phase 2 至 Phase 6 已经把作品列表收成原生模型直绑，并清掉了
 - 设置帮助页的 `McpToolItemViewModel`。它投影的是 JSON Schema，不是领域实体。
 - `HomeCardDefinitions` 里“卡片种类 → 已有 Mako 拉取引擎”的映射。映射表不再搬进 Rust，只去掉对 `App.AppViewModel` 的静态读取。
 
-#### 7.1 下载任务编排下沉与进度树直绑
+#### 7.1 下载任务编排下沉与进度树直绑 (已完成)
 - **现状**：
   - `UgoiraDownloadTaskGroup`、`MangaDownloadTaskGroup`、`NovelDownloadTaskGroup`、`ImageDownloadTask` 与基类 `DownloadTaskGroup` 仍在 C# 决定目标路径、覆盖策略、动图帧 URL、历史回写，然后再调用 `MediaEngine`。
   - `DownloadPageViewModel` 自己查找订阅文件夹、置顶、插入，并为每个任务构造 `DownloadItemViewModel`。
@@ -606,13 +606,13 @@ Phase 2 至 Phase 6 已经把作品列表收成原生模型直绑，并清掉了
   - 引擎向外推一份不可变的下载页快照。快照里直接带标题、作者、状态、进度和文件夹聚合，表现层不再按作品类型现算这些字段。
   - 插件自定义编码仍通过现有 `ExtensionService` 回调供给。回调只提供编码器，任务组类不再保留编排。
   - `DownloadPageViewModel` 只保留筛选、多选和暂停、继续、删除、打开命令。
-- **验收标准**：
-  - [ ] 表现层没有代码决定下载目标路径、帧列表或归档打包。
-  - [ ] 下载列表的 `DataTemplate` 绑定原生快照记录，`DownloadItemViewModel` 删除。
-  - [ ] 页面 ViewModel 不插入、不排序、不按条包装任务。
-  - [ ] `Models/Download/Tasks/` 下的任务组与 `ImageDownloadTask` 删除，或只剩下把命令转给 `DownloadManager` 的薄句柄。
+- **验收标准与完成状态**：
+  - [x] 表现层没有代码决定下载目标路径、帧列表或归档打包。
+  - [x] 下载列表的 `DataTemplate` 绑定原生快照记录，`DownloadItemViewModel` 删除。
+  - [x] 页面 ViewModel 不插入、不排序、不按条包装任务。
+  - [x] `Models/Download/Tasks/` 下的任务组与 `ImageDownloadTask` 删除，或只剩下把命令转给 `DownloadManager` 的薄句柄。
 
-#### 7.2 评论与设置行去掉平行模型
+#### 7.2 评论与设置行去掉平行模型 (已完成)
 - **现状**：
   - Rust 已导出 `CommentRecord`，C# 仍维护 `Pixeval.Models.Pixiv.Comment`，再由 `CommentItemViewModel` 包一层。该类还继承 `CommentsViewViewModel`，使每一条评论都带一份列表引擎。
   - `BlockedUserItemViewModel`、`WorkSubscriptionItemViewModel` 包住已有的 `BlockedUserRecord`、`WorkSubscriptionRecord`，并再合成一个 `User` 供模板使用。
@@ -621,12 +621,12 @@ Phase 2 至 Phase 6 已经把作品列表收成原生模型直绑，并清掉了
   - 回复展开、输入草稿和“是否本人”留在 `CommentsViewViewModel`，按评论 id 索引；身份比较使用 `IUserSessionService`。
   - 屏蔽用户和订阅列表直接绑定 `BlockedUserRecord`、`WorkSubscriptionRecord`。头像、名称和类型文案由记录字段、partial 或值转换器提供。
   - `McpToolItemViewModel` 保持不动。
-- **验收标准**：
-  - [ ] 删除 `Comment`、`CommentItemViewModel`、`BlockedUserItemViewModel`、`WorkSubscriptionItemViewModel`。
-  - [ ] 评论、屏蔽用户、订阅三项的 `DataTemplate` 以对应原生记录为 `DataType`。
-  - [ ] 设置帮助页的 MCP 工具模板仍使用现有展示模型。
+- **验收标准与完成状态**：
+  - [x] 删除 `Comment`、`CommentItemViewModel`、`BlockedUserItemViewModel`、`WorkSubscriptionItemViewModel`。
+  - [x] 评论、屏蔽用户、订阅三项的 `DataTemplate` 以对应原生记录为 `DataType`。
+  - [x] 设置帮助页的 MCP 工具模板仍使用现有展示模型。
 
-#### 7.3 查看器子页声明式组合
+#### 7.3 查看器子页声明式组合 (已完成)
 - **现状**：
   - `IllustrationViewerInfoPane` 在代码里 `new WorkInfoPage`、`new Border`、`new CommentsPage`、`new WorkRelatedPage`。
   - `NovelViewerPage` 同样直接构造信息页、评论页和相关作品页。
@@ -638,13 +638,13 @@ Phase 2 至 Phase 6 已经把作品列表收成原生模型直绑，并清掉了
   - 用户查看器的 ViewModel 暴露当前用户记录和 id，不暴露 `Page` 列表。
   - 自动播放的计时器放在附加行为里。页面 ViewModel 可以暴露可绑定的播放开关，不持有计时器，也不在滴答时写设置。
   - `SingleViewerViewModel` 保留缩放、旋转和播放状态。保存、复制和扩展图像变换改走已有的 `ArtworkActionService` 与 `ImageProviderService`。
-- **验收标准**：
-  - [ ] `Views/` 与 `ViewModels/` 中不再出现 `new WorkInfoPage`、`new CommentsPage`、`new WorkRelatedPage`、`new WorkPostsPage` 以及同类能力页构造。
-  - [ ] `SettingsMainView` 不再直接 `new AboutPage`、`new HelpPage`、`new NavigationSettingsPage`。
-  - [ ] `IllustrationViewerPageViewModel` 没有自动播放计时器字段。
-  - [ ] 查看器仍能切换当前作品、显示加载错误，并完成缩放、旋转和自动播放。不验收这些文件的行数。
+- **验收标准与完成状态**：
+  - [x] `Views/` 与 `ViewModels/` 中不再出现 `new WorkInfoPage`、`new CommentsPage`、`new WorkRelatedPage`、`new WorkPostsPage` 以及同类能力页构造。
+  - [x] `SettingsMainView` 不再直接 `new AboutPage`、`new HelpPage`、`new NavigationSettingsPage`。
+  - [x] `IllustrationViewerPageViewModel` 没有自动播放计时器字段。
+  - [x] 查看器仍能切换当前作品、显示加载错误，并完成缩放、旋转和自动播放。不验收这些文件的行数。
 
-#### 7.4 静态服务定位器退出业务代码
+#### 7.4 静态服务定位器退出业务代码 (已完成)
 - **现状**：
   - `App.AppViewModel` 在表现层约有 243 处引用，分布在约 73 个文件。大量构造函数写成“注入参数 ?? `App.AppViewModel`”。
   - `PixevalSettings` 把 `App.AppViewModel.AppSettings` 和 `MakoClient.GetUser()` 收成静态属性。XAML 用 `{x:Static PixevalSettings.WorkType}`、布局尺寸和 `PixevalSettings.Instance` 做双向绑定。
@@ -656,11 +656,11 @@ Phase 2 至 Phase 6 已经把作品列表收成原生模型直绑，并清掉了
   - 作品类型默认值和缩略图布局尺寸改绑到页面上的 `AppSettings`，或改由 `{di:Service}` 提供。`PixevalSettings` 不再转发 `App.AppViewModel`。
   - `HomeCardDefinitions` 接收注入的 `MakoClient`，继续做卡片种类到拉取引擎的映射。
   - `App` 启动路径和 `AppViewModel` 组合根可以继续创建容器并持有进程级对象。测试项目可以继续设置这个根。
-- **验收标准**：
-  - [ ] 上述业务目录中不再出现 `App.AppViewModel`。组合根与 `Pixeval.Tests` 除外。
-  - [ ] `PixevalSettings` 删除，或文件内不再出现 `App.AppViewModel`。
-  - [ ] 主页卡片预览仍能按卡片种类打开对应的原生拉取结果。
-  - [ ] 不验收 `AppViewModel` 的行数。
+- **验收标准与完成状态**：
+  - [x] 上述业务目录中不再出现 `App.AppViewModel`。组合根与 `Pixeval.Tests` 除外。
+  - [x] `PixevalSettings` 删除，或文件内不再出现 `App.AppViewModel`。
+  - [x] 主页卡片预览仍能按卡片种类打开对应的原生拉取结果。
+  - [x] 不验收 `AppViewModel` 的行数。
 
 #### 7.5 残留编解码、缓存所有权与更新下载
 - **现状**：
