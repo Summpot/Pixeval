@@ -127,10 +127,20 @@ flowchart TD
         P6_5["6.5 View Code-Behind 极致瘦身与声明式路由 [已完成]<br/>• WorkContainer / TabViewContainer 视图逻辑抽取<br/>• 规范化 NavigationService 统一路由跳转"]
     end
 
+    subgraph Phase7 ["Phase 7: Thin UI 收口 (职责边界) [待启动]"]
+        P7_1["7.1 下载任务编排下沉与进度树直绑"]
+        P7_2["7.2 评论与设置行去掉平行模型"]
+        P7_3["7.3 查看器子页声明式组合"]
+        P7_4["7.4 静态服务定位器退出业务代码"]
+        P7_5["7.5 残留编解码、缓存所有权与更新下载"]
+        P7_6["7.6 作品记录上的重复投影收敛"]
+    end
+
     Phase2 --> Phase3
     Phase3 --> Phase4
     Phase4 --> Phase5
     Phase5 --> Phase6
+    Phase6 --> Phase7
 ```
 
 ---
@@ -348,6 +358,7 @@ flowchart TD
     - `IllustrationViewerPageViewModel.cs` (515 行 -> ~160 行)
     - `NovelViewerPageViewModel.cs` (386 行 -> ~140 行)
     - `AppViewModel.cs` (784 行 -> ~220 行)
+  - 上列行数是当时的估算。Phase 7 不再用行数验收，改看职责是否还留在表现层。
 - **验收标准**：
   - 表现层 100% 消除 `*ItemViewModel` 实体包装类，XAML DataTemplate 均以 `Pixeval.Native.*` 原生实体为 DataContext。
   - 列表滚动流无任何包装堆分配，长列表 GC 停顿时间显著下降；下载中心与作品查看器无任何 UI 线程卡顿。
@@ -569,25 +580,114 @@ Phase 6 的核心目标是：**全面清理在逐步演进过程中积累的过�
 
 ---
 
-## 4. 下一步行动建议 (Recommended Next Steps)
+### 阶段 7：Thin UI 收口 (Phase 7) [待启动]
 
-在 Phase 1 ~ 4.1 的全量攻坚下，Pixeval 已完成绝大多数底层架构向 Rust 的跨越，并修复了 17 个关键技术缺陷。
-为了彻底消除历史技术债务并实现极致精简的 Avalonia 表现层，后续建议按照**“先下沉残留核心系统，再解耦模型与清退外部抽象，最后解构静态巨石与精简表现层”**的战略步骤推进：
+Phase 2 至 Phase 6 已经把作品列表收成原生模型直绑，并清掉了点名的 `*ItemViewModel`、Misaki 和旧集合克隆管道。对照 §1.3，表现层仍在做四类不该留在 C# 的事：下载任务编排、与原生记录平行的一行一模型、在视图里 `new Page()`，以及把 `App.AppViewModel` 当服务定位器。
 
-1. **底层核心业务与协议栈全量下沉 (Phase 5: 5.1 ~ 5.7) [已完成]**
-   - 达成 100% Rust Core 底层闭环，C# 网络栈、图像解码、协议辅助与动态库扫描全部下沉。
-2. **领域契约还原与 UI 状态解耦 (Phase 6.1) [已完成]**
-   - 原生 Record 恢复纯净只读不可变契约；交互状态完全收敛至集中式 UI 状态仓与附加行为。
-3. **彻底清退 Misaki 依赖与历史抽象 (Phase 6.2) [已完成]**
-   - 物理移除 `Misaki` NuGet 包与 `IArtworkInfo` 等接口链；视图 DataTemplate 纯粹直绑原生实体。
-4. **静态巨石解体与标准 DI 落地 (Phase 6.3) [已完成]**
-   - 注册单一职责核心服务至 DI，消灭弱类型命令与 `App.AppViewModel` 静态穿透，推行构造函数注入与 XAML 标记扩展。
-5. **集合管道精简与数据流极大化精简 (Phase 6.4) [已完成]**
-   - 物理删除 `SharableViewDataProvider` 等复杂轮子，将集合管道收敛至原生异步流与精简集合。
-6. **表现层终极瘦身与声明式路由体系 (Phase 6.5) [已完成]**
-   - 解耦 `WorkContainer` / `TabViewContainer`，完成 Avalonia 表现层终极瘦身与声明式路由。
-7. **最终交付：统一跨平台 CI/CD 流水线 (Phase 4.2) [待启动]**
-   - 配置 GitHub Actions 原生矩阵交叉编译与多架构分发。
+本阶段按职责边界收口，不设行数上限。Phase 4.1 里 `DownloadPageViewModel` 约 70 行、查看器约 160 行这类数字是当时的估算，不作为验收。查看器可以继续持有当前索引、加载状态和错误信息；手势、外观控件和设置帮助页的展示模型也留在 C#。
+
+以下内容明确留在表现层：
+
+- 虚拟化面板、Markdown、分词框等自定义外观控件。
+- 图片查看器的缩放、旋转、播放暂停。
+- `AnimatedControls` 里为了把帧画成 Avalonia `Bitmap` 而使用的 Skia 解码。
+- Velopack 的安装与重启。
+- 设置帮助页的 `McpToolItemViewModel`。它投影的是 JSON Schema，不是领域实体。
+- `HomeCardDefinitions` 里“卡片种类 → 已有 Mako 拉取引擎”的映射。映射表不再搬进 Rust，只去掉对 `App.AppViewModel` 的静态读取。
+
+#### 7.1 下载任务编排下沉与进度树直绑
+- **现状**：
+  - `UgoiraDownloadTaskGroup`、`MangaDownloadTaskGroup`、`NovelDownloadTaskGroup`、`ImageDownloadTask` 与基类 `DownloadTaskGroup` 仍在 C# 决定目标路径、覆盖策略、动图帧 URL、历史回写，然后再调用 `MediaEngine`。
+  - `DownloadPageViewModel` 自己查找订阅文件夹、置顶、插入，并为每个任务构造 `DownloadItemViewModel`。
+  - `DownloadFolderViewModel` 虽然持有 `SubscriptionFolderSnapshot`，但是用当前 `DownloadItemViewModel` 列表在 C# 里重算出来的。
+  - `DownloadItemViewModel` 再用 `switch` 从 `Illustration` / `Novel` / `BooruPost` 拼标题和作者。
+- **目标**：
+  - `pixeval_download` 拥有任务树：入队、覆盖判断、子任务、动图与漫画打包（内部调用已有的 `pixeval_media`）、小说落盘、历史回写。
+  - 引擎向外推一份不可变的下载页快照。快照里直接带标题、作者、状态、进度和文件夹聚合，表现层不再按作品类型现算这些字段。
+  - 插件自定义编码仍通过现有 `ExtensionService` 回调供给。回调只提供编码器，任务组类不再保留编排。
+  - `DownloadPageViewModel` 只保留筛选、多选和暂停、继续、删除、打开命令。
+- **验收标准**：
+  - [ ] 表现层没有代码决定下载目标路径、帧列表或归档打包。
+  - [ ] 下载列表的 `DataTemplate` 绑定原生快照记录，`DownloadItemViewModel` 删除。
+  - [ ] 页面 ViewModel 不插入、不排序、不按条包装任务。
+  - [ ] `Models/Download/Tasks/` 下的任务组与 `ImageDownloadTask` 删除，或只剩下把命令转给 `DownloadManager` 的薄句柄。
+
+#### 7.2 评论与设置行去掉平行模型
+- **现状**：
+  - Rust 已导出 `CommentRecord`，C# 仍维护 `Pixeval.Models.Pixiv.Comment`，再由 `CommentItemViewModel` 包一层。该类还继承 `CommentsViewViewModel`，使每一条评论都带一份列表引擎。
+  - `BlockedUserItemViewModel`、`WorkSubscriptionItemViewModel` 包住已有的 `BlockedUserRecord`、`WorkSubscriptionRecord`，并再合成一个 `User` 供模板使用。
+- **目标**：
+  - 评论列表直接绑定 `CommentRecord`。印章地址、日期和展示文本在 `NativeExtensions/Mako` 的 partial 上做只读投影。
+  - 回复展开、输入草稿和“是否本人”留在 `CommentsViewViewModel`，按评论 id 索引；身份比较使用 `IUserSessionService`。
+  - 屏蔽用户和订阅列表直接绑定 `BlockedUserRecord`、`WorkSubscriptionRecord`。头像、名称和类型文案由记录字段、partial 或值转换器提供。
+  - `McpToolItemViewModel` 保持不动。
+- **验收标准**：
+  - [ ] 删除 `Comment`、`CommentItemViewModel`、`BlockedUserItemViewModel`、`WorkSubscriptionItemViewModel`。
+  - [ ] 评论、屏蔽用户、订阅三项的 `DataTemplate` 以对应原生记录为 `DataType`。
+  - [ ] 设置帮助页的 MCP 工具模板仍使用现有展示模型。
+
+#### 7.3 查看器子页声明式组合
+- **现状**：
+  - `IllustrationViewerInfoPane` 在代码里 `new WorkInfoPage`、`new Border`、`new CommentsPage`、`new WorkRelatedPage`。
+  - `NovelViewerPage` 同样直接构造信息页、评论页和相关作品页。
+  - `UserViewerPageViewModel.TabPages` 在属性里构造投稿、收藏、关注、MyPixiv 和相关用户五页。
+  - `SettingsMainView` 用 `new AboutPage()`、`new HelpPage()`、`new NavigationSettingsPage()` 推进设置帧。
+  - 自动播放的间隔、开关和设置保存仍在 `IllustrationViewerPageViewModel`。
+- **目标**：
+  - 查看器子页和用户主页的五个标签在 XAML 里声明，用 `DataTemplate` 或 `ContentControl` 呈现。导航进入的页面只由 `NavigationService` 构造。
+  - 用户查看器的 ViewModel 暴露当前用户记录和 id，不暴露 `Page` 列表。
+  - 自动播放的计时器放在附加行为里。页面 ViewModel 可以暴露可绑定的播放开关，不持有计时器，也不在滴答时写设置。
+  - `SingleViewerViewModel` 保留缩放、旋转和播放状态。保存、复制和扩展图像变换改走已有的 `ArtworkActionService` 与 `ImageProviderService`。
+- **验收标准**：
+  - [ ] `Views/` 与 `ViewModels/` 中不再出现 `new WorkInfoPage`、`new CommentsPage`、`new WorkRelatedPage`、`new WorkPostsPage` 以及同类能力页构造。
+  - [ ] `SettingsMainView` 不再直接 `new AboutPage`、`new HelpPage`、`new NavigationSettingsPage`。
+  - [ ] `IllustrationViewerPageViewModel` 没有自动播放计时器字段。
+  - [ ] 查看器仍能切换当前作品、显示加载错误，并完成缩放、旋转和自动播放。不验收这些文件的行数。
+
+#### 7.4 静态服务定位器退出业务代码
+- **现状**：
+  - `App.AppViewModel` 在表现层约有 243 处引用，分布在约 73 个文件。大量构造函数写成“注入参数 ?? `App.AppViewModel`”。
+  - `PixevalSettings` 把 `App.AppViewModel.AppSettings` 和 `MakoClient.GetUser()` 收成静态属性。XAML 用 `{x:Static PixevalSettings.WorkType}`、布局尺寸和 `PixevalSettings.Instance` 做双向绑定。
+  - `HomeCardDefinitions` 的每种卡片都直接调用 `App.AppViewModel.MakoClient`。
+- **目标**：
+  - `Views`、`ViewModels`、`Models`、`Utilities`、`NativeExtensions`、`Services`、`Controls` 通过构造函数或已有的 `{di:Service}` 取得 `MakoClient`、`AppSettings`、`StorageEngine`、`DownloadManager` 和日志。
+  - 去掉 `?? App.AppViewModel` 回退。
+  - 会话身份（当前用户、用户 id、是否登录）只从 `IUserSessionService` 读取。
+  - 作品类型默认值和缩略图布局尺寸改绑到页面上的 `AppSettings`，或改由 `{di:Service}` 提供。`PixevalSettings` 不再转发 `App.AppViewModel`。
+  - `HomeCardDefinitions` 接收注入的 `MakoClient`，继续做卡片种类到拉取引擎的映射。
+  - `App` 启动路径和 `AppViewModel` 组合根可以继续创建容器并持有进程级对象。测试项目可以继续设置这个根。
+- **验收标准**：
+  - [ ] 上述业务目录中不再出现 `App.AppViewModel`。组合根与 `Pixeval.Tests` 除外。
+  - [ ] `PixevalSettings` 删除，或文件内不再出现 `App.AppViewModel`。
+  - [ ] 主页卡片预览仍能按卡片种类打开对应的原生拉取结果。
+  - [ ] 不验收 `AppViewModel` 的行数。
+
+#### 7.5 残留编解码、缓存所有权与更新下载
+- **现状**：
+  - `IOHelper.Imaging.SplitAnimatedImageStreamAsync` 仍用 Skia `SKCodec` 拆帧并编码 PNG。屏幕上的 `AnimatedControls` 也使用 `SKCodec`，二者职责不同。
+  - `ImageProviderService` 已经拥有一个 `CacheEngine`，`CacheHelper` 又懒加载第二个，并自行套用网络选项。
+  - `pixeval_update` 已能做版本比较、资源下载和 SHA256。`Versioning` 仍用 `SocketsHttpHandler` 与 `GitHubFileDownloader` 给 Velopack 拉发布包。
+- **目标**：
+  - 下载和导出路径上的动图拆帧进入 `pixeval_media`。若 `SplitAnimatedImageStreamAsync` 已无调用方，直接删除。
+  - 屏幕动画控件继续用 Skia 产出 Avalonia `Bitmap`。
+  - 应用图片缓存只由 `ImageProviderService` 构造一个 `CacheEngine`。容量和网络选项沿现有服务入口更新。`CacheHelper` 若保留，只负责把已有字节或引擎结果转成 `Bitmap` 与占位图。
+  - 更新包的字节下载和校验走 `UpdateEngine`。Velopack 的 `IFileDownloader` 只转发到该引擎。安装与重启留在 `Versioning`。
+- **验收标准**：
+  - [ ] 下载与导出代码路径不调用 `SKCodec`。
+  - [ ] 进程内只构造一个图片 `CacheEngine`。
+  - [ ] 更新资源的 HTTP 下载只出现在 `pixeval_update`。
+  - [ ] 动图预览控件仍能逐帧显示。
+
+#### 7.6 作品记录上的重复投影收敛
+- **现状**：
+  - `Illustration` 等 partial 上同时存在模板真正用到的 `AspectRatio`、`SizeText`、`Tooltip`，以及只把原生字段换个名字的 `Author`、`TotalFavorite`、`Entry`、`Description`。
+  - `IWorkEntry` 仍被批量命令用来做多态分发，成员很少。
+- **目标**：
+  - 调用点改为使用原生字段名后，删除只做转发的别名。
+  - 保留 `IWorkEntry` 里命令实际读取的成员，以及模板使用的只读展示属性。
+- **验收标准**：
+  - [ ] 原生作品记录上不再有与自身字段等价的转发属性。
+  - [ ] 作品墙、批量命令和工具提示行为与收口前一致。
 
 
 
