@@ -5,8 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Interactivity;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 
@@ -14,9 +17,12 @@ namespace Pixeval.Views.Capability;
 
 public partial class UserFollowingPage : IconContentPage
 {
+    private static long CurrentUserId =>
+        App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? PixevalSettings.MyId;
+
     private readonly long _userId;
 
-    public UserFollowingPage() : this(PixevalSettings.MyId)
+    public UserFollowingPage() : this(CurrentUserId)
     {
     }
 
@@ -25,7 +31,8 @@ public partial class UserFollowingPage : IconContentPage
         InitializeComponent();
         _userId = id;
         PrivacyPolicyComboBox.SelectedValue = privacyPolicy;
-        if (id <= 0 || id != PixevalSettings.MyId)
+        var myId = CurrentUserId;
+        if (id <= 0 || id != myId)
             PrivacyPolicyComboBox.IsEnabled = PrivacyPolicyComboBox.IsVisible = false;
         if (viewModel is not null)
             UserContainer.UserView.SetViewModel(viewModel);
@@ -53,7 +60,8 @@ public partial class UserFollowingPage : IconContentPage
             return;
         }
         var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>();
-        ResetEngine(App.AppViewModel.MakoClient.UserFollowing(_userId, privacy));
+        var makoClient = App.Services?.GetService<MakoClient>() ?? App.AppViewModel.MakoClient;
+        ResetEngine(makoClient.UserFollowing(_userId, privacy));
     }
 
     private void ResetEngine(IAsyncEnumerable<Pixeval.Native.Mako.User> fetchEngine) =>

@@ -10,7 +10,9 @@ using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Models.Pixiv;
+using Pixeval.Services;
 using Pixeval.Utilities;
 
 namespace Pixeval.Views.Work;
@@ -100,7 +102,8 @@ public partial class TagSelector : UserControl
             }
             else
             {
-                var bookmarkDetail = await App.AppViewModel.MakoClient.GetWorkBookmarkDetailAsync(WorkType, WorkId);
+                var makoClient = App.Services?.GetService<MakoClient>() ?? App.AppViewModel.MakoClient;
+                var bookmarkDetail = await makoClient.GetWorkBookmarkDetailAsync(WorkType, WorkId);
                 IsPrivate = bookmarkDetail.Restrict.Equals("private", StringComparison.OrdinalIgnoreCase);
                 var tags = bookmarkDetail.Tags.Select(BookmarkDetailBookmarkTag.Create).ToArray();
                 TagsSource = [.. tags, GetAddTag()];
@@ -114,10 +117,15 @@ public partial class TagSelector : UserControl
 
         return;
 
-        async Task<AvaloniaList<BookmarkTag>> GetTagsAsync(PrivacyPolicy policy) =>
-            PixevalSettings.MyId > 0
-                ? [.. await App.AppViewModel.MakoClient.WorkBookmarkTags(WorkType, PixevalSettings.MyId, policy).ToListAsync(token)]
+        async Task<AvaloniaList<BookmarkTag>> GetTagsAsync(PrivacyPolicy policy)
+        {
+            var session = App.Services?.GetService<IUserSessionService>();
+            var myId = session?.CurrentUserId ?? PixevalSettings.MyId;
+            var makoClient = App.Services?.GetService<MakoClient>() ?? App.AppViewModel.MakoClient;
+            return myId > 0
+                ? [.. await makoClient.WorkBookmarkTags(WorkType, myId, policy).ToListAsync(token)]
                 : [];
+        }
     }
 
     private AddNewBookmarkTag GetAddTag()

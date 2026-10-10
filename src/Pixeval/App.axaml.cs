@@ -64,7 +64,15 @@ public class App : Application
 #endif
     }
 
+    private static IServiceProvider? s_customServices;
+
     public static AppViewModel AppViewModel { get; private set; } = null!;
+
+    public static IServiceProvider? Services
+    {
+        get => s_customServices ?? AppViewModel?.AppServiceProvider;
+        set => s_customServices = value;
+    }
 
     public static void ApplyAppFontFamily(IEnumerable<string> fontFamilies)
     {

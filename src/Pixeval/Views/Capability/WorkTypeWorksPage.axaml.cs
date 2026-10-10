@@ -12,6 +12,7 @@ using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
 using Pixeval.Models.Subscriptions;
 using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Work;
@@ -130,9 +131,12 @@ public class WorkNewPage : WorkTypeWorksPage
 
 public class WorkPostsPage : WorkTypeWorksPage
 {
+    private static User GetCurrentOrFallbackUser() =>
+        App.Services?.GetService<IUserSessionService>()?.CurrentUserEntity ?? PixevalSettings.MyUser ?? new User(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []);
+
     private readonly User _user;
 
-    public WorkPostsPage() : this(PixevalSettings.MyUser ?? new User(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []))
+    public WorkPostsPage() : this(GetCurrentOrFallbackUser())
     {
     }
 

@@ -12,12 +12,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Native.Cache;
+using Pixeval.Services;
 
 namespace Pixeval.Utilities.IO.Caching;
 
 public static class CacheHelper
 {
     public static string CachePath { get; } = Path.Combine(AppInfo.CacheFolder, "FileCache");
+
+    private static IImageProviderService? Service => App.Services?.GetService<IImageProviderService>();
 
     private static readonly Lazy<CacheEngine> _CacheEngine =
         new(() =>
@@ -43,10 +46,16 @@ public static class CacheHelper
             return engine;
         });
 
-    public static CacheEngine CacheEngine => _CacheEngine.Value;
+    public static CacheEngine CacheEngine => Service?.CacheEngine ?? _CacheEngine.Value;
 
     public static void UpdateNetworkOptions(MakoConfigurationDto config)
     {
+        if (Service is { } service)
+        {
+            service.UpdateNetworkOptions(config);
+            return;
+        }
+
         try
         {
             _CacheEngine.Value.UpdateNetworkOptions(
@@ -75,21 +84,36 @@ public static class CacheHelper
         new(() => IAnimatedBitmap.Load([WrappedImageNotAvailable.Value], [100]));
 
     public static Task PurgeCacheAsync(CancellationToken token = default) =>
-        Task.Run(() => _CacheEngine.Value.Clear(), token);
+        Service?.PurgeCacheAsync(token) ?? Task.Run(() => _CacheEngine.Value.Clear(), token);
 
-    public static Task EnforceCacheSizeLimitAsync(CancellationToken token = default) => Task.CompletedTask;
+    public static Task EnforceCacheSizeLimitAsync(CancellationToken token = default) =>
+        Service?.EnforceCacheSizeLimitAsync(token) ?? Task.CompletedTask;
 
     private static long GetCacheSizeLimitInBytes()
     {
         var sizeInMegabytes =
-            Math.Max(1, App.AppViewModel.AppSettings.ApplicationSettings.FileCache.FileCacheSizeLimitInMegabytes);
+            Math.Max(1, App.AppViewModel?.AppSettings?.ApplicationSettings?.FileCache?.FileCacheSizeLimitInMegabytes ?? 128);
         return sizeInMegabytes * 1024L * 1024L;
     }
 
     /// <summary>
     /// 保证<see cref="Stream.Position"/>为0
     /// </summary>
-    public static async ValueTask<IAnimatedBitmap> GetUgoiraAnimatedImageAsync(
+    public static ValueTask<IAnimatedBitmap> GetUgoiraAnimatedImageAsync(
+        string platform,
+        Uri zipUri,
+        IReadOnlyList<int> delays,
+        IProgress<double>? progress = null,
+        Action<DecodedPreviewFrame>? onPreview = null,
+        CancellationToken token = default)
+    {
+        if (Service is { } service)
+            return service.GetUgoiraAnimatedImageAsync(platform, zipUri, delays, progress, onPreview, token);
+
+        return GetUgoiraAnimatedImageFallbackAsync(platform, zipUri, delays, progress, onPreview, token);
+    }
+
+    private static async ValueTask<IAnimatedBitmap> GetUgoiraAnimatedImageFallbackAsync(
         string platform,
         Uri zipUri,
         IReadOnlyList<int> delays,
@@ -136,7 +160,20 @@ public static class CacheHelper
     /// <summary>
     /// 保证<see cref="Stream.Position"/>为0
     /// </summary>
-    public static async ValueTask<IAnimatedBitmap> GetSingleImageAsync(
+    public static ValueTask<IAnimatedBitmap> GetSingleImageAsync(
+        string platform,
+        Uri frameUri,
+        IProgress<double>? progress = null,
+        Action<DecodedPreviewFrame>? onPreview = null,
+        CancellationToken token = default)
+    {
+        if (Service is { } service)
+            return service.GetSingleImageAsync(platform, frameUri, progress, onPreview, token);
+
+        return GetSingleImageFallbackAsync(platform, frameUri, progress, onPreview, token);
+    }
+
+    private static async ValueTask<IAnimatedBitmap> GetSingleImageFallbackAsync(
         string platform,
         Uri frameUri,
         IProgress<double>? progress = null,
@@ -171,7 +208,19 @@ public static class CacheHelper
     /// <summary>
     /// 保证<see cref="Stream.Position"/>为0
     /// </summary>
-    public static async ValueTask<Stream?> GetImageStreamAsync(
+    public static ValueTask<Stream?> GetImageStreamAsync(
+        string platform,
+        string key,
+        IProgress<double>? progress = null,
+        CancellationToken token = default)
+    {
+        if (Service is { } service)
+            return service.GetImageStreamAsync(platform, key, progress, token);
+
+        return GetImageStreamFallbackAsync(platform, key, progress, token);
+    }
+
+    private static async ValueTask<Stream?> GetImageStreamFallbackAsync(
         string platform,
         string key,
         IProgress<double>? progress = null,
@@ -187,14 +236,26 @@ public static class CacheHelper
         }
         catch (Exception e)
         {
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+            App.AppViewModel?.AppServiceProvider?.GetService<FileLogger>()?
                 .LogError(nameof(GetImageStreamAsync), e);
         }
 
         return null;
     }
 
-    public static async Task<IAnimatedBitmap> GetAnimatedBitmapAsync(
+    public static Task<IAnimatedBitmap> GetAnimatedBitmapAsync(
+        string platform,
+        string key,
+        IProgress<double>? progress = null,
+        CancellationToken token = default)
+    {
+        if (Service is { } service)
+            return service.GetAnimatedBitmapAsync(platform, key, progress, token);
+
+        return GetAnimatedBitmapFallbackAsync(platform, key, progress, token);
+    }
+
+    private static async Task<IAnimatedBitmap> GetAnimatedBitmapFallbackAsync(
         string platform,
         string key,
         IProgress<double>? progress = null,
@@ -212,14 +273,27 @@ public static class CacheHelper
         }
         catch (Exception e)
         {
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+            App.AppViewModel?.AppServiceProvider?.GetService<FileLogger>()?
                 .LogError(nameof(GetAnimatedBitmapAsync), e);
         }
 
         return AnimatedImageNotAvailable.Value;
     }
 
-    public static async ValueTask<Bitmap> GetBitmapAsync(
+    public static ValueTask<Bitmap> GetBitmapAsync(
+        string platform,
+        string key,
+        IProgress<double>? progress = null,
+        int? desiredWidth = null,
+        CancellationToken token = default)
+    {
+        if (Service is { } service)
+            return service.GetBitmapAsync(platform, key, progress, desiredWidth, token);
+
+        return GetBitmapFallbackAsync(platform, key, progress, desiredWidth, token);
+    }
+
+    private static async ValueTask<Bitmap> GetBitmapFallbackAsync(
         string platform,
         string key,
         IProgress<double>? progress = null,
@@ -317,6 +391,9 @@ public static class CacheHelper
     /// <returns></returns>
     public static Stream? TryGetStream(string key)
     {
+        if (Service is { } service)
+            return service.TryGetStream(key);
+
         try
         {
             return _CacheEngine.Value.TryReadCache(key, out var stream) ? stream : null;
@@ -333,6 +410,9 @@ public static class CacheHelper
     /// <exception cref="InvalidOperationException"/>
     internal static bool TryCacheStream(string key, Stream stream)
     {
+        if (Service is { } service)
+            return service.TryCacheStream(key, stream);
+
         return _CacheEngine.Value.TryCache(key, stream);
     }
 }

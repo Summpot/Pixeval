@@ -7,20 +7,33 @@ using System.Threading.Tasks;
 using AnimatedControls.Avalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Models;
+using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities.IO.Caching;
 
 namespace Pixeval.ViewModels;
 
 public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
 {
+    private readonly IUserSessionService _sessionService;
+    private readonly MakoClient _makoClient;
     private CancellationTokenSource? _avatarLoadCancellationTokenSource;
     private bool _isDisposed;
 
-    public TabViewContainerViewModel()
+    public TabViewContainerViewModel() : this(
+        App.Services?.GetService<IUserSessionService>() ?? App.AppViewModel.AppServiceProvider.GetRequiredService<IUserSessionService>(),
+        App.Services?.GetService<MakoClient>() ?? App.AppViewModel.MakoClient)
     {
-        OnUserRefreshed(App.AppViewModel.MakoClient.GetUser());
-        App.AppViewModel.UserRefreshed += OnUserRefreshed;
+    }
+
+    public TabViewContainerViewModel(IUserSessionService sessionService, MakoClient makoClient)
+    {
+        _sessionService = sessionService;
+        _makoClient = makoClient;
+        OnUserRefreshed(_sessionService.CurrentUser);
+        _sessionService.UserRefreshed += OnUserRefreshed;
     }
 
     private async void OnUserRefreshed(TokenUser? user)
@@ -84,7 +97,7 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
             return;
 
         _isDisposed = true;
-        App.AppViewModel.UserRefreshed -= OnUserRefreshed;
+        _sessionService.UserRefreshed -= OnUserRefreshed;
         _avatarLoadCancellationTokenSource?.Cancel();
         _avatarLoadCancellationTokenSource?.Dispose();
         _avatarLoadCancellationTokenSource = null;
@@ -131,8 +144,8 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
         try
         {
             RestrictedCache = skipPost
-                ? (await App.AppViewModel.MakoClient.GetRestrictedModeSettingsAsync()).IsRestrictedModeEnabled
-                : (await App.AppViewModel.MakoClient.PostRestrictedModeSettingsAsync(!RestrictedCache)).IsRestrictedModeEnabled;
+                ? (await _makoClient.GetRestrictedModeSettingsAsync()).IsRestrictedModeEnabled
+                : (await _makoClient.PostRestrictedModeSettingsAsync(!RestrictedCache)).IsRestrictedModeEnabled;
         }
         finally
         {
@@ -148,8 +161,8 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
         try
         {
             AiShowCache = skipPost
-                ? (await App.AppViewModel.MakoClient.GetAiShowSettingsAsync()).ShowAi
-                : (await App.AppViewModel.MakoClient.PostAiShowSettingsAsync(!AiShowCache)).ShowAi;
+                ? (await _makoClient.GetAiShowSettingsAsync()).ShowAi
+                : (await _makoClient.PostAiShowSettingsAsync(!AiShowCache)).ShowAi;
         }
         finally
         {
@@ -165,7 +178,7 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
         AiShowIdle = false;
         try
         {
-            var aiShow = await App.AppViewModel.MakoClient.GetAiShowSettingsAsync();
+            var aiShow = await _makoClient.GetAiShowSettingsAsync();
             if (IsCurrentGeneration(generation))
                 AiShowCache = aiShow.ShowAi;
         }

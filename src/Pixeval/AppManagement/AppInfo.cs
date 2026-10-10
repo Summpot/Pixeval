@@ -13,6 +13,7 @@ using Pixeval.AppManagement.Settings;
 using Pixeval.Native.Config;
 using Pixeval.Utilities;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Pixeval.AppManagement;
 
@@ -106,9 +107,12 @@ public static class AppInfo
         return await reader.ReadToEndAsync();
     }
 
-    public static void SaveWindowContext(Window window)
+    public static void SaveWindowContext(Window window, AppSettings? settings = null)
     {
-        var applicationSettings = App.AppViewModel.AppSettings.ApplicationSettings;
+        settings ??= App.Services?.GetService<AppSettings>() ?? App.AppViewModel?.AppSettings;
+        if (settings is null)
+            return;
+        var applicationSettings = settings.ApplicationSettings;
         var isMaximized = applicationSettings.IsMaximized = window.WindowState is WindowState.Maximized;
         // 在非最大化状态下保存窗口大小，以便从最大化恢复时使用
         if (!isMaximized)
@@ -118,10 +122,15 @@ public static class AppInfo
         }
     }
 
-    public static void SaveContext()
+    public static void SaveContext(
+        LoginContext? loginContext = null,
+        AppSettings? appSettings = null,
+        ObservableCollection<HomePageCardLayout>? cards = null,
+        string? navYaml = null)
     {
-        SaveLoginContext(App.AppViewModel.LoginContext);
-        SaveSettings();
+        loginContext ??= App.Services?.GetService<LoginContext>() ?? App.AppViewModel?.LoginContext;
+        SaveLoginContext(loginContext);
+        SaveSettings(appSettings, cards, navYaml);
     }
 
     public static AppSettings? LoadAppSettings(FileLogger logger)
@@ -172,11 +181,20 @@ public static class AppInfo
         return TryLoad(() => File.ReadAllText(NavigationMenuPath), logger);
     }
 
-    public static void SaveSettings()
+    public static void SaveSettings(
+        AppSettings? appSettings = null,
+        ObservableCollection<HomePageCardLayout>? cards = null,
+        string? navYaml = null)
     {
-        SaveAppSettings(App.AppViewModel.AppSettings);
-        SaveHomePageCards(App.AppViewModel.HomePageCards);
-        SaveNavigationMenuYaml(App.AppViewModel.NavigationMenuYamlText);
+        appSettings ??= App.Services?.GetService<AppSettings>() ?? App.AppViewModel?.AppSettings;
+        cards ??= App.AppViewModel?.HomePageCards;
+        navYaml ??= App.AppViewModel?.NavigationMenuYamlText;
+
+        SaveAppSettings(appSettings);
+        if (cards is not null)
+            SaveHomePageCards(cards);
+        if (navYaml is not null)
+            SaveNavigationMenuYaml(navYaml);
     }
 
     public static void SaveAppSettings(AppSettings? appSettings)

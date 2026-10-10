@@ -7,11 +7,13 @@ using System.Linq;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Controls;
 using Pixeval.I18N;
 using Pixeval.Native.Config;
 using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.Views;
 using Pixeval.Views.Home;
@@ -20,7 +22,7 @@ namespace Pixeval.ViewModels.Home;
 
 public partial class HomePageViewModel : ViewModelBase
 {
-    private static AppSettings Settings => App.AppViewModel.AppSettings;
+    private static AppSettings Settings => App.Services?.GetService<AppSettings>() ?? App.AppViewModel.AppSettings;
 
     private readonly IReadOnlyList<HomeCardParameterEditorViewModel> _sourceParameterEditors;
 
@@ -181,7 +183,8 @@ public partial class HomePageViewModel : ViewModelBase
         _sourcePrivacyPolicyEditor.Value = template.PrivacyPolicy;
         _sourceRankingDateEditor.Reset(MakoClient.RankingMaxDateTime.LocalDateTime);
 
-        _sourceUserIdEditor.Text = template.UseCurrentUserAsDefault ? PixevalSettings.MyId.ToString() : "";
+        var currentUserId = App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? PixevalSettings.MyId;
+        _sourceUserIdEditor.Text = template.UseCurrentUserAsDefault ? currentUserId.ToString() : "";
         _sourceEntryIdEditor.Text = "";
         _sourceSeriesIdEditor.Text = "";
         if (!template.HasParameter(HomeCardParameterKinds.SearchText))

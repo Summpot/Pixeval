@@ -23,30 +23,59 @@ namespace Pixeval.ViewModels;
 
 public class SettingsPageViewModel : ViewModelBase
 {
+    private readonly AppSettings _appSettings;
+    private readonly ExtensionService _extensionService;
+    private readonly DownloadManager _downloadManager;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly AppViewModel? _appViewModel;
+
     public string CurrentVersion => AppInfo.AppVersion.CurrentVersionShortText;
 
     public DateTime LastCheckedUpdate
     {
-        get => AppSettings.ApplicationSettings.LastCheckedUpdate;
-        set => SetProperty(AppSettings.ApplicationSettings.LastCheckedUpdate, value, AppSettings.ApplicationSettings, (setting, v) => setting.LastCheckedUpdate = v);
+        get => _appSettings.ApplicationSettings.LastCheckedUpdate;
+        set => SetProperty(_appSettings.ApplicationSettings.LastCheckedUpdate, value, _appSettings.ApplicationSettings, (setting, v) => setting.LastCheckedUpdate = v);
     }
 
     public void RefreshLastCheckedUpdate() => OnPropertyChanged(nameof(LastCheckedUpdate));
 
-    public AppSettings AppSettings => App.AppViewModel.AppSettings;
+    public AppSettings AppSettings => _appSettings;
 
     public IEnumerable<ISettingsGroup> Groups => LocalGroups.Concat(ExtensionGroups);
 
-    public IReadOnlyList<ISettingsGroup> LocalGroups { get; } = BuildLocalGroups();
+    public IReadOnlyList<ISettingsGroup> LocalGroups { get; }
 
-    public IReadOnlyList<ExtensionSettingsGroup> ExtensionGroups { get; } =
-        App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>().SettingsGroups;
+    public IReadOnlyList<ExtensionSettingsGroup> ExtensionGroups => _extensionService.SettingsGroups;
 
-    private static IReadOnlyList<ISettingsGroup> BuildLocalGroups()
+    public SettingsPageViewModel() : this(
+        App.Services?.GetService<AppSettings>() ?? App.AppViewModel.AppSettings,
+        App.Services?.GetService<ExtensionService>() ?? App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>(),
+        App.Services?.GetService<DownloadManager>() ?? App.AppViewModel.DownloadManager,
+        App.Services ?? App.AppViewModel.AppServiceProvider,
+        App.AppViewModel)
+    {
+    }
+
+    public SettingsPageViewModel(
+        AppSettings appSettings,
+        ExtensionService extensionService,
+        DownloadManager downloadManager,
+        IServiceProvider serviceProvider,
+        AppViewModel? appViewModel = null)
+    {
+        _appSettings = appSettings;
+        _extensionService = extensionService;
+        _downloadManager = downloadManager;
+        _serviceProvider = serviceProvider;
+        _appViewModel = appViewModel ?? App.AppViewModel;
+        LocalGroups = BuildLocalGroups();
+    }
+
+    private IReadOnlyList<ISettingsGroup> BuildLocalGroups()
     {
         LocalSettingsEntryHelper.Initialize();
 
-        return SettingsBuilder.CreateGroupList(App.AppViewModel.AppSettings)
+        return SettingsBuilder.CreateGroupList(_appSettings)
             .NewGroup(t => t.ApplicationSettings, group => group
                 .Language(t => t.CultureName)
                 .Enum(t => t.Theme,
@@ -73,7 +102,7 @@ public class SettingsPageViewModel : ViewModelBase
             .NewGroup(t => t.NetworkSettings, group => group
                 .Int(t => t.ApiRequestCooldown, 0, 5000, 100, entry => entry.ValueChanged += _ =>
                 {
-                    App.AppViewModel.UpdateMakoNetworkOptions();
+                    _appViewModel?.UpdateMakoNetworkOptions();
                 })
                 .DomainFronting(t => t.PixivDomainFronting, t => t.EnablePixivDomainFronting, entry =>
                         entry.Enum(t => t.PixivDomainFrontingType)
@@ -85,9 +114,9 @@ public class SettingsPageViewModel : ViewModelBase
                             .IPSet(t => t.PixivWebApiNameResolver),
                     entry => entry.MainValue.ValueChanged += t =>
                     {
-                        App.AppViewModel.SetNameResolvers();
-                        App.AppViewModel.DownloadManager.UpdateNetworkOptions();
-                        App.AppViewModel.UpdateMakoNetworkOptions();
+                        _appViewModel?.SetNameResolvers();
+                        _downloadManager.UpdateNetworkOptions();
+                        _appViewModel?.UpdateMakoNetworkOptions();
                     })
                 .DomainFronting(t => t.GitHubDomainFronting, t => t.EnableGitHubDomainFronting, entry => entry
                     .IPSet(t => t.GitHubNameResolver)
@@ -98,8 +127,8 @@ public class SettingsPageViewModel : ViewModelBase
                     .IPSet(t => t.GitHubCodeloadNameResolver))
                 .Proxy(entry => entry.ProxyChanged += t =>
                 {
-                    App.AppViewModel.DownloadManager.UpdateNetworkOptions();
-                    App.AppViewModel.UpdateMakoNetworkOptions();
+                    _downloadManager.UpdateNetworkOptions();
+                    _appViewModel?.UpdateMakoNetworkOptions();
                 })
                 .String(t => t.MirrorHost)
                 .String(t => t.WebCookie))
@@ -136,7 +165,7 @@ public class SettingsPageViewModel : ViewModelBase
             .NewGroup(t => t.DownloadSettings, group => group
                 .Bool(t => t.OverwriteDownloadedFile)
                 .Int(t => t.MaxDownloadTaskConcurrencyLevel, 1, Environment.ProcessorCount, 1,
-                    entry => entry.ValueChanged += t => App.AppViewModel.DownloadManager.ConcurrencyDegree = t)
+                    entry => entry.ValueChanged += t => _downloadManager.ConcurrencyDegree = t)
                 .DownloadMacro(t => t.DownloadPathMacro)
                 .MultiValues(t => t.DownloadFormats, entry =>
                     entry.IllustrationDownloadFormat()
@@ -144,17 +173,17 @@ public class SettingsPageViewModel : ViewModelBase
                         .NovelDownloadFormat())
                 .Bool(t => t.EnableSubscriptionDaemon, entry => entry.ValueChanged += enabled =>
                 {
-                    if (App.AppViewModel.AppServiceProvider.GetService<WorkSubscriptionDownloadService>() is { } subService)
+                    if (_serviceProvider.GetService<IWorkSubscriptionService>() is { } subService)
                     {
                         if (enabled)
-                            subService.StartDaemon((ulong)Math.Max(1, App.AppViewModel.AppSettings.DownloadSettings.SubscriptionDaemonIntervalMinutes) * 60);
+                            subService.StartDaemon((ulong)Math.Max(1, _appSettings.DownloadSettings.SubscriptionDaemonIntervalMinutes) * 60);
                         else
                             subService.StopDaemon();
                     }
                 })
                 .Int(t => t.SubscriptionDaemonIntervalMinutes, 1, 1440, 5, entry => entry.ValueChanged += minutes =>
                 {
-                    if (App.AppViewModel.AppServiceProvider.GetService<WorkSubscriptionDownloadService>() is { } subService)
+                    if (_serviceProvider.GetService<IWorkSubscriptionService>() is { } subService)
                     {
                         subService.SetDaemonInterval((ulong)Math.Max(1, minutes) * 60);
                     }
@@ -177,16 +206,16 @@ public class SettingsPageViewModel : ViewModelBase
     }
 
 #if PIXEVAL_MCP
-    private static async Task ApplyMcpSettingsAsync()
+    private async Task ApplyMcpSettingsAsync()
     {
         try
         {
-            if (App.AppViewModel.AppServiceProvider.GetService<IPixevalMcpService>() is { } service)
+            if (_serviceProvider.GetService<IPixevalMcpService>() is { } service)
                 await service.ApplySettingsAsync();
         }
         catch (Exception e)
         {
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+            _serviceProvider.GetService<FileLogger>()?
                 .LogError("Failed to apply Pixeval MCP settings", e);
         }
     }

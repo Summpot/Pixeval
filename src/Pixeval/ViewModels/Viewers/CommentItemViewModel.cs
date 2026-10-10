@@ -6,6 +6,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.Views;
 
@@ -13,8 +15,14 @@ namespace Pixeval.ViewModels.Viewers;
 
 public sealed class CommentItemViewModel : CommentsViewViewModel
 {
-    public CommentItemViewModel(Comment comment, SimpleWorkType parentType, long parentId, bool isTopComment)
-        : base(parentType, parentId)
+    public CommentItemViewModel(
+        Comment comment,
+        SimpleWorkType parentType,
+        long parentId,
+        bool isTopComment,
+        MakoClient? makoClient = null,
+        IUserSessionService? userSessionService = null)
+        : base(parentType, parentId, makoClient, userSessionService)
     {
         Comment = BlockedContentHelper.Replace(comment);
         IsTopComment = isTopComment;
@@ -44,7 +52,7 @@ public sealed class CommentItemViewModel : CommentsViewViewModel
 
     public string CommentContent => CommentImageHelper.GetContents(Comment.Content);
 
-    public bool IsMe => UserId == PixevalSettings.MyId;
+    public bool IsMe => UserId == (UserSessionService?.CurrentUserId ?? PixevalSettings.MyId);
 
     public long Id => Comment.Id;
 
@@ -52,26 +60,26 @@ public sealed class CommentItemViewModel : CommentsViewViewModel
     {
         if (!IsTopComment)
             return Comment.CreateDefault();
-        return await App.AppViewModel.MakoClient.AddWorkCommentAsync(ParentType, ParentId, Id, content);
+        return await MakoClient.AddWorkCommentAsync(ParentType, ParentId, Id, content);
     }
 
     public override async Task<Comment> AddStickerAsync(int stampId)
     {
         if (!IsTopComment)
             return Comment.CreateDefault();
-        return await App.AppViewModel.MakoClient.AddWorkCommentAsync(ParentType, ParentId, Id, stampId);
+        return await MakoClient.AddWorkCommentAsync(ParentType, ParentId, Id, stampId);
     }
 
     public Task<bool> DeleteAsync()
     {
-        return IsMe ? App.AppViewModel.MakoClient.DeleteWorkCommentAsync(ParentType, Id) : Task.FromResult(false);
+        return IsMe ? MakoClient.DeleteWorkCommentAsync(ParentType, Id) : Task.FromResult(false);
     }
 
-    public override void AddComment(Comment comment) => Source.Insert(0, new CommentItemViewModel(comment, ParentType, ParentId, false));
+    public override void AddComment(Comment comment) => Source.Insert(0, new CommentItemViewModel(comment, ParentType, ParentId, false, MakoClient, UserSessionService));
 
     public override void RefreshEngine()
     {
-        ResetEngine(App.AppViewModel.MakoClient.WorkCommentReplies(ParentType, Id),
-            (comment, _) => new(comment, ParentType, ParentId, false));
+        ResetEngine(MakoClient.WorkCommentReplies(ParentType, Id),
+            (comment, _) => new(comment, ParentType, ParentId, false, MakoClient, UserSessionService));
     }
 }

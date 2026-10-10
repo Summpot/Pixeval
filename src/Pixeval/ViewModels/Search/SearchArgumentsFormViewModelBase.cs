@@ -3,7 +3,9 @@
 
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
+using Pixeval.Services;
 using Pixeval.Views;
 
 namespace Pixeval.ViewModels.Search;
@@ -44,7 +46,8 @@ public abstract partial class SearchArgumentsFormViewModelBase : ViewModelBase
             return false;
         }
 
-        if (!(PixevalSettings.Me?.IsPremium ?? false)
+        var isPremium = App.Services?.GetService<Services.IUserSessionService>()?.CurrentUser?.IsPremium ?? (PixevalSettings.Me?.IsPremium ?? false);
+        if (!isPremium
             && SortOption is WorkSortOption.PopularityDescending)
         {
             title = I18NManager.GetResource(SearchResources.Validation.PremiumSort.Title);

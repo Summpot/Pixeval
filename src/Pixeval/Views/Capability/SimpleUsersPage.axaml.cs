@@ -4,9 +4,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Interactivity;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 
@@ -14,6 +16,9 @@ namespace Pixeval.Views.Capability;
 
 public abstract partial class SimpleUsersPage : IconContentPage
 {
+    protected static long CurrentUserId =>
+        App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? PixevalSettings.MyId;
+
     protected SimpleUsersPage() => InitializeComponent();
 
     protected void InitializeSource(UserViewViewModel? viewModel = null)
@@ -21,7 +26,7 @@ public abstract partial class SimpleUsersPage : IconContentPage
         if (viewModel is not null)
             UserContainer.UserView.SetViewModel(viewModel);
         else
-            ResetEngine(GetFetchEngine(App.AppViewModel.MakoClient));
+            ResetEngine(GetFetchEngine(App.Services?.GetService<MakoClient>() ?? App.AppViewModel.MakoClient));
     }
 
     private void UserContainer_OnRefreshRequested(object? sender, RoutedEventArgs e)
@@ -93,9 +98,10 @@ public class UserFollowerPage : SimpleUsersPage
 
     protected override IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
     {
-        if (PixevalSettings.MyId <= 0)
+        var myId = CurrentUserId;
+        if (myId <= 0)
             return AsyncEnumerable.Empty<User>();
-        return makoClient.UserFollower(PixevalSettings.MyId);
+        return makoClient.UserFollower(myId);
     }
 }
 
@@ -103,7 +109,7 @@ public class UserMyPixivPage : SimpleUsersPage
 {
     private readonly long _userId;
 
-    public UserMyPixivPage() : this(PixevalSettings.MyId)
+    public UserMyPixivPage() : this(CurrentUserId)
     {
     }
 
@@ -125,7 +131,7 @@ public class RelatedUsersPage : SimpleUsersPage
 {
     private readonly long _userId;
 
-    public RelatedUsersPage() : this(PixevalSettings.MyId)
+    public RelatedUsersPage() : this(CurrentUserId)
     {
     }
 

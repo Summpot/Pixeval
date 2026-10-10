@@ -342,12 +342,13 @@ public partial class TabViewContainer : ViewContainerBase
 
     private void OpenMyPage_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (PixevalSettings.MyId <= 0)
+        var myId = App.Services?.GetService<Services.IUserSessionService>()?.CurrentUserId ?? PixevalSettings.MyId;
+        if (myId <= 0)
         {
             TopLevel.GetTopLevel(this)?.ViewContainer?.NavigateTo(new LoginPage());
             return;
         }
-        this.CreateUserPage(PixevalSettings.MyId);
+        this.CreateUserPage(myId);
     }
 
     private void SwitchAccount_OnClicked(object? sender, RoutedEventArgs e)

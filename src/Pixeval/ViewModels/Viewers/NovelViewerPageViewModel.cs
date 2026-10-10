@@ -23,6 +23,10 @@ namespace Pixeval.ViewModels.Viewers;
 
 public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDisposable
 {
+    private readonly MakoClient _makoClient;
+    private readonly AppSettings _appSettings;
+    private readonly AppManagement.AppViewModel? _appViewModel;
+
     private readonly Dictionary<int, Novel> _refreshedNovels = [];
 
     private readonly bool _needRefresh;
@@ -38,20 +42,44 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
     [ObservableProperty]
     public partial WorkSeriesInfoViewModel? SeriesInfo { get; private set; }
 
-    public NovelViewerPageViewModel(Novel novelViewModel, bool needRefresh)
+    public NovelViewerPageViewModel(
+        Novel novelViewModel,
+        bool needRefresh,
+        MakoClient? makoClient = null,
+        AppSettings? appSettings = null,
+        AppManagement.AppViewModel? appViewModel = null)
     {
+        _makoClient = makoClient ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<MakoClient>(App.Services!) ?? App.AppViewModel.MakoClient;
+        _appSettings = appSettings ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<AppSettings>(App.Services!) ?? App.AppViewModel.AppSettings;
+        _appViewModel = appViewModel ?? App.AppViewModel;
         _needRefresh = needRefresh;
         CurrentNovel = novelViewModel;
         CurrentWorkIndex = 0;
     }
 
-    public NovelViewerPageViewModel(long id)
+    public NovelViewerPageViewModel(
+        long id,
+        MakoClient? makoClient = null,
+        AppSettings? appSettings = null,
+        AppManagement.AppViewModel? appViewModel = null)
     {
+        _makoClient = makoClient ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<MakoClient>(App.Services!) ?? App.AppViewModel.MakoClient;
+        _appSettings = appSettings ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<AppSettings>(App.Services!) ?? App.AppViewModel.AppSettings;
+        _appViewModel = appViewModel ?? App.AppViewModel;
         _ = LoadSingleNovelAsync(id, _loadingCts.Token);
     }
 
-    public NovelViewerPageViewModel(ISourceView<Novel> dataProvider, int currentNovelIndex, bool needRefresh)
+    public NovelViewerPageViewModel(
+        ISourceView<Novel> dataProvider,
+        int currentNovelIndex,
+        bool needRefresh,
+        MakoClient? makoClient = null,
+        AppSettings? appSettings = null,
+        AppManagement.AppViewModel? appViewModel = null)
     {
+        _makoClient = makoClient ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<MakoClient>(App.Services!) ?? App.AppViewModel.MakoClient;
+        _appSettings = appSettings ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<AppSettings>(App.Services!) ?? App.AppViewModel.AppSettings;
+        _appViewModel = appViewModel ?? App.AppViewModel;
         _needRefresh = needRefresh;
         _sourceView = dataProvider;
         CurrentWorkIndex = currentNovelIndex;
@@ -150,7 +178,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
                 if (cts.Token.IsCancellationRequested || _disposed)
                     return;
 
-                await App.AppViewModel.MakoClient.AddNovelMarkerAsync(novelId, pageIndex + 1);
+                await _makoClient.AddNovelMarkerAsync(novelId, pageIndex + 1);
             }
             catch
             {
@@ -170,7 +198,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
     #region Settings
 
-    private static AppSettings Settings => App.AppViewModel.AppSettings;
+    private AppSettings Settings => _appSettings;
 
     public uint NovelBackground => Settings.NovelSettings.NovelBackground;
 
@@ -239,13 +267,13 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             else
             {
                 SeriesInfo = WorkSeriesInfoViewModel.Create(currentNovel, SimpleWorkType.Novel);
-                var content = await App.AppViewModel.MakoClient.GetNovelContentStructuredAsync(currentNovel.Id);
+                var content = await _makoClient.GetNovelContentStructuredAsync(currentNovel.Id);
                 token.ThrowIfCancellationRequested();
                 if (index != CurrentWorkIndex || _disposed)
                     return;
 
                 SeriesInfo = WorkSeriesInfoViewModel.Create(content, currentNovel.Series);
-                App.AppViewModel.AddBrowseHistory(currentNovel);
+                _appViewModel?.AddBrowseHistory(currentNovel);
                 var markdowns = await Task.Run(() => BuildPageMarkdowns(content), token);
                 token.ThrowIfCancellationRequested();
                 if (index != CurrentWorkIndex || _disposed)
@@ -264,7 +292,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
                     {
                         try
                         {
-                            var markers = await App.AppViewModel.MakoClient.GetNovelMarkersAsync();
+                            var markers = await _makoClient.GetNovelMarkersAsync();
                             var match = markers.MarkedNovels.FirstOrDefault(x => x.Novel.Id == currentNovel.Id);
                             if (match is { NovelMarker: { Page: > 0 and var page } } && page <= _pageMarkdowns.Count)
                             {
@@ -357,7 +385,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         try
         {
             var novel = BlockedContentHelper.Replace(
-                await App.AppViewModel.MakoClient.GetNovelFromIdAsync(id, token));
+                await _makoClient.GetNovelFromIdAsync(id, token));
             token.ThrowIfCancellationRequested();
             onLoaded(novel);
             return novel;

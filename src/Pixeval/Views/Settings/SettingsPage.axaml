@@ -6,8 +6,10 @@
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
+    xmlns:di="using:Pixeval.Views.Markup"
     xmlns:viewModels="using:Pixeval.ViewModels"
     x:DataType="{x:Type viewModels:SettingsPageViewModel}"
+    DataContext="{di:Service Type={x:Type viewModels:SettingsPageViewModel}}"
     HasShadow="True"
     Header="{I18N {x:Static pixeval:MainPageResources+Tab.Settings}}"
     Icon="{markup:SymbolIcon Settings,
@@ -15,8 +17,4 @@
                              IconVariant=Color}"
     mc:Ignorable="d"
     d:DesignHeight="450"
-    d:DesignWidth="800">
-    <NavigationPage.DataContext>
-        <viewModels:SettingsPageViewModel />
-    </NavigationPage.DataContext>
-</NavigationPage>
+    d:DesignWidth="800" />

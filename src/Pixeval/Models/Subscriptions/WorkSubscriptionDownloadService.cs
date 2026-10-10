@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using Pixeval.AppManagement;
+using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Download;
 using Pixeval.Models.Download.Tasks;
 using Pixeval.Models.Options;
@@ -13,8 +14,8 @@ using Pixeval.Native.Download;
 using Pixeval.Native.Mako;
 using Pixeval.Native.Storage;
 using Pixeval.Native.Subscription;
+using Pixeval.Services;
 using Pixeval.Utilities;
-using Pixeval.Views;
 
 namespace Pixeval.Models.Subscriptions;
 
@@ -23,6 +24,8 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
     private readonly StorageEngine _storageEngine;
     private readonly MakoClient _makoClient;
     private readonly FileLogger _logger;
+    private readonly IUserSessionService _userSessionService;
+    private readonly AppSettings _appSettings;
     private readonly SubscriptionSyncEngine _syncEngine;
     private readonly Lock _gate = new();
     private readonly SemaphoreSlim _mutationGate = new(1, 1);
@@ -60,11 +63,15 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
         StorageEngine storageEngine,
         DownloadManager downloadManager,
         MakoClient makoClient,
-        FileLogger logger)
+        FileLogger logger,
+        IUserSessionService userSessionService,
+        AppSettings appSettings)
     {
         _storageEngine = storageEngine;
         _makoClient = makoClient;
         _logger = logger;
+        _userSessionService = userSessionService;
+        _appSettings = appSettings;
 
         var config = CreateSyncConfig();
         _syncEngine = SubscriptionSyncEngine.NewWithServices(
@@ -74,10 +81,10 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
             config,
             this);
 
-        var settings = App.AppViewModel?.AppSettings?.DownloadSettings;
-        if (settings?.EnableSubscriptionDaemon ?? true)
+        var settings = appSettings.DownloadSettings;
+        if (settings.EnableSubscriptionDaemon)
         {
-            var intervalMinutes = Math.Max(1, settings?.SubscriptionDaemonIntervalMinutes ?? 30);
+            var intervalMinutes = Math.Max(1, settings.SubscriptionDaemonIntervalMinutes);
             _syncEngine.StartDaemon((ulong)(intervalMinutes * 60));
         }
     }
@@ -346,12 +353,11 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
         }
     }
 
-    private static SubscriptionSyncConfig CreateSyncConfig()
+    private SubscriptionSyncConfig CreateSyncConfig()
     {
-        var settings = App.AppViewModel?.AppSettings;
-        var macro = settings?.DownloadSettings.DownloadPathMacro ?? string.Empty;
-        var overwrite = settings?.DownloadSettings.OverwriteDownloadedFile ?? false;
-        long? myId = PixevalSettings.MyId == 0 ? null : PixevalSettings.MyId;
+        var macro = _appSettings.DownloadSettings.DownloadPathMacro ?? string.Empty;
+        var overwrite = _appSettings.DownloadSettings.OverwriteDownloadedFile;
+        long? myId = _userSessionService.CurrentUserId <= 0 ? null : _userSessionService.CurrentUserId;
         return new SubscriptionSyncConfig(
             macro,
             string.Empty,

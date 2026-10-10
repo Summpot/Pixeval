@@ -8,12 +8,14 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement;
 using Pixeval.Controls;
 using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Config;
 using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Home;
@@ -372,8 +374,12 @@ public static class HomeCardDefinitions
     private static void OpenSingleUser(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel) =>
         topLevel.ViewContainer?.CreateUserPage(source.GetOpeningContext<SingleUserOpeningContext>().UserDetail);
 
-    private static User CreateUserBasicInfo(HomePageCardLayout card) =>
-        PixevalSettings.MyUser is { } me && card.UserId == PixevalSettings.MyId
+    private static User CreateUserBasicInfo(HomePageCardLayout card)
+    {
+        var session = App.Services?.GetService<Services.IUserSessionService>();
+        var myUser = session?.CurrentUserEntity ?? PixevalSettings.MyUser;
+        var myId = session?.CurrentUserId ?? PixevalSettings.MyId;
+        return myUser is { } me && card.UserId == myId
             ? me
             : new User(
                 card.UserId,
@@ -382,6 +388,7 @@ public static class HomeCardDefinitions
                 new ProfileImageUrls(null, null, null, AppInfo.ImageNotAvailablePath),
                 false,
                 null);
+    }
 
     private sealed record SingleSeriesOpeningContext(
         Series SeriesDetail,

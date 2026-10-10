@@ -5,11 +5,11 @@ using System.Collections.Generic;
 using Avalonia.Controls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
+using Pixeval.Models.Pixiv;
 using Pixeval.Native.Mako;
 using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
-using Pixeval.ViewModels.Viewers;
 
 namespace Pixeval.Tests;
 
@@ -18,40 +18,15 @@ namespace Pixeval.Tests;
 public sealed class WorkCommandsTest
 {
     [TestMethod]
-    public void ResolveWorkDirectInstanceReturnsWork()
+    public void BookmarkRequestStructPropertiesHoldExpectedValues()
     {
         var illust = DesignHelper.DesignIllustration;
-        var resolved = WorkCommands.ResolveWork(illust);
-        Assert.AreSame(illust, resolved);
-    }
+        var tags = new List<string> { "tag1", "tag2" };
+        var request = new BookmarkRequest(illust, true, tags);
 
-    [TestMethod]
-    public void ResolveWorkControlWithWorkDataContextReturnsWork()
-    {
-        var illust = DesignHelper.DesignIllustration;
-        var control = new Button { DataContext = illust };
-        var resolved = WorkCommands.ResolveWork(control);
-        Assert.AreSame(illust, resolved);
-    }
-
-    [TestMethod]
-    public void ResolveWorkControlWithIllustrationViewerPageViewModelReturnsCurrentIllustration()
-    {
-        var illust = DesignHelper.DesignIllustration;
-        var viewerVm = new IllustrationViewerPageViewModel(illust, false);
-        var button = new Button { DataContext = viewerVm };
-        var resolved = WorkCommands.ResolveWork(button);
-        Assert.AreSame(illust, resolved);
-    }
-
-    [TestMethod]
-    public void ResolveWorkControlWithNovelViewerPageViewModelReturnsCurrentNovel()
-    {
-        var novel = DesignHelper.DesignNovel;
-        var novelVm = new NovelViewerPageViewModel(novel, false);
-        var button = new Button { DataContext = novelVm };
-        var resolved = WorkCommands.ResolveWork(button);
-        Assert.AreSame(novel, resolved);
+        Assert.AreSame(illust, request.Work);
+        Assert.IsTrue(request.IsPrivate);
+        Assert.AreSame(tags, request.Tags);
     }
 
     [TestMethod]
@@ -99,6 +74,42 @@ public sealed class WorkCommandsTest
     }
 
     [TestMethod]
+    public void AddToBookmarkCommandAcceptsBookmarkRequest()
+    {
+        var illust = DesignHelper.DesignIllustration;
+        var request = new BookmarkRequest(illust, false, ["pixiv"]);
+        Assert.IsTrue(WorkCommands.AddToBookmarkCommand.CanExecute(request));
+    }
+
+    [TestMethod]
+    public void AddToWatchLaterCommandAcceptsWorkDirectly()
+    {
+        var illust = DesignHelper.DesignIllustration;
+        Assert.IsTrue(WorkCommands.AddToWatchLaterCommand.CanExecute(illust));
+
+        var novel = DesignHelper.DesignNovel;
+        Assert.IsTrue(WorkCommands.AddToWatchLaterCommand.CanExecute(novel));
+    }
+
+    [TestMethod]
+    public void SaveCommandAcceptsWorkDirectly()
+    {
+        var illust = DesignHelper.DesignIllustration;
+        Assert.IsTrue(WorkCommands.SaveCommand.CanExecute(illust));
+
+        var novel = DesignHelper.DesignNovel;
+        Assert.IsTrue(WorkCommands.SaveCommand.CanExecute(novel));
+    }
+
+    [TestMethod]
+    public void UserCommandsAcceptUserDirectly()
+    {
+        var user = DesignHelper.DesignUser;
+        Assert.IsTrue(WorkCommands.FollowUserCommand.CanExecute(user));
+        Assert.IsTrue(WorkCommands.BlockUserCommand.CanExecute(user));
+    }
+
+    [TestMethod]
     public void ButtonWithBookmarkCommandAcceptsWorkAsCommandParameter()
     {
         var illust = DesignHelper.DesignIllustration;
@@ -106,6 +117,19 @@ public sealed class WorkCommandsTest
         {
             Command = WorkCommands.BookmarkCommand,
             CommandParameter = illust
+        };
+        Assert.IsTrue(button.Command.CanExecute(button.CommandParameter));
+    }
+
+    [TestMethod]
+    public void ButtonWithAddToBookmarkCommandAcceptsBookmarkRequestParameter()
+    {
+        var illust = DesignHelper.DesignIllustration;
+        var request = new BookmarkRequest(illust, true, null);
+        var button = new Button
+        {
+            Command = WorkCommands.AddToBookmarkCommand,
+            CommandParameter = request
         };
         Assert.IsTrue(button.Command.CanExecute(button.CommandParameter));
     }

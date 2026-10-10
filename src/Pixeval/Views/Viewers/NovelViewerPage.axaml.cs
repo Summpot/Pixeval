@@ -17,6 +17,7 @@ using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
 using Pixeval.Models.Settings;
 using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
@@ -141,7 +142,7 @@ public partial class NovelViewerPage : IconContentPage
     {
         if (ViewModel.CurrentNovel is { } current)
         {
-            await WorkCommands.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, current));
+            await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
             TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
                 I18NManager.GetResource(MiscResources.AddedToBookmark));
         }

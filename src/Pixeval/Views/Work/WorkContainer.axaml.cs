@@ -23,6 +23,7 @@ using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Booru;
 using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 
@@ -197,9 +198,9 @@ public partial class WorkContainer : UserControl
 
     private async Task AddToBookmarkAsync(object? target, (bool IsPrivate, IReadOnlyList<string>? Tags) e)
     {
-        if (target is not null)
+        if (target is IWorkEntry workTarget)
         {
-            await WorkCommands.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, target));
+            await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(workTarget, e.IsPrivate, e.Tags));
             TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.AddedToBookmark));
             return;
         }
@@ -215,7 +216,10 @@ public partial class WorkContainer : UserControl
             return;
 
         foreach (var i in viewModel.SelectedEntries)
-            await WorkCommands.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, i));
+        {
+            if (i is IWorkEntry work)
+                await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(work, e.IsPrivate, e.Tags));
+        }
         if (viewModel.SelectedEntries.Count is var c and > 0)
             TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(I18NManager.GetResource(WorkContainerResources.AddedAllToBookmarkContentFormatted, c));
     }

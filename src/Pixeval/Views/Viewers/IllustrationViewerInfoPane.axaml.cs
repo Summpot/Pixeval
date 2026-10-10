@@ -15,6 +15,7 @@ using Pixeval.I18N;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
@@ -132,10 +133,10 @@ public partial class IllustrationViewerInfoPane : UserControl
 
     private async Task AddToBookmarkAsync((bool IsPrivate, IReadOnlyList<string>? Tags) e)
     {
-        if (ViewModel?.CurrentIllustration is not { } current)
+        if (ViewModel?.CurrentIllustration is not IWorkEntry current)
             return;
 
-        await WorkCommands.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, current));
+        await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
         TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
             I18NManager.GetResource(MiscResources.AddedToBookmark));
     }

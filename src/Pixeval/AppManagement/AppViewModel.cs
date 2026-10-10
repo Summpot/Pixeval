@@ -27,6 +27,7 @@ using Pixeval.Native.Maho;
 using Pixeval.Native.Mako;
 using Pixeval.Native.Storage;
 using Pixeval.Utilities;
+using Pixeval.Services;
 using Pixeval.Utilities.Network;
 using Pixeval.Utilities.GitHub;
 using Pixeval.Utilities.IO.Caching;
@@ -39,6 +40,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
     private bool _isDisposed;
 
     public ServiceProvider AppServiceProvider { get; private set; } = null!;
+    public IUserSessionService UserSession { get; private set; } = null!;
     public App App { get; } = app;
     public StorageEngine StorageEngine { get; } = new(AppInfo.DatabaseFilePath);
     public DownloadManager DownloadManager { get; private set; } = null!;
@@ -62,6 +64,8 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
     {
         AppSettings.Initialize();
         AppServiceProvider = CreateServiceProvider();
+        UserSession = AppServiceProvider.GetRequiredService<IUserSessionService>();
+        UserSession.UserRefreshed += u => UserRefreshed?.Invoke(u);
         SetNameResolvers();
         InitializePersistence();
         if (GetCurrentLoginUser() is { } currentUser)
@@ -114,6 +118,8 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
 
         return new ServiceCollection()
             .AddSingleton(_ => logger)
+            .AddSingleton(AppSettings)
+            .AddSingleton(LoginContext)
             .AddBooruServices()
             .AddKeyedSingleton<GitHubHttpClientProvider>(
                 GitHubHttpClientProvider.PlatformKey,
@@ -122,12 +128,17 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             .AddSingleton(_ => MahoClient)
             .AddSingleton(_ => StorageEngine)
             .AddSingleton(_ => DownloadManager)
+            .AddSingleton<IUserSessionService, UserSessionService>()
+            .AddSingleton<IImageProviderService, ImageProviderService>()
+            .AddSingleton<IDownloadFormatService, DownloadFormatService>()
+            .AddSingleton<IArtworkActionService, ArtworkActionService>()
             .AddSingleton<WorkSubscriptionDownloadService>()
             .AddSingleton<IWorkSubscriptionService>(provider =>
                 provider.GetRequiredService<WorkSubscriptionDownloadService>())
             .AddSingleton<IllustrationDownloadTaskFactory>()
             .AddSingleton<NovelDownloadTaskFactory>()
             .AddSingleton(provider => new ExtensionService(provider.GetRequiredService<FileLogger>(), AppSettings))
+            .AddTransient<ViewModels.SettingsPageViewModel>()
 #if PIXEVAL_MCP
             .AddSingleton<IPixevalMcpService>(t =>
                 new PixevalMcpService(this, t.GetRequiredService<FileLogger>()))
@@ -137,6 +148,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
 
     private void InitializePersistence()
     {
+        ArtworkUiStateStore.Initialize(StorageEngine);
         StorageEngine.InitializeObserver();
         RestoreTask = RestoreHistoryAsync();
     }
@@ -229,42 +241,13 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         await Task.Run(() => StorageEngine.DownloadRepository.DeleteSubscriptionDownloadsByWorkSubscriptionId(workSubscriptionId)).ConfigureAwait(false);
     }
 
-    public void OnTokenRefreshed(TokenResponse? tokenResponse)
-    {
-        TokenUser? user = null;
-        if (tokenResponse is null)
-        {
-            LoginContext.CurrentKey = 0;
-            MakoClient.ClearToken();
-        }
-        else
-        {
-            user = tokenResponse.User ?? MakoClient.GetUser();
-            if (user is not null)
-            {
-                var entry = StorageEngine.UpsertLoginUser(LoginUserRecord.FromTokenUser(tokenResponse.RefreshToken, user));
-                LoginContext.CurrentKey = (int)entry.HistoryEntryId;
-            }
-        }
-
-        void Notify()
-        {
-            PixevalSettings.Instance.OnIsLoggedInChanged();
-            UserRefreshed?.Invoke(user);
-        }
-
-        if (Dispatcher.UIThread.CheckAccess())
-            Notify();
-        else
-            Dispatcher.UIThread.Post(Notify);
-
-        AppInfo.SaveLoginContext(LoginContext);
-    }
+    public void OnTokenRefreshed(TokenResponse? tokenResponse) =>
+        UserSession.OnTokenRefreshed(tokenResponse);
 
     public event Action<TokenUser?>? UserRefreshed;
 
     public LoginUserRecord? GetCurrentLoginUser() =>
-        StorageEngine.GetLoginUserByKey(LoginContext.CurrentKey);
+        UserSession.GetCurrentLoginUser();
 
     public void QueueWorkSubscriptionSyncAll() =>
         AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().QueueSyncAll();

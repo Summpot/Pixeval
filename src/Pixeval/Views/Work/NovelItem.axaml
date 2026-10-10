@@ -28,7 +28,7 @@
                     <MenuItem
                         controls:ArtworkStateBehavior.TrackBookmark="True"
                         Command="{x:Static novel:WorkCommands.BookmarkCommand}"
-                        CommandParameter="{Binding $self, Mode=OneTime}"
+                        CommandParameter="{Binding}"
                         ContextRequested="AddToBookmark_OnRightClick"
                         Header="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
                         Icon="{markup1:SymbolIconEx Heart}"
@@ -36,7 +36,7 @@
                     <MenuItem
                         controls:ArtworkStateBehavior.TrackWatchLater="True"
                         Command="{x:Static novel:WorkCommands.AddToWatchLaterCommand}"
-                        CommandParameter="{Binding $self, Mode=OneTime}"
+                        CommandParameter="{Binding}"
                         Header="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}"
                         Icon="{markup1:SymbolIconEx Clock}" />
                     <MenuItem
@@ -51,7 +51,7 @@
                     <Separator />
                     <MenuItem
                         Command="{x:Static novel:WorkCommands.SaveCommand}"
-                        CommandParameter="{Binding $self, Mode=OneTime}"
+                        CommandParameter="{Binding}"
                         Header="{I18N {x:Static pixeval:EntryItemResources.Save}}"
                         Icon="{markup:SymbolIcon Save}" />
                     <Separator />
@@ -117,7 +117,7 @@
                 VerticalAlignment="Top"
                 controls:ArtworkStateBehavior.TrackBookmark="True"
                 Command="{x:Static novel:WorkCommands.BookmarkCommand}"
-                CommandParameter="{Binding $self, Mode=OneTime}"
+                CommandParameter="{Binding}"
                 IsVisible="{Binding IsBookmarkSupported}">
                 
                 <controls:HeartButton.CacheMode>

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
@@ -65,14 +66,27 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         ]
         : [];
 
-    public UserViewerPageViewModel(SingleUserResponse userDetail)
+    private readonly MakoClient? _makoClient;
+    private readonly IUserSessionService? _userSessionService;
+
+    public UserViewerPageViewModel(
+        SingleUserResponse userDetail,
+        MakoClient? makoClient = null,
+        IUserSessionService? userSessionService = null)
     {
+        _makoClient = makoClient ?? App.Services?.GetService<MakoClient>() ?? App.AppViewModel?.MakoClient;
+        _userSessionService = userSessionService ?? App.Services?.GetService<IUserSessionService>();
         Id = userDetail.User.Id;
         UserDetail = userDetail;
     }
 
-    public UserViewerPageViewModel(long userId)
+    public UserViewerPageViewModel(
+        long userId,
+        MakoClient? makoClient = null,
+        IUserSessionService? userSessionService = null)
     {
+        _makoClient = makoClient ?? App.Services?.GetService<MakoClient>() ?? App.AppViewModel?.MakoClient;
+        _userSessionService = userSessionService ?? App.Services?.GetService<IUserSessionService>();
         Id = userId;
         _ = LoadUserAsync(userId);
     }
@@ -107,6 +121,9 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
 
     private async Task LoadUserAsync(long userId)
     {
+        if (_makoClient is null)
+            return;
+
         var token = _loadingCts.Token;
 
         IsLoading = true;
@@ -114,7 +131,7 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         try
         {
             var userDetail = BlockedContentHelper.Replace(
-                await App.AppViewModel.MakoClient.GetUserFromIdAsync(userId, token));
+                await _makoClient.GetUserFromIdAsync(userId, token));
             if (_disposed)
                 return;
 
@@ -135,7 +152,7 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private bool CanFollow => Id != PixevalSettings.MyId;
+    private bool CanFollow => Id != (_userSessionService?.CurrentUserId ?? PixevalSettings.MyId);
 
     private bool CanBlockUser => UserDetail is { UserEntity: var user }
                                  && !BlockedContentHelper.IsBlocked(user);
@@ -153,7 +170,10 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private async Task FollowAsync()
     {
-        var result = await App.AppViewModel.MakoClient.SetFollowAsync(Id, true, false);
+        if (_makoClient is null)
+            return;
+
+        var result = await _makoClient.SetFollowAsync(Id, true, false);
         if (result)
         {
             if (UserDetail?.User is { } user)
@@ -165,7 +185,10 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private async Task FollowPrivatelyAsync()
     {
-        var result = await App.AppViewModel.MakoClient.SetFollowAsync(Id, true, true);
+        if (_makoClient is null)
+            return;
+
+        var result = await _makoClient.SetFollowAsync(Id, true, true);
         if (result)
         {
             if (UserDetail?.User is { } user)
@@ -177,7 +200,10 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private async Task UnfollowAsync()
     {
-        var result = await App.AppViewModel.MakoClient.SetFollowAsync(Id, false);
+        if (_makoClient is null)
+            return;
+
+        var result = await _makoClient.SetFollowAsync(Id, false);
         if (result)
         {
             if (UserDetail?.User is { } user)

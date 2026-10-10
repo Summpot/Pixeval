@@ -3,295 +3,72 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Avalonia.Input.Platform;
-using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Models;
-using Pixeval.Models.Blocking;
-using Pixeval.Models.Download;
 using Pixeval.Models.Pixiv;
-using Pixeval.Native.Booru;
 using Pixeval.Native.Mako;
-using Pixeval.Native.SauceNao;
-using Pixeval.Native.Storage;
 using Pixeval.Services;
-using Pixeval.Utilities;
-using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.ViewContainers;
-using Pixeval.Views.Viewers;
 
 namespace Pixeval.ViewModels;
 
 public static class WorkCommands
 {
-    public static IAsyncRelayCommand<object?> BookmarkCommand { get; } =
-        new AsyncRelayCommand<object?>(ExecuteBookmarkAsync);
+    private static IArtworkActionService ActionService =>
+        App.Services?.GetService<IArtworkActionService>()
+        ?? NullArtworkActionService.Instance;
 
-    public static IAsyncRelayCommand<(IReadOnlyList<string>? Tags, bool IsPrivate, object? Parameter)> AddToBookmarkCommand { get; } =
-        new AsyncRelayCommand<(IReadOnlyList<string>? Tags, bool IsPrivate, object? Parameter)>(ExecuteAddToBookmarkAsync);
+    public static IAsyncRelayCommand<IWorkEntry> BookmarkCommand => ActionService.BookmarkCommand;
 
-    public static IRelayCommand<object?> AddToWatchLaterCommand { get; } =
-        new RelayCommand<object?>(ExecuteAddToWatchLater);
+    public static IAsyncRelayCommand<BookmarkRequest> AddToBookmarkCommand => ActionService.AddToBookmarkCommand;
 
-    public static IAsyncRelayCommand<object?> SaveCommand { get; } =
-        new AsyncRelayCommand<object?>(ExecuteSaveAsync);
+    public static IRelayCommand<object> AddToWatchLaterCommand => ActionService.AddToWatchLaterCommand;
 
-    public static IAsyncRelayCommand<Image?> CopyCommand { get; } =
-        new AsyncRelayCommand<Image?>(ExecuteCopyAsync);
+    public static IAsyncRelayCommand<Illustration> SaveIllustrationCommand => ActionService.SaveIllustrationCommand;
 
-    public static IAsyncRelayCommand<object?> FollowUserCommand { get; } =
-        new AsyncRelayCommand<object?>(ExecuteFollowUserAsync);
+    public static IAsyncRelayCommand<Novel> SaveNovelCommand => ActionService.SaveNovelCommand;
 
-    public static IRelayCommand<object?> BlockUserCommand { get; } =
-        new RelayCommand<object?>(ExecuteBlockUser);
+    public static IAsyncRelayCommand<object> SaveCommand => ActionService.SaveCommand;
 
-    internal static object? ResolveWork(object? parameter)
+    public static IAsyncRelayCommand<Image> CopyCommand => ActionService.CopyCommand;
+
+    public static IAsyncRelayCommand<User> FollowUserCommand => ActionService.FollowUserCommand;
+
+    public static IRelayCommand<User> BlockUserCommand => ActionService.BlockUserCommand;
+
+    public static Task<bool> ToggleBookmarkAsync(IWorkEntry work) =>
+        ActionService.ToggleBookmarkAsync(work);
+
+    public static Task<bool> AddToBookmarkAsync(IWorkEntry work, bool isPrivate, IReadOnlyList<string>? tags = null) =>
+        ActionService.AddToBookmarkAsync(work, isPrivate, tags);
+
+    public static bool ToggleWatchLater(object work, ViewContainerBase? viewContainer = null) =>
+        ActionService.ToggleWatchLater(work, viewContainer);
+
+    public static Task SaveIllustrationAsync(ViewContainerBase? viewContainerBase, Illustration entry, int setIndex) =>
+        ActionService.SaveIllustrationAsync(entry, setIndex, viewContainerBase);
+
+    public static Task SaveNovelAsync(ViewContainerBase? viewContainerBase, Novel entry) =>
+        ActionService.SaveNovelAsync(entry, viewContainerBase);
+
+    public static Task SaveWorkAsync(object work, ViewContainerBase? viewContainer = null) =>
+        ActionService.SaveWorkAsync(work, viewContainer);
+
+    public static Task SaveImageAsync(object entry, object? parameter, int setIndex)
     {
-        return parameter switch
-        {
-            Illustration illust => illust,
-            Novel novel => novel,
-            BooruPost booru => booru,
-            SauceNaoItem sauce => sauce,
-            WorkEntry we => we,
-            IllustrationViewerPageViewModel viewerVm => viewerVm.CurrentIllustration,
-            NovelViewerPageViewModel novelVm => novelVm.CurrentNovel,
-            IllustrationViewerInfoPane pane => pane.DataContext as IllustrationViewerPageViewModel is { CurrentIllustration: { } illust } ? illust : null,
-            NovelViewerPage page => page.DataContext as NovelViewerPageViewModel is { CurrentNovel: { } novel } ? novel : null,
-            Control { DataContext: { } ctx } => ctx switch
-            {
-                Illustration i => i,
-                Novel n => n,
-                BooruPost b => b,
-                SauceNaoItem s => s,
-                WorkEntry w => w,
-                IllustrationViewerPageViewModel vm => vm.CurrentIllustration,
-                NovelViewerPageViewModel nvm => nvm.CurrentNovel,
-                _ => null
-            },
-            _ => null
-        };
-    }
-
-    internal static User? ResolveUser(object? parameter)
-    {
-        return parameter switch
-        {
-            User u => u,
-            Control { DataContext: User u } => u,
-            _ => null
-        };
-    }
-
-    private static ViewContainerBase? ResolveViewContainer(object? parameter)
-    {
-        if (parameter is Control control && TopLevel.GetTopLevel(control)?.ViewContainer is { } vc)
-            return vc;
-
-        if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            var activeWindow = desktop.Windows.FirstOrDefault(static w => w.IsActive) ?? desktop.MainWindow;
-            if (activeWindow?.Content is ViewContainerBase windowVc)
-                return windowVc;
-        }
-
-        return null;
-    }
-
-    private static async Task ExecuteBookmarkAsync(object? parameter)
-    {
-        if (ResolveWork(parameter) is not { } work)
-            return;
-
-        if (work is not IWorkEntry workEntry || BlockedContentHelper.IsBlockedPlaceholder(work))
-            return;
-
-        var state = ArtworkUiStateStore.GetOrCreate(work);
-        if ((state.BookmarkState & HeartButtonState.Pending) is not 0)
-            return;
-
-        var currentIsFavorite = (state.BookmarkState & HeartButtonState.Checked) is not 0;
-        var target = !currentIsFavorite;
-
-        ArtworkUiStateStore.SetBookmarkPending(work);
-        try
-        {
-            var result = await App.AppViewModel.MakoClient.SetWorkBookmarkAsync(workEntry, target);
-            if (result)
-            {
-                ArtworkUiStateStore.SetBookmarkState(work, target);
-            }
-            else
-            {
-                ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
-            }
-        }
-        catch
-        {
-            ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
-            throw;
-        }
-    }
-
-    private static async Task ExecuteAddToBookmarkAsync((IReadOnlyList<string>? Tags, bool IsPrivate, object? Parameter) parameter)
-    {
-        if (ResolveWork(parameter.Parameter) is not { } work)
-            return;
-
-        if (work is not IWorkEntry workEntry || BlockedContentHelper.IsBlockedPlaceholder(work))
-            return;
-
-        var state = ArtworkUiStateStore.GetOrCreate(work);
-        if ((state.BookmarkState & HeartButtonState.Pending) is not 0)
-            return;
-
-        var currentIsFavorite = (state.BookmarkState & HeartButtonState.Checked) is not 0;
-
-        ArtworkUiStateStore.SetBookmarkPending(work);
-        try
-        {
-            var result = await App.AppViewModel.MakoClient.SetWorkBookmarkAsync(workEntry, true, parameter.IsPrivate, parameter.Tags);
-            if (result)
-            {
-                ArtworkUiStateStore.SetBookmarkState(work, true);
-            }
-            else
-            {
-                ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
-            }
-        }
-        catch
-        {
-            ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
-            throw;
-        }
-    }
-
-    private static void ExecuteAddToWatchLater(object? parameter)
-    {
-        if (ResolveWork(parameter) is not { } work)
-            return;
-
-        if (App.AppViewModel is not { } app || !WatchLaterRecord.TryCreateWorkKey(work, out _))
-            return;
-
-        var state = ArtworkUiStateStore.GetOrCreate(work);
-        var target = !state.IsInWatchLater;
-        if (target)
-        {
-            if (!app.AddWatchLater(work))
-                return;
-        }
-        else if (!app.RemoveWatchLater(work))
-        {
-            return;
-        }
-
-        ArtworkUiStateStore.SetWatchLater(work, target);
-        ResolveViewContainer(parameter)?.ShowSuccess(
-            I18NManager.GetResource(target ? MiscResources.AddedToWatchLater : MiscResources.RemovedFromWatchLater));
-    }
-
-    private static async Task ExecuteSaveAsync(object? parameter)
-    {
-        if (ResolveWork(parameter) is not { } work)
-            return;
-
-        if (BlockedContentHelper.IsBlockedPlaceholder(work))
-            return;
-
-        var viewContainer = ResolveViewContainer(parameter);
-        switch (work)
-        {
-            case Illustration illustration:
-                await SaveIllustrationAsync(viewContainer, illustration, -1);
-                break;
-            case Novel novel:
-                await SaveNovelAsync(viewContainer, novel);
-                break;
-        }
-    }
-
-    public static async Task SaveImageAsync(object entry, object? parameter, int setIndex)
-    {
-        if (BlockedContentHelper.IsBlockedPlaceholder(entry))
-            return;
-
         if (entry is Illustration illustration)
-            await SaveIllustrationAsync(ResolveViewContainer(parameter), illustration, setIndex);
+            return SaveIllustrationAsync(null, illustration, setIndex);
+        return Task.CompletedTask;
     }
 
-    public static async ValueTask SaveIllustrationAsync(ViewContainerBase? viewContainerBase, Illustration entry, int setIndex)
-    {
-        var path = App.AppViewModel.AppSettings.DownloadSettings.DownloadPathMacro;
-        var factory = App.AppViewModel.AppServiceProvider.GetRequiredService<IllustrationDownloadTaskFactory>();
-        var task = factory.Create(entry, path, setIndex);
-        App.AppViewModel.DownloadManager.QueueTask(task);
-        viewContainerBase?.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
-    }
+    public static Task<bool> ToggleFollowUserAsync(User user) =>
+        ActionService.ToggleFollowUserAsync(user);
 
-    public static async ValueTask SaveNovelAsync(ViewContainerBase? viewContainerBase, Novel entry)
-    {
-        var path = App.AppViewModel.AppSettings.DownloadSettings.DownloadPathMacro;
-        var content = await App.AppViewModel.MakoClient.GetNovelContentStructuredAsync(entry.RawId);
-        var factory = App.AppViewModel.AppServiceProvider.GetRequiredService<NovelDownloadTaskFactory>();
-        var task = factory.Create(entry, path, content);
-        App.AppViewModel.DownloadManager.QueueTask(task);
-        viewContainerBase?.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
-    }
+    public static bool BlockUser(User user) =>
+        ActionService.BlockUser(user);
 
-    private static async Task ExecuteCopyAsync(Image? parameter)
-    {
-        if (parameter is not { Source: Bitmap bitmap })
-            return;
-
-        if (TopLevel.GetTopLevel(parameter) is not { Clipboard: { } clipboard } topLevel)
-            return;
-
-        await clipboard.SetBitmapAsync(bitmap);
-        await clipboard.FlushAsync();
-        topLevel.ViewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
-    }
-
-    private static async Task ExecuteFollowUserAsync(object? parameter)
-    {
-        if (ResolveUser(parameter) is not { } user)
-            return;
-
-        var state = UserUiStateStore.GetOrCreate(user);
-        if ((state.FollowState & HeartButtonState.Pending) is not 0)
-            return;
-
-        var currentFollow = (state.FollowState & HeartButtonState.Checked) is not 0;
-        var target = !currentFollow;
-
-        UserUiStateStore.SetFollowPending(user);
-        try
-        {
-            var result = await App.AppViewModel.MakoClient.SetFollowAsync(user, target);
-            if (result)
-                UserUiStateStore.SetFollowState(user, target);
-            else
-                UserUiStateStore.RevertFollowPending(user, currentFollow);
-        }
-        catch
-        {
-            UserUiStateStore.RevertFollowPending(user, currentFollow);
-            throw;
-        }
-    }
-
-    private static void ExecuteBlockUser(object? parameter)
-    {
-        if (ResolveUser(parameter) is not { } user)
-            return;
-
-        _ = BlockedContentHelper.TryAddOrUpdateBlockedUser(user);
-    }
+    public static Task CopyImageAsync(Image? image) =>
+        ActionService.CopyImageAsync(image);
 }

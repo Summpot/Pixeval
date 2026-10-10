@@ -31,7 +31,14 @@ public sealed partial class ArtworkUiState : ObservableObject
 public static class ArtworkUiStateStore
 {
     private static readonly ConcurrentDictionary<string, ArtworkUiState> s_states = new(StringComparer.Ordinal);
+    private static StorageEngine? s_storageEngine;
     private static bool s_observerHooked;
+
+    public static void Initialize(StorageEngine storageEngine)
+    {
+        s_storageEngine = storageEngine;
+        EnsureStorageObserver();
+    }
 
     public static string GetKey(object entry)
     {
@@ -64,7 +71,8 @@ public static class ArtworkUiStateStore
                 _ => HeartButtonState.Unchecked
             };
 
-            var inWatchLater = App.AppViewModel?.ContainsWatchLater(targetEntry) is true;
+            var inWatchLater = (s_storageEngine?.WatchLaterRepository.ContainsWatchLater(targetEntry)
+                ?? App.AppViewModel?.ContainsWatchLater(targetEntry)) is true;
             return new ArtworkUiState(bookmarkState, inWatchLater);
         });
     }
@@ -120,7 +128,8 @@ public static class ArtworkUiStateStore
 
     private static void EnsureStorageObserver()
     {
-        if (s_observerHooked || App.AppViewModel?.StorageEngine is not { } storageEngine)
+        var storageEngine = s_storageEngine ?? App.AppViewModel?.StorageEngine;
+        if (s_observerHooked || storageEngine is null)
             return;
 
         lock (s_states)
@@ -132,7 +141,8 @@ public static class ArtworkUiStateStore
             {
                 Dispatcher.UIThread.Post(() =>
                 {
-                    if (App.AppViewModel?.StorageEngine?.WatchLaterRepository is not { } repo)
+                    var currentEngine = s_storageEngine ?? App.AppViewModel?.StorageEngine;
+                    if (currentEngine?.WatchLaterRepository is not { } repo)
                         return;
 
                     foreach (var (key, state) in s_states)

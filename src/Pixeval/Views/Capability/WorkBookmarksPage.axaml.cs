@@ -10,8 +10,10 @@ using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.Models.Options;
+using Pixeval.Models.Pixiv;
 using Pixeval.Models.Subscriptions;
 using Pixeval.Native.Mako;
+using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Work;
@@ -27,9 +29,12 @@ public partial class WorkBookmarksPage : IconContentPage
     public static IReadOnlyList<BookmarkTag> DefaultTags { get; } = [AllBookmarkTag.Instance, UncategorizedBookmarkTag.Instance];
 
     private static IWorkSubscriptionService SubscriptionService =>
-        App.AppViewModel.AppServiceProvider.GetRequiredService<IWorkSubscriptionService>();
+        App.Services?.GetService<IWorkSubscriptionService>() ?? App.AppViewModel.AppServiceProvider.GetRequiredService<IWorkSubscriptionService>();
 
-    public WorkBookmarksPage() : this(PixevalSettings.MyUser ?? new User(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []))
+    private static User GetCurrentOrFallbackUser() =>
+        App.Services?.GetService<IUserSessionService>()?.CurrentUserEntity ?? PixevalSettings.MyUser ?? new User(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []);
+
+    public WorkBookmarksPage() : this(GetCurrentOrFallbackUser())
     {
     }
 
@@ -41,7 +46,8 @@ public partial class WorkBookmarksPage : IconContentPage
         _initialTag = tag;
         SimpleWorkTypeComboBox.SelectedValue = simpleWorkType;
         PrivacyPolicyComboBox.SelectedValue = privacyPolicy;
-        if (_user.Id <= 0 || _user.Id != PixevalSettings.MyId)
+        var myId = App.Services?.GetService<IUserSessionService>()?.CurrentUserId ?? PixevalSettings.MyId;
+        if (_user.Id <= 0 || _user.Id != myId)
             PrivacyPolicyComboBox.IsEnabled = PrivacyPolicyComboBox.IsVisible = false;
 
         if (_user.Id > 0)

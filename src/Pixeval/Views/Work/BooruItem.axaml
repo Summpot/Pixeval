@@ -30,7 +30,7 @@
                     IsEnabled="{Binding #ThumbnailImage.(controls:Source.Loaded)}" />
                 <MenuItem
                     Command="{x:Static viewModels:WorkCommands.SaveCommand}"
-                    CommandParameter="{Binding $self, Mode=OneTime}"
+                    CommandParameter="{Binding}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.Save}}"
                     Icon="{markup:SymbolIcon Save}" />
                 <Separator />
