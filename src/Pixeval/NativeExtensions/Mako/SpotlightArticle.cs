@@ -10,9 +10,6 @@ namespace Pixeval.Native.Mako;
 public partial record SpotlightArticle
 {
     [JsonIgnore]
-    public SpotlightArticle Entry => this;
-
-    [JsonIgnore]
     public string? ThumbnailUrl => Thumbnail;
 
     [JsonIgnore]

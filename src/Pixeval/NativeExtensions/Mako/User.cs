@@ -15,12 +15,6 @@ public partial record User
     }
 
     [JsonIgnore]
-    public User Entry => this;
-
-    [JsonIgnore]
-    public string Username => Name;
-
-    [JsonIgnore]
     public long UserId => RawId;
 
     [JsonIgnore]

@@ -10,9 +10,6 @@ namespace Pixeval.Native.Mako;
 public partial record Series
 {
     [JsonIgnore]
-    public Series Entry => this;
-
-    [JsonIgnore]
     public SimpleWorkType WorkType { get; init; } = SimpleWorkType.Illustration;
 
     [JsonIgnore]

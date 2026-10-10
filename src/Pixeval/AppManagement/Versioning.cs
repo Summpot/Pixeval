@@ -8,7 +8,6 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Native.Update;
 using Pixeval.Utilities;
@@ -28,6 +27,8 @@ public class Versioning
     private UpdateInfo? _velopackUpdateInfo;
     private AppRelease? _velopackUpdateReleaseModel;
     private UpdateEngine? _updateEngine;
+    private AppSettings? _settings;
+    private FileLogger? _logger;
     private readonly SemaphoreSlim _updateCheckLock = new(1, 1);
     private readonly SemaphoreSlim _updateDownloadLock = new(1, 1);
     private bool _updateApplyRequested;
@@ -57,7 +58,14 @@ public class Versioning
 
     public AppRelease? CurrentAppReleaseModel => AppReleaseModels?.FirstOrDefault(t => t.ParsedVersion == CurrentVersion || t.Version == CurrentVersionShortText);
 
-    public UpdateEngine UpdateEngine => _updateEngine ??= UpdateEngine.CreateFromSettings(App.AppViewModel?.AppSettings?.NetworkSettings ?? new NetworkSettingsGroup());
+    internal void Attach(AppSettings settings, FileLogger logger)
+    {
+        _settings = settings;
+        _logger = logger;
+        _updateEngine = null;
+    }
+
+    public UpdateEngine UpdateEngine => _updateEngine ??= UpdateEngine.CreateFromSettings(_settings?.NetworkSettings ?? new NetworkSettingsGroup());
 
     public void ResetUpdateEngine() => _updateEngine = null;
 
@@ -97,7 +105,7 @@ public class Versioning
                 _velopackUpdateInfo = null;
                 _velopackUpdateReleaseModel = result.LatestRelease;
                 UpdateState = result.UpdateState;
-                App.AppViewModel.AppSettings.ApplicationSettings.LastCheckedUpdate = DateTime.UtcNow;
+                TouchLastCheckedUpdate();
             }
         }
         catch (Exception exception)
@@ -106,9 +114,7 @@ public class Versioning
             _velopackUpdateInfo = null;
             _velopackUpdateReleaseModel = null;
             UpdateState = UpdateState.Unknown;
-            App.AppViewModel.AppServiceProvider.GetService<FileLogger>()?.LogError(
-                nameof(CheckForUpdateAsync),
-                exception);
+            _logger?.LogError(nameof(CheckForUpdateAsync), exception);
         }
         finally
         {
@@ -221,9 +227,7 @@ public class Versioning
         catch (Exception exception)
         {
             _updateApplyRequested = false;
-            App.AppViewModel.AppServiceProvider.GetService<FileLogger>()?.LogError(
-                nameof(ApplyPendingUpdateOnExit),
-                exception);
+            _logger?.LogError(nameof(ApplyPendingUpdateOnExit), exception);
         }
     }
 
@@ -263,7 +267,15 @@ public class Versioning
             UpdateState = UpdateEngine.CompareVersions(CurrentVersionShortText, versionStr);
         }
 
-        App.AppViewModel.AppSettings.ApplicationSettings.LastCheckedUpdate = DateTime.UtcNow;
+        TouchLastCheckedUpdate();
+    }
+
+    private void TouchLastCheckedUpdate()
+    {
+        if (_settings is null)
+            return;
+
+        _settings.ApplicationSettings.LastCheckedUpdate = DateTime.UtcNow;
     }
 
     public async Task<AppRelease?> GetCurrentAppReleaseModelAsync()

@@ -60,7 +60,7 @@
             RowSpacing="7">
             <TextBlock
                 MaxLines="5"
-                Text="{Binding Entry.Title}"
+                Text="{Binding Title}"
                 TextTrimming="CharacterEllipsis"
                 TextWrapping="Wrap"
                 Theme="{StaticResource BodyLargeStrongTextBlockStyle}" />
@@ -69,14 +69,14 @@
                     VerticalAlignment="Bottom"
                     DockPanel.Dock="Right"
                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                    Text="{Binding Entry.LastPublishedContentDatetime, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}"
+                    Text="{Binding LastPublishedContentDatetime, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}"
                     TextTrimming="CharacterEllipsis"
                     Theme="{StaticResource CaptionTextBlockStyle}" />
                 <Button Padding="2" Click="AuthorButton_OnClick">
                     <TextBlock
                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                         MaxLines="2"
-                        Text="{Binding Entry.User.Name}"
+                        Text="{Binding User.Name}"
                         TextTrimming="CharacterEllipsis"
                         TextWrapping="Wrap" />
                 </Button>
@@ -91,7 +91,7 @@
                 <controls:IconText
                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                     Symbol="SquareMultiple"
-                    Text="{Binding Entry.PublishedContentCount}" />
+                    Text="{Binding PublishedContentCount}" />
             </DockPanel>
         </Grid>
     </Grid>

@@ -43,7 +43,7 @@
             Spacing="5">
             <TextBlock
                 Margin="0,5,0,0"
-                Text="{Binding Username}"
+                Text="{Binding Name}"
                 TextTrimming="CharacterEllipsis"
                 TextWrapping="NoWrap"
                 Theme="{StaticResource SubtitleTextBlockStyle}" />

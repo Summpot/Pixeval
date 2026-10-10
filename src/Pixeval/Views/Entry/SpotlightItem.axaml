@@ -26,24 +26,24 @@
                 Grid.Row="0"
                 Grid.Column="0"
                 Padding="5,0"
-                Background="{Binding Entry.Category, Converter={x:Static entry:SpotlightItem.BackgroundBrushConverter}}"
+                Background="{Binding Category, Converter={x:Static entry:SpotlightItem.BackgroundBrushConverter}}"
                 CornerRadius="{StaticResource ControlCornerRadius}"
                 DockPanel.Dock="Left">
-                <TextBlock Text="{Binding Entry.SubcategoryLabel}" />
+                <TextBlock Text="{Binding SubcategoryLabel}" />
             </ContentControl>
             <TextBlock
                 Grid.Row="0"
                 Grid.Column="2"
                 DockPanel.Dock="Right"
                 Foreground="DarkGray"
-                Text="{Binding Entry.PublishDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}" />
+                Text="{Binding PublishDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}" />
             <TextBlock
                 Grid.Row="1"
                 Grid.Column="0"
                 Grid.ColumnSpan="3"
                 DockPanel.Dock="Bottom"
                 MaxLines="1"
-                Text="{Binding Entry.Title}"
+                Text="{Binding Title}"
                 TextTrimming="WordEllipsis"
                 Theme="{StaticResource BodyLargeStrongTextBlockStyle}" />
         </Grid>

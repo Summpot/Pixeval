@@ -69,6 +69,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
 
     public void InitializeProvider()
     {
+        AppInfo.AppVersion.Attach(AppSettings, logger);
         AppSettings.Initialize();
         AppServiceProvider = CreateServiceProvider();
         UserSession = AppServiceProvider.GetRequiredService<IUserSessionService>();
