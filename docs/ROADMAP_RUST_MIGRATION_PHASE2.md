@@ -136,11 +136,19 @@ flowchart TD
         P7_6["7.6 作品记录上的重复投影收敛 [已完成]"]
     end
 
+    subgraph Phase8 ["Phase 8: 表现层文件组织与纯净架构深度重组 (Clean Thin UI Architecture) [待启动]"]
+        P8_1["8.1 领域模型统一收敛 (NativeExtensions + Models -> Domain/)<br/>• 废除 NativeExtensions 伪目录，确立 Domain 一等实体<br/>• 清理 Models 遗留冗余模型，设置偏好项收归 Domain/Settings"]
+        P8_2["8.2 服务体系正名与物理收拢 (-> Services/)<br/>• 将 ExtensionService, McpService, SubscriptionService 迁入 Services/Background<br/>• 将 PixivArtworkService 从 Utilities/Network 迁入 Services/Network"]
+        P8_3["8.3 视图体系与展示模型 1:1 对称重组 (Views & ViewModels)<br/>• 彻底物理删除 Views/Capability 与 Views/Entry，合并为 Views/Works<br/>• 将 PixevalSettings.cs 从 Views/ 迁入 Domain/Config 或 Settings<br/>• 严格对齐 View 与 ViewModel 目录层级"]
+        P8_4["8.4 基础设施归并与垃圾目录物理清理 (-> Common/)<br/>• 删除空的 Download/ 与 Storage/ 目录<br/>• 将 Collections, Attributes, Converters, Markup, Utilities 收编至 Common/<br/>• 全工程命名空间规范化与单测验证"]
+    end
+
     Phase2 --> Phase3
     Phase3 --> Phase4
     Phase4 --> Phase5
     Phase5 --> Phase6
     Phase6 --> Phase7
+    Phase7 --> Phase8
 ```
 
 ---
@@ -688,6 +696,118 @@ Phase 2 至 Phase 6 已经把作品列表收成原生模型直绑，并清掉了
 - **验收标准**：
   - [x] 原生作品记录上不再有与自身字段等价的转发属性。
   - [x] 作品墙、批量命令和工具提示行为与收口前一致。
+
+---
+
+### 阶段 8：表现层文件组织与纯净架构深度重组 (Phase 8: Clean Thin UI Architecture & Reorganization) [待启动]
+
+Phase 2 至 Phase 7 成功实现了 100% 密集型计算与领域逻辑向 Rust Core 下沉，并消除了表现层的包装类、Misaki 依赖、静态定位器与平行模型。
+然而，经系统级审查，表现层当前的物理文件与目录组织依然残留着各个过渡时期的“历史疤痕”：
+1. **技术来源标签感过重**：将核心领域实体置于 `NativeExtensions/` 目录下并按 Rust Crate 细分，依然带着“来自 Native 的外部代码”这一过渡期命名包袱。在现代化 Thin UI 中，它们就是一等**领域实体（Domain Models）**。
+2. **`Models/` 沦为历史杂物间**：明明是常驻服务的 `ExtensionService`、`WorkSubscriptionDownloadService`、`PixevalMcpService` 被藏在 `Models/`；已完全下沉的宏解析、YAML 解析残留模型仍在 `Models/`；设置偏好项散落在 `Models/Settings/`，导致开发者难以区分 `Models/` 与 `NativeExtensions/`。
+3. **视图命名远古且碎片化**：保留 4 年前的 `Views/Capability/`（10 个页面）与 `Views/Entry/` 目录；实体卡片被切成 `Entry/` 和 `Work/` 两半；`PixevalSettings.cs` 奇特地放置在 `Views/` 根目录。
+4. **View 与 ViewModel 结构完全不对齐**：两套目录分类维度不同、层级错位，无法形成清晰直观的 1:1 对称映射。
+5. **顶层目录散落**：顶层残留多达 14+ 个目录，包括空目录 `Download/`、`Storage/`，仅有数个类的 `Collections/`、`Attributes/`、`Filters/` 等。
+
+**终极目标**：将表现层重构成如同**第一天由专业架构师从零开始设计**出的纯净形态：顶层极简、语义高度内聚、分层严格对称、彻底消除历史过渡痕迹。
+
+#### 8.1 目标目录结构全景 (Clean Presentation Architecture)
+
+```
+src/Pixeval/
+├── Domain/                   # 【彻底取代 NativeExtensions 与 Models】一等领域实体与原生 partial 扩展
+│   ├── Works/               # Illustration, Novel, BooruPost, Series, SpotlightArticle, Tag, WorkEntry
+│   ├── Users/               # User, BlockedUserRecord
+│   ├── Downloads/           # DownloadItemSnapshot, DownloadFolderSnapshot, FormatToken
+│   ├── Subscriptions/       # WorkSubscriptionRecord
+│   ├── Comments/            # CommentRecord
+│   ├── Search/              # SauceNaoItem, SearchFilterOptions
+│   └── Config/              # HomePageCardLayout, NavigationMenu, AppSettings, PixevalSettings
+│
+├── Services/                 # 【收揽全部单例与后台服务，消除 Models/ 下的伪模型与 Utilities 下的伪服务】
+│   ├── Core/                # UserSessionService, NavigationService, ArtworkUiStateStore, UserUiStateStore
+│   ├── Media/               # ImageProviderService, ArtworkActionService, DownloadFormatService
+│   ├── Network/             # NetworkRuntime, PixivArtworkService, ProxyHelper
+│   ├── Background/          # WorkSubscriptionDownloadService, PixevalMcpService, ExtensionService
+│   └── Update/              # AppUpdateNotificationCoordinator, VersioningService
+│
+├── ViewModels/               # 【展示状态机与响应式命令，与 Views 目录 1:1 严格对称】
+│   ├── Shell/               # TabViewContainerViewModel
+│   ├── Home/                # HomePageViewModel, HomeCardPreviewViewModel
+│   ├── Works/               # WorkContainerViewModel, TagSelectorViewModel (收编旧 Capability/Entry/Work 散落 VM)
+│   ├── Viewers/             # IllustrationViewerViewModel, NovelViewerViewModel, SingleViewerViewModel, UserViewerViewModel
+│   ├── Search/              # SearchPageViewModel, SauceNaoSearchViewModel
+│   ├── Download/            # DownloadPageViewModel, DownloadFolderPageViewModel
+│   ├── Comments/            # CommentsViewModel
+│   ├── Settings/            # SettingsPageViewModel
+│   └── Login/               # LoginPageViewModel
+│
+├── Views/                    # 【纯声明式 XAML 模板，与 ViewModels 目录 1:1 严格对称】
+│   ├── Shell/               # TabViewContainer.axaml
+│   ├── Home/                # HomePage.axaml, HomePageCardControl.axaml
+│   ├── Works/               # WorkView, WorkContainer, NovelItem, UserItem, SeriesItem, SpotlightItem (彻底消灭 Capability 与 Entry)
+│   ├── Viewers/             # IllustrationViewerPage, NovelViewerPage, UserViewerPage, SingleViewer, WorkInfoPane
+│   ├── Search/              # SearchPage.axaml, SauceNaoSearchPage.axaml
+│   ├── Download/            # DownloadPage.axaml, DownloadFolder.axaml, DownloadItem.axaml
+│   ├── Comments/            # CommentView.axaml, CommentItem.axaml, CommentContainer.axaml
+│   ├── Settings/            # SettingsMainView.axaml, SettingsSubView.axaml, McpHelpSection.axaml
+│   └── Login/               # LoginPage.axaml
+│
+├── Controls/                 # 【自定义外观控件与 Attached Behaviors】
+│   ├── Viewers/             # 图片手势缩放、旋转、逐帧动画控件
+│   ├── Markdown/            # MarkdownBox
+│   └── Behaviors/           # Attached Behaviors (AutoPlay, ArtworkState, DragDrop)
+│
+├── Common/                   # 【通用基础设施，收编 Utilities, Collections, Attributes, Converters, Markup】
+│   ├── Collections/         # FilteredIncrementalCollection
+│   ├── Converters/          # PixevalConverters, NumberEllipsisConverter
+│   ├── Markup/              # ServiceExtension, Localization
+│   └── Logging/             # FileLogger
+│
+├── Assets/                   # 静态图片、图标与矢量资源
+└── Themes/                   # Fluent 主题与样式字典
+```
+
+#### 8.2 子任务拆解与实施规范
+
+##### 8.2.1 领域模型收敛与统一命名 (`NativeExtensions` + `Models` -> `Domain/`)
+- **目标**：
+  - 新建 `Domain/`，彻底取代带有技术过渡标签的 `NativeExtensions/`。
+  - 领域实体按业务范畴组织（`Domain/Works/`、`Domain/Users/`、`Domain/Downloads/` 等），保持 `public partial record ...` 就地扩展特性。
+  - 清理 `Models/` 目录中的死代码和过渡残留模型（清理已下沉至 Rust 的 `DownloadPathMacroParser.cs`、`NavigationYamlParser.cs` 等）。
+  - 将设置偏好实体收敛至 `Domain/Settings/`。
+- **验收标准**：
+  - [ ] 表现层不再存在 `NativeExtensions/` 目录。
+  - [ ] `Models/` 目录中只保留纯数据模型或被完全平移至 `Domain/`。
+  - [ ] 全工程 0 编译错误，单元测试全绿。
+
+##### 8.2.2 服务体系正名与物理收拢 (-> `Services/`)
+- **目标**：
+  - 将伪装在 `Models/` 下的核心后台服务迁入 `Services/Background/`：`ExtensionService.cs`、`WorkSubscriptionDownloadService.cs`、`PixevalMcpService.cs`。
+  - 将伪装在 `Utilities/Network/` 下的业务门面服务迁入 `Services/Network/`：`PixivArtworkService.cs`。
+  - 规范服务目录分类（`Core/`, `Media/`, `Network/`, `Background/`, `Update/`）。
+- **验收标准**：
+  - [ ] 所有实现类命名为 `*Service` 或承担后台守护职责的类 100% 收敛至 `Services/` 及其子目录。
+  - [ ] `Models/` 与 `Utilities/` 下不再包含任何服务类。
+
+##### 8.2.3 视图体系与展示模型 1:1 对称重组 (`Views/` & `ViewModels/`)
+- **目标**：
+  - 彻底物理废除远古遗留的 `Views/Capability/` 和 `Views/Entry/` 目录，将作品流子页面与实体卡片（`SeriesItem`, `SpotlightItem`, `UserItem`, `NovelItem`, `WorkView`）统一并入 `Views/Works/`。
+  - 将 `ViewModels/` 目录结构与 `Views/` 目录结构严格建立 1:1 对称对齐映射（`Shell`, `Home`, `Works`, `Viewers`, `Search`, `Download`, `Comments`, `Settings`, `Login`）。
+  - 将错置于 `Views/PixevalSettings.cs` 的静态配置门面迁出至 `Domain/Config/`。
+- **验收标准**：
+  - [ ] 物理删除 `Views/Capability/` 与 `Views/Entry/` 目录。
+  - [ ] `Views/` 与 `ViewModels/` 目录结构保持 1:1 对称。
+  - [ ] `Views/` 根目录下不再有裸露的 `.cs` 文件。
+
+##### 8.2.4 基础设施归并与垃圾目录彻底物理清理 (-> `Common/`)
+- **目标**：
+  - 物理删除根目录下的空残留目录 `src/Pixeval/Download/` 与 `src/Pixeval/Storage/`。
+  - 新建 `Common/` 目录，收编顶层零散的 `Collections/`、`Attributes/`，收敛 `Utilities/` 中的纯辅助函数（`Converters/`, `Markup/`, `Logging/`）。
+  - 确保顶层目录严格收敛为：`Domain`, `Services`, `ViewModels`, `Views`, `Controls`, `Common`, `Assets`, `Themes`。
+- **验收标准**：
+  - [ ] 顶层不再有空的或零散碎片目录。
+  - [ ] 全工程 0 编译警告、0 编译错误，所有单元测试持续全绿通过。
 
 
 
