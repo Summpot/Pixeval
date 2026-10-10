@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Interactivity;
-using Misaki;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 
@@ -50,7 +49,7 @@ public partial class WorkRelatedPage : IconContentPage
     private void ChangeSource()
     {
         var engine = _id is 0
-            ? (IAsyncEnumerable<IArtworkInfo>) AsyncEnumerable.Empty<IArtworkInfo>()
+            ? (IAsyncEnumerable<object>) AsyncEnumerable.Empty<object>()
             : App.AppViewModel.MakoClient.WorkRelated(_id, _simpleWorkType);
         WorkContainer.ResetEngine(engine);
     }

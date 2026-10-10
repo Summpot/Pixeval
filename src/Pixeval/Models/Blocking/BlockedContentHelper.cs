@@ -4,8 +4,8 @@
 using System;
 using System.Collections.Frozen;
 using System.Linq;
-using Misaki;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Booru;
 using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 
@@ -28,70 +28,56 @@ public static class BlockedContentHelper
         return new(blockedTags, blockedUsers);
     }
 
-    public static bool IsBlocked(IArtworkInfo entry) => IsBlocked(entry, CaptureSnapshot());
+    public static bool IsBlocked(object entry) => IsBlocked(entry, CaptureSnapshot());
 
-    public static bool IsBlocked(IArtworkInfo entry, BlockedContentSnapshot snapshot) =>
-        BlockedContentModelHelper.IsBlockedPlaceholder(entry)
-        || entry.Tags.Any(group => group.Any(tag => snapshot.BlockedTags.Contains(tag.Name)))
-        || entry.Authors.Concat(entry.Uploaders).Any(user => IsBlocked(user, snapshot));
+    public static bool IsBlocked(object entry, BlockedContentSnapshot snapshot)
+    {
+        if (BlockedContentModelHelper.IsBlockedPlaceholder(entry))
+            return true;
+
+        return entry switch
+        {
+            Illustration illust => illust.Tags.Any(t => snapshot.BlockedTags.Contains(t.Name)) || IsBlocked(illust.User.Id, snapshot),
+            Novel novel => novel.Tags.Any(t => snapshot.BlockedTags.Contains(t.Name)) || IsBlocked(novel.User.Id, snapshot),
+            BooruPost booru => booru.Tags.Any(t => snapshot.BlockedTags.Contains(t.Name)),
+            WorkEntry we => IsBlocked(we.AsWorkEntry, snapshot),
+            _ => false
+        };
+    }
 
     public static bool IsBlocked(long userId, BlockedContentSnapshot snapshot) =>
         snapshot.BlockedUsers.Contains(userId);
 
-    public static bool IsBlocked(IUser user) => IsBlocked(user, CaptureSnapshot());
+    public static bool IsBlocked(User user) => IsBlocked(user, CaptureSnapshot());
 
-    public static bool IsBlocked(IUser user, BlockedContentSnapshot snapshot)
-    {
-        var id = user is IIdEntry idEntry && idEntry.Id != 0
-            ? idEntry.Id
-            : long.TryParse(user.Id, out var parsed) ? parsed : 0;
-        return id > 0 && snapshot.BlockedUsers.Contains(id);
-    }
+    public static bool IsBlocked(User user, BlockedContentSnapshot snapshot) =>
+        user.Id > 0 && snapshot.BlockedUsers.Contains(user.Id);
 
     public static bool IsBlocked(Comment comment) => IsBlocked(comment, CaptureSnapshot());
 
     public static bool IsBlocked(Comment comment, BlockedContentSnapshot snapshot) =>
         snapshot.BlockedUsers.Contains(comment.User.Id);
 
-    public static bool IsBlockedPlaceholder(IArtworkInfo entry) =>
+    public static bool IsBlockedPlaceholder(object entry) =>
         BlockedContentModelHelper.IsBlockedPlaceholder(entry);
 
-    public static T Replace<T>(T entry) where T : IArtworkInfo =>
+    public static T Replace<T>(T entry) where T : class =>
         BlockedContentModelHelper.Replace(entry, CaptureSnapshot());
 
-    public static User Replace(User entry) =>
-        BlockedContentModelHelper.Replace(entry, CaptureSnapshot());
+    public static T ReplaceEntry<T>(T entry, BlockedContentSnapshot snapshot) where T : class =>
+        BlockedContentModelHelper.Replace(entry, snapshot);
 
-    public static SingleUserResponse Replace(SingleUserResponse entry) =>
-        BlockedContentModelHelper.Replace(entry, CaptureSnapshot());
-
-    public static Comment Replace(Comment entry) =>
-        BlockedContentModelHelper.Replace(entry, CaptureSnapshot());
-
-    public static T ReplaceEntry<T>(T entry)
-        where T : class, IIdentityInfo => ReplaceEntry(entry, CaptureSnapshot());
-
-    public static T ReplaceEntry<T>(T entry, BlockedContentSnapshot snapshot)
-        where T : class, IIdentityInfo => entry switch
+    public static bool TryAddOrUpdateBlockedUser(User user)
     {
-        IArtworkInfo artwork => (T) BlockedContentModelHelper.Replace(artwork, snapshot),
-        User user => (T) (object) BlockedContentModelHelper.Replace(user, snapshot),
-        Comment comment => (T) (object) BlockedContentModelHelper.Replace(comment, snapshot),
-        _ => entry
-    };
-
-    public static bool TryAddOrUpdateBlockedUser(IUser user)
-    {
-        var id = user is IIdEntry idEntry && idEntry.Id != 0
-            ? idEntry.Id
-            : long.TryParse(user.Id, out var parsed) ? parsed : 0;
-        if (id <= 0 || App.AppViewModel?.StorageEngine is not { } storage)
+        try
+        {
+            var record = BlockedContentModelHelper.CreateBlockedUserRecord(user);
+            App.AppViewModel.StorageEngine.AddOrUpdateBlockedUser(record.Id, record.UserName, record.AvatarUrl, record.Account);
+            return true;
+        }
+        catch
+        {
             return false;
-
-        if (storage.GetAllBlockedUsers().Any(u => u.Id == id))
-            return false;
-
-        storage.AddOrUpdateBlockedUser(BlockedContentModelHelper.CreateBlockedUserRecord(user));
-        return true;
+        }
     }
 }

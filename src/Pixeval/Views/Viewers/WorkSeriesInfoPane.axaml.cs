@@ -4,7 +4,7 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Misaki;
+using Pixeval.Models;
 using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -51,6 +51,6 @@ public partial class WorkSeriesInfoPane : UserControl
         else
             viewContainer.CreateIllustrationPage(
                 navigation.Id.ToString(),
-                IPlatformInfo.Pixiv);
+                PlatformConstants.Pixiv);
     }
 }

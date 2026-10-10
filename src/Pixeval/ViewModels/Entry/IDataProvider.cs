@@ -3,14 +3,13 @@
 
 using System;
 using System.Collections.Generic;
-using Misaki;
 using Pixeval.Collections;
 
 namespace Pixeval.ViewModels;
 
 public interface IDataProvider<T, TViewModel>
     : ISourceView<TViewModel>
-    where T : class, IIdentityInfo
+    where T : class
     where TViewModel : class
 {
     new AdvancedObservableCollection<TViewModel> View { get; }

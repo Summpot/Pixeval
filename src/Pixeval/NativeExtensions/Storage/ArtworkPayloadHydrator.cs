@@ -2,7 +2,6 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using Misaki;
 using Pixeval.Native.Booru;
 using Pixeval.Native.SauceNao;
 using MakoIllustration = Pixeval.Native.Mako.Illustration;
@@ -12,7 +11,7 @@ namespace Pixeval.Native.Storage;
 
 public static class ArtworkPayloadHydrator
 {
-    public static IArtworkInfo? Hydrate(string? serializeKey, string? payloadJson)
+    public static object? Hydrate(string? serializeKey, string? payloadJson)
     {
         if (string.IsNullOrWhiteSpace(payloadJson))
             return null;

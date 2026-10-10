@@ -5,8 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Misaki;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Mako;
 
 namespace Pixeval.Native.Storage;
 
@@ -18,24 +18,32 @@ public partial class WatchLaterRepository : IArtworkHistorySource
 
     public void Clear() => ClearWatchLater();
 
-    public bool ContainsWatchLater(IArtworkInfo entry) =>
-        WatchLaterRecord.TryCreateWorkKey(entry, out var workKey) && Contains(workKey);
+    public bool ContainsWatchLater(object entry) =>
+        WatchLaterRecord.TryCreateWorkKey(entry, out var workKey) && ContainsWatchLater(workKey);
 
-    public bool AddWatchLater(IArtworkInfo entry)
+    public bool AddWatchLater(object entry)
     {
         if (!WatchLaterRecord.TryCreateWorkKey(entry, out var workKey))
             return false;
-        var serializable = entry as ISerializable;
+        var serializable = entry as IArtworkSerializable;
         var serializeKey = serializable?.SerializeKey;
         var payloadJson = serializable?.Serialize();
-        AddOrReplaceWatchLater(entry.Id.ToString(), serializeKey, workKey, payloadJson ?? "");
+        var id = entry switch
+        {
+            Illustration i => i.Id.ToString(),
+            Pixeval.Native.Mako.Novel n => n.Id.ToString(),
+            Booru.BooruPost b => b.Id,
+            SauceNao.SauceNaoItem s => s.RawId,
+            _ => ""
+        };
+        AddOrReplaceWatchLater(id, serializeKey, workKey, payloadJson ?? "");
         return true;
     }
 
-    public bool RemoveWatchLater(IArtworkInfo entry) =>
-        WatchLaterRecord.TryCreateWorkKey(entry, out var workKey) && Remove(workKey);
+    public bool RemoveWatchLater(object entry) =>
+        WatchLaterRecord.TryCreateWorkKey(entry, out var workKey) && RemoveWatchLater(workKey);
 
-    public async IAsyncEnumerable<IArtworkInfo> StreamAsync(SimpleWorkType workType, [EnumeratorCancellation] CancellationToken token = default)
+    public async IAsyncEnumerable<object> StreamAsync(SimpleWorkType workType, [EnumeratorCancellation] CancellationToken token = default)
     {
         long? cursorId = null;
         const int pageSize = 50;
@@ -60,8 +68,4 @@ public partial class WatchLaterRepository : IArtworkHistorySource
                 yield break;
         }
     }
-
-    public bool Contains(string workKey) => ContainsWatchLater(workKey);
-
-    public bool Remove(string workKey) => RemoveWatchLater(workKey);
 }

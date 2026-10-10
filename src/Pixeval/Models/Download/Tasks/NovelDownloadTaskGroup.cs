@@ -9,7 +9,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
 using Pixeval.Download;
 using Pixeval.Extensions.Common.FormatProviders;
 using Pixeval.Models.Extensions;
@@ -84,7 +83,7 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
     }
 
     public NovelDownloadTaskGroup(
-        IArtworkInfo entry,
+        object entry,
         string destination,
         NovelContent? novelContent,
         int? workSubscriptionId = null) : base(entry, destination, workSubscriptionId)
@@ -121,7 +120,7 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
             SetNovelContent(content with
             {
                 Title = string.IsNullOrWhiteSpace(content.Title) ? Entry.Title : content.Title,
-                CoverUrl = string.IsNullOrWhiteSpace(content.CoverUrl) ? (Entry.Thumbnails.FirstOrDefault()?.ImageUri.OriginalString ?? "") : content.CoverUrl,
+                CoverUrl = string.IsNullOrWhiteSpace(content.CoverUrl) ? (Entry.ThumbnailUrl ?? "") : content.CoverUrl,
                 UserId = content.UserId == 0 ? Entry.Author.Id : content.UserId
             });
         }

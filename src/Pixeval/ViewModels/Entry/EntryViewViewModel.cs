@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using Misaki;
 using Pixeval.Collections;
 using Pixeval.Models.Blocking;
 
@@ -13,7 +12,7 @@ namespace Pixeval.ViewModels;
 
 public abstract class EntryViewViewModel<T, TViewModel>
     : ViewModelBase, ISimpleViewViewModel, IDisposable
-    where T : class, IIdentityInfo
+    where T : class
     where TViewModel : class
 {
     private bool _isDisposed;

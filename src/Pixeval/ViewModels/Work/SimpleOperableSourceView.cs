@@ -5,23 +5,22 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Misaki;
 using Pixeval.Collections;
 using Pixeval.Models.Blocking;
 
 namespace Pixeval.ViewModels;
 
-public sealed class SimpleOperableSourceView<TViewModel>(IReadOnlyCollection<IArtworkInfo> source)
-    : ViewModelBase, ISourceView<IArtworkInfo>
-    where TViewModel : class, IArtworkInfo
+public sealed class SimpleOperableSourceView<TViewModel>(IReadOnlyCollection<object> source)
+    : ViewModelBase, ISourceView<object>
+    where TViewModel : class
 {
     private bool _isDisposed;
 
-    public AdvancedObservableAdaptor<IArtworkInfo, IArtworkInfo> View { get; } = new(CreateSource(source), CreateArtwork);
+    public AdvancedObservableAdaptor<object, object> View { get; } = new(CreateSource(source), CreateArtwork);
 
-    IAdvancedObservableView<IArtworkInfo> ISourceView<IArtworkInfo>.View => View;
+    IAdvancedObservableView<object> ISourceView<object>.View => View;
 
-    public ObservableCollection<IArtworkInfo> Source => View.MappedSource;
+    public ObservableCollection<object> Source => View.MappedSource;
 
     public ISourceView<TViewModel> CloneSourceView()
         => new SnapshotSourceView<TViewModel>(View.OfType<TViewModel>().Select(CloneItem));
@@ -35,9 +34,9 @@ public sealed class SimpleOperableSourceView<TViewModel>(IReadOnlyCollection<IAr
         View.Dispose();
     }
 
-    private static IArtworkInfo CreateArtwork(IArtworkInfo info) => info;
+    private static object CreateArtwork(object info) => info;
 
-    private static ObservableCollection<IArtworkInfo> CreateSource(IReadOnlyCollection<IArtworkInfo> source) =>
+    private static ObservableCollection<object> CreateSource(IReadOnlyCollection<object> source) =>
         [.. source.Select(static entry => BlockedContentHelper.Replace(entry))];
 
     private static TViewModel CloneItem(TViewModel viewModel) => viewModel;

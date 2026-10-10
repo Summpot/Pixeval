@@ -2,14 +2,13 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using Misaki;
+using Pixeval.Models;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.Native.Mako;
 
-public abstract partial record WorkEntry : IArtworkInfo, IWorkEntry
+public abstract partial record WorkEntry : IWorkEntry, IArtworkSerializable
 {
     public IWorkEntry AsWorkEntry => this switch
     {
@@ -20,53 +19,100 @@ public abstract partial record WorkEntry : IArtworkInfo, IWorkEntry
 
     public long RawId => AsWorkEntry.RawId;
 
-    long IIdEntry.Id => AsWorkEntry.RawId;
-
-    string IIdentityInfo.Id => AsWorkEntry.RawId.ToString();
-
-    string IPlatformInfo.Platform => IPlatformInfo.Pixiv;
+    public long Id => AsWorkEntry.Id;
 
     public User User => AsWorkEntry.User;
 
     public string Title => AsWorkEntry.Title;
 
-    public string Description => AsWorkEntry.Description;
+    public string Description => this switch
+    {
+        Illust i => i.Illustration.Description,
+        NovelWork n => n.Novel.Description,
+        _ => ""
+    };
 
-    public DateTimeOffset CreateDate => AsWorkEntry.CreateDate;
+    public DateTimeOffset CreateDateOffset => this switch
+    {
+        Illust i => i.Illustration.CreateDateOffset,
+        NovelWork n => n.Novel.CreateDateOffset,
+        _ => default
+    };
 
-    public int TotalFavorite => AsWorkEntry.TotalFavorite;
+    public int TotalFavorite => this switch
+    {
+        Illust i => i.Illustration.TotalFavorite,
+        NovelWork n => n.Novel.TotalFavorite,
+        _ => 0
+    };
 
-    public int TotalView => AsWorkEntry.TotalView;
+    public int TotalViewCount => this switch
+    {
+        Illust i => i.Illustration.TotalViewCount,
+        NovelWork n => n.Novel.TotalViewCount,
+        _ => 0
+    };
 
-    public IPreloadableList<IUser> Authors => AsWorkEntry.Authors;
+    public Uri WebsiteUri => this switch
+    {
+        Illust i => i.Illustration.WebsiteUri,
+        NovelWork n => n.Novel.WebsiteUri,
+        _ => new("about:blank")
+    };
 
-    public IPreloadableList<IUser> Uploaders => AsWorkEntry.Uploaders;
+    public Uri AppUri => this switch
+    {
+        Illust i => i.Illustration.AppUri,
+        NovelWork n => n.Novel.AppUri,
+        _ => new("about:blank")
+    };
 
-    public ILookup<ITagCategory, ITag> Tags => AsWorkEntry.Tags;
+    public SafeRating SafeRating => this switch
+    {
+        Illust i => i.Illustration.SafeRating,
+        NovelWork n => n.Novel.SafeRating,
+        _ => SafeRating.NotSpecified
+    };
 
-    public Uri WebsiteUri => AsWorkEntry.WebsiteUri;
+    public int Width => this switch
+    {
+        Illust i => (int) i.Illustration.Width,
+        NovelWork n => n.Novel.Width,
+        _ => 0
+    };
 
-    public Uri AppUri => AsWorkEntry.AppUri;
+    public int Height => this switch
+    {
+        Illust i => (int) i.Illustration.Height,
+        NovelWork n => n.Novel.Height,
+        _ => 0
+    };
 
-    public ImageType ImageType => AsWorkEntry.ImageType;
+    public bool IsFavorite => this switch
+    {
+        Illust i => i.Illustration.IsFavorite,
+        NovelWork n => n.Novel.IsFavorite,
+        _ => false
+    };
 
-    public SafeRating SafeRating => AsWorkEntry.SafeRating;
-
-    public IReadOnlyCollection<IImageFrame> Thumbnails => AsWorkEntry.Thumbnails;
-
-    public IReadOnlyDictionary<string, object> AdditionalInfo => AsWorkEntry.AdditionalInfo;
-
-    public int Width => AsWorkEntry.Width;
-
-    public int Height => AsWorkEntry.Height;
-
-    public bool IsFavorite => AsWorkEntry.IsFavorite;
-
-    public bool IsAiGenerated => AsWorkEntry.IsAiGenerated;
+    public bool IsAiGenerated => this switch
+    {
+        Illust i => i.Illustration.IsAiGenerated,
+        NovelWork n => n.Novel.IsAiGenerated,
+        _ => false
+    };
 
     public Series? Series => AsWorkEntry.Series;
 
-    public string Serialize() => AsWorkEntry.Serialize();
+    public string Serialize() => AsWorkEntry switch
+    {
+        IArtworkSerializable s => s.Serialize(),
+        _ => throw new InvalidOperationException("WorkEntry is not serializable")
+    };
 
-    public string SerializeKey => AsWorkEntry.SerializeKey;
+    public string SerializeKey => AsWorkEntry switch
+    {
+        IArtworkSerializable s => s.SerializeKey,
+        _ => throw new InvalidOperationException("WorkEntry is not serializable")
+    };
 }

@@ -2,7 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using Misaki;
+using Pixeval.Models;
 
 namespace Pixeval.Native.Booru;
 
@@ -10,11 +10,11 @@ public static class BooruPlatformExtensions
 {
     public static string ToPlatformString(this BooruPlatform platform) => platform switch
     {
-        BooruPlatform.Danbooru => IPlatformInfo.Danbooru,
-        BooruPlatform.Gelbooru => IPlatformInfo.Gelbooru,
-        BooruPlatform.Yandere => IPlatformInfo.Yandere,
-        BooruPlatform.Sankaku => IPlatformInfo.Sankaku,
-        BooruPlatform.Rule34 => "rule34",
+        BooruPlatform.Danbooru => PlatformConstants.Danbooru,
+        BooruPlatform.Gelbooru => PlatformConstants.Gelbooru,
+        BooruPlatform.Yandere => PlatformConstants.Yandere,
+        BooruPlatform.Sankaku => PlatformConstants.Sankaku,
+        BooruPlatform.Rule34 => PlatformConstants.Rule34,
         _ => platform.ToString().ToLowerInvariant()
     };
 

@@ -23,7 +23,7 @@ using Markdown.Avalonia.StyleCollections;
 using Markdown.Avalonia.Svg;
 using Markdown.Avalonia.SyntaxHigh;
 using Markdown.Avalonia.Utils;
-using Misaki;
+using Pixeval.Models;
 using Pixeval.AppManagement;
 using Pixeval.Utilities;
 using Pixeval.Utilities.GitHub;
@@ -190,7 +190,7 @@ public class MarkdownBox : MarkdownScrollViewer
         if (uri.Scheme is not AppInfo.AppProtocol)
             await launcher.LaunchUriAsync(uri);
         else if (uri.Host is "illust" && uri.AbsolutePath.Trim('/') is { } id)
-            viewContainer.CreateIllustrationPage(id, IPlatformInfo.Pixiv);
+            viewContainer.CreateIllustrationPage(id, PlatformConstants.Pixiv);
     }
 
     private bool TryScrollToAnchor(string url)
@@ -543,10 +543,10 @@ public class MarkdownBox : MarkdownScrollViewer
             if (GitHubHttpOptions.IsGitHubHost(host))
                 return GitHubHttpClientProvider.PlatformKey;
             if (IsHostOrSubdomain(host, "pixiv.net") || IsHostOrSubdomain(host, "pximg.net"))
-                return IPlatformInfo.Pixiv;
+                return PlatformConstants.Pixiv;
             if (IsHostOrSubdomain(host, "donmai.us"))
-                return IPlatformInfo.Danbooru;
-            return IPlatformInfo.All;
+                return PlatformConstants.Danbooru;
+            return PlatformConstants.All;
         }
 
         private static bool IsHostOrSubdomain(string host, string domain) =>

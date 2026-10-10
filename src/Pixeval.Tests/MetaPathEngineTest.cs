@@ -1,9 +1,9 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Misaki;
 using Pixeval.Models.Download;
 using Pixeval.Utilities;
 using Pixeval.Native.Download;
@@ -73,14 +73,14 @@ public sealed class MetaPathEngineTest
     public void ReduceShouldFormatIdAndDateTime()
     {
         using var engine = new MetaPathEngine();
-        var sample = DesignHelper.DownloadParserSampleWork(ImageType.SingleImage);
+        var sample = DesignHelper.DownloadParserSampleSingleIllustration;
         var context = new ParserContext(sample).ToMacroContext();
 
         var idPath = engine.Reduce("@{id}", context);
-        Assert.AreEqual("12345678", idPath);
+        Assert.AreEqual("123456", idPath);
 
         var datePath = engine.Reduce("@{publish_time:yyyy-MM-dd}", context);
-        Assert.AreEqual("2020-10-12", datePath);
+        Assert.AreEqual(DateTimeOffset.UtcNow.ToString("yyyy-MM-dd"), datePath);
 
         var extPath = engine.Reduce("@{ext}", context);
         Assert.AreEqual("<ext>", extPath);
@@ -94,12 +94,12 @@ public sealed class MetaPathEngineTest
     {
         using var engine = new MetaPathEngine();
 
-        var singleSample = DesignHelper.DownloadParserSampleWork(ImageType.SingleImage);
+        var singleSample = DesignHelper.DownloadParserSampleSingleIllustration;
         var singleContext = new ParserContext(singleSample).ToMacroContext();
         var singleResult = engine.Reduce("@{is_pic_set?set:single}", singleContext);
         Assert.AreEqual("single", singleResult);
 
-        var setSample = DesignHelper.DownloadParserSampleWork(ImageType.ImageSet);
+        var setSample = DesignHelper.DownloadParserSampleImageSetIllustration;
         var setContext = new ParserContext(setSample).ToMacroContext();
         var setResult = engine.Reduce("@{is_pic_set?set:single}", setContext);
         Assert.AreEqual("set", setResult);

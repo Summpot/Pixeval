@@ -6,7 +6,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
 using Pixeval.Extensions.Common.FormatProviders;
 using Pixeval.Models.Extensions;
 using Pixeval.Native.Storage;
@@ -17,12 +16,12 @@ namespace Pixeval.Models.Download.Tasks;
 
 public class SingleImageDownloadTaskGroup : SingleImageDownloadTaskGroupBase
 {
-    public ISingleImage Entry => (ISingleImage) DatabaseEntry.Entry!;
+    public object Entry => DatabaseEntry.Entry!;
 
     private IllustrationDownloadFormatToken DestinationIllustrationFormat { get; }
 
     public SingleImageDownloadTaskGroup(
-        ISingleImage entry,
+        object entry,
         string destination,
         int? workSubscriptionId = null) : base(entry, destination, workSubscriptionId)
     {

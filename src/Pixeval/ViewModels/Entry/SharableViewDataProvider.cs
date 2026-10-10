@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Misaki;
 using Pixeval.Collections;
 using Pixeval.Utilities;
 
@@ -17,7 +16,7 @@ namespace Pixeval.ViewModels;
 /// </summary>
 public sealed class SharableViewDataProvider<T, TViewModel>
     : ViewModelBase, IDataProvider<T, TViewModel>, IRefCloneable<SharableViewDataProvider<T, TViewModel>>
-    where T : class, IIdentityInfo
+    where T : class
     where TViewModel : class
 {
     private bool _isDisposed;

@@ -5,7 +5,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
-using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.Models.Download;
 using Pixeval.Models.Download.Tasks;

@@ -3,8 +3,6 @@
 
 using Avalonia;
 using Avalonia.Controls.Templates;
-using Misaki;
-
 namespace Pixeval.Views.Viewers;
 
 public partial class WorkInfoPage : IconContentPage
@@ -31,7 +29,7 @@ public partial class WorkInfoPage : IconContentPage
     {
     }
 
-    public WorkInfoPage(IArtworkInfo? viewModel)
+    public WorkInfoPage(object? viewModel)
     {
         DataContext = viewModel;
         InitializeComponent();

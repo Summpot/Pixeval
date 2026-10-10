@@ -8,7 +8,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
 using Pixeval.Models.Download;
 using Pixeval.Models.Extensions;
 using Pixeval.Models.Options;
@@ -372,11 +371,11 @@ public static partial class IoHelper
             _ => throw new NotSupportedException($"Unsupported image format: {encodedFormat}.")
         };
 
-    extension(IArtworkInfo artworkInfo)
+    extension(object? artworkInfo)
     {
         public int TryGetSetIndex()
         {
-            return artworkInfo is ISingleImage singleImage ? singleImage.SetIndex : -1;
+            return artworkInfo is Native.Mako.Illustration illust ? illust.SetIndex : -1;
         }
     }
 }

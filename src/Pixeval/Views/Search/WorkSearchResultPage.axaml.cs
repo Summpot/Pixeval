@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Misaki;
 using Pixeval.Controls;
 using Pixeval.I18N;
 using Pixeval.Models.Pixiv;
@@ -109,7 +108,7 @@ public partial class WorkSearchResultPage : IconContentPage
 
     private void PopularPreviewItem_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (sender is Avalonia.Controls.Control { DataContext: IArtworkInfo artwork } && TopLevel.GetTopLevel(this) is { } topLevel)
+        if (sender is Avalonia.Controls.Control { DataContext: object artwork } && TopLevel.GetTopLevel(this) is { } topLevel)
         {
             if (artwork is Pixeval.Native.Mako.Novel novel)
                 topLevel.ViewContainer?.CreateNovelPage(novel);
@@ -122,9 +121,9 @@ public partial class WorkSearchResultPage : IconContentPage
 
     private void ChangeSource()
     {
-        IAsyncEnumerable<IArtworkInfo> engine = (_illustrationArguments, _novelArguments) switch
+        IAsyncEnumerable<object> engine = (_illustrationArguments, _novelArguments) switch
         {
-            (null, null) => App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<IArtworkInfo>()),
+            (null, null) => App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<object>()),
             (_, null) => App.AppViewModel.MakoClient.IllustrationSearch(_illustrationArguments!),
             (null, _) => App.AppViewModel.MakoClient.NovelSearch(_novelArguments!),
             _ => SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>() switch

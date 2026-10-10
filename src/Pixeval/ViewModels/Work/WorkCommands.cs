@@ -10,13 +10,15 @@ using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
 using Pixeval.Controls;
 using Pixeval.I18N;
+using Pixeval.Models;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Download;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Booru;
 using Pixeval.Native.Mako;
+using Pixeval.Native.SauceNao;
 using Pixeval.Native.Storage;
 using Pixeval.Services;
 using Pixeval.Utilities;
@@ -49,18 +51,30 @@ public static class WorkCommands
     public static IRelayCommand<object?> BlockUserCommand { get; } =
         new RelayCommand<object?>(ExecuteBlockUser);
 
-    internal static IArtworkInfo? ResolveWork(object? parameter)
+    internal static object? ResolveWork(object? parameter)
     {
         return parameter switch
         {
-            IArtworkInfo info => info,
+            Illustration illust => illust,
+            Novel novel => novel,
+            BooruPost booru => booru,
+            SauceNaoItem sauce => sauce,
+            WorkEntry we => we,
             IllustrationViewerPageViewModel viewerVm => viewerVm.CurrentIllustration,
             NovelViewerPageViewModel novelVm => novelVm.CurrentNovel,
             IllustrationViewerInfoPane pane => pane.DataContext as IllustrationViewerPageViewModel is { CurrentIllustration: { } illust } ? illust : null,
             NovelViewerPage page => page.DataContext as NovelViewerPageViewModel is { CurrentNovel: { } novel } ? novel : null,
-            Control { DataContext: IArtworkInfo info } => info,
-            Control { DataContext: IllustrationViewerPageViewModel viewerVm } => viewerVm.CurrentIllustration,
-            Control { DataContext: NovelViewerPageViewModel novelVm } => novelVm.CurrentNovel,
+            Control { DataContext: { } ctx } => ctx switch
+            {
+                Illustration i => i,
+                Novel n => n,
+                BooruPost b => b,
+                SauceNaoItem s => s,
+                WorkEntry w => w,
+                IllustrationViewerPageViewModel vm => vm.CurrentIllustration,
+                NovelViewerPageViewModel nvm => nvm.CurrentNovel,
+                _ => null
+            },
             _ => null
         };
     }
@@ -95,7 +109,7 @@ public static class WorkCommands
         if (ResolveWork(parameter) is not { } work)
             return;
 
-        if (BlockedContentHelper.IsBlockedPlaceholder(work) || work.Platform is not IPlatformInfo.Pixiv)
+        if (work is not IWorkEntry workEntry || BlockedContentHelper.IsBlockedPlaceholder(work))
             return;
 
         var state = ArtworkUiStateStore.GetOrCreate(work);
@@ -108,7 +122,7 @@ public static class WorkCommands
         ArtworkUiStateStore.SetBookmarkPending(work);
         try
         {
-            var result = await App.AppViewModel.MakoClient.SetWorkBookmarkAsync((IWorkEntry) work, target);
+            var result = await App.AppViewModel.MakoClient.SetWorkBookmarkAsync(workEntry, target);
             if (result)
             {
                 ArtworkUiStateStore.SetBookmarkState(work, target);
@@ -130,7 +144,7 @@ public static class WorkCommands
         if (ResolveWork(parameter.Parameter) is not { } work)
             return;
 
-        if (BlockedContentHelper.IsBlockedPlaceholder(work) || work.Platform is not IPlatformInfo.Pixiv)
+        if (work is not IWorkEntry workEntry || BlockedContentHelper.IsBlockedPlaceholder(work))
             return;
 
         var state = ArtworkUiStateStore.GetOrCreate(work);
@@ -142,7 +156,7 @@ public static class WorkCommands
         ArtworkUiStateStore.SetBookmarkPending(work);
         try
         {
-            var result = await App.AppViewModel.MakoClient.SetWorkBookmarkAsync((IWorkEntry) work, true, parameter.IsPrivate, parameter.Tags);
+            var result = await App.AppViewModel.MakoClient.SetWorkBookmarkAsync(workEntry, true, parameter.IsPrivate, parameter.Tags);
             if (result)
             {
                 ArtworkUiStateStore.SetBookmarkState(work, true);
@@ -204,7 +218,7 @@ public static class WorkCommands
         }
     }
 
-    public static async Task SaveImageAsync(IArtworkInfo entry, object? parameter, int setIndex)
+    public static async Task SaveImageAsync(object entry, object? parameter, int setIndex)
     {
         if (BlockedContentHelper.IsBlockedPlaceholder(entry))
             return;
@@ -216,9 +230,6 @@ public static class WorkCommands
     public static async ValueTask SaveIllustrationAsync(ViewContainerBase? viewContainerBase, Illustration entry, int setIndex)
     {
         var path = App.AppViewModel.AppSettings.DownloadSettings.DownloadPathMacro;
-        if (entry.IsPicGif && entry is ISingleAnimatedImage { MultiImageUris: not null } animatedImage)
-            await animatedImage.MultiImageUris.TryPreloadListAsync(animatedImage);
-
         var factory = App.AppViewModel.AppServiceProvider.GetRequiredService<IllustrationDownloadTaskFactory>();
         var task = factory.Create(entry, path, setIndex);
         App.AppViewModel.DownloadManager.QueueTask(task);

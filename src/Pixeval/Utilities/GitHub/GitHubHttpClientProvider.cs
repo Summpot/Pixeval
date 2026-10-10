@@ -3,29 +3,21 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Threading;
-using Misaki;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Options;
 using Pixeval.Utilities.Network;
 
 namespace Pixeval.Utilities.GitHub;
 
-public sealed class GitHubHttpClientProvider(NetworkSettingsGroup networkSettings) : IDownloadHttpClientService, IDisposable
+public sealed class GitHubHttpClientProvider(NetworkSettingsGroup networkSettings) : IDisposable
 {
     public const string PlatformKey = "github";
 
-    private static readonly Uri[] _ProxyProbeUris =
-    [
-        new($"https://{GitHubHttpOptions.Host}"),
-        new($"https://{GitHubHttpOptions.ApiHost}"),
-        new($"https://{GitHubHttpOptions.AvatarHost}")
-    ];
-
     private readonly Lock _gate = new();
     private readonly Dictionary<string, HttpClient> _clients = [];
+    private bool _disposed;
 
     public string Platform => PlatformKey;
 
@@ -58,23 +50,9 @@ public sealed class GitHubHttpClientProvider(NetworkSettingsGroup networkSetting
         {
             ProxyType.None => "proxy:disabled",
             ProxyType.Custom => $"proxy:explicit:{ProxyHelper.NormalizeProxyUri(networkSettings.ProxySettings.Proxy) ?? ""}",
-            ProxyType.System => $"proxy:system:{string.Join("|", _ProxyProbeUris.Select(GetSystemProxyCacheKeyPart))}",
-            _ => throw new ArgumentOutOfRangeException(nameof(networkSettings.ProxySettings.ProxyType))
+            _ => "proxy:auto"
         };
         return $"{domainFronting};{proxy}";
-    }
-
-    private static string GetSystemProxyCacheKeyPart(Uri uri)
-    {
-        var proxy = SystemProxyProvider.GetCurrent();
-        try
-        {
-            return $"{uri.AbsoluteUri}:{proxy.IsBypassed(uri)}:{proxy.GetProxy(uri)?.AbsoluteUri}";
-        }
-        catch (Exception e)
-        {
-            return $"{uri.AbsoluteUri}:{e.GetType().FullName}";
-        }
     }
 
     public void Dispose()
@@ -83,15 +61,10 @@ public sealed class GitHubHttpClientProvider(NetworkSettingsGroup networkSetting
         {
             if (_disposed)
                 return;
-
             _disposed = true;
-
             foreach (var client in _clients.Values)
                 client.Dispose();
-
             _clients.Clear();
         }
     }
-
-    private bool _disposed;
 }

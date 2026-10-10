@@ -6,19 +6,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
-using Misaki;
 using Pixeval.I18N;
+using Pixeval.Models;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.Native.Mako;
 
-public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISingleAnimatedImage, IImageSet, IImageSize, ISerializable
+public partial record Illustration : IWorkEntry, IArtworkSerializable
 {
-    private static readonly Dictionary<string, object> s_emptyDict = [];
-
     [JsonIgnore]
-    public bool IsBookmarkSupported => !BlockedContentHelper.IsBlockedPlaceholder(this) && Platform is IPlatformInfo.Pixiv;
+    public bool IsBookmarkSupported => !BlockedContentHelper.IsBlockedPlaceholder(this) && Platform is PlatformConstants.Pixiv;
 
     [JsonIgnore]
     public bool HasSeries => Series is not null;
@@ -30,7 +29,7 @@ public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISi
     public string? SizeText => Width > 0 && Height > 0 ? $"{Width} x {Height}" : null;
 
     [JsonIgnore]
-    public string? ThumbnailUrl => Thumbnails.PickClosestHeight(300)?.ImageUri.OriginalString;
+    public string? ThumbnailUrl => ImageUrls?.Medium ?? ImageUrls?.SquareMedium ?? ImageUrls?.Large;
 
     [JsonIgnore]
     public string Tooltip
@@ -55,12 +54,8 @@ public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISi
     [JsonIgnore]
     public long RawId => Id;
 
-    long IIdEntry.Id => Id;
-
-    string IIdentityInfo.Id => Id == 0 ? "" : Id.ToString();
-
     [JsonIgnore]
-    public string Platform => IPlatformInfo.Pixiv;
+    public string Platform => PlatformConstants.Pixiv;
 
     [JsonIgnore]
     public string Description => Caption;
@@ -68,34 +63,17 @@ public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISi
     [JsonIgnore]
     public DateTimeOffset CreateDateOffset => DateTimeOffset.TryParse(CreateDate, out var dt) ? dt : default;
 
-    DateTimeOffset IArtworkInfo.CreateDate => CreateDateOffset;
-
     [JsonIgnore]
     public int TotalFavorite => (int) TotalBookmarks;
 
     [JsonIgnore]
     public int TotalViewCount => (int) TotalView;
 
-    int IArtworkInfo.TotalView => TotalViewCount;
-
     [JsonIgnore]
     public User Author => User;
 
-    User IWorkEntry.User => User;
-
     [JsonIgnore]
     public IReadOnlyList<Tag> TagList => Tags;
-
-    ILookup<ITagCategory, ITag> IArtworkInfo.Tags => Tags.ToLookup(_ => ITagCategory.Empty, ITag (t) => t);
-
-    [JsonIgnore]
-    public IPreloadableList<IUser> Authors => [User];
-
-    [JsonIgnore]
-    public IPreloadableList<IUser> Uploaders => [];
-
-    [JsonIgnore]
-    public IReadOnlyDictionary<string, object> AdditionalInfo => s_emptyDict;
 
     [JsonIgnore]
     public IllustrationType Type => IllustType switch
@@ -112,6 +90,18 @@ public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISi
     public string? OriginalSingleUrl => MetaSinglePage?.OriginalImageUrl;
 
     [JsonIgnore]
+    public string? LargeThumbnailUrl => ImageUrls?.Large;
+
+    [JsonIgnore]
+    public string? MediumThumbnailUrl => ImageUrls?.Medium;
+
+    [JsonIgnore]
+    public string? SquareMediumThumbnailUrl => ImageUrls?.SquareMedium;
+
+    [JsonIgnore]
+    public string? OriginalUrl => OriginalSingleUrl ?? ImageUrls?.Original ?? ImageUrls?.Large ?? ImageUrls?.Medium;
+
+    [JsonIgnore]
     public bool IsPicGif => string.Equals(IllustType, "ugoira", StringComparison.OrdinalIgnoreCase);
 
     [JsonIgnore]
@@ -119,13 +109,6 @@ public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISi
 
     [JsonIgnore]
     public bool IsPicOne => !IsPicSet && !IsPicGif;
-
-    [JsonIgnore]
-    public ImageType ImageType => IsPicSet
-        ? ImageType.ImageSet
-        : IsPicGif
-            ? ImageType.SingleAnimatedImage
-            : ImageType.SingleImage;
 
     [JsonIgnore]
     public Uri WebsiteUri => new($"https://www.pixiv.net/artworks/{Id}");
@@ -164,58 +147,10 @@ public partial record Illustration : IArtworkInfo, IWorkEntry, ISingleImage, ISi
     public bool IsAiGenerated => IllustAiType == 2;
 
     [JsonIgnore]
-    public IReadOnlyCollection<IImageFrame> Thumbnails
-    {
-        get
-        {
-            var med = ImageUrls?.Medium ?? ImageUrls?.SquareMedium;
-            var large = ImageUrls?.Large ?? med;
-            return
-            [
-                new ImageFrame(IImageSize.Uniform(this, 540, 540)) { ImageUri = string.IsNullOrWhiteSpace(med) ? new("about:blank") : new(med) },
-                new ImageFrame(IImageSize.Uniform(this, 600, 1200)) { ImageUri = string.IsNullOrWhiteSpace(large) ? new("about:blank") : new(large) },
-            ];
-        }
-    }
-
-    ulong IImageFrame.ByteSize => 0;
-
-    Uri IImageFrame.ImageUri
-    {
-        get
-        {
-            var url = OriginalSingleUrl ?? ImageUrls?.Original ?? ImageUrls?.Large ?? ImageUrls?.Medium;
-            return string.IsNullOrWhiteSpace(url) ? new("about:blank") : new(url);
-        }
-    }
-
-    [JsonIgnore]
-    public SingleAnimatedImageType PreferredAnimatedImageType => SingleAnimatedImageType.MultiFiles;
-
-    [JsonIgnore]
-    public Uri? SingleImageUri => null;
-
-    [JsonIgnore]
     public UgoiraMetadata? UgoiraMetadata { get; init; }
 
     [JsonIgnore]
-    public IPreloadableList<int>? ZipImageDelays => UgoiraMetadata is { } u ? [.. u.Frames.Select(f => f.Delay)] : null;
-
-    [JsonIgnore]
-    public IPreloadableList<(Uri, int)> MultiImageUris => UgoiraMetadata is { } u && OriginalSingleUrl is { } orig
-        ? [.. u.Frames.Select((f, i) => (new Uri(orig.Replace("ugoira0", $"ugoira{i}")), f.Delay))]
-        : [];
-
-    [JsonIgnore]
-    public IPreloadableList<IAnimatedImageFrame> AnimatedThumbnails => UgoiraMetadata is { } u
-        ? [
-            new AnimatedImageFrame(IImageSize.Uniform(this, 540, 540), new Uri(u.ZipUrls.Medium), [.. u.Frames.Select(f => f.Delay)]),
-            new AnimatedImageFrame(IImageSize.Uniform(this, 600, 1200), new Uri(u.ZipUrls.Medium.Replace("600x600", "1920x1080")), [.. u.Frames.Select(f => f.Delay)])
-        ]
-        : [];
-
-    [JsonIgnore]
-    public IPreloadableList<ISingleImage> Pages => PageCount <= 1
+    public IReadOnlyList<Illustration> Pages => PageCount <= 1
         ? [this]
         : [.. MetaPages.Select((m, i) => this with
         {

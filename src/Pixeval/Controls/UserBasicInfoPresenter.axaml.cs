@@ -1,20 +1,19 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using System.Linq;
 using Avalonia;
 using Avalonia.Controls.Primitives;
-using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Booru;
 using Pixeval.Native.Mako;
 
 namespace Pixeval.Controls;
 
 public class UserBasicInfoPresenter : TemplatedControl
 {
-    public static readonly StyledProperty<IUser?> UserProperty =
-        AvaloniaProperty.Register<UserBasicInfoPresenter, IUser?>(nameof(User));
+    public static readonly StyledProperty<object?> UserProperty =
+        AvaloniaProperty.Register<UserBasicInfoPresenter, object?>(nameof(User));
 
     public static readonly DirectProperty<UserBasicInfoPresenter, string> AvatarUrlProperty =
         AvaloniaProperty.RegisterDirect<UserBasicInfoPresenter, string>(nameof(AvatarUrl), o => o.AvatarUrl);
@@ -29,7 +28,7 @@ public class UserBasicInfoPresenter : TemplatedControl
     {
         UserProperty.Changed.AddClassHandler<UserBasicInfoPresenter>(static (control, e) =>
         {
-            control.UpdateFromUser(e.GetNewValue<IUser?>());
+            control.UpdateFromUser(e.GetNewValue<object?>());
         });
     }
 
@@ -38,7 +37,7 @@ public class UserBasicInfoPresenter : TemplatedControl
         UpdateFromUser(User);
     }
 
-    public IUser? User
+    public object? User
     {
         get => GetValue(UserProperty);
         set => SetValue(UserProperty, value);
@@ -62,20 +61,22 @@ public class UserBasicInfoPresenter : TemplatedControl
         private set => SetAndRaise(AccountDisplayProperty, ref field, value);
     } = "";
 
-    private void UpdateFromUser(IUser? user)
+    private void UpdateFromUser(object? user)
     {
         var avatarUrl = (user as User)?.AvatarUrl
             ?? (user as TokenUser)?.AvatarUrl
-            ?? user?.Avatar.FirstOrDefault()?.ImageUri.OriginalString;
+            ?? (user as BooruUser)?.AvatarUrl;
 
         AvatarUrl = string.IsNullOrWhiteSpace(avatarUrl)
             ? AppInfo.ImageNotAvailablePath
             : avatarUrl;
-        UserDisplayName = user is null
-            ? ""
-            : string.IsNullOrWhiteSpace(user.Name)
-                ? (user is IIdEntry ide && ide.Id != 0 ? ide.Id.ToString() : user.Id)
-                : user.Name;
+        UserDisplayName = user switch
+        {
+            User u => string.IsNullOrWhiteSpace(u.Name) ? u.Id.ToString() : u.Name,
+            TokenUser tu => string.IsNullOrWhiteSpace(tu.Name) ? tu.Id.ToString() : tu.Name,
+            BooruUser bu => string.IsNullOrWhiteSpace(bu.Name) ? bu.Id.ToString() : bu.Name,
+            _ => ""
+        };
         var account = (user as User)?.Account
             ?? (user as TokenUser)?.Account;
         AccountDisplay = string.IsNullOrWhiteSpace(account) ? "" : $"@{account}";

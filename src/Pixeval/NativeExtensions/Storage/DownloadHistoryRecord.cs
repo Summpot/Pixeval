@@ -1,21 +1,20 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using Misaki;
 using Pixeval.Native.Download;
 
 namespace Pixeval.Native.Storage;
 
 public partial record DownloadHistoryRecord : IDownloadHistoryEntry
 {
-    private IArtworkInfo? _entry;
+    private object? _entry;
     private DownloadState? _currentState;
     private string? _formatTokenOverride;
     private string? _errorMessageOverride;
 
-    internal IArtworkInfo? EntryOverride { get; init; }
+    internal object? EntryOverride { get; init; }
 
-    public IArtworkInfo? Entry => EntryOverride ?? (_entry ??= ArtworkPayloadHydrator.Hydrate(SerializeKey, PayloadJson));
+    public object? Entry => EntryOverride ?? (_entry ??= ArtworkPayloadHydrator.Hydrate(SerializeKey, PayloadJson));
 
     public DownloadState DownloadState => _currentState ?? (DownloadState)State;
 

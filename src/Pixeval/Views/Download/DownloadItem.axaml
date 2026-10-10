@@ -63,7 +63,7 @@
             <TextBlock
                 FontWeight="SemiBold"
                 MaxLines="1"
-                Text="{Binding Entry.Title}"
+                Text="{Binding Title}"
                 TextTrimming="CharacterEllipsis" />
             <TextBlock
                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"

@@ -10,7 +10,7 @@ public sealed record WorkSeriesInfoViewModel(
     WorkSeriesNavigationViewModel? Next = null,
     string? PositionText = null)
 {
-    public static WorkSeriesInfoViewModel? Create(Misaki.IArtworkInfo? work, SimpleWorkType workType)
+    public static WorkSeriesInfoViewModel? Create(object? work, SimpleWorkType workType)
     {
         var series = work switch
         {

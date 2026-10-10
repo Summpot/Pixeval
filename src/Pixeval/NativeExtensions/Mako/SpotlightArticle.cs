@@ -3,19 +3,12 @@
 
 using System;
 using System.Text.Json.Serialization;
-using Misaki;
 using Pixeval.Models.Pixiv;
 
 namespace Pixeval.Native.Mako;
 
-public partial record SpotlightArticle : IIdEntry
+public partial record SpotlightArticle
 {
-    long IIdEntry.Id => Id;
-
-    string IIdentityInfo.Id => Id == 0 ? "" : Id.ToString();
-
-    string IPlatformInfo.Platform => IPlatformInfo.Pixiv;
-
     [JsonIgnore]
     public SpotlightArticle Entry => this;
 

@@ -1,30 +1,39 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using Misaki;
-
 namespace Pixeval.Native.Storage;
 
 public partial record BrowseHistoryRecord
 {
-    private IArtworkInfo? _entry;
+    private object? _entry;
 
-    internal IArtworkInfo? EntryOverride
+    internal object? EntryOverride
     {
         get => _entry;
         init => _entry = value;
     }
 
-    public IArtworkInfo? Entry => _entry ??= ArtworkPayloadHydrator.Hydrate(SerializeKey, PayloadJson);
+    public object? Entry => _entry ??= ArtworkPayloadHydrator.Hydrate(SerializeKey, PayloadJson);
 
-    public static bool TryCreateWorkKey(IArtworkInfo entry, out string key)
+    public static bool TryCreateWorkKey(object entry, out string key)
     {
         key = "";
-        if (entry is not ISerializable { SerializeKey: { } serializeKey }
-            || string.IsNullOrEmpty(entry.Id))
+        if (entry is not IArtworkSerializable serializable)
             return false;
 
-        key = CreateWorkKey(serializeKey, entry.Id);
+        var id = entry switch
+        {
+            Mako.Illustration i => i.Id.ToString(),
+            Mako.Novel n => n.Id.ToString(),
+            Booru.BooruPost b => b.Id,
+            SauceNao.SauceNaoItem s => s.RawId,
+            _ => null
+        };
+
+        if (string.IsNullOrEmpty(id))
+            return false;
+
+        key = CreateWorkKey(serializable.SerializeKey, id);
         return true;
     }
 

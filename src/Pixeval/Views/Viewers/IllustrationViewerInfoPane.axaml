@@ -132,12 +132,12 @@
                         Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
                         Icon="{markup:SymbolIcon LinkMultiple}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
-                        Tag="{Binding CurrentIllustration.WebsiteUri, FallbackValue={x:Null}}" />
+                        Tag="{Binding WebsiteUri, FallbackValue={x:Null}}" />
                     <CommandBarButton
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                         Icon="{markup:SymbolIcon GlobeArrowUp}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
-                        Tag="{Binding CurrentIllustration.WebsiteUri, FallbackValue={x:Null}}" />
+                        Tag="{Binding WebsiteUri, FallbackValue={x:Null}}" />
                 </CommandBar>
             </StackPanel>
 

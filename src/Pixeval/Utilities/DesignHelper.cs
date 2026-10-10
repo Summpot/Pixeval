@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Mako;
@@ -60,66 +59,8 @@ public static class DesignHelper
         0,
         DateTimeOffset.UtcNow.ToString("o"));
 
-    public static ISingleImage DownloadParserSampleWork(ImageType imageType) => new DownloadParserSampleWork(imageType);
-}
-
-file record DownloadParserSampleWork(ImageType ImageType) : ISingleImage, IImageSet, ISingleAnimatedImage
-{
-    public ulong ByteSize => 0;
-
-    public Uri ImageUri => null!;
-
-    public int SetIndex => 0;
-
-    public IPreloadableList<ISingleImage> Pages => null!;
-
-    public int PageCount => 0;
-
-    public SingleAnimatedImageType PreferredAnimatedImageType => SingleAnimatedImageType.MultiFiles;
-
-    public Uri? SingleImageUri => null;
-
-    public IPreloadableList<int>? ZipImageDelays => null;
-
-    public IPreloadableList<(Uri Uri, int MsDelay)>? MultiImageUris => null;
-
-    public IPreloadableList<IAnimatedImageFrame> AnimatedThumbnails => null!;
-
-    public int Width => 0;
-
-    public int Height => 0;
-
-    public string Platform => null!;
-
-    public string Id => "12345678";
-
-    public string Title => nameof(Title);
-
-    public string Description => null!;
-
-    public Uri WebsiteUri => null!;
-
-    public Uri AppUri => null!;
-
-    public DateTimeOffset CreateDate => new(2020, 10, 12, 0, 0, 0, TimeSpan.Zero);
-
-    public IPreloadableList<IUser> Authors { get; } = [];
-
-    public IPreloadableList<IUser> Uploaders => null!;
-
-    public SafeRating SafeRating => default;
-
-    public ILookup<ITagCategory, ITag> Tags => null!;
-
-    public IReadOnlyCollection<IImageFrame> Thumbnails => null!;
-
-    public IReadOnlyDictionary<string, object> AdditionalInfo => null!;
-
-    public int TotalFavorite => 0;
-
-    public int TotalView => 0;
-
-    public bool IsFavorite => false;
-
-    public bool IsAiGenerated => false;
+    public static Illustration DownloadParserSampleSingleIllustration => DesignIllustration with { PageCount = 1 };
+    public static Illustration DownloadParserSampleAnimatedIllustration => DesignIllustration with { IllustType = "ugoira" };
+    public static Illustration DownloadParserSampleImageSetIllustration => DesignIllustration with { PageCount = 5, SetIndex = 0 };
+    public static Novel DownloadParserSampleNovel => DesignNovel;
 }

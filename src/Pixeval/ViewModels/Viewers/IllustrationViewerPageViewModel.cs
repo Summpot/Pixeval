@@ -8,12 +8,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.I18N;
+using Pixeval.Models;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Booru;
 using Pixeval.Native.Mako;
 using Pixeval.Services;
 using Pixeval.Utilities;
@@ -24,13 +25,13 @@ namespace Pixeval.ViewModels.Viewers;
 
 public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewModel, IDisposable
 {
-    private readonly Dictionary<int, IArtworkInfo> _refreshedIllustrations = [];
+    private readonly Dictionary<int, object> _refreshedIllustrations = [];
 
     private readonly bool _needRefresh;
 
     private CancellationTokenSource _loadingCts = new();
 
-    private readonly ISourceView<IArtworkInfo>? _sourceView;
+    private readonly ISourceView<object>? _sourceView;
 
     [ObservableProperty]
     public partial bool IsLoading { get; private set; }
@@ -41,11 +42,30 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     [ObservableProperty]
     public partial WorkSeriesInfoViewModel? SeriesInfo { get; private set; }
 
-    public string? LogoUri => CurrentIllustration?.Platform is { } platform ? $"avares://Pixeval/Assets/Platforms/{platform}.png" : null;
+    public string? LogoUri => CurrentIllustration switch
+    {
+        Illustration => $"avares://Pixeval/Assets/Platforms/{PlatformConstants.Pixiv}.png",
+        BooruPost bp => $"avares://Pixeval/Assets/Platforms/{bp.Platform}.png",
+        _ => null
+    };
 
     public ArtworkUiState? CurrentUiState => CurrentIllustration is { } ill ? ArtworkUiStateStore.GetOrCreate(ill) : null;
 
-    public bool IsBookmarkSupported => CurrentIllustration is Illustration ill ? ill.IsBookmarkSupported : CurrentIllustration?.Platform is IPlatformInfo.Pixiv;
+    public string? Title => CurrentIllustration switch
+    {
+        Illustration ill => ill.Title,
+        BooruPost bp => bp.Title,
+        _ => null
+    };
+
+    public Uri? WebsiteUri => CurrentIllustration switch
+    {
+        Illustration ill => ill.WebsiteUri,
+        BooruPost bp => bp.WebsiteUri,
+        _ => null
+    };
+
+    public bool IsBookmarkSupported => CurrentIllustration is Illustration ill && ill.IsBookmarkSupported;
 
     public bool IsPicGif => CurrentIllustration is Illustration { IsPicGif: true };
 
@@ -54,21 +74,21 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// </summary>
     /// <param name="illustrationViewModel"></param>
     /// <param name="needRefresh"></param>
-    public IllustrationViewerPageViewModel(IArtworkInfo illustrationViewModel, bool needRefresh)
+    public IllustrationViewerPageViewModel(object illustrationViewModel, bool needRefresh)
     {
         _needRefresh = needRefresh;
         CurrentIllustration = illustrationViewModel;
         CurrentWorkIndex = 0;
     }
 
-    public IllustrationViewerPageViewModel(IIdentityInfo info)
+    public IllustrationViewerPageViewModel(string id, string platform)
     {
-        _ = LoadSingleIllustrationAsync(info, _loadingCts.Token);
+        _ = LoadSingleIllustrationAsync(id, platform, _loadingCts.Token);
     }
 
-    private async Task LoadSingleIllustrationAsync(IIdentityInfo i, CancellationToken token)
+    private async Task LoadSingleIllustrationAsync(string id, string platform, CancellationToken token)
     {
-        var illustration = await LoadIllustrationAsync(i, item => CurrentIllustration = item, token);
+        var illustration = await LoadIllustrationAsync(id, platform, item => CurrentIllustration = item, token);
 
         if (illustration is not null && !token.IsCancellationRequested)
             CurrentWorkIndex = 0;
@@ -84,7 +104,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// illustrations should contain only one item if the illustration is a single
     /// otherwise it contains the entire manga data
     /// </remarks>
-    public IllustrationViewerPageViewModel(ISourceView<IArtworkInfo> dataProvider, int currentIllustrationIndex, bool needRefresh)
+    public IllustrationViewerPageViewModel(ISourceView<object> dataProvider, int currentIllustrationIndex, bool needRefresh)
     {
         _needRefresh = needRefresh;
         _sourceView = dataProvider;
@@ -96,7 +116,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// <summary>
     /// 当前插画
     /// </summary>
-    public IArtworkInfo? CurrentIllustration
+    public object? CurrentIllustration
     {
         get
         {
@@ -186,7 +206,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
         return;
 
-        async ValueTask<IArtworkInfo?> GetCurrentIllustrationAsync(int workIndex)
+        async ValueTask<object?> GetCurrentIllustrationAsync(int workIndex)
         {
             if (!_needRefresh)
             {
@@ -201,14 +221,22 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
             }
 
             // 需刷新
-            if (CurrentIllustration is not IIdentityInfo info)
+            (string? platform, string? id) = CurrentIllustration switch
+            {
+                Illustration ill => (PlatformConstants.Pixiv, ill.Id.ToString()),
+                BooruPost bp => (bp.PlatformName, bp.Id),
+                _ => (null, null)
+            };
+
+            if (platform is null || id is null)
             {
                 IsLoading = false;
                 return null;
             }
 
             return await LoadIllustrationAsync(
-                info,
+                id,
+                platform,
                 item =>
                 {
                     // 单项刷新写回当前项，列表刷新只缓存到当前 Viewer，避免污染原始 SourceView。
@@ -221,7 +249,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         }
     }
 
-    private async Task LoadSeriesInfoAsync(IArtworkInfo entry, int index, CancellationToken token)
+    private async Task LoadSeriesInfoAsync(object entry, int index, CancellationToken token)
     {
         SeriesInfo = WorkSeriesInfoViewModel.Create(entry, SimpleWorkType.Illustration);
         if (entry is not Illustration { Series: not null } illustration)
@@ -253,13 +281,13 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         return _loadingCts.Token;
     }
 
-    private async Task<IArtworkInfo?> LoadIllustrationAsync(IIdentityInfo info, Action<IArtworkInfo> onLoaded, CancellationToken token)
+    private async Task<object?> LoadIllustrationAsync(string id, string platform, Action<object> onLoaded, CancellationToken token)
     {
         IsLoading = true;
         LoadErrorMessage = null;
         try
         {
-            var entry = await info.TryGetArtworkInfoAsync();
+            var entry = await ViewerHelper.TryGetArtworkAsync(platform, id);
             token.ThrowIfCancellationRequested();
             if (entry is null)
             {
@@ -321,6 +349,8 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     private void NotifyCurrentIllustrationChanged()
     {
         OnPropertyChanged(nameof(CurrentIllustration));
+        OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(WebsiteUri));
         OnPropertyChanged(nameof(CurrentUiState));
         OnPropertyChanged(nameof(IsBookmarkSupported));
         OnPropertyChanged(nameof(IsPicGif));
@@ -350,7 +380,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// <summary>
     /// 插画列表
     /// </summary>
-    public IReadOnlyList<IArtworkInfo>? Illustrations => _sourceView?.View;
+    public IReadOnlyList<object>? Illustrations => _sourceView?.View;
 
     #endregion
 

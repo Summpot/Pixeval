@@ -8,7 +8,6 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.Controls;
 using Pixeval.Models.Options;
@@ -94,10 +93,10 @@ public static class HomeCardDefinitions
                 HomePageCardSourceKind.WorkSearch,
                 CreateWorkPreviewSourceFactory(card => card.SimpleWorkType is SimpleWorkType.Novel
                     ? string.IsNullOrWhiteSpace(card.SearchText)
-                        ? App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<IArtworkInfo>())
+                        ? App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<object>())
                         : App.AppViewModel.MakoClient.NovelSearch(new NovelSearchArguments(card.SearchText)).ToFetchEngine()
                     : string.IsNullOrWhiteSpace(card.SearchText)
-                        ? App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<IArtworkInfo>())
+                        ? App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<object>())
                         : App.AppViewModel.MakoClient.IllustrationSearch(new IllustrationSearchArguments(card.SearchText)).ToFetchEngine()),
                 OpenWorkSearchPage,
                 card => [GetDescription(card.SimpleWorkType), card.SearchText ?? ""]),
@@ -165,7 +164,7 @@ public static class HomeCardDefinitions
             case (Novel novel, NovelViewViewModel viewViewModel):
                 topLevel.ViewContainer?.CreateNovelPage(novel, viewViewModel.DataProvider.CloneRef());
                 break;
-            case (IArtworkInfo work, IllustrationViewViewModel viewViewModel):
+            case (object work, IllustrationViewViewModel viewViewModel):
                 topLevel.ViewContainer?.CreateIllustrationPage(work, viewViewModel.DataProvider.CloneRef());
                 break;
             case (User user, _):
@@ -179,7 +178,7 @@ public static class HomeCardDefinitions
     }
 
     private static Func<HomePageCardLayout, Task<HomeCardPreviewSource>> CreateWorkPreviewSourceFactory(
-        Func<HomePageCardLayout, IFetchEngine<IArtworkInfo>> engineFactory) =>
+        Func<HomePageCardLayout, IFetchEngine<object>> engineFactory) =>
         card => Task.FromResult(CreateWorkPreviewSource(engineFactory(card)));
 
     private static Func<HomePageCardLayout, Task<HomeCardPreviewSource>> CreateUserPreviewSourceFactory(
@@ -221,7 +220,7 @@ public static class HomeCardDefinitions
         return new(CreateUserViewModel(engine), new SingleUserOpeningContext(userDetail));
     }
 
-    private static HomeCardPreviewSource CreateWorkPreviewSource(IFetchEngine<IArtworkInfo> engine) =>
+    private static HomeCardPreviewSource CreateWorkPreviewSource(IFetchEngine<object> engine) =>
         new(engine is IFetchEngine<Novel> novelEngine
             ? CreateNovelViewModel(novelEngine)
             : CreateIllustrationViewModel(engine));
@@ -229,7 +228,7 @@ public static class HomeCardDefinitions
     private static HomeCardPreviewSource CreateUserPreviewSource(IFetchEngine<User> engine) =>
         new(CreateUserViewModel(engine));
 
-    private static IllustrationViewViewModel CreateIllustrationViewModel(IFetchEngine<IArtworkInfo> engine)
+    private static IllustrationViewViewModel CreateIllustrationViewModel(IFetchEngine<object> engine)
     {
         var viewModel = new IllustrationViewViewModel();
         viewModel.ResetEngine(engine);

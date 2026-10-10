@@ -16,12 +16,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluentIcons.Common;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.Commands.Transformers;
 using Pixeval.I18N;
 using Pixeval.Models.Extensions;
+using Pixeval.Native.Booru;
 using Pixeval.Native.Cache;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO;
 using Pixeval.Utilities.IO.Caching;
@@ -152,7 +153,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         ReleaseLoadingPreview();
     }
 
-    public bool IsPicGif => _entry.ImageType is ImageType.SingleAnimatedImage;
+    public bool IsPicGif => _entry is Illustration { IsPicGif: true };
 
     private bool IsGifLoadSuccessfully => LoadSuccessfully && IsPicGif;
 
@@ -169,7 +170,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
 
     private bool _thumbnailLoaded;
     private readonly string _platform;
-    private readonly IArtworkInfo _entry;
+    private readonly object _entry;
     private readonly Func<Control?, int, Task> _saveImageAsync;
 
     public int Index { get; }
@@ -195,7 +196,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     /// <inheritdoc/>
     public SingleViewerViewModel(
         string platform,
-        IArtworkInfo entry,
+        object entry,
         int index,
         Func<Control?, int, Task> saveImageAsync)
     {
@@ -369,21 +370,36 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         LoadingProgress = progress;
     }
 
+    private IEnumerable<(string Url, int Width, int Height)> GetThumbnailCandidates()
+    {
+        switch (_entry)
+        {
+            case Illustration ill:
+                if (!string.IsNullOrEmpty(ill.OriginalUrl)) yield return (ill.OriginalUrl, (int) ill.Width, (int) ill.Height);
+                if (!string.IsNullOrEmpty(ill.LargeThumbnailUrl)) yield return (ill.LargeThumbnailUrl, (int) ill.Width, (int) ill.Height);
+                if (!string.IsNullOrEmpty(ill.MediumThumbnailUrl)) yield return (ill.MediumThumbnailUrl, (int) ill.Width, (int) ill.Height);
+                if (!string.IsNullOrEmpty(ill.SquareMediumThumbnailUrl)) yield return (ill.SquareMediumThumbnailUrl, (int) ill.Width, (int) ill.Height);
+                break;
+            case BooruPost bp:
+                if (!string.IsNullOrEmpty(bp.FileUrl)) yield return (bp.FileUrl, (int) bp.Width, (int) bp.Height);
+                if (!string.IsNullOrEmpty(bp.LargeFileUrl)) yield return (bp.LargeFileUrl, (int) bp.Width, (int) bp.Height);
+                if (!string.IsNullOrEmpty(bp.PreviewFileUrl)) yield return (bp.PreviewFileUrl, (int) bp.Width, (int) bp.Height);
+                break;
+        }
+    }
+
     private async Task<Bitmap?> LoadThumbnailImageOverrideAsync(CancellationToken token, int maximumDimension = 100)
     {
-        var candidates = _entry.Thumbnails.ToList();
-        while (candidates.PickMax() is { } frame)
+        foreach (var (url, w, h) in GetThumbnailCandidates())
         {
             token.ThrowIfCancellationRequested();
-            _ = candidates.Remove(frame);
-            await using var stream = CacheHelper.TryGetStream(frame.ImageUri.OriginalString);
+            await using var stream = CacheHelper.TryGetStream(url);
             if (stream is null)
                 continue;
 
             // Reuse the largest already-downloaded thumbnail; never start a placeholder download.
-            var width = frame is { Width: > 0, Height: > 0 }
-                ? Math.Max(1, (int) (frame.Width * Math.Min(1d,
-                    maximumDimension / (double) Math.Max(frame.Width, frame.Height))))
+            var width = w > 0 && h > 0
+                ? Math.Max(1, (int) (w * Math.Min(1d, maximumDimension / (double) Math.Max(w, h))))
                 : maximumDimension;
             try
             {
@@ -401,52 +417,49 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     {
         switch (_entry)
         {
-            // 当下载图集的其中一张图片时，ImageType会为ImageSet
-            case ISingleImage { ImageType: ImageType.SingleImage or ImageType.ImageSet } singleImage:
+            case Illustration { IsPicGif: true } ill:
             {
-                var f = isOriginal ? singleImage : singleImage.Thumbnails.PickMax();
-                if (f is null)
+                var metadata = ill.UgoiraMetadata ?? await App.AppViewModel.MakoClient.GetUgoiraMetadataAsync(ill.Id);
+                var zipUrl = isOriginal ? (metadata.LargeUrl ?? metadata.MediumUrl) : metadata.MediumUrl;
+                if (string.IsNullOrEmpty(zipUrl))
                     return null;
-                return await CacheHelper.GetSingleImageAsync(
+                var delays = metadata.Delays;
+                return await CacheHelper.GetUgoiraAnimatedImageAsync(
                     _platform,
-                    f,
+                    new Uri(zipUrl),
+                    delays,
                     new Progress<double>(UpdateLoadingProgress),
                     onPreview, token);
             }
-            case ISingleAnimatedImage { ImageType: ImageType.SingleAnimatedImage } singleAnimatedImage:
+            case Illustration ill:
             {
-                var f = isOriginal
-                    ? singleAnimatedImage
-                    : (await singleAnimatedImage.AnimatedThumbnails.ApplyAsync(t => t
-                        .TryPreloadListAsync(singleAnimatedImage, token: token))).PickMax();
-                token.ThrowIfCancellationRequested();
-                if (f is null)
+                var url = isOriginal
+                    ? (ill.OriginalUrl ?? ill.LargeThumbnailUrl ?? ill.MediumThumbnailUrl)
+                    : (ill.LargeThumbnailUrl ?? ill.MediumThumbnailUrl ?? ill.OriginalUrl);
+                if (string.IsNullOrEmpty(url))
                     return null;
-                switch (f.PreferredAnimatedImageType)
-                {
-                    case SingleAnimatedImageType.MultiFiles:
-                    {
-                        return await CacheHelper.GetAnimatedImageSeparatedAsync(
-                            _platform,
-                            f,
-                            new Progress<double>(UpdateLoadingProgress),
-                            onPreview, token);
-                    }
-                    case SingleAnimatedImageType.SingleZipFile or SingleAnimatedImageType.SingleFile:
-                    {
-                        return await CacheHelper.GetSingleAnimatedImageAsync(
-                            _platform,
-                            f,
-                            new Progress<double>(UpdateLoadingProgress),
-                            onPreview, token);
-                    }
-                }
-
-                break;
+                return await CacheHelper.GetSingleImageAsync(
+                    _platform,
+                    url,
+                    new Progress<double>(UpdateLoadingProgress),
+                    onPreview, token);
             }
+            case BooruPost bp:
+            {
+                var url = isOriginal
+                    ? (bp.FileUrl ?? bp.LargeFileUrl ?? bp.PreviewFileUrl)
+                    : (bp.LargeFileUrl ?? bp.PreviewFileUrl ?? bp.FileUrl);
+                if (string.IsNullOrEmpty(url))
+                    return null;
+                return await CacheHelper.GetSingleImageAsync(
+                    _platform,
+                    url,
+                    new Progress<double>(UpdateLoadingProgress),
+                    onPreview, token);
+            }
+            default:
+                return null;
         }
-
-        return null;
     }
 
     partial void OnTransformedSourceChanging(IAnimatedBitmap? value)
@@ -614,7 +627,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
                 }
             ],
             DefaultExtension = "png",
-            SuggestedFileName = _entry.Id
+            SuggestedFileName = GetEntryIdString()
         });
 
         if (file is null)
@@ -624,6 +637,13 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         singleFrame.Save(stream, new PngBitmapEncoderOptions());
         viewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.Saved), file.Path.OriginalString);
     }
+
+    private string GetEntryIdString() => _entry switch
+    {
+        Illustration ill => ill.Id.ToString(),
+        BooruPost bp => bp.Id.ToString(),
+        _ => "image"
+    };
 
     private static ExtensionService ExtensionService => App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>();
 }

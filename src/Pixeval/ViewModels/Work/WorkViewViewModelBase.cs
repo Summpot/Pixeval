@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Misaki;
 using Pixeval.Collections;
 using Pixeval.Controls;
 using Pixeval.Utilities;
@@ -14,17 +13,17 @@ using Pixeval.Utilities;
 namespace Pixeval.ViewModels;
 
 public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<string>? blockedTags) : EntryViewViewModel<T, TViewModel>, IWorkViewViewModel
-    where T : class, IArtworkInfo
-    where TViewModel : class, IArtworkInfo
+    where T : class
+    where TViewModel : class
 {
     public FrozenSet<string> CachedBlockedTags { get; private set; } = blockedTags ?? App.AppViewModel.AppSettings.BrowsingExperienceSettings.BlockedTags.ToFrozenSet();
 
     [ObservableProperty]
     public partial bool IsSelecting { get; set; }
 
-    public AvaloniaList<IArtworkInfo> SelectedEntries { get; } = [];
+    public AvaloniaList<object> SelectedEntries { get; } = [];
 
-    public void SetSortDescriptions(params IEnumerable<ISortDescription<IArtworkInfo>> descriptions)
+    public void SetSortDescriptions(params IEnumerable<ISortDescription<object>> descriptions)
     {
         using (View.DeferSortDescriptionsChange())
         {
@@ -43,7 +42,7 @@ public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<str
         }
     }
 
-    public IFilter<IArtworkInfo>? UserFilter
+    public IFilter<object>? UserFilter
     {
         get;
         set
@@ -56,16 +55,23 @@ public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<str
         }
     }
 
-    IReadOnlyCollection<IArtworkInfo> IOperableViewViewModel.View => View;
+    IReadOnlyCollection<object> IOperableViewViewModel.View => View;
 
-    IReadOnlyCollection<IArtworkInfo> IOperableViewViewModel.Source => Source;
+    IReadOnlyCollection<object> IOperableViewViewModel.Source => Source;
 
     public abstract bool RequireAdaptiveGrid { get; }
 
-    public void ResetEngine(IAsyncEnumerable<IArtworkInfo>? newEngine, int itemsPerPage = 20, int itemLimit = -1)
+    public void ResetEngine(IAsyncEnumerable<object>? newEngine, int itemsPerPage = 20, int itemLimit = -1)
     {
         CachedBlockedTags = [.. App.AppViewModel.AppSettings.BrowsingExperienceSettings.BlockedTags.ToFrozenSet()];
-        ResetEngine((IAsyncEnumerable<T>?) newEngine, static (info, _) => (TViewModel) (object) info, itemsPerPage, itemLimit);
+        var typedEngine = newEngine as IAsyncEnumerable<T> ?? (newEngine is not null ? CastEngine(newEngine) : null);
+        ResetEngine(typedEngine, static (info, _) => (TViewModel) (object) info, itemsPerPage, itemLimit);
         SetFilters();
+
+        static async IAsyncEnumerable<T> CastEngine(IAsyncEnumerable<object> source)
+        {
+            await foreach (var item in source)
+                yield return (T) item;
+        }
     }
 }

@@ -6,11 +6,12 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using FluentIcons.Common;
-using Misaki;
 using Pixeval.Download;
 using Pixeval.I18N;
 using Pixeval.Models.Download.Tasks;
 using Pixeval.Models.Options;
+using Pixeval.Native.Booru;
+using Pixeval.Native.Mako;
 
 namespace Pixeval.ViewModels;
 
@@ -20,9 +21,9 @@ public sealed class DownloadItemViewModel : ViewModelBase, IDisposable
 
     public IDownloadTaskGroup DownloadTask { get; }
 
-    public IArtworkInfo Entry => DownloadTask.DatabaseEntry.Entry!;
+    public object Entry => DownloadTask.DatabaseEntry.Entry!;
 
-    public string Id => Entry.Id;
+    public string Id => DownloadTask.DatabaseEntry.Id.ToString();
 
     public DownloadItemViewModel(IDownloadTaskGroup downloadTask)
     {
@@ -30,11 +31,36 @@ public sealed class DownloadItemViewModel : ViewModelBase, IDisposable
         DownloadTask.PropertyChanged += DownloadTaskOnPropertyChanged;
     }
 
-    public string AuthorsText => string.Join(", ", Entry.Authors.Select(t => t.Name));
+    public string Title => Entry switch
+    {
+        Illustration ill => ill.Title,
+        Novel n => n.Title,
+        BooruPost bp => bp.Title,
+        _ => ""
+    };
 
-    public Uri AppUri => Entry.AppUri;
+    public string AuthorsText => Entry switch
+    {
+        Illustration ill => ill.User.Name,
+        Novel n => n.User.Name,
+        BooruPost bp => bp.UploaderName,
+        _ => ""
+    };
 
-    public Uri WebsiteUri => Entry.WebsiteUri;
+    public Uri? AppUri => Entry switch
+    {
+        Illustration ill => ill.AppUri,
+        Novel n => n.AppUri,
+        _ => null
+    };
+
+    public Uri? WebsiteUri => Entry switch
+    {
+        Illustration ill => ill.WebsiteUri,
+        Novel n => n.WebsiteUri,
+        BooruPost bp => bp.WebsiteUri,
+        _ => null
+    };
 
     public bool ShowGroupStats => DownloadTask.Count > 1;
 
@@ -114,7 +140,13 @@ public sealed class DownloadItemViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public string ThumbnailUrl => Entry.Thumbnails.PickMax()?.ImageUri.OriginalString ?? "";
+    public string ThumbnailUrl => Entry switch
+    {
+        Illustration ill => ill.ThumbnailUrl ?? "",
+        Novel n => n.ThumbnailUrl ?? "",
+        BooruPost bp => bp.ThumbnailUrl ?? "",
+        _ => ""
+    };
 
     public override bool Equals(object? obj) => obj is DownloadItemViewModel viewModel && Entry.Equals(viewModel.Entry);
 
@@ -123,8 +155,14 @@ public sealed class DownloadItemViewModel : ViewModelBase, IDisposable
     public string? ErrorMessage => DownloadTask.ErrorMessage;
 
     public bool MatchesSearch(string key) =>
-        Entry.Title.Contains(key, StringComparison.OrdinalIgnoreCase)
-        || DownloadTask.Id.Contains(key, StringComparison.OrdinalIgnoreCase);
+        (Entry switch
+        {
+            Illustration ill => ill.Title,
+            Novel n => n.Title,
+            BooruPost bp => bp.Title,
+            _ => string.Empty
+        }).Contains(key, StringComparison.OrdinalIgnoreCase)
+        || Id.Contains(key, StringComparison.OrdinalIgnoreCase);
 
     public bool MatchesOption(DownloadListOption option, ISet<DownloadItemViewModel>? customSearchResult) => option switch
     {

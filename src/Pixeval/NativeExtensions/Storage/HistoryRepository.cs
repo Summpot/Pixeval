@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Misaki;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Mako;
 using MakoNovel = Pixeval.Native.Mako.Novel;
@@ -20,14 +19,22 @@ public partial class HistoryRepository : IArtworkHistorySource
 
     public void Clear() => ClearBrowseHistory();
 
-    public void AddBrowseHistory(IArtworkInfo entry)
+    public void AddBrowseHistory(object entry)
     {
         if (!BrowseHistoryRecord.TryCreateWorkKey(entry, out var workKey))
             return;
-        var serializable = entry as ISerializable;
+        var serializable = entry as IArtworkSerializable;
         var serializeKey = serializable?.SerializeKey;
         var payloadJson = serializable?.Serialize();
-        AddOrReplaceBrowseHistory(entry.Id.ToString(), serializeKey, workKey, payloadJson ?? "");
+        var id = entry switch
+        {
+            Illustration i => i.Id.ToString(),
+            MakoNovel n => n.Id.ToString(),
+            Booru.BooruPost b => b.Id,
+            SauceNao.SauceNaoItem s => s.RawId,
+            _ => ""
+        };
+        AddOrReplaceBrowseHistory(id, serializeKey, workKey, payloadJson ?? "");
     }
 
     public void AddSearchHistory(string text, string? translatedName = null)
@@ -37,7 +44,7 @@ public partial class HistoryRepository : IArtworkHistorySource
         UpsertSearchHistory(text, translatedName, DateTimeOffset.UtcNow.ToString("O"));
     }
 
-    public async IAsyncEnumerable<IArtworkInfo> StreamAsync(SimpleWorkType workType, [EnumeratorCancellation] CancellationToken token = default)
+    public async IAsyncEnumerable<object> StreamAsync(SimpleWorkType workType, [EnumeratorCancellation] CancellationToken token = default)
     {
         long? cursorId = null;
         const int pageSize = 50;
@@ -63,7 +70,7 @@ public partial class HistoryRepository : IArtworkHistorySource
         }
     }
 
-    internal static bool MatchesWorkType(SimpleWorkType workType, string? serializeKey, IArtworkInfo entry)
+    internal static bool MatchesWorkType(SimpleWorkType workType, string? serializeKey, object entry)
     {
         var isNovel = entry is MakoNovel
             || string.Equals(serializeKey, MakoNovel.LegacyNovelToken, StringComparison.OrdinalIgnoreCase)

@@ -8,28 +8,20 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Misaki;
 using Pixeval.Native.Mako;
 
 namespace Pixeval.Models.Pixiv;
 
-public interface IIdEntry : IIdentityInfo
+public interface IWorkEntry
 {
-    new long Id { get; }
-    string IIdentityInfo.Id => Id is 0 ? "" : Id.ToString();
-    string IPlatformInfo.Platform => IPlatformInfo.Pixiv;
-}
-
-public interface IWorkEntry : IArtworkInfo, IIdEntry, ISerializable
-{
-    long RawId { get; }
+    long Id { get; }
+    long RawId => Id;
     User User { get; }
+    string Title { get; }
     Series? Series => null;
 }
 
-public interface INovelEntry : IWorkEntry;
-
-public record Comment : IIdEntry
+public record Comment
 {
     public required long Id { get; set; }
     public required string Content { get; set; } = "";
@@ -37,8 +29,6 @@ public record Comment : IIdEntry
     public required User User { get; set; }
     public required bool HasReplies { get; set; }
     public required Stamp? Stamp { get; set; }
-    string IIdentityInfo.Id => Id.ToString();
-    string IPlatformInfo.Platform => IPlatformInfo.Pixiv;
 
     public static Comment CreateDefault() => new()
     {

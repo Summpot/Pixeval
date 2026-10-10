@@ -8,7 +8,6 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Rendering.Composition;
-using Misaki;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Mako;
 using Pixeval.Utilities;
@@ -35,23 +34,23 @@ public class WorkItem : EntryItem, IWorkAnimatable
         DataContext = null;
     }
 
-    public event EventHandler<Control, IArtworkInfo>? RequestOpenUserInfoPage;
+    public event EventHandler<Control, object>? RequestOpenUserInfoPage;
 
-    public event EventHandler<Control, IArtworkInfo>? RequestAddToBookmark;
+    public event EventHandler<Control, object>? RequestAddToBookmark;
 
     protected void AddToBookmark_OnRightClick(object sender, ContextRequestedEventArgs e)
     {
-        RequestAddToBookmark?.Invoke(this, (IArtworkInfo) DataContext!);
+        RequestAddToBookmark?.Invoke(this, DataContext!);
     }
 
     protected void OpenUserInfoPage_OnClicked(object sender, RoutedEventArgs e)
     {
-        RequestOpenUserInfoPage?.Invoke(this, (IArtworkInfo) DataContext!);
+        RequestOpenUserInfoPage?.Invoke(this, DataContext!);
     }
 
     protected void OpenSeriesPage_OnClicked(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Control { DataContext: IArtworkInfo work }
+        if (sender is not Control { DataContext: { } work }
             || TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
             return;
 
@@ -60,7 +59,7 @@ public class WorkItem : EntryItem, IWorkAnimatable
             return;
 
         viewContainer.CreateSeriesPage(
-            work is Novel or INovelEntry ? SimpleWorkType.Novel : SimpleWorkType.Illustration,
+            work is Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration,
             series.Id);
     }
 

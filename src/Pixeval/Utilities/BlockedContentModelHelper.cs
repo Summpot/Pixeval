@@ -1,10 +1,9 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using System.Diagnostics.CodeAnalysis;
+using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.I18N;
 using Pixeval.Models.Blocking;
@@ -17,23 +16,15 @@ namespace Pixeval.Utilities;
 public static class BlockedContentModelHelper
 {
     // Native entries do not expose extension state, so keep the placeholder marker outside the model.
-    private static readonly ConditionalWeakTable<IArtworkInfo, object> _BlockedArtworkMarkers = new();
+    private static readonly ConditionalWeakTable<object, object> _BlockedArtworkMarkers = new();
 
     private static readonly object _BlockedArtworkMarker = new();
 
-    public static BlockedUserRecord CreateBlockedUserRecord(IUser user)
+    public static BlockedUserRecord CreateBlockedUserRecord(User user)
     {
-        var id = user is IIdEntry idEntry && idEntry.Id != 0
-            ? idEntry.Id
-            : long.TryParse(user.Id, out var parsed) ? parsed : 0;
-        var avatarUrl = (user as User)?.AvatarUrl
-            ?? (user as TokenUser)?.AvatarUrl
-            ?? user.Avatar?.FirstOrDefault()?.ImageUri.OriginalString
-            ?? "";
-        var account = (user as User)?.Account
-            ?? (user as TokenUser)?.Account
-            ?? "";
-        return new BlockedUserRecord(0, id, user.Name ?? "", avatarUrl, account);
+        var avatarUrl = user.AvatarUrl ?? "";
+        var account = user.Account ?? "";
+        return new BlockedUserRecord(0, user.Id, user.Name ?? "", avatarUrl, account);
     }
 
     public static User CreateBlockedUserPreview(BlockedUserRecord entry) => new(
@@ -53,10 +44,10 @@ public static class BlockedContentModelHelper
         Text = I18NManager.GetResource(BlockedContentResources.Work)
     };
 
-    internal static bool IsBlockedPlaceholder(IArtworkInfo entry) =>
+    internal static bool IsBlockedPlaceholder(object entry) =>
         _BlockedArtworkMarkers.TryGetValue(entry, out _);
 
-    internal static T Replace<T>(T entry, BlockedContentSnapshot snapshot) where T : IArtworkInfo
+    internal static T Replace<T>(T entry, BlockedContentSnapshot snapshot) where T : class
     {
         return BlockedContentHelper.IsBlocked(entry, snapshot)
             ? entry switch
@@ -126,7 +117,7 @@ public static class BlockedContentModelHelper
             : entry;
 
     private static T MarkBlocked<T>(T entry)
-        where T : class, IArtworkInfo
+        where T : class
     {
         if (!_BlockedArtworkMarkers.TryGetValue(entry, out _))
             _BlockedArtworkMarkers.Add(entry, _BlockedArtworkMarker);

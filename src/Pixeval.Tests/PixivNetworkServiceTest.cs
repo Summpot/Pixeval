@@ -20,7 +20,7 @@ public sealed class PixivNetworkServiceTest
         using var makoClient = new MakoClient(makoConfig);
         var service = new PixivArtworkService(makoClient);
 
-        Assert.AreEqual(Misaki.IPlatformInfo.Pixiv, service.Platform);
+        Assert.AreEqual(Pixeval.Models.PlatformConstants.Pixiv, service.Platform);
     }
 
     [TestMethod]

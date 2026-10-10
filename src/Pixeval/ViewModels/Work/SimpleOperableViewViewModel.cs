@@ -5,18 +5,18 @@ using System;
 using System.Collections.Generic;
 using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Misaki;
 using Pixeval.Collections;
+using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 
 namespace Pixeval.ViewModels;
 
 public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelBase, IOperableViewViewModel, IDisposable
-    where TViewModel : class, IArtworkInfo
+    where TViewModel : class
 {
     private bool _isDisposed;
 
-    public SimpleOperableViewViewModel(IReadOnlyCollection<IArtworkInfo> source, bool needRefreshOnOpen = false)
+    public SimpleOperableViewViewModel(IReadOnlyCollection<object> source, bool needRefreshOnOpen = false)
     {
         NeedRefreshOnOpen = needRefreshOnOpen;
         SourceView = new(source);
@@ -27,16 +27,16 @@ public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelB
 
     public bool NeedRefreshOnOpen { get; }
 
-    private static IFilter<IArtworkInfo> TypeFilter { get; } = IFilter<IArtworkInfo>.Create(entry => entry is TViewModel, false);
+    private static IFilter<object> TypeFilter { get; } = IFilter<object>.Create(entry => entry is TViewModel, false);
 
     /// <inheritdoc />
     [ObservableProperty]
     public partial bool IsSelecting { get; set; }
 
     /// <inheritdoc />
-    public AvaloniaList<IArtworkInfo> SelectedEntries { get; } = [];
+    public AvaloniaList<object> SelectedEntries { get; } = [];
 
-    public void SetSortDescriptions(params IEnumerable<ISortDescription<IArtworkInfo>> descriptions)
+    public void SetSortDescriptions(params IEnumerable<ISortDescription<object>> descriptions)
     {
         using (SourceView.View.DeferSortDescriptionsChange())
         {
@@ -56,7 +56,7 @@ public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelB
         }
     }
 
-    public IFilter<IArtworkInfo>? UserFilter
+    public IFilter<object>? UserFilter
     {
         get;
         set
@@ -70,13 +70,13 @@ public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelB
     }
 
     /// <inheritdoc />
-    IReadOnlyCollection<IArtworkInfo> IOperableViewViewModel.View => SourceView.View;
+    IReadOnlyCollection<object> IOperableViewViewModel.View => SourceView.View;
 
     /// <inheritdoc />
-    public IReadOnlyCollection<IArtworkInfo> Source => SourceView.Source;
+    public IReadOnlyCollection<object> Source => SourceView.Source;
 
     /// <inheritdoc />
-    public bool RequireAdaptiveGrid => typeof(TViewModel) == typeof(Pixeval.Native.Mako.Novel) || typeof(INovelEntry).IsAssignableFrom(typeof(TViewModel));
+    public bool RequireAdaptiveGrid => typeof(TViewModel) == typeof(Pixeval.Native.Mako.Novel);
 
     public void Dispose()
     {

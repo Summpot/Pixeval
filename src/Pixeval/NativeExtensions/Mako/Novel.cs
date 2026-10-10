@@ -5,18 +5,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
-using Misaki;
+using Pixeval.Models;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Storage;
 
 namespace Pixeval.Native.Mako;
 
-public partial record Novel : IArtworkInfo, IWorkEntry, INovelEntry, ISerializable
+public partial record Novel : IWorkEntry, IArtworkSerializable
 {
-    private static readonly Dictionary<string, object> s_emptyDict = [];
-
     [JsonIgnore]
-    public bool IsBookmarkSupported => !BlockedContentHelper.IsBlockedPlaceholder(this) && Platform is IPlatformInfo.Pixiv;
+    public bool IsBookmarkSupported => !BlockedContentHelper.IsBlockedPlaceholder(this) && Platform is PlatformConstants.Pixiv;
 
     [JsonIgnore]
     public bool HasSeries => Series is not null;
@@ -25,7 +24,7 @@ public partial record Novel : IArtworkInfo, IWorkEntry, INovelEntry, ISerializab
     public double AspectRatio => 1;
 
     [JsonIgnore]
-    public string? ThumbnailUrl => Thumbnails.FirstOrDefault()?.ImageUri.OriginalString ?? "";
+    public string? ThumbnailUrl => ImageUrls?.SquareMedium ?? ImageUrls?.Medium ?? ImageUrls?.Large ?? "";
 
     [JsonIgnore]
     public string Tooltip => Title;
@@ -39,12 +38,8 @@ public partial record Novel : IArtworkInfo, IWorkEntry, INovelEntry, ISerializab
     [JsonIgnore]
     public long RawId => Id;
 
-    long IIdEntry.Id => Id;
-
-    string IIdentityInfo.Id => Id == 0 ? "" : Id.ToString();
-
     [JsonIgnore]
-    public string Platform => IPlatformInfo.Pixiv;
+    public string Platform => PlatformConstants.Pixiv;
 
     [JsonIgnore]
     public int Width => 0;
@@ -58,37 +53,17 @@ public partial record Novel : IArtworkInfo, IWorkEntry, INovelEntry, ISerializab
     [JsonIgnore]
     public DateTimeOffset CreateDateOffset => DateTimeOffset.TryParse(CreateDate, out var dt) ? dt : default;
 
-    DateTimeOffset IArtworkInfo.CreateDate => CreateDateOffset;
-
     [JsonIgnore]
     public int TotalFavorite => (int) TotalBookmarks;
 
     [JsonIgnore]
     public int TotalViewCount => (int) TotalView;
 
-    int IArtworkInfo.TotalView => TotalViewCount;
-
     [JsonIgnore]
     public User Author => User;
 
-    User IWorkEntry.User => User;
-
     [JsonIgnore]
     public IReadOnlyList<Tag> TagList => Tags;
-
-    ILookup<ITagCategory, ITag> IArtworkInfo.Tags => Tags.ToLookup(_ => ITagCategory.Empty, ITag (t) => t);
-
-    [JsonIgnore]
-    public IPreloadableList<IUser> Authors => [User];
-
-    [JsonIgnore]
-    public IPreloadableList<IUser> Uploaders => [];
-
-    [JsonIgnore]
-    public IReadOnlyDictionary<string, object> AdditionalInfo => s_emptyDict;
-
-    [JsonIgnore]
-    public ImageType ImageType => ImageType.Other;
 
     [JsonIgnore]
     public Uri WebsiteUri => new($"https://www.pixiv.net/novel/show.php?id={Id}");
@@ -114,21 +89,6 @@ public partial record Novel : IArtworkInfo, IWorkEntry, INovelEntry, ISerializab
 
     [JsonIgnore]
     public bool IsAiGenerated => NovelAiType == 2;
-
-    [JsonIgnore]
-    public IReadOnlyCollection<IImageFrame> Thumbnails
-    {
-        get
-        {
-            var med = ImageUrls?.Medium ?? ImageUrls?.SquareMedium;
-            var large = ImageUrls?.Large ?? med;
-            return
-            [
-                new ImageFrame(IImageSize.Uniform(this, 540, 540)) { ImageUri = string.IsNullOrWhiteSpace(med) ? new("about:blank") : new(med) },
-                new ImageFrame(IImageSize.Uniform(this, 600, 1200)) { ImageUri = string.IsNullOrWhiteSpace(large) ? new("about:blank") : new(large) },
-            ];
-        }
-    }
 
     public const string LegacyNovelToken = "Mako.Model.Novel";
 

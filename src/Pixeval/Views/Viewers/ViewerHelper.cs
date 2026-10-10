@@ -4,8 +4,9 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
+using Pixeval.Models;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Booru;
 using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -24,25 +25,17 @@ public static class ViewerHelper
         /// <summary>
         /// 此方法无法加载更多插画，加载单张图使用
         /// </summary>
-        public void CreateIllustrationPage(IIdentityInfo info)
-        {
-            control.NavigateTo(new IllustrationViewerPage(new(info)));
-        }
-
-        /// <summary>
-        /// 此方法无法加载更多插画，加载单张图使用
-        /// </summary>
         public void CreateIllustrationPage(string id, string platform)
         {
-            control.NavigateTo(new IllustrationViewerPage(new(new SimpleIdentityInfo(id, platform))));
+            control.NavigateTo(new IllustrationViewerPage(new(id, platform)));
         }
 
         /// <summary>
         /// 此方法无法加载更多插画
         /// </summary>
-        /// <param name="illustrationViewModel">指定的插画ViewModel</param>
+        /// <param name="illustrationViewModel">指定的插画实体</param>
         /// <param name="needRefresh"></param>
-        public void CreateIllustrationPage(IArtworkInfo illustrationViewModel, bool needRefresh = false)
+        public void CreateIllustrationPage(object illustrationViewModel, bool needRefresh = false)
         {
             control.NavigateTo(new IllustrationViewerPage(new(illustrationViewModel, needRefresh)));
         }
@@ -50,10 +43,10 @@ public static class ViewerHelper
         /// <summary>
         /// 此方法可以使用<paramref name="sourceView"/>来加载更多插画
         /// </summary>
-        /// <param name="illustrationViewModel">指定的插画ViewModel</param>
-        /// <param name="sourceView">指定的插画ViewModel所在的SourceView</param>
+        /// <param name="illustrationViewModel">指定的插画实体</param>
+        /// <param name="sourceView">指定的插画实体所在的SourceView</param>
         /// <param name="needRefresh">是否需要刷新插画（如从数据库中加载的则需要刷新）</param>
-        public void CreateIllustrationPage(IArtworkInfo illustrationViewModel, ISourceView<IArtworkInfo> sourceView, bool needRefresh = false)
+        public void CreateIllustrationPage(object illustrationViewModel, ISourceView<object> sourceView, bool needRefresh = false)
         {
             var index = sourceView.View.IndexOf(illustrationViewModel);
             control.NavigateTo(new IllustrationViewerPage(new(sourceView, index, needRefresh)));
@@ -130,25 +123,28 @@ public static class ViewerHelper
         #endregion
     }
 
-    extension(IIdentityInfo info)
+    public static async Task<object?> TryGetArtworkAsync(string platform, string id)
     {
-        public async Task<IArtworkInfo?> TryGetArtworkInfoAsync()
+        try
         {
-            var getArtworkService = App.AppViewModel.GetPlatformService<IGetArtworkService>(info.Platform);
-            if (getArtworkService is null)
-                return null;
-            try
+            if (string.Equals(platform, PlatformConstants.Pixiv, StringComparison.OrdinalIgnoreCase))
             {
-                return await getArtworkService.GetArtworkAsync(info.Id);
+                if (long.TryParse(id, out var illustId))
+                    return await App.AppViewModel.MakoClient.GetIllustrationAsync(illustId);
             }
-            catch (Exception e)
+            else
             {
-                var logger = App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>();
-                logger.LogError(nameof(TryGetArtworkInfoAsync), e);
-                return null;
+                var booruPlatform = BooruPlatformExtensions.FromPlatformString(platform);
+                var client = App.AppViewModel.AppServiceProvider.GetRequiredService<BooruClient>();
+                return await client.GetPostAsync(booruPlatform, id);
             }
         }
+        catch (Exception e)
+        {
+            var logger = App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>();
+            logger.LogError(nameof(TryGetArtworkAsync), e);
+        }
+
+        return null;
     }
 }
-
-internal record SimpleIdentityInfo(string Id, string Platform) : IIdentityInfo;

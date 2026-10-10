@@ -2,25 +2,18 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using System.Collections.Generic;
-using Misaki;
 
 namespace Pixeval.Native.Booru;
 
-public sealed record BooruUser(string Name, BooruPlatform Platform) : IUser, IIdEntry
+public sealed record BooruUser(string Name, BooruPlatform Platform)
 {
-    private static readonly Dictionary<string, Uri> s_emptyContact = [];
-    private static readonly Dictionary<string, object> s_emptyDict = [];
-
     public string Id => Name;
 
-    long IIdEntry.Id => long.TryParse(Name, out var id) ? id : 0;
-
-    string IIdentityInfo.Id => Name;
-
-    string IPlatformInfo.Platform => Platform.ToPlatformString();
+    public string PlatformName => Platform.ToPlatformString();
 
     public string Description => "";
+
+    public string? AvatarUrl => null;
 
     public Uri WebsiteUri => new(Platform switch
     {
@@ -33,10 +26,4 @@ public sealed record BooruUser(string Name, BooruPlatform Platform) : IUser, IId
     });
 
     public Uri? AppUri => null;
-
-    public IReadOnlyCollection<IImageFrame> Avatar => [];
-
-    public IReadOnlyDictionary<string, Uri> ContactInformation => s_emptyContact;
-
-    public IReadOnlyDictionary<string, object> AdditionalInfo => s_emptyDict;
 }

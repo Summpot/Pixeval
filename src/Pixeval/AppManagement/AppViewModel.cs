@@ -9,7 +9,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Models.Download;
 using Pixeval.Models.Download.Tasks;
@@ -101,7 +100,6 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         MakoClient = new MakoClient(makoConfig);
         MakoClient.SetSessionCallback(new MakoSessionCallbackHandler(this, logger));
         MahoClient = new MahoClient(CreateMahoClientOptions());
-        var pixivService = new PixivArtworkService(MakoClient);
         DownloadManager = new DownloadManager(null, AppSettings.DownloadSettings.MaxDownloadTaskConcurrencyLevel);
 
         try
@@ -117,14 +115,9 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         return new ServiceCollection()
             .AddSingleton(_ => logger)
             .AddBooruServices()
-            .AddKeyedSingleton<IGetArtworkService>(IPlatformInfo.Pixiv, (provider, key) => pixivService)
-            .AddKeyedSingleton<IPostFavoriteService>(IPlatformInfo.Pixiv, (provider, key) => pixivService)
             .AddKeyedSingleton<GitHubHttpClientProvider>(
                 GitHubHttpClientProvider.PlatformKey,
                 (_, _) => new GitHubHttpClientProvider(AppSettings.NetworkSettings))
-            .AddKeyedSingleton<IDownloadHttpClientService>(
-                GitHubHttpClientProvider.PlatformKey,
-                (provider, key) => provider.GetRequiredKeyedService<GitHubHttpClientProvider>(key))
             .AddSingleton(_ => MakoClient)
             .AddSingleton(_ => MahoClient)
             .AddSingleton(_ => StorageEngine)
@@ -192,15 +185,15 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         SearchHistoryEntries.Clear();
     }
 
-    public void AddBrowseHistory(IArtworkInfo entry) => StorageEngine.HistoryRepository.AddBrowseHistory(entry);
+    public void AddBrowseHistory(object entry) => StorageEngine.HistoryRepository.AddBrowseHistory(entry);
 
     public void ClearBrowseHistory() => StorageEngine.HistoryRepository.Clear();
 
-    public bool ContainsWatchLater(IArtworkInfo entry) => StorageEngine.WatchLaterRepository.ContainsWatchLater(entry);
+    public bool ContainsWatchLater(object entry) => StorageEngine.WatchLaterRepository.ContainsWatchLater(entry);
 
-    public bool AddWatchLater(IArtworkInfo entry) => StorageEngine.WatchLaterRepository.AddWatchLater(entry);
+    public bool AddWatchLater(object entry) => StorageEngine.WatchLaterRepository.AddWatchLater(entry);
 
-    public bool RemoveWatchLater(IArtworkInfo entry) => StorageEngine.WatchLaterRepository.RemoveWatchLater(entry);
+    public bool RemoveWatchLater(object entry) => StorageEngine.WatchLaterRepository.RemoveWatchLater(entry);
 
     public void UpdateDownloadHistory(IDownloadHistoryEntry entry) => StorageEngine.DownloadRepository.Update(entry);
 
@@ -313,16 +306,8 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         AppInfo.AppVersion.ResetUpdateEngine();
     }
 
-    public T? GetPlatformService<T>(string platformKey) where T : IMisakiService =>
-        AppServiceProvider.GetKeyedService<T>(platformKey) ?? AppServiceProvider.GetKeyedService<T>(IPlatformInfo.All);
-
-    public T GetRequiredPlatformService<T>(string platformKey) where T : IMisakiService =>
-        AppServiceProvider.GetKeyedService<T>(platformKey)
-        ?? AppServiceProvider.GetKeyedService<T>(IPlatformInfo.All)
-        ?? throw new NotSupportedException($"No service found for {platformKey}");
-
     public HttpClient GetRequiredGitHubHttpClient() =>
-        AppServiceProvider.GetRequiredKeyedService<IDownloadHttpClientService>(GitHubHttpClientProvider.PlatformKey).GetApiClient();
+        AppServiceProvider.GetRequiredKeyedService<GitHubHttpClientProvider>(GitHubHttpClientProvider.PlatformKey).GetApiClient();
 
     public HttpClient GetRequiredGitHubUpdateHttpClient() =>
         AppServiceProvider.GetRequiredKeyedService<GitHubHttpClientProvider>(GitHubHttpClientProvider.PlatformKey).GetUpdateDownloadClient();

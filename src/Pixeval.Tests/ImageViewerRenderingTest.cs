@@ -18,7 +18,6 @@ using Avalonia.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Native.Booru;
-using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.I18N;
 using Pixeval.Utilities;

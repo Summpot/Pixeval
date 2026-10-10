@@ -3,19 +3,12 @@
 
 using System;
 using System.Text.Json.Serialization;
-using Misaki;
 using Pixeval.Models.Pixiv;
 
 namespace Pixeval.Native.Mako;
 
-public partial record Series : IIdEntry
+public partial record Series
 {
-    long IIdEntry.Id => Id;
-
-    string IIdentityInfo.Id => Id.ToString();
-
-    string IPlatformInfo.Platform => IPlatformInfo.Pixiv;
-
     [JsonIgnore]
     public Series Entry => this;
 

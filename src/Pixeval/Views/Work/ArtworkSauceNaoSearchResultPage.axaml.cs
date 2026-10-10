@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Misaki;
 using Pixeval.I18N;
 using Pixeval.Native.SauceNao;
 using Pixeval.Utilities;
@@ -29,7 +28,7 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage
         WorkContainer.ResetEngine(results);
     }
 
-    public async IAsyncEnumerable<IArtworkInfo> GetResults(string apiKey, ReadOnlyMemory<byte> file)
+    public async IAsyncEnumerable<object> GetResults(string apiKey, ReadOnlyMemory<byte> file)
     {
         var viewContainer = TopLevel.GetTopLevel(this)?.ViewContainer;
 
@@ -48,8 +47,8 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage
         {
             foreach (var result in sauceNaoResults)
             {
-                if (result.ToIdentityInfo() is { } identityInfo
-                    && await identityInfo.TryGetArtworkInfoAsync() is { } artwork)
+                if (!string.IsNullOrEmpty(result.ArtworkId)
+                    && await ViewerHelper.TryGetArtworkAsync(result.Platform, result.ArtworkId) is { } artwork)
                 {
                     yield return artwork;
                 }

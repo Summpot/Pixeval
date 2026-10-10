@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Misaki;
 using Pixeval.Download;
 using Pixeval.Models.Download.Tasks;
 using Pixeval.Native.Booru;
@@ -369,7 +368,7 @@ public sealed class DownloadManagerTest
         public IDownloadHistoryEntry DatabaseEntry { get; } =
             IDownloadHistoryEntry.Create(destination, CreatePost(id), workSubscriptionId);
 
-        public string Id => DatabaseEntry.Entry?.Id ?? "";
+        public string Id => (DatabaseEntry.Entry as BooruPost)?.Id ?? id;
 
         public double ProgressPercentage => 100;
 

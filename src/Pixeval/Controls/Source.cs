@@ -12,7 +12,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using Misaki;
+using Pixeval.Models;
 using Pixeval.Utilities;
 using Pixeval.Utilities.IO.Caching;
 
@@ -55,7 +55,7 @@ public static class Source
         AvaloniaProperty.RegisterAttached<Control, string>(
             "Platform",
             typeof(Source),
-            defaultValue: IPlatformInfo.Pixiv);
+            defaultValue: PlatformConstants.Pixiv);
 
     static Source()
     {

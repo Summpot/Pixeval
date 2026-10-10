@@ -4,7 +4,7 @@
 using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Misaki;
+using Pixeval.Models;
 using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -30,7 +30,7 @@ public partial class SeriesItem : EntryItem
         else
             viewContainer.CreateIllustrationPage(
                 latestContentId.ToString(CultureInfo.InvariantCulture),
-                IPlatformInfo.Pixiv);
+                PlatformConstants.Pixiv);
     }
 
     private void AuthorButton_OnClick(object? sender, RoutedEventArgs e)

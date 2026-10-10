@@ -2,15 +2,16 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using Misaki;
 using Pixeval.Models.Download.Tasks;
+using Pixeval.Native.Booru;
+using Pixeval.Native.Mako;
 using Pixeval.Utilities.IO;
 
 namespace Pixeval.Models.Download;
 
-public class IllustrationDownloadTaskFactory : IDownloadTaskFactory<IArtworkInfo, IDownloadTaskGroup, int>
+public class IllustrationDownloadTaskFactory : IDownloadTaskFactory<object, IDownloadTaskGroup, int>
 {
-    public IDownloadTaskGroup Create(IArtworkInfo context, string rawPath, int setIndex = -1) =>
+    public IDownloadTaskGroup Create(object context, string rawPath, int setIndex = -1) =>
         Create(new ParserContext(context), rawPath, setIndex);
 
     public IDownloadTaskGroup Create(ParserContext parserContext, string rawPath, int setIndex = -1)
@@ -22,30 +23,18 @@ public class IllustrationDownloadTaskFactory : IDownloadTaskFactory<IArtworkInfo
 
         IDownloadTaskGroup task = context switch
         {
-            ISingleImage { ImageType: ImageType.SingleImage } singleImage => new SingleImageDownloadTaskGroup(
-                singleImage, path, workSubscriptionId),
-            ISingleImage { ImageType: ImageType.ImageSet, SetIndex: > -1 } singleImage =>
-                new SingleImageDownloadTaskGroup(singleImage, path, workSubscriptionId),
-            ISingleAnimatedImage
-            {
-                ImageType: ImageType.SingleAnimatedImage,
-                PreferredAnimatedImageType: SingleAnimatedImageType.MultiFiles
-            } singleAnimatedImage => new UgoiraDownloadTaskGroup(singleAnimatedImage, path, workSubscriptionId),
-            ISingleAnimatedImage
-            {
-                ImageType: ImageType.SingleAnimatedImage,
-                PreferredAnimatedImageType: SingleAnimatedImageType.SingleFile
-                or SingleAnimatedImageType.SingleZipFile
-            } singleAnimatedImage => new SingleAnimatedImageDownloadTaskGroup(singleAnimatedImage, path, workSubscriptionId),
-            IImageSet { ImageType: ImageType.ImageSet } imageSet => new MangaDownloadTaskGroup(imageSet, path, workSubscriptionId),
-            _ => throw new NotSupportedException()
+            Illustration illust when illust.IsPicGif => new UgoiraDownloadTaskGroup(illust, path, workSubscriptionId),
+            Illustration illust when illust.IsPicSet && illust.SetIndex == -1 => new MangaDownloadTaskGroup(illust, path, workSubscriptionId),
+            Illustration illust => new SingleImageDownloadTaskGroup(illust, path, workSubscriptionId),
+            BooruPost booru => new SingleImageDownloadTaskGroup(booru, path, workSubscriptionId),
+            _ => new SingleImageDownloadTaskGroup(context, path, workSubscriptionId)
         };
 
         return task;
     }
 
     private static ParserContext SelectPage(ParserContext parserContext, int setIndex) =>
-        setIndex >= 0 && parserContext.ArtworkInfo is IImageSet imageSet
-            ? parserContext with { ArtworkInfo = imageSet.Pages[setIndex] }
+        setIndex >= 0 && parserContext.ArtworkInfo is Illustration illust && illust.IsPicSet
+            ? parserContext with { ArtworkInfo = illust.Pages[setIndex] }
             : parserContext;
 }

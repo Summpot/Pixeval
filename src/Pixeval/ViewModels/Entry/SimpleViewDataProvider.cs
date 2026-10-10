@@ -10,7 +10,7 @@ using Pixeval.Collections;
 namespace Pixeval.ViewModels;
 
 public sealed class SimpleViewDataProvider<T, TViewModel> : ViewModelBase, IDataProvider<T, TViewModel>
-    where T : class, IIdEntry
+    where T : class
     where TViewModel : ViewModelBase
 {
     private bool _isDisposed;

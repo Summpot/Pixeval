@@ -5,9 +5,10 @@ using System;
 using System.Collections.Concurrent;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Misaki;
 using Pixeval.Controls;
+using Pixeval.Native.Booru;
 using Pixeval.Native.Mako;
+using Pixeval.Native.SauceNao;
 using Pixeval.Native.Storage;
 
 namespace Pixeval.Services;
@@ -32,15 +33,24 @@ public static class ArtworkUiStateStore
     private static readonly ConcurrentDictionary<string, ArtworkUiState> s_states = new(StringComparer.Ordinal);
     private static bool s_observerHooked;
 
-    public static string GetKey(IArtworkInfo entry)
+    public static string GetKey(object entry)
     {
         var targetEntry = entry is WorkEntry we ? we.AsWorkEntry : entry;
         if (WatchLaterRecord.TryCreateWorkKey(targetEntry, out var key))
             return key;
-        return $"{targetEntry.Platform}:{targetEntry.Id}";
+
+        var (platform, id) = targetEntry switch
+        {
+            Illustration i => (i.Platform, i.Id.ToString()),
+            Novel n => (n.Platform, n.Id.ToString()),
+            BooruPost b => (b.PlatformName, b.Id),
+            SauceNaoItem s => (s.Platform, s.RawId),
+            _ => ("unknown", targetEntry?.ToString() ?? "")
+        };
+        return $"{platform}:{id}";
     }
 
-    public static ArtworkUiState GetOrCreate(IArtworkInfo entry)
+    public static ArtworkUiState GetOrCreate(object entry)
     {
         EnsureStorageObserver();
         var key = GetKey(entry);
@@ -51,7 +61,7 @@ public static class ArtworkUiStateStore
             {
                 Illustration ill => ill.IsBookmarked ? HeartButtonState.Checked : HeartButtonState.Unchecked,
                 Novel nov => nov.IsBookmarked ? HeartButtonState.Checked : HeartButtonState.Unchecked,
-                _ => targetEntry.IsFavorite ? HeartButtonState.Checked : HeartButtonState.Unchecked
+                _ => HeartButtonState.Unchecked
             };
 
             var inWatchLater = App.AppViewModel?.ContainsWatchLater(targetEntry) is true;
@@ -59,32 +69,32 @@ public static class ArtworkUiStateStore
         });
     }
 
-    public static bool TryGetState(IArtworkInfo entry, out ArtworkUiState? state)
+    public static bool TryGetState(object entry, out ArtworkUiState? state)
     {
         return s_states.TryGetValue(GetKey(entry), out state);
     }
 
-    public static void SetBookmarkPending(IArtworkInfo entry)
+    public static void SetBookmarkPending(object entry)
     {
         var state = GetOrCreate(entry);
         state.BookmarkState |= HeartButtonState.Pending;
     }
 
-    public static void SetBookmarkState(IArtworkInfo entry, bool isBookmarked)
+    public static void SetBookmarkState(object entry, bool isBookmarked)
     {
         var state = GetOrCreate(entry);
         state.BookmarkState = isBookmarked ? HeartButtonState.Checked : HeartButtonState.Unchecked;
     }
 
-    public static void SetBookmarkState(IArtworkInfo entry, HeartButtonState bookmarkState)
+    public static void SetBookmarkState(object entry, HeartButtonState bookmarkState)
     {
         var state = GetOrCreate(entry);
         state.BookmarkState = bookmarkState;
     }
 
-    public static void UpdateBookmark(IArtworkInfo entry, HeartButtonState bookmarkState) => SetBookmarkState(entry, bookmarkState);
+    public static void UpdateBookmark(object entry, HeartButtonState bookmarkState) => SetBookmarkState(entry, bookmarkState);
 
-    public static void RevertBookmarkPending(IArtworkInfo entry, bool? fallback = null)
+    public static void RevertBookmarkPending(object entry, bool? fallback = null)
     {
         var state = GetOrCreate(entry);
         if (fallback.HasValue)
@@ -97,7 +107,7 @@ public static class ArtworkUiStateStore
         }
     }
 
-    public static void SetWatchLater(IArtworkInfo entry, bool isInWatchLater)
+    public static void SetWatchLater(object entry, bool isInWatchLater)
     {
         var state = GetOrCreate(entry);
         state.IsInWatchLater = isInWatchLater;
@@ -127,7 +137,7 @@ public static class ArtworkUiStateStore
 
                     foreach (var (key, state) in s_states)
                     {
-                        var inWatchLater = repo.Contains(key);
+                        var inWatchLater = repo.ContainsWatchLater(key);
                         if (state.IsInWatchLater != inWatchLater)
                             state.IsInWatchLater = inWatchLater;
                     }

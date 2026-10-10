@@ -5,7 +5,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Misaki;
 using Pixeval.Download;
 using Pixeval.Native.Storage;
 using Pixeval.Utilities.IO;
@@ -22,10 +21,17 @@ public abstract class SingleImageDownloadTaskGroupBase : ImageDownloadTask, IDow
         return ValueTask.CompletedTask;
     }
 
-    public string Id => DatabaseEntry.Entry?.Id ?? "";
+    public string Id => DatabaseEntry.Entry switch
+    {
+        Native.Mako.Illustration i => i.Id.ToString(),
+        Native.Mako.Novel n => n.Id.ToString(),
+        Native.Booru.BooruPost b => b.Id,
+        Native.SauceNao.SauceNaoItem s => s.RawId,
+        _ => ""
+    };
 
     protected SingleImageDownloadTaskGroupBase(
-        IArtworkInfo entry,
+        object entry,
         string destination,
         int? workSubscriptionId = null) : this(IDownloadHistoryEntry.Create(destination, entry, workSubscriptionId))
     {
@@ -44,17 +50,13 @@ public abstract class SingleImageDownloadTaskGroupBase : ImageDownloadTask, IDow
         SetNotCreateFromEntry();
     }
 
-    private static Uri GetImageUri(IArtworkInfo info) =>
+    private static Uri GetImageUri(object info) =>
         info switch
         {
-            ISingleImage { ImageType: ImageType.SingleImage } singleImage => singleImage.ImageUri,
-            ISingleImage { ImageType: ImageType.ImageSet, SetIndex: > -1 } singleImage => singleImage.ImageUri,
-            ISingleAnimatedImage
-            {
-                ImageType: ImageType.SingleAnimatedImage,
-                PreferredAnimatedImageType: SingleAnimatedImageType.SingleZipFile or SingleAnimatedImageType.SingleFile
-            } animatedImage => animatedImage.SingleImageUri!,
-            _ => throw new NotSupportedException(info.ToString())
+            Native.Mako.Illustration illust => new Uri(illust.OriginalSingleUrl ?? illust.ImageUrls?.Original ?? illust.ImageUrls?.Large ?? "about:blank"),
+            Native.Booru.BooruPost booru => new Uri(booru.OriginalUrl ?? booru.SampleUrl ?? booru.PreviewUrl ?? "about:blank"),
+            Native.SauceNao.SauceNaoItem sauce => new Uri(string.IsNullOrWhiteSpace(sauce.ThumbnailUrl) ? "about:blank" : sauce.ThumbnailUrl),
+            _ => throw new NotSupportedException(info?.ToString())
         };
 
     private void SetNotCreateFromEntry()

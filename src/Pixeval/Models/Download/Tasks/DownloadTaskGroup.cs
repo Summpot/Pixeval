@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Misaki;
 using Pixeval.Download;
 using Pixeval.Native.Storage;
 using Pixeval.Utilities;
@@ -25,10 +24,17 @@ public abstract partial class DownloadTaskGroup(IDownloadHistoryEntry entry) : V
 
     public abstract ValueTask InitializeTaskGroupAsync();
 
-    public string Id => DatabaseEntry.Entry?.Id ?? "";
+    public string Id => DatabaseEntry.Entry switch
+    {
+        Native.Mako.Illustration i => i.Id.ToString(),
+        Native.Mako.Novel n => n.Id.ToString(),
+        Native.Booru.BooruPost b => b.Id,
+        Native.SauceNao.SauceNaoItem s => s.RawId,
+        _ => ""
+    };
 
     protected DownloadTaskGroup(
-        IArtworkInfo entry,
+        object entry,
         string destination,
         int? workSubscriptionId = null) : this(IDownloadHistoryEntry.Create(destination, entry, workSubscriptionId)) =>
         SetNotCreateFromEntry();

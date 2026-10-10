@@ -5,14 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Misaki;
 using Pixeval.Collections;
 using Pixeval.Utilities;
 
 namespace Pixeval.ViewModels;
 
 public class IncrementalSource<T, TViewModel> : IIncrementalSource<TViewModel>, IDisposable
-    where T : IIdentityInfo
+    where T : notnull
 {
     private readonly IAsyncEnumerable<T?> _asyncEnumerable;
 
@@ -179,5 +178,18 @@ public class IncrementalSource<T, TViewModel> : IIncrementalSource<TViewModel>, 
         }
     }
 
-    protected virtual string Identifier(T entity) => entity.Id;
+    protected virtual string Identifier(T entity) => entity switch
+    {
+        Pixeval.Native.Mako.Illustration ill => ill.Id.ToString(),
+        Pixeval.Native.Mako.Novel n => n.Id.ToString(),
+        Pixeval.Native.Booru.BooruPost bp => bp.Id,
+        Pixeval.Native.SauceNao.SauceNaoItem sni => sni.RawId,
+        Pixeval.Native.Mako.User u => u.Id.ToString(),
+        Pixeval.Native.Booru.BooruUser bu => bu.Id,
+        Pixeval.Native.Mako.Series s => s.Id.ToString(),
+        Pixeval.Native.Mako.SpotlightArticle a => a.Id.ToString(),
+        Pixeval.Models.Pixiv.Comment c => c.Id.ToString(),
+        Pixeval.Models.Pixiv.IWorkEntry we => we.Id.ToString(),
+        _ => entity.ToString() ?? string.Empty
+    };
 }

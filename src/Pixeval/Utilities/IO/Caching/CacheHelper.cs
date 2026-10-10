@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using AnimatedControls.Avalonia;
 using Avalonia.Media.Imaging;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
 using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
 using Pixeval.Native.Cache;
@@ -88,56 +87,39 @@ public static class CacheHelper
     }
 
     /// <summary>
-    /// <summary>
     /// 保证<see cref="Stream.Position"/>为0
     /// </summary>
-    public static async ValueTask<IAnimatedBitmap> GetSingleAnimatedImageAsync(
+    public static async ValueTask<IAnimatedBitmap> GetUgoiraAnimatedImageAsync(
         string platform,
-        IAnimatedImageFrame frame,
+        Uri zipUri,
+        IReadOnlyList<int> delays,
         IProgress<double>? progress = null,
         Action<DecodedPreviewFrame>? onPreview = null,
         CancellationToken token = default)
     {
-        var key = frame.SingleImageUri;
-        ArgumentNullException.ThrowIfNull(key);
-        if (frame.PreferredAnimatedImageType is not SingleAnimatedImageType.SingleZipFile
-            and not SingleAnimatedImageType.SingleFile)
-            throw new InvalidOperationException(
-                $"{nameof(IAnimatedImageFrame.PreferredAnimatedImageType)} should be {nameof(SingleAnimatedImageType.SingleZipFile)} or {nameof(SingleAnimatedImageType.SingleFile)}");
+        var key = zipUri.OriginalString;
+        var sourceStream = await GetStreamAsync(platform, key, progress, onPreview, token);
+        if (sourceStream is null)
+            return AnimatedImageNotAvailable.Value;
 
-        if (frame.PreferredAnimatedImageType is SingleAnimatedImageType.SingleZipFile)
+        IReadOnlyList<MemoryStream>? zip = null;
+        try
         {
-            var sourceStream = await GetStreamAsync(platform, key.OriginalString, progress, onPreview, token);
-            if (sourceStream is null)
-                return AnimatedImageNotAvailable.Value;
-
-            IReadOnlyList<MemoryStream>? zip = null;
-            try
-            {
-                ArgumentNullException.ThrowIfNull(frame.ZipImageDelays);
-                await frame.ZipImageDelays.TryPreloadListAsync(platform, token: token);
-                zip = await Streams.ReadZipAsync(sourceStream, true);
-                sourceStream = null;
-                token.ThrowIfCancellationRequested();
-                var loadedBitmap = IAnimatedBitmap.Load(zip, frame.ZipImageDelays, true);
-                zip = null;
-                return loadedBitmap;
-            }
-            finally
-            {
-                if (sourceStream is not null)
-                    await sourceStream.DisposeAsync();
-                if (zip is not null)
-                    foreach (var stream in zip)
-                        await stream.DisposeAsync();
-            }
+            zip = await Streams.ReadZipAsync(sourceStream, true);
+            sourceStream = null;
+            token.ThrowIfCancellationRequested();
+            var loadedBitmap = IAnimatedBitmap.Load(zip, delays, true);
+            zip = null;
+            return loadedBitmap;
         }
-
-        // SingleAnimatedImageType.SingleFile
-        if (await GetSingleImageAsync(platform, key, progress, onPreview, token) is { } bitmap)
-            return bitmap;
-
-        return AnimatedImageNotAvailable.Value;
+        finally
+        {
+            if (sourceStream is not null)
+                await sourceStream.DisposeAsync();
+            if (zip is not null)
+                foreach (var stream in zip)
+                    await stream.DisposeAsync();
+        }
     }
 
     /// <summary>
@@ -145,13 +127,16 @@ public static class CacheHelper
     /// </summary>
     public static ValueTask<IAnimatedBitmap> GetSingleImageAsync(
         string platform,
-        IImageFrame frame,
+        string url,
         IProgress<double>? progress = null,
         Action<DecodedPreviewFrame>? onPreview = null,
         CancellationToken token = default)
-        => GetSingleImageAsync(platform, frame.ImageUri, progress, onPreview, token);
+        => GetSingleImageAsync(platform, new Uri(url), progress, onPreview, token);
 
-    private static async ValueTask<IAnimatedBitmap> GetSingleImageAsync(
+    /// <summary>
+    /// 保证<see cref="Stream.Position"/>为0
+    /// </summary>
+    public static async ValueTask<IAnimatedBitmap> GetSingleImageAsync(
         string platform,
         Uri frameUri,
         IProgress<double>? progress = null,
@@ -181,79 +166,6 @@ public static class CacheHelper
         }
 
         return AnimatedImageNotAvailable.Value;
-    }
-
-    public static async Task<IAnimatedBitmap> GetAnimatedImageSeparatedAsync(
-        string platform,
-        IAnimatedImageFrame frame,
-        IProgress<double>? progress = null,
-        Action<DecodedPreviewFrame>? onPreview = null,
-        CancellationToken token = default)
-    {
-        if (frame.PreferredAnimatedImageType is not SingleAnimatedImageType.MultiFiles)
-            throw new InvalidOperationException(
-                $"{nameof(IAnimatedImageFrame.PreferredAnimatedImageType)} should be {nameof(SingleAnimatedImageType.MultiFiles)}");
-        await frame.MultiImageUris!.TryPreloadListAsync(platform, token: token);
-        var count = frame.MultiImageUris!.Count;
-        var imageList = new List<BitmapOrStream>(count);
-        var delayList = new List<int>(count);
-        var ratio = 1d / count;
-        var startProgress = 0d;
-        IAnimatedBitmap? bitmap = null;
-        try
-        {
-            foreach (var (uri, msDelay) in frame.MultiImageUris)
-            {
-                BitmapOrStream stream;
-                try
-                {
-                    var key = uri.OriginalString;
-                    if (TryGetStream(key) is { } s)
-                        stream = s;
-                    else
-                    {
-                        var sp = startProgress;
-                        var s2 = await GetStreamAsync(
-                            platform,
-                            key,
-                            progress?.Let(t => new Progress<double>(d => t.Report(sp + (ratio * d)))),
-                            onPreview,
-                            token);
-                        if (s2 is not null)
-                        {
-                            stream = s2;
-                        }
-                        else
-                        {
-                            stream = WrappedImageNotAvailable.Value;
-                        }
-                    }
-                }
-                catch (OperationCanceledException) when (token.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
-                        .LogError(nameof(GetAnimatedImageSeparatedAsync), e);
-                    stream = WrappedImageNotAvailable.Value;
-                }
-
-                imageList.Add(stream);
-                delayList.Add(msDelay);
-                startProgress += 100 * ratio;
-            }
-
-            bitmap = IAnimatedBitmap.Load(imageList, delayList, true);
-            return bitmap;
-        }
-        finally
-        {
-            if (bitmap is null)
-                foreach (var image in imageList)
-                    image.Dispose();
-        }
     }
 
     /// <summary>

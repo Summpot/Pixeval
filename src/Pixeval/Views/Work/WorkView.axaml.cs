@@ -3,13 +3,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.Selection;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Misaki;
 using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
@@ -22,7 +22,7 @@ public sealed partial class WorkView : UserControl, IDisposable
 {
     private bool _isDisposed;
 
-    public event EventHandler<Control, IArtworkInfo>? RequestAddToBookmark;
+    public event EventHandler<Control, object>? RequestAddToBookmark;
 
     public ThumbnailLayoutType LayoutType
     {
@@ -53,7 +53,7 @@ public sealed partial class WorkView : UserControl, IDisposable
 
     private async void WorkItem_OnTapped(object? sender, TappedEventArgs tappedEventArgs)
     {
-        if (sender is not ListBoxItem { DataContext: IArtworkInfo vm } lbi)
+        if (sender is not ListBoxItem { DataContext: { } vm } lbi)
             return;
 
         if (WorkListBox.SelectionMode.HasFlag(SelectionMode.Multiple))
@@ -83,7 +83,7 @@ public sealed partial class WorkView : UserControl, IDisposable
 
     private async void WorkItem_OnDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (sender is not ListBoxItem { DataContext: IArtworkInfo vm })
+        if (sender is not ListBoxItem { DataContext: { } vm })
             return;
 
         if (WorkListBox.SelectionMode.HasFlag(SelectionMode.Single))
@@ -92,7 +92,7 @@ public sealed partial class WorkView : UserControl, IDisposable
         await CreateWorkViewerPage(vm);
     }
 
-    private async Task CreateWorkViewerPage(IArtworkInfo vm)
+    private async Task CreateWorkViewerPage(object vm)
     {
         if (TopLevel.GetTopLevel(this) is not { ViewContainer: { } viewContainer })
             return;
@@ -105,16 +105,16 @@ public sealed partial class WorkView : UserControl, IDisposable
             case (Novel novel, SimpleOperableViewViewModel<Novel> viewViewModel):
                 viewContainer.CreateNovelPage(novel, viewViewModel.SourceView.CloneSourceView(), viewViewModel.NeedRefreshOnOpen);
                 break;
-            case (IArtworkInfo illustration, IllustrationViewViewModel viewViewModel):
+            case (object illustration, IllustrationViewViewModel viewViewModel):
                 viewContainer.CreateIllustrationPage(illustration, viewViewModel.DataProvider.CloneRef());
                 break;
-            case (IArtworkInfo illustration, SimpleOperableViewViewModel<IArtworkInfo> viewViewModel):
+            case (object illustration, SimpleOperableViewViewModel<object> viewViewModel):
                 viewContainer.CreateIllustrationPage(illustration, viewViewModel.SourceView.CloneSourceView(), viewViewModel.NeedRefreshOnOpen);
                 break;
             case (Novel { Id: var id }, _):
                 viewContainer.CreateNovelPage(id);
                 break;
-            case (IArtworkInfo illustration, _):
+            case (object illustration, _):
                 viewContainer.CreateIllustrationPage(illustration);
                 break;
         }
@@ -123,9 +123,9 @@ public sealed partial class WorkView : UserControl, IDisposable
     /// <summary>
     /// 在调用<see cref="ResetEngine"/>前<see cref="Control.DataContext"/>为<see langword="null"/>
     /// </summary>
-    public void ResetEngine(IAsyncEnumerable<IArtworkInfo> newEngine)
+    public void ResetEngine(IAsyncEnumerable<object> newEngine)
     {
-        var isNovelEngine = newEngine is IAsyncEnumerable<Novel> or IAsyncEnumerable<INovelEntry>;
+        var isNovelEngine = newEngine is IAsyncEnumerable<Novel>;
         var viewModel = DataContext as IWorkViewViewModel;
         switch (viewModel)
         {
@@ -141,11 +141,11 @@ public sealed partial class WorkView : UserControl, IDisposable
         }
     }
 
-    public void SetSource(IReadOnlyCollection<IArtworkInfo> source, SimpleWorkType workType, bool needRefreshOnOpen = false)
+    public void SetSource(IReadOnlyCollection<object> source, SimpleWorkType workType, bool needRefreshOnOpen = false)
     {
         IOperableViewViewModel viewModel = workType is SimpleWorkType.Novel
-            ? new SimpleOperableViewViewModel<Novel>(source, needRefreshOnOpen)
-            : new SimpleOperableViewViewModel<IArtworkInfo>(source, needRefreshOnOpen);
+            ? new SimpleOperableViewViewModel<Novel>(source.OfType<Novel>().ToList(), needRefreshOnOpen)
+            : new SimpleOperableViewViewModel<object>(source, needRefreshOnOpen);
         SetOwnedViewModel(viewModel);
     }
 
@@ -165,9 +165,9 @@ public sealed partial class WorkView : UserControl, IDisposable
         oldViewModel?.Dispose();
     }
 
-    private void WorkItem_OnRequestAddToBookmark(Control sender, IArtworkInfo e) => RequestAddToBookmark?.Invoke(sender, e);
+    private void WorkItem_OnRequestAddToBookmark(Control sender, object e) => RequestAddToBookmark?.Invoke(sender, e);
 
-    public void WorkItem_OnRequestOpenUserInfoPage(Control sender, IArtworkInfo e)
+    public void WorkItem_OnRequestOpenUserInfoPage(Control sender, object e)
     {
         if (e is IWorkEntry { User.Id: var id })
         {

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using AnimatedControls.Avalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Misaki;
+using Pixeval.Models;
 using Pixeval.Utilities.IO.Caching;
 
 namespace Pixeval.ViewModels;
@@ -40,7 +40,7 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
             if (!string.IsNullOrWhiteSpace(avatarUrl))
             {
                 avatar = await CacheHelper.GetAnimatedBitmapAsync(
-                    IPlatformInfo.Pixiv,
+                    PlatformConstants.Pixiv,
                     avatarUrl,
                     token: cancellationTokenSource.Token);
             }

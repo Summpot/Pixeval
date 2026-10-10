@@ -56,7 +56,6 @@
 		<PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" />
 		<PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" Version="3.119.4" />
 		<PackageReference Include="UniFFISharp" Version="0.2.10" />
-		<PackageReference Include="Misaki" Version="1.0.0.6" />
 	</ItemGroup>
 
 

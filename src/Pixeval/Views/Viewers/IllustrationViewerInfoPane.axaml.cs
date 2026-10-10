@@ -11,7 +11,6 @@ using Avalonia.Controls.Metadata;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
-using Misaki;
 using Pixeval.I18N;
 using Pixeval.Models.Blocking;
 using Pixeval.Models.Pixiv;
@@ -79,7 +78,7 @@ public partial class IllustrationViewerInfoPane : UserControl
         }
     }
 
-    private void UpdatePanePages(IArtworkInfo? entry)
+    private void UpdatePanePages(object? entry)
     {
         if (entry is not Illustration { Id: var id } illustration)
         {
@@ -122,18 +121,18 @@ public partial class IllustrationViewerInfoPane : UserControl
 
     private async void AddToBookmarkButton_OnRightClick(object? sender, ContextRequestedEventArgs e)
     {
-        if (sender is Control c && ViewModel?.CurrentIllustration is { Id: { } idStr } && long.TryParse(idStr, out var id))
+        if (sender is Control c && ViewModel?.CurrentIllustration is Illustration ill)
             await BookmarkTagSelectorFlyoutHelper.ShowAsync(
                 c,
                 SimpleWorkType.Illustration,
-                id,
+                ill.Id,
                 AddToBookmarkAsync,
                 PlacementMode.TopEdgeAlignedRight);
     }
 
     private async Task AddToBookmarkAsync((bool IsPrivate, IReadOnlyList<string>? Tags) e)
     {
-        if (ViewModel?.CurrentIllustration is not IArtworkInfo current)
+        if (ViewModel?.CurrentIllustration is not { } current)
             return;
 
         await WorkCommands.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, current));

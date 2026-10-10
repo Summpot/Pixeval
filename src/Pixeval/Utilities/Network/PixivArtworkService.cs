@@ -3,17 +3,16 @@
 
 using System.Threading;
 using System.Threading.Tasks;
-using Misaki;
-using Pixeval.Models.Pixiv;
+using Pixeval.Models;
 using Pixeval.Native.Mako;
 
 namespace Pixeval.Utilities.Network;
 
-public sealed class PixivArtworkService(MakoClient makoClient) : IGetArtworkService, IPostFavoriteService
+public sealed class PixivArtworkService(MakoClient makoClient)
 {
-    public string Platform => IPlatformInfo.Pixiv;
+    public string Platform => PlatformConstants.Pixiv;
 
-    public async Task<IArtworkInfo> GetArtworkAsync(string id, CancellationToken token = default)
+    public async Task<Illustration> GetArtworkAsync(string id, CancellationToken token = default)
     {
         var rawId = long.Parse(id);
         return await makoClient.GetIllustrationAsync(rawId);

@@ -8,11 +8,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
 using Pixeval.Download;
 using Pixeval.Extensions.Common.FormatProviders;
 using Pixeval.Models.Extensions;
 using Pixeval.Models.Options;
+using Pixeval.Native.Mako;
 using Pixeval.Native.Media;
 using Pixeval.Native.Storage;
 using Pixeval.Utilities;
@@ -20,12 +20,9 @@ using Pixeval.Utilities.IO;
 
 namespace Pixeval.Models.Download.Tasks;
 
-/// <summary>
-/// 只有<see cref="SingleAnimatedImageType.MultiFiles"/>使用这个类，其他使用<see cref="SingleImageDownloadTaskGroupBase"/>
-/// </summary>
 public class UgoiraDownloadTaskGroup : DownloadTaskGroup
 {
-    public ISingleAnimatedImage Entry => (ISingleAnimatedImage) DatabaseEntry.Entry!;
+    public Illustration Entry => (Illustration) DatabaseEntry.Entry!;
 
     /// <summary>
     /// 表示将每张图下载到的目标文件夹。
@@ -65,10 +62,13 @@ public class UgoiraDownloadTaskGroup : DownloadTaskGroup
             return;
         }
 
-        var msDelays = new int[Entry.MultiImageUris!.Count];
-        for (var i = 0; i < Entry.MultiImageUris.Count; ++i)
+        var frames = Entry.UgoiraMetadata?.Frames ?? [];
+        var orig = Entry.OriginalSingleUrl ?? Entry.ImageUrls?.Original ?? "";
+        var msDelays = new int[frames.Count];
+        for (var i = 0; i < frames.Count; ++i)
         {
-            var (uri, msDelay) = Entry.MultiImageUris[i];
+            var uri = new Uri(orig.Replace("ugoira0", $"ugoira{i}"));
+            var msDelay = (int) frames[i].Delay;
             msDelays[i] = msDelay;
             var imageDownloadTask = new ImageDownloadTask(uri,
                 Path.Combine(FolderPath, $"{i}{Path.GetExtension(uri.OriginalString)}"), DatabaseEntry.State);
@@ -96,14 +96,10 @@ public class UgoiraDownloadTaskGroup : DownloadTaskGroup
     }
 
     public UgoiraDownloadTaskGroup(
-        ISingleAnimatedImage entry,
+        Illustration entry,
         string destination,
         int? workSubscriptionId = null) : base(entry, destination, workSubscriptionId)
     {
-        if (entry.PreferredAnimatedImageType is not SingleAnimatedImageType.MultiFiles)
-            throw new InvalidOperationException($"{nameof(ISingleAnimatedImage.PreferredAnimatedImageType)} should be {nameof(SingleAnimatedImageType.MultiFiles)}");
-        if (!Entry.MultiImageUris!.IsPreloaded)
-            throw new InvalidOperationException($"{nameof(ISingleAnimatedImage.MultiImageUris)} should be preloaded");
         DestinationUgoiraFormat = IoHelper.GetAvailableUgoiraDownloadFormatToken();
         DatabaseEntry.FormatToken = DestinationUgoiraFormat.Value;
 

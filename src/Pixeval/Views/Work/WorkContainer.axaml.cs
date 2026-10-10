@@ -13,7 +13,6 @@ using Avalonia.Controls.Selection;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Misaki;
 using Pixeval.Collections;
 using Pixeval.Controls;
 using Pixeval.Filters;
@@ -22,6 +21,7 @@ using Pixeval.I18N;
 using Pixeval.Models.Filters;
 using Pixeval.Models.Options;
 using Pixeval.Models.Pixiv;
+using Pixeval.Native.Booru;
 using Pixeval.Native.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -35,7 +35,7 @@ public partial class WorkContainer : UserControl
 {
     private const string FilterDiagnosticResourcePrefix = "Filter.Diagnostics.";
 
-    private IReadOnlyCollection<IArtworkInfo>? _filterCompletionSource;
+    private IReadOnlyCollection<object>? _filterCompletionSource;
     private int _filterCompletionSourceCount = -1;
 
     public static readonly DirectProperty<WorkContainer, bool> IsRefreshEnabledProperty = AvaloniaProperty.RegisterDirect<WorkContainer, bool>(
@@ -166,18 +166,24 @@ public partial class WorkContainer : UserControl
         await ShowBookmarkTagSelectorAsync(AddAllToBookmarkButton, null).ConfigureAwait(false);
     }
 
-    private async void WorkView_OnRequestAddToBookmark(Control sender, IArtworkInfo e)
+    private async void WorkView_OnRequestAddToBookmark(Control sender, object e)
     {
         await ShowBookmarkTagSelectorAsync(sender, e).ConfigureAwait(false);
     }
 
-    private async Task ShowBookmarkTagSelectorAsync(Control placementTarget, IArtworkInfo? target)
+    private async Task ShowBookmarkTagSelectorAsync(Control placementTarget, object? target)
     {
         if (target is null && DataContext is not IOperableViewViewModel { SelectedEntries.Count: > 0 })
             return;
 
-        var id = target is { Id: { } idStr } && long.TryParse(idStr, out var idLong) ? idLong : 0;
-        var type = target is Novel || target is INovelEntry || DataContext is NovelViewViewModel or SimpleOperableViewViewModel<Novel>
+        var id = target switch
+        {
+            Illustration illust => illust.Id,
+            Novel novel => novel.Id,
+            BooruPost booru => long.TryParse(booru.Id, out var idLong) ? idLong : 0,
+            _ => 0
+        };
+        var type = target is Novel || DataContext is NovelViewViewModel or SimpleOperableViewViewModel<Novel>
             ? SimpleWorkType.Novel
             : SimpleWorkType.Illustration;
 
@@ -189,7 +195,7 @@ public partial class WorkContainer : UserControl
             PlacementMode.Bottom);
     }
 
-    private async Task AddToBookmarkAsync(IArtworkInfo? target, (bool IsPrivate, IReadOnlyList<string>? Tags) e)
+    private async Task AddToBookmarkAsync(object? target, (bool IsPrivate, IReadOnlyList<string>? Tags) e)
     {
         if (target is not null)
         {
@@ -247,7 +253,15 @@ public partial class WorkContainer : UserControl
 
         foreach (var selectedEntry in viewModel.SelectedEntries)
         {
-            _ = await TopLevel.GetTopLevel(this)!.Launcher.LaunchUriAsync(selectedEntry.WebsiteUri);
+            var uri = selectedEntry switch
+            {
+                Illustration illust => illust.WebsiteUri,
+                Novel novel => novel.WebsiteUri,
+                BooruPost booru => booru.WebsiteUri,
+                _ => null
+            };
+            if (uri is not null)
+                _ = await TopLevel.GetTopLevel(this)!.Launcher.LaunchUriAsync(uri);
         }
     }
 
@@ -290,7 +304,7 @@ public partial class WorkContainer : UserControl
         }
 
         viewModel.UserFilter = query.HasPredicates()
-            ? IFilter<IArtworkInfo>.Create(o => query.MatchesArtwork(o.ToArtworkMetadata()), false)
+            ? IFilter<object>.Create(o => query.MatchesArtwork(o.ToArtworkMetadata()), false)
             : null;
         WorkFilterAutoSuggestBox.ClearSelection();
     }
@@ -303,7 +317,7 @@ public partial class WorkContainer : UserControl
         return WorkFilterLanguage.CompletionEngine.Analyze(text ?? string.Empty, caret);
     }
 
-    private void EnsureFilterValueCompletions(IReadOnlyCollection<IArtworkInfo> source)
+    private void EnsureFilterValueCompletions(IReadOnlyCollection<object> source)
     {
         if (ReferenceEquals(_filterCompletionSource, source) && _filterCompletionSourceCount == source.Count)
             return;
@@ -345,7 +359,7 @@ public partial class WorkContainer : UserControl
 
     private static string GetFilterDiagnosticResourceKey(FilterDiagnosticKind kind) => FilterDiagnosticResourcePrefix + kind;
 
-    public void ResetEngine(IAsyncEnumerable<IArtworkInfo> newEngine)
+    public void ResetEngine(IAsyncEnumerable<object> newEngine)
     {
         WorkView.ResetEngine(newEngine);
     }
@@ -356,7 +370,7 @@ public partial class WorkContainer : UserControl
         WorkView.SetViewModel(viewModel);
     }
 
-    public void SetSource(IReadOnlyCollection<IArtworkInfo> source, SimpleWorkType workType, bool needRefreshOnOpen = false)
+    public void SetSource(IReadOnlyCollection<object> source, SimpleWorkType workType, bool needRefreshOnOpen = false)
     {
         WorkView.SetSource(source, workType, needRefreshOnOpen);
     }

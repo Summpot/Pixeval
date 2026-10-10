@@ -7,9 +7,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
 using Pixeval.Extensions.Common.FormatProviders;
 using Pixeval.Models.Extensions;
+using Pixeval.Native.Mako;
 using Pixeval.Native.Media;
 using Pixeval.Native.Storage;
 using Pixeval.Utilities;
@@ -19,7 +19,7 @@ namespace Pixeval.Models.Download.Tasks;
 
 public class MangaDownloadTaskGroup : DownloadTaskGroup
 {
-    public IImageSet Entry => (IImageSet) DatabaseEntry.Entry!;
+    public Illustration Entry => (Illustration) DatabaseEntry.Entry!;
 
     public MangaDownloadTaskGroup(IDownloadHistoryEntry entry) : base(entry)
     {
@@ -27,7 +27,7 @@ public class MangaDownloadTaskGroup : DownloadTaskGroup
     }
 
     public MangaDownloadTaskGroup(
-        IImageSet entry,
+        Illustration entry,
         string destination,
         int? workSubscriptionId = null) : base(entry, destination, workSubscriptionId)
     {
@@ -47,8 +47,9 @@ public class MangaDownloadTaskGroup : DownloadTaskGroup
             return;
         foreach (var page in Entry.Pages)
         {
-            var path = IoHelper.ReplaceTokenExtensionFromUrl(TokenizedDestination, page.ImageUri, page.SetIndex);
-            var imageDownloadTask = new ImageDownloadTask(page.ImageUri, path, DatabaseEntry.State);
+            var pageUri = new Uri(page.OriginalSingleUrl ?? page.ImageUrls?.Original ?? page.ImageUrls?.Large ?? "about:blank");
+            var path = IoHelper.ReplaceTokenExtensionFromUrl(TokenizedDestination, pageUri, page.SetIndex);
+            var imageDownloadTask = new ImageDownloadTask(pageUri, path, DatabaseEntry.State);
             AddToTasksSet(imageDownloadTask);
         }
 

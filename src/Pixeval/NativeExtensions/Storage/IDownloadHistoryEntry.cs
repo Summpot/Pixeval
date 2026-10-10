@@ -2,7 +2,6 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using Misaki;
 using Pixeval.Models.Download.Tasks;
 using Pixeval.Native.Download;
 using Pixeval.Native.Mako;
@@ -13,6 +12,7 @@ namespace Pixeval.Native.Storage;
 public interface IDownloadHistoryEntry
 {
     long HistoryEntryId { get; }
+    long Id => HistoryEntryId;
 
     string Destination { get; }
 
@@ -22,16 +22,25 @@ public interface IDownloadHistoryEntry
 
     string? ErrorMessage { get; set; }
 
-    IArtworkInfo? Entry { get; }
+    object? Entry { get; }
 
     DownloadTaskKey DownloadTaskKey { get; }
 
     public static IDownloadHistoryEntry Create(
         string destination,
-        IArtworkInfo entry,
+        object entry,
         int? workSubscriptionId = null)
     {
-        var serializable = entry as ISerializable;
+        var id = entry switch
+        {
+            Illustration i => i.Id.ToString(),
+            MakoNovel n => n.Id.ToString(),
+            Booru.BooruPost b => b.Id,
+            SauceNao.SauceNaoItem s => s.RawId,
+            _ => ""
+        };
+
+        var serializable = entry as IArtworkSerializable;
         var serializeKey = serializable?.SerializeKey;
         var payloadJson = serializable?.Serialize();
 
@@ -39,14 +48,14 @@ public interface IDownloadHistoryEntry
         {
             var record = new SubscriptionDownloadHistoryRecord(
                 0,
-                entry.Id,
+                id,
                 serializeKey,
                 destination,
                 (uint)DownloadState.Queued,
                 null,
                 null,
                 subId,
-                entry.Id,
+                id,
                 payloadJson)
             {
                 EntryOverride = entry
@@ -56,7 +65,7 @@ public interface IDownloadHistoryEntry
 
         var dlRecord = new DownloadHistoryRecord(
             0,
-            entry.Id,
+            id,
             serializeKey,
             destination,
             (uint)DownloadState.Queued,
@@ -76,20 +85,9 @@ public static class DownloadHistoryEntryExtensions
     {
         return entry.Entry switch
         {
-            ISingleImage { ImageType: ImageType.SingleImage } or
-                ISingleImage { ImageType: ImageType.ImageSet, SetIndex: > -1 } => new SingleImageDownloadTaskGroup(entry),
-            ISingleAnimatedImage
-            {
-                ImageType: ImageType.SingleAnimatedImage,
-                PreferredAnimatedImageType: SingleAnimatedImageType.SingleZipFile or SingleAnimatedImageType.SingleFile
-            } => new SingleAnimatedImageDownloadTaskGroup(entry),
-            ISingleAnimatedImage
-            {
-                ImageType: ImageType.SingleAnimatedImage,
-                PreferredAnimatedImageType: SingleAnimatedImageType.MultiFiles
-            } => new UgoiraDownloadTaskGroup(entry),
-            IImageSet { ImageType: ImageType.ImageSet } => new MangaDownloadTaskGroup(entry),
             MakoNovel => new NovelDownloadTaskGroup(entry),
+            Illustration illust when illust.IsPicGif => new UgoiraDownloadTaskGroup(entry),
+            Illustration illust when illust.IsPicSet && illust.SetIndex == -1 => new MangaDownloadTaskGroup(entry),
             _ => new SingleImageDownloadTaskGroup(entry)
         };
     }

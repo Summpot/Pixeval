@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Misaki;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Booru;
 using Pixeval.Native.Storage;
@@ -91,7 +90,7 @@ public sealed class StorageRepositoryTest
         Assert.AreEqual(1, repo.CountBrowseHistory());
         await using var enumerator = repo.StreamAsync(SimpleWorkType.Illustration).GetAsyncEnumerator();
         Assert.IsTrue(await enumerator.MoveNextAsync());
-        Assert.AreEqual(post.Id, enumerator.Current.Id);
+        Assert.AreEqual(post.Id, ((BooruPost) enumerator.Current).Id);
     }
 
     [TestMethod]

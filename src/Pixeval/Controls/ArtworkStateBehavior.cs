@@ -8,7 +8,6 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
-using Misaki;
 using Pixeval.Services;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -90,7 +89,7 @@ public static class ArtworkStateBehavior
     {
         UnbindBookmark(control);
 
-        if (control.DataContext is not IArtworkInfo artwork)
+        if (control.DataContext is not { } artwork)
             return;
 
         var state = ArtworkUiStateStore.GetOrCreate(artwork);
@@ -186,7 +185,7 @@ public static class ArtworkStateBehavior
     {
         UnbindWatchLater(control);
 
-        if (control.DataContext is not IArtworkInfo artwork)
+        if (control.DataContext is not { } artwork)
             return;
 
         var state = ArtworkUiStateStore.GetOrCreate(artwork);

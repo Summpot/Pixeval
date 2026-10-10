@@ -2,15 +2,14 @@
 // Licensed under the GPL-3.0 License.
 
 using System.Collections.Frozen;
-using Misaki;
 using IllustrationViewDataProvider = Pixeval.ViewModels.SharableViewDataProvider<
-    Misaki.IArtworkInfo,
-    Misaki.IArtworkInfo>;
+    object,
+    object>;
 
 namespace Pixeval.ViewModels;
 
 public sealed class IllustrationViewViewModel
-    : WorkViewViewModelBase<IArtworkInfo, IArtworkInfo>, IRefCloneable<IllustrationViewViewModel>
+    : WorkViewViewModelBase<object, object>, IRefCloneable<IllustrationViewViewModel>
 {
     public IllustrationViewViewModel() : this(new IllustrationViewDataProvider(), null)
     {

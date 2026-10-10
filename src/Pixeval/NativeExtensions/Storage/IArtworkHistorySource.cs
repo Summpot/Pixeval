@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Misaki;
 using Pixeval.Models.Pixiv;
 
 namespace Pixeval.Native.Storage;
@@ -13,7 +12,7 @@ public interface IArtworkHistorySource
 {
     event EventHandler? Changed;
 
-    IAsyncEnumerable<IArtworkInfo> StreamAsync(SimpleWorkType workType, CancellationToken token = default);
+    IAsyncEnumerable<object> StreamAsync(SimpleWorkType workType, CancellationToken token = default);
 
     void Clear();
 }

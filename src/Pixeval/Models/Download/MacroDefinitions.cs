@@ -24,12 +24,12 @@ public interface IPredicate : IMacro
 
 public sealed record TransducerMacroDefinition(string Name, string Description) : ITransducer
 {
-    public System.Type ContextType => typeof(Misaki.IArtworkInfo);
+    public System.Type ContextType => typeof(object);
 }
 
 public sealed record PredicateMacroDefinition(string Name, string Description) : IPredicate
 {
-    public System.Type ContextType => typeof(Misaki.IArtworkInfo);
+    public System.Type ContextType => typeof(object);
 }
 
 public static class MacroDefinitions

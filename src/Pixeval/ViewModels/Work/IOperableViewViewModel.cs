@@ -4,7 +4,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using Avalonia.Collections;
-using Misaki;
 using Pixeval.Collections;
 
 namespace Pixeval.ViewModels;
@@ -20,17 +19,17 @@ public interface IOperableViewViewModel : ISimpleViewViewModel
 {
     bool IsSelecting { get; set; }
 
-    AvaloniaList<IArtworkInfo> SelectedEntries { get; }
+    AvaloniaList<object> SelectedEntries { get; }
 
-    void SetSortDescriptions(params IEnumerable<ISortDescription<IArtworkInfo>> descriptions);
+    void SetSortDescriptions(params IEnumerable<ISortDescription<object>> descriptions);
 
-    IFilter<IArtworkInfo>? UserFilter { get; set; }
+    IFilter<object>? UserFilter { get; set; }
 
     bool RequireAdaptiveGrid { get; }
 
-    new IReadOnlyCollection<IArtworkInfo> View { get; }
+    new IReadOnlyCollection<object> View { get; }
 
-    new IReadOnlyCollection<IArtworkInfo> Source { get; }
+    new IReadOnlyCollection<object> Source { get; }
 
     IReadOnlyCollection<object> ISimpleViewViewModel.View => View;
 

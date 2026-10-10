@@ -500,7 +500,7 @@ Phase 6 的核心目标是：**全面清理在逐步演进过程中积累的过�
   - [x] 建立 `ArtworkUiStateStore` 与 `UserUiStateStore`，实现跨视图与后端的响应式交互状态同步。
   - [x] 针对性单元测试（`ArtworkUiStateStoreTest` 与 `WorkCommandsTest` 16 项测试）全部通过，全工程 0 编译警告 0 编译错误。
 
-#### 6.2 彻底清退 `Misaki` 外部依赖与历史抽象包袱 (Eliminate Misaki Legacy Abstractions)
+#### 6.2 彻底清退 `Misaki` 外部依赖与历史抽象包袱 (Eliminate Misaki Legacy Abstractions) [已完成]
 - **痛点与坏味道**：
   - 工程仍保留远古多平台抽象包 `Misaki`（`PackageReference Include="Misaki" Version="1.0.0.6"`），强行要求原生模型实现 `IArtworkInfo`、`IWorkEntry`、`ISingleImage`、`IImageSet`、`ISingleAnimatedImage`、`IIdentityInfo`。
   - 为此手写了数十个无意义的只读投影属性（如 `Author => User`、`TotalFavorite => (int)TotalBookmarks`、`IPreloadableList<IUser> Uploaders => []`），污染了代码库。
@@ -509,7 +509,10 @@ Phase 6 的核心目标是：**全面清理在逐步演进过程中积累的过�
   - 表现层 Views 与 ViewModels 直面原生强类型实体（`Illustration`、`Novel`、`BooruPost`、`SauceNaoItem`），利用 Avalonia 强类型 `DataTemplate` 进行多态渲染，彻底废除多重接口包装。
   - 清理所有无用的投影属性与空集合桩代码。
 - **验收标准**：
-  - `Pixeval.csproj` 物理移除 `Misaki` 引用，项目中完全消除 `using Misaki;`。
+  - [x] `Pixeval.csproj` 物理移除 `Misaki` 引用，全项目中完全消除 `using Misaki;`。
+  - [x] 原生模型（`Illustration`, `Novel`, `BooruPost`, `SauceNaoItem`, `User`, `Tag` 等）剥离全部 Misaki 接口与冗余桩属性，纯净对接 UniFFI 生成类型。
+  - [x] 表现层视图与查看器（`WorkInfoPane`, `WorkItem`, `WorkView`, `DownloadItem`, `IllustrationViewer` 等）直绑原生实体或解耦模板属性。
+  - [x] 全工程 0 编译警告 0 编译错误，所有 321 项单元测试全绿通过。
 
 #### 6.3 静态巨石解体与规范化标准依赖注入 (Deconstruct Static God Helpers & Standardize DI)
 - **痛点与坏味道**：
@@ -555,9 +558,9 @@ Phase 6 的核心目标是：**全面清理在逐步演进过程中积累的过�
    - 达成 100% Rust Core 底层闭环，C# 网络栈、图像解码、协议辅助与动态库扫描全部下沉。
 2. **领域契约还原与 UI 状态解耦 (Phase 6.1) [已完成]**
    - 原生 Record 恢复纯净只读不可变契约；交互状态完全收敛至集中式 UI 状态仓与附加行为。
-3. **第一当前推进目标：彻底清退 Misaki 依赖与历史抽象 (Phase 6.2) [待启动]**
+3. **彻底清退 Misaki 依赖与历史抽象 (Phase 6.2) [已完成]**
    - 物理移除 `Misaki` NuGet 包与 `IArtworkInfo` 等接口链；视图 DataTemplate 纯粹直绑原生实体。
-4. **后续演进：静态巨石解体与标准 DI 落地 (Phase 6.3)**
+4. **第一当前推进目标：静态巨石解体与标准 DI 落地 (Phase 6.3) [待启动]**
    - 消灭 `IoHelper` 与 `App.AppViewModel` 静态穿透，建立正规 Service 注入。
 5. **后续演进：集合管道精简与 View Code-Behind 瘦身 (Phase 6.4 & 6.5)**
    - 废除复杂的 `SharableViewDataProvider` 历史轮子，解耦 `WorkContainer` / `TabViewContainer`，完成 Avalonia 表现层终极瘦身。

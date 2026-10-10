@@ -13,8 +13,8 @@ using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Misaki;
 using Pixeval.I18N;
+using Pixeval.Models;
 using Pixeval.Models.Pixiv;
 using Pixeval.Native.Storage;
 using Pixeval.Utilities;
@@ -441,7 +441,7 @@ public partial class SearchPage : IconContentPage
         if (!TryGetSearchId(out var id) || TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
             return false;
 
-        viewContainer.CreateIllustrationPage(id.ToString(), IPlatformInfo.Pixiv);
+        viewContainer.CreateIllustrationPage(id.ToString(), PlatformConstants.Pixiv);
         return true;
     }
 

@@ -12,8 +12,8 @@ using Avalonia.Data.Converters;
 using Avalonia.Media;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
-using Misaki;
 using Pixeval.Controls;
+using Pixeval.Models;
 using Pixeval.Models.Pixiv;
 using Pixeval.Utilities;
 
@@ -33,8 +33,8 @@ public static partial class PixevalConverters
 
     public static readonly FuncValueConverter<int, int> PlusOne = new(i => i + 1);
 
-    public static readonly FuncValueConverter<int, string> IntToString = new(value => value.ToString());
-
+    public static readonly FuncValueConverter<object?, string> IntToString = new(value => value?.ToString() ?? "0");
+ 
     public static readonly FuncValueConverter<bool, IconVariant> BoolToIconVariant = new(value => value ? IconVariant.Color : IconVariant.Regular);
 
     public static readonly FuncValueConverter<HeartButtonState, IconVariant> StateToIconVariant = new(value => value switch
@@ -67,8 +67,6 @@ public static partial class PixevalConverters
         });
 
     public static readonly StringFormatConverter StringFormatConverter = StringFormatConverter.Instance;
-
-    public static readonly FuncValueConverter<IReadOnlyCollection<IImageFrame>, string?> ImagePickClosestConverter = new(value => value?.PickClosest(50, 50)?.ImageUri.OriginalString);
 
     public static readonly FuncValueConverter<string?, string?> HtmlToPlainText = new(value =>
         value is null

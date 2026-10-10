@@ -4,7 +4,6 @@
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Views.Converters"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
-    xmlns:misaki="using:Misaki"
     xmlns:pixeval="using:Pixeval"
     xmlns:utilities="using:Pixeval.Utilities"
     xmlns:viewers="using:Pixeval.Views.Viewers">
@@ -13,7 +12,7 @@
         <viewers:WorkInfoPane />
     </Design.PreviewWith>
 
-    <DataTemplate x:DataType="{x:Type misaki:IUser}" x:Key="UserCardDataTemplate">
+    <DataTemplate x:DataType="viewers:WorkInfoUser" x:Key="UserCardDataTemplate">
         <Button
             Padding="8"
             HorizontalAlignment="Stretch"
@@ -21,11 +20,11 @@
             Background="Transparent"
             BorderThickness="0"
             Command="{Binding $parent[viewers:WorkInfoPane].OpenAuthorCommand}"
-            CommandParameter="{Binding}">
+            CommandParameter="{Binding RawUser}">
             <DockPanel HorizontalSpacing="12" LastChildFill="False">
                 <controls:AvatarImage
                     Width="50"
-                    controls:Source.Cache="{Binding Avatar, Converter={x:Static converters:PixevalConverters.ImagePickClosestConverter}}"
+                    controls:Source.Cache="{Binding AvatarUrl}"
                     DockPanel.Dock="Left" />
                 <StackPanel DockPanel.Dock="Top" Spacing="2">
                     <TextBlock
@@ -53,7 +52,7 @@
                 <ContextMenu>
                     <MenuItem
                         Command="{Binding $parent[viewers:WorkInfoPane].BlockUserCommand}"
-                        CommandParameter="{Binding}"
+                        CommandParameter="{Binding RawUser}"
                         Header="{I18N {x:Static pixeval:BlockedContentResources.BlockUser}}"
                         Icon="{markup:SymbolIcon PersonProhibited}" />
                 </ContextMenu>
@@ -61,7 +60,7 @@
         </Button>
     </DataTemplate>
 
-    <DataTemplate x:DataType="{x:Type misaki:IUser}" x:Key="LiteUserCardDataTemplate">
+    <DataTemplate x:DataType="viewers:WorkInfoUser" x:Key="LiteUserCardDataTemplate">
         <Button
             Padding="8"
             HorizontalAlignment="Stretch"
@@ -69,13 +68,13 @@
             Background="Transparent"
             BorderThickness="0"
             Command="{Binding $parent[viewers:WorkInfoPane].OpenAuthorCommand}"
-            CommandParameter="{Binding}">
+            CommandParameter="{Binding RawUser}">
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <controls:AvatarImage
                     Width="28"
-                    controls:Source.Cache="{Binding Avatar, Converter={x:Static converters:PixevalConverters.ImagePickClosestConverter}}"
+                    controls:Source.Cache="{Binding AvatarUrl}"
                     DockPanel.Dock="Left" />
-                <StackPanel DockPanel.Dock="Top" Spacing="2">
+                <StackPanel Spacing="2">
                     <TextBlock
                         Text="{Binding Name}"
                         TextWrapping="Wrap"
@@ -86,7 +85,7 @@
                 <ContextMenu>
                     <MenuItem
                         Command="{Binding $parent[viewers:WorkInfoPane].BlockUserCommand}"
-                        CommandParameter="{Binding}"
+                        CommandParameter="{Binding RawUser}"
                         Header="{I18N {x:Static pixeval:BlockedContentResources.BlockUser}}"
                         Icon="{markup:SymbolIcon PersonProhibited}" />
                 </ContextMenu>
@@ -100,23 +99,21 @@
 
     <ControlTheme x:Key="{x:Type viewers:WorkInfoPane}" TargetType="{x:Type viewers:WorkInfoPane}">
         <Setter Property="Template">
-            <ControlTemplate>
+            <ControlTemplate TargetType="{x:Type viewers:WorkInfoPane}">
                 <ScrollViewer
                     Name="WIPHostScroller"
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto">
                     <StackPanel
-                        x:DataType="{x:Type misaki:IArtworkInfo}"
                         Margin="16,12"
-                        DataContext="{TemplateBinding ArtworkInfo}"
                         Spacing="5">
                         <Grid ColumnDefinitions="*,Auto">
                             <SelectableTextBlock
                                 HorizontalAlignment="Left"
                                 controls:TranslatableTextBlockBehavior.IsEnabled="True"
                                 controls:TranslatableTextBlockBehavior.TextType="WorkTitle"
-                                IsVisible="{Binding Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                Text="{Binding Title}"
+                                IsVisible="{Binding WorkTitle, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                Text="{TemplateBinding WorkTitle}"
                                 TextWrapping="Wrap"
                                 Theme="{StaticResource TitleTextBlockStyle}" />
                             <ContentPresenter
@@ -129,18 +126,18 @@
                             MaxHeight="{Binding #WIPHostScroller.Bounds, Converter={x:Static viewers:WorkInfoPane.HalfVerticalSpaceConverter}}"
                             Margin="0,5,0,0"
                             HorizontalScrollBarVisibility="Disabled"
-                            IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            IsVisible="{Binding WorkDescription, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                             <SelectableTextBlock
                                 controls:TranslatableTextBlockBehavior.IsEnabled="True"
                                 controls:TranslatableTextBlockBehavior.TextType="WorkCaption"
-                                Text="{Binding Description, Converter={x:Static converters:PixevalConverters.HtmlToPlainText}}"
+                                Text="{Binding WorkDescription, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.HtmlToPlainText}}"
                                 TextWrapping="Wrap" />
                         </ScrollViewer>
 
                         <StackPanel Orientation="Horizontal" Spacing="5">
                             <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
                                 <Run Text="ID " />
-                                <Run Text="{Binding Id}" />
+                                <Run Text="{Binding WorkId, RelativeSource={RelativeSource TemplatedParent}}" />
                             </TextBlock>
                             <Button
                                 Padding="2"
@@ -150,11 +147,11 @@
                                 Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
                                 Content="{markup:SymbolIcon Copy,
                                                             FontSize=12}"
-                                Tag="{Binding Id}" />
+                                Tag="{Binding WorkId, RelativeSource={RelativeSource TemplatedParent}}" />
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" Spacing="20">
-                            <controls:IconText Symbol="Eye" Text="{Binding TotalView, Converter={x:Static converters:PixevalConverters.IntToString}}" />
+                            <controls:IconText Symbol="Eye" Text="{Binding TotalView, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.IntToString}}" />
                             <Button
                                 Padding="0"
                                 Background="Transparent"
@@ -162,48 +159,47 @@
                                 Command="{Binding $parent[viewers:WorkInfoPane].ViewLikedUsersCommand}"
                                 Cursor="Hand"
                                 ToolTip.Tip="查看收藏用户 / Liked Users">
-                                <controls:IconText Symbol="Heart" Text="{Binding TotalFavorite, Converter={x:Static converters:PixevalConverters.IntToString}}" />
+                                <controls:IconText Symbol="Heart" Text="{Binding TotalFavorite, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.IntToString}}" />
                             </Button>
-                            <controls:IconText Symbol="Clock" Text="{Binding CreateDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}" />
+                            <controls:IconText Symbol="Clock" Text="{Binding CreateDate, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}" />
                         </StackPanel>
 
                         <ItemsControl
-                            IsVisible="{Binding !!Authors.Count}"
+                            IsVisible="{Binding !!Authors.Count, RelativeSource={RelativeSource TemplatedParent}}"
                             ItemTemplate="{StaticResource UserCardDataTemplate}"
                             ItemsPanel="{StaticResource StackLayout}"
-                            ItemsSource="{Binding Authors}" />
+                            ItemsSource="{Binding Authors, RelativeSource={RelativeSource TemplatedParent}}" />
                         <ItemsControl
-                            IsVisible="{Binding !!Uploaders.Count}"
+                            IsVisible="{Binding !!Uploaders.Count, RelativeSource={RelativeSource TemplatedParent}}"
                             ItemTemplate="{StaticResource UserCardDataTemplate}"
                             ItemsPanel="{StaticResource StackLayout}"
-                            ItemsSource="{Binding Uploaders}" />
+                            ItemsSource="{Binding Uploaders, RelativeSource={RelativeSource TemplatedParent}}" />
 
                         <StackPanel Orientation="Horizontal" Spacing="5">
-                            <controls:PixevalBadge IsVisible="{Binding IsAiGenerated}" Mode="Ai" />
-                            <controls:PixevalBadge Mode="{Binding SafeRating, Converter={x:Static converters:PixevalConverters.SafeBadgeModeConverter}}" />
+                            <controls:PixevalBadge IsVisible="{Binding IsAiGenerated, RelativeSource={RelativeSource TemplatedParent}}" Mode="Ai" />
+                            <controls:PixevalBadge Mode="{Binding SafeRating, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.SafeBadgeModeConverter}}" />
                         </StackPanel>
 
-                        <ItemsControl ItemsPanel="{StaticResource StackLayout}" ItemsSource="{Binding Tags}">
+                        <ItemsControl ItemsPanel="{StaticResource StackLayout}" ItemsSource="{Binding TagGroups, RelativeSource={RelativeSource TemplatedParent}}">
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate>
+                                <DataTemplate x:DataType="viewers:WorkInfoTagGroup">
                                     <StackPanel>
                                         <TextBlock
                                             Margin="10"
                                             HorizontalAlignment="Left"
                                             controls:TranslatableTextBlockBehavior.IsEnabled="True"
-                                            controls:TranslatableTextBlockBehavior.PretranslatedText="{Binding Key.TranslatedName}"
                                             controls:TranslatableTextBlockBehavior.TextType="WorkTag"
-                                            IsVisible="{Binding Key.Name, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                            Text="{Binding Key.Name}"
+                                            IsVisible="{Binding Key, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                            Text="{Binding Key}"
                                             Theme="{StaticResource BodyStrongTextBlockStyle}" />
-                                        <ItemsControl ItemsSource="{Binding}">
+                                        <ItemsControl ItemsSource="{Binding Tags}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
                                                     <WrapPanel ItemSpacing="8" LineSpacing="8" />
                                                 </ItemsPanelTemplate>
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="{x:Type misaki:ITag}">
+                                                <DataTemplate x:DataType="viewers:WorkInfoTag">
                                                     <Button Command="{Binding $parent[viewers:WorkInfoPane].OpenTagCommand}" CommandParameter="{Binding}">
                                                         <TextBlock
                                                             controls:TranslatableTextBlockBehavior.IsEnabled="True"
@@ -247,19 +243,17 @@
 
     <ControlTheme x:Key="LiteWorkInfoPaneStyle" TargetType="{x:Type viewers:WorkInfoPane}">
         <Setter Property="Template">
-            <ControlTemplate>
+            <ControlTemplate TargetType="{x:Type viewers:WorkInfoPane}">
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                     <StackPanel
-                        x:DataType="{x:Type misaki:IArtworkInfo}"
                         Margin="16,12"
-                        DataContext="{TemplateBinding ArtworkInfo}"
                         Spacing="5">
                         <Grid ColumnDefinitions="* Auto">
                             <TextBlock
                                 HorizontalAlignment="Left"
-                                IsVisible="{Binding Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                IsVisible="{Binding WorkTitle, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                 MaxLines="2"
-                                Text="{Binding Title}"
+                                Text="{TemplateBinding WorkTitle}"
                                 TextTrimming="CharacterEllipsis"
                                 TextWrapping="Wrap"
                                 Theme="{StaticResource TitleTextBlockStyle}" />
@@ -273,12 +267,12 @@
                             MaxHeight="100"
                             Margin="0,5,0,0"
                             HorizontalScrollBarVisibility="Disabled"
-                            IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <TextBlock Text="{Binding Description, Converter={x:Static converters:PixevalConverters.HtmlToPlainText}}" TextWrapping="Wrap" />
+                            IsVisible="{Binding WorkDescription, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="{Binding WorkDescription, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.HtmlToPlainText}}" TextWrapping="Wrap" />
                         </ScrollViewer>
 
                         <StackPanel Orientation="Horizontal" Spacing="20">
-                            <controls:IconText Symbol="Eye" Text="{Binding TotalView, Converter={x:Static converters:PixevalConverters.IntToString}}" />
+                            <controls:IconText Symbol="Eye" Text="{Binding TotalView, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.IntToString}}" />
                             <Button
                                 Padding="0"
                                 Background="Transparent"
@@ -286,25 +280,25 @@
                                 Command="{Binding $parent[viewers:WorkInfoPane].ViewLikedUsersCommand}"
                                 Cursor="Hand"
                                 ToolTip.Tip="查看收藏用户 / Liked Users">
-                                <controls:IconText Symbol="Heart" Text="{Binding TotalFavorite, Converter={x:Static converters:PixevalConverters.IntToString}}" />
+                                <controls:IconText Symbol="Heart" Text="{Binding TotalFavorite, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.IntToString}}" />
                             </Button>
-                            <controls:IconText Symbol="Clock" Text="{Binding CreateDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}" />
+                            <controls:IconText Symbol="Clock" Text="{Binding CreateDate, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}" />
                         </StackPanel>
 
                         <ItemsControl
-                            IsVisible="{Binding !!Authors.Count}"
+                            IsVisible="{Binding !!Authors.Count, RelativeSource={RelativeSource TemplatedParent}}"
                             ItemTemplate="{StaticResource LiteUserCardDataTemplate}"
                             ItemsPanel="{StaticResource StackLayout}"
-                            ItemsSource="{Binding Authors}" />
+                            ItemsSource="{Binding Authors, RelativeSource={RelativeSource TemplatedParent}}" />
                         <ItemsControl
-                            IsVisible="{Binding !!Uploaders.Count}"
+                            IsVisible="{Binding !!Uploaders.Count, RelativeSource={RelativeSource TemplatedParent}}"
                             ItemTemplate="{StaticResource LiteUserCardDataTemplate}"
                             ItemsPanel="{StaticResource StackLayout}"
-                            ItemsSource="{Binding Uploaders}" />
+                            ItemsSource="{Binding Uploaders, RelativeSource={RelativeSource TemplatedParent}}" />
 
                         <StackPanel Orientation="Horizontal" Spacing="5">
-                            <controls:PixevalBadge IsVisible="{Binding IsAiGenerated}" Mode="Ai" />
-                            <controls:PixevalBadge Mode="{Binding SafeRating, Converter={x:Static converters:PixevalConverters.SafeBadgeModeConverter}}" />
+                            <controls:PixevalBadge IsVisible="{Binding IsAiGenerated, RelativeSource={RelativeSource TemplatedParent}}" Mode="Ai" />
+                            <controls:PixevalBadge Mode="{Binding SafeRating, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.SafeBadgeModeConverter}}" />
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
