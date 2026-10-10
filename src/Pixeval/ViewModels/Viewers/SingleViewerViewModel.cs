@@ -375,12 +375,12 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         {
             case Illustration ill:
                 if (!string.IsNullOrEmpty(ill.OriginalUrl)) yield return (ill.OriginalUrl, (int) ill.Width, (int) ill.Height);
-                if (!string.IsNullOrEmpty(ill.LargeThumbnailUrl)) yield return (ill.LargeThumbnailUrl, (int) ill.Width, (int) ill.Height);
-                if (!string.IsNullOrEmpty(ill.MediumThumbnailUrl)) yield return (ill.MediumThumbnailUrl, (int) ill.Width, (int) ill.Height);
-                if (!string.IsNullOrEmpty(ill.SquareMediumThumbnailUrl)) yield return (ill.SquareMediumThumbnailUrl, (int) ill.Width, (int) ill.Height);
+                if (!string.IsNullOrEmpty(ill.ImageUrls?.Large)) yield return (ill.ImageUrls.Large, (int) ill.Width, (int) ill.Height);
+                if (!string.IsNullOrEmpty(ill.ImageUrls?.Medium)) yield return (ill.ImageUrls.Medium, (int) ill.Width, (int) ill.Height);
+                if (!string.IsNullOrEmpty(ill.ImageUrls?.SquareMedium)) yield return (ill.ImageUrls.SquareMedium, (int) ill.Width, (int) ill.Height);
                 break;
             case BooruPost bp:
-                if (!string.IsNullOrEmpty(bp.FileUrl)) yield return (bp.FileUrl, (int) bp.Width, (int) bp.Height);
+                if (!string.IsNullOrEmpty(bp.OriginalUrl)) yield return (bp.OriginalUrl, (int) bp.Width, (int) bp.Height);
                 if (!string.IsNullOrEmpty(bp.LargeFileUrl)) yield return (bp.LargeFileUrl, (int) bp.Width, (int) bp.Height);
                 if (!string.IsNullOrEmpty(bp.PreviewFileUrl)) yield return (bp.PreviewFileUrl, (int) bp.Width, (int) bp.Height);
                 break;
@@ -433,8 +433,8 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
             case Illustration ill:
             {
                 var url = isOriginal
-                    ? (ill.OriginalUrl ?? ill.LargeThumbnailUrl ?? ill.MediumThumbnailUrl)
-                    : (ill.LargeThumbnailUrl ?? ill.MediumThumbnailUrl ?? ill.OriginalUrl);
+                    ? (ill.OriginalUrl ?? ill.ImageUrls?.Large ?? ill.ImageUrls?.Medium)
+                    : (ill.ImageUrls?.Large ?? ill.ImageUrls?.Medium ?? ill.OriginalUrl);
                 if (string.IsNullOrEmpty(url))
                     return null;
                 return await Images.GetSingleImageAsync(
@@ -446,8 +446,8 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
             case BooruPost bp:
             {
                 var url = isOriginal
-                    ? (bp.FileUrl ?? bp.LargeFileUrl ?? bp.PreviewFileUrl)
-                    : (bp.LargeFileUrl ?? bp.PreviewFileUrl ?? bp.FileUrl);
+                    ? (bp.OriginalUrl ?? bp.LargeFileUrl ?? bp.PreviewFileUrl)
+                    : (bp.LargeFileUrl ?? bp.PreviewFileUrl ?? bp.OriginalUrl);
                 if (string.IsNullOrEmpty(url))
                     return null;
                 return await Images.GetSingleImageAsync(

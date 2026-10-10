@@ -4,6 +4,7 @@
 using System.ComponentModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
+using Pixeval.Models.Pixiv;
 using Pixeval.Native.Booru;
 using Pixeval.Native.Mako;
 using Pixeval.Native.SauceNao;
@@ -122,15 +123,38 @@ public sealed class ArtworkUiStateStoreTest
     }
 
     [TestMethod]
-    public void WorkEntryIsFavoriteIsImmutable()
+    public void WorkRecordsDoNotExposeFieldAliases()
     {
-        var illust = DesignHelper.DesignIllustration;
-        var workEntry = new WorkEntry.Illust(illust);
-        Assert.AreEqual(illust.IsFavorite, workEntry.IsFavorite);
+        foreach (var type in new[] { typeof(Illustration), typeof(Novel), typeof(WorkEntry) })
+        {
+            Assert.IsNull(type.GetProperty("IsFavorite"), type.Name);
+            Assert.IsNull(type.GetProperty("Author"), type.Name);
+            Assert.IsNull(type.GetProperty("Description"), type.Name);
+            Assert.IsNull(type.GetProperty("TotalFavorite"), type.Name);
+            Assert.IsNull(type.GetProperty("Entry"), type.Name);
+            Assert.IsNull(type.GetProperty("RawId"), type.Name);
+            Assert.IsNull(type.GetProperty("TagList"), type.Name);
+            Assert.IsNull(type.GetProperty("TotalViewCount"), type.Name);
+        }
 
-        var prop = typeof(WorkEntry).GetProperty(nameof(WorkEntry.IsFavorite));
-        Assert.IsNotNull(prop);
-        Assert.IsTrue(prop.CanRead);
-        Assert.IsFalse(prop.CanWrite);
+        Assert.IsNull(typeof(Illustration).GetProperty("LargeThumbnailUrl"));
+        Assert.IsNull(typeof(Illustration).GetProperty("MediumThumbnailUrl"));
+        Assert.IsNull(typeof(Illustration).GetProperty("SquareMediumThumbnailUrl"));
+        Assert.IsNull(typeof(Illustration).GetProperty("OriginalSingleUrl"));
+        Assert.IsNull(typeof(BooruPost).GetProperty("FileUrl"));
+        Assert.IsNull(typeof(BooruPost).GetProperty("TotalFavorite"));
+        Assert.IsNull(typeof(IWorkEntry).GetProperty("RawId"));
+
+        var bookmarked = typeof(Illustration).GetProperty(nameof(Illustration.IsBookmarked));
+        Assert.IsNotNull(bookmarked);
+        Assert.IsTrue(bookmarked.CanRead);
+        Assert.AreEqual(DesignHelper.DesignIllustration.IsBookmarked, bookmarked.GetValue(DesignHelper.DesignIllustration));
+        Assert.IsNotNull(typeof(Illustration).GetProperty(nameof(Illustration.Tooltip)));
+        Assert.IsNotNull(typeof(Illustration).GetProperty(nameof(Illustration.AspectRatio)));
+        Assert.IsNotNull(typeof(Illustration).GetProperty(nameof(Illustration.SizeText)));
+        Assert.IsNotNull(typeof(IWorkEntry).GetProperty(nameof(IWorkEntry.Id)));
+        Assert.IsNotNull(typeof(IWorkEntry).GetProperty(nameof(IWorkEntry.User)));
+        Assert.IsNotNull(typeof(IWorkEntry).GetProperty(nameof(IWorkEntry.Title)));
+        Assert.IsNotNull(typeof(IWorkEntry).GetProperty(nameof(IWorkEntry.Series)));
     }
 }

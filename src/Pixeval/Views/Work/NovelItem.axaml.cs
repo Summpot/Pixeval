@@ -36,7 +36,7 @@ public partial class NovelItem : WorkItem
         if (sender is not Control { DataContext: Novel vm })
             return;
         var nav = App.Services?.GetService<INavigationService>() ?? new NavigationService();
-        nav.NavigateToUser(vm.Entry.User.Id, this);
+        nav.NavigateToUser(vm.User.Id, this);
     }
 
     private void InputElement_OnPointerEntered(object? sender, PointerEventArgs e)

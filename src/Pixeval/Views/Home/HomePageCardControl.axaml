@@ -189,7 +189,7 @@
                                             DockPanel.Dock="Bottom"
                                             FontSize="12"
                                             MaxLines="1"
-                                            Text="{Binding Entry.Title}"
+                                            Text="{Binding Title}"
                                             TextTrimming="CharacterEllipsis"
                                             TextWrapping="Wrap" />
                                         <Border ClipToBounds="True" CornerRadius="{StaticResource ControlCornerRadius}">

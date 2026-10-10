@@ -59,7 +59,7 @@ public static class ArtworkInfoExtensions
             Illustration illust => illust.TotalBookmarks,
             Novel novel => novel.TotalBookmarks,
             BooruPost booru => booru.Score,
-            WorkEntry we => (long) we.TotalFavorite,
+            WorkEntry we => GetBookmarks(we.AsWorkEntry),
             _ => 0
         };
 

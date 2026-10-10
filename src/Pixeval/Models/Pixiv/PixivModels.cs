@@ -15,7 +15,6 @@ namespace Pixeval.Models.Pixiv;
 public interface IWorkEntry
 {
     long Id { get; }
-    long RawId => Id;
     User User { get; }
     string Title { get; }
     Series? Series => null;

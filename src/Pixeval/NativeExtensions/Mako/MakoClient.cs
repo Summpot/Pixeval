@@ -32,8 +32,8 @@ public partial class MakoClient
         var policyStr = privately ? "private" : "public";
         var tagList = tags is null ? null : new List<string>(tags);
         var result = await (favorite
-            ? PostBookmarkAsync(isNovel, entry.RawId, policyStr, tagList)
-            : RemoveBookmarkAsync(isNovel, entry.RawId));
+            ? PostBookmarkAsync(isNovel, entry.Id, policyStr, tagList)
+            : RemoveBookmarkAsync(isNovel, entry.Id));
         if (result.Success)
         {
             ArtworkUiStateStore.SetBookmarkState(entry, favorite);

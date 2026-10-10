@@ -135,10 +135,10 @@ public class WorkInfoPane : TemplatedControl
         {
             case Illustration illust:
                 WorkTitle = illust.Title;
-                WorkDescription = illust.Description;
+                WorkDescription = illust.Caption;
                 WorkId = illust.Id.ToString();
                 TotalView = illust.TotalView;
-                TotalFavorite = illust.TotalFavorite;
+                TotalFavorite = illust.TotalBookmarks;
                 CreateDate = illust.CreateDateOffset;
                 Authors = [new WorkInfoUser(illust.User.Id.ToString(), illust.User.Name, illust.User.AvatarUrl, illust.User)];
                 Uploaders = [];
@@ -148,10 +148,10 @@ public class WorkInfoPane : TemplatedControl
                 break;
             case Novel novel:
                 WorkTitle = novel.Title;
-                WorkDescription = novel.Description;
+                WorkDescription = novel.Caption;
                 WorkId = novel.Id.ToString();
                 TotalView = novel.TotalView;
-                TotalFavorite = novel.TotalFavorite;
+                TotalFavorite = novel.TotalBookmarks;
                 CreateDate = novel.CreateDateOffset;
                 Authors = [new WorkInfoUser(novel.User.Id.ToString(), novel.User.Name, novel.User.AvatarUrl, novel.User)];
                 Uploaders = [];
@@ -164,7 +164,7 @@ public class WorkInfoPane : TemplatedControl
                 WorkDescription = booru.Description;
                 WorkId = booru.Id;
                 TotalView = booru.TotalViewCount >= 0 ? booru.TotalViewCount : 0;
-                TotalFavorite = booru.TotalFavorite;
+                TotalFavorite = booru.Score;
                 CreateDate = booru.CreateDateOffset;
                 Authors = [];
                 Uploaders = !string.IsNullOrWhiteSpace(booru.UploaderName)

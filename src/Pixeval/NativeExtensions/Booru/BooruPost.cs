@@ -28,9 +28,6 @@ public partial record BooruPost : IArtworkSerializable
     public string? ThumbnailUrl => PreviewUrl ?? SampleUrl ?? OriginalUrl;
 
     [JsonIgnore]
-    public string? FileUrl => OriginalUrl;
-
-    [JsonIgnore]
     public string? LargeFileUrl => SampleUrl ?? OriginalUrl;
 
     [JsonIgnore]
@@ -53,9 +50,6 @@ public partial record BooruPost : IArtworkSerializable
 
     [JsonIgnore]
     public DateTimeOffset CreateDateOffset => DateTimeOffset.TryParse(CreatedAt, out var dt) ? dt : default;
-
-    [JsonIgnore]
-    public int TotalFavorite => Score;
 
     [JsonIgnore]
     public int TotalViewCount => -1;

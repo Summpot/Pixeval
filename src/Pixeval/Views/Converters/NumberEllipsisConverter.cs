@@ -14,12 +14,15 @@ public class NumberEllipsisConverter : IValueConverter
     {
         var v = value switch
         {
-            int d => d,
+            int d => (double) d,
+            long d => d,
             float d => d,
             double d => d,
             _ => throw new ArgumentException($"{nameof(value)} should be a number", nameof(value))
         };
-        return v < 1000 ? v.ToString(culture) : $"{v / 1000d:0.#}k";
+        if (v < 1000)
+            return v % 1d == 0d ? ((long) v).ToString(culture) : v.ToString(culture);
+        return $"{v / 1000d:0.#}k";
     }
 
     /// <inheritdoc />

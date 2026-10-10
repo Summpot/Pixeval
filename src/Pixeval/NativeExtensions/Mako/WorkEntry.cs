@@ -17,40 +17,17 @@ public abstract partial record WorkEntry : IWorkEntry, IArtworkSerializable
         _ => throw new InvalidOperationException("Unsupported work entry type")
     };
 
-    public long RawId => AsWorkEntry.RawId;
-
     public long Id => AsWorkEntry.Id;
 
     public User User => AsWorkEntry.User;
 
     public string Title => AsWorkEntry.Title;
 
-    public string Description => this switch
-    {
-        Illust i => i.Illustration.Description,
-        NovelWork n => n.Novel.Description,
-        _ => ""
-    };
-
     public DateTimeOffset CreateDateOffset => this switch
     {
         Illust i => i.Illustration.CreateDateOffset,
         NovelWork n => n.Novel.CreateDateOffset,
         _ => default
-    };
-
-    public int TotalFavorite => this switch
-    {
-        Illust i => i.Illustration.TotalFavorite,
-        NovelWork n => n.Novel.TotalFavorite,
-        _ => 0
-    };
-
-    public int TotalViewCount => this switch
-    {
-        Illust i => i.Illustration.TotalViewCount,
-        NovelWork n => n.Novel.TotalViewCount,
-        _ => 0
     };
 
     public Uri WebsiteUri => this switch
@@ -86,13 +63,6 @@ public abstract partial record WorkEntry : IWorkEntry, IArtworkSerializable
         Illust i => (int) i.Illustration.Height,
         NovelWork n => n.Novel.Height,
         _ => 0
-    };
-
-    public bool IsFavorite => this switch
-    {
-        Illust i => i.Illustration.IsFavorite,
-        NovelWork n => n.Novel.IsFavorite,
-        _ => false
     };
 
     public bool IsAiGenerated => this switch

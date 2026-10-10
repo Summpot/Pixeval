@@ -157,7 +157,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             NextWorkCommand.NotifyCanExecuteChanged();
             PrevWorkCommand.NotifyCanExecuteChanged();
 
-            if (!_suppressMarkerSync && CurrentNovel is { Entry.Id: var novelId } && novelId > 0 && PageCount > 0)
+            if (!_suppressMarkerSync && CurrentNovel is { Id: var novelId } && novelId > 0 && PageCount > 0)
             {
                 SyncMarkerDebounced(novelId, value);
             }

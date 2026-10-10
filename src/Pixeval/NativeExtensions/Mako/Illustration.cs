@@ -46,34 +46,10 @@ public partial record Illustration : IWorkEntry, IArtworkSerializable
     }
 
     [JsonIgnore]
-    public Illustration Entry => this;
-
-    [JsonIgnore]
-    public bool IsFavorite => IsBookmarked;
-
-    [JsonIgnore]
-    public long RawId => Id;
-
-    [JsonIgnore]
     public string Platform => PlatformConstants.Pixiv;
 
     [JsonIgnore]
-    public string Description => Caption;
-
-    [JsonIgnore]
     public DateTimeOffset CreateDateOffset => DateTimeOffset.TryParse(CreateDate, out var dt) ? dt : default;
-
-    [JsonIgnore]
-    public int TotalFavorite => (int) TotalBookmarks;
-
-    [JsonIgnore]
-    public int TotalViewCount => (int) TotalView;
-
-    [JsonIgnore]
-    public User Author => User;
-
-    [JsonIgnore]
-    public IReadOnlyList<Tag> TagList => Tags;
 
     [JsonIgnore]
     public IllustrationType Type => IllustType switch
@@ -87,19 +63,7 @@ public partial record Illustration : IWorkEntry, IArtworkSerializable
     public int SetIndex { get; init; } = -1;
 
     [JsonIgnore]
-    public string? OriginalSingleUrl => MetaSinglePage?.OriginalImageUrl;
-
-    [JsonIgnore]
-    public string? LargeThumbnailUrl => ImageUrls?.Large;
-
-    [JsonIgnore]
-    public string? MediumThumbnailUrl => ImageUrls?.Medium;
-
-    [JsonIgnore]
-    public string? SquareMediumThumbnailUrl => ImageUrls?.SquareMedium;
-
-    [JsonIgnore]
-    public string? OriginalUrl => OriginalSingleUrl ?? ImageUrls?.Original ?? ImageUrls?.Large ?? ImageUrls?.Medium;
+    public string? OriginalUrl => MetaSinglePage?.OriginalImageUrl ?? ImageUrls?.Original ?? ImageUrls?.Large ?? ImageUrls?.Medium;
 
     [JsonIgnore]
     public bool IsPicGif => string.Equals(IllustType, "ugoira", StringComparison.OrdinalIgnoreCase);

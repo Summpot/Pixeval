@@ -2,8 +2,6 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json.Serialization;
 using Pixeval.Models;
 using Pixeval.Models.Blocking;
@@ -30,15 +28,6 @@ public partial record Novel : IWorkEntry, IArtworkSerializable
     public string Tooltip => Title;
 
     [JsonIgnore]
-    public Novel Entry => this;
-
-    [JsonIgnore]
-    public bool IsFavorite => IsBookmarked;
-
-    [JsonIgnore]
-    public long RawId => Id;
-
-    [JsonIgnore]
     public string Platform => PlatformConstants.Pixiv;
 
     [JsonIgnore]
@@ -48,22 +37,7 @@ public partial record Novel : IWorkEntry, IArtworkSerializable
     public int Height => 0;
 
     [JsonIgnore]
-    public string Description => Caption;
-
-    [JsonIgnore]
     public DateTimeOffset CreateDateOffset => DateTimeOffset.TryParse(CreateDate, out var dt) ? dt : default;
-
-    [JsonIgnore]
-    public int TotalFavorite => (int) TotalBookmarks;
-
-    [JsonIgnore]
-    public int TotalViewCount => (int) TotalView;
-
-    [JsonIgnore]
-    public User Author => User;
-
-    [JsonIgnore]
-    public IReadOnlyList<Tag> TagList => Tags;
 
     [JsonIgnore]
     public Uri WebsiteUri => new($"https://www.pixiv.net/novel/show.php?id={Id}");

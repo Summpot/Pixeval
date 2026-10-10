@@ -95,7 +95,7 @@
                         x:Name="DescriptionBlock"
                         Margin="0,30,0,10"
                         Padding="10,0"
-                        Markdown="{Binding Entry.Description}"
+                        Markdown="{Binding Caption}"
                         Opacity="0">
                         <controls:MarkdownBox.Transitions>
                             <Transitions>
@@ -133,7 +133,7 @@
                 <TextBlock
                     DockPanel.Dock="Top"
                     MaxLines="3"
-                    Text="{Binding Entry.Title, Mode=OneTime}"
+                    Text="{Binding Title, Mode=OneTime}"
                     TextTrimming="CharacterEllipsis"
                     TextWrapping="Wrap"
                     Theme="{StaticResource CaptionStrongTextBlockStyle}" />
@@ -142,7 +142,7 @@
                         VerticalAlignment="Bottom"
                         DockPanel.Dock="Right"
                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                        Text="{Binding Entry.CreateDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}"
+                        Text="{Binding CreateDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}"
                         TextTrimming="CharacterEllipsis"
                         Theme="{StaticResource BodyTextBlockStyle}" />
                     <Button Padding="2" Click="AuthorButton_OnClick">
@@ -150,7 +150,7 @@
                             x:Name="AuthorTextBlock"
                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             MaxLines="1"
-                            Text="{Binding Entry.User.Name}"
+                            Text="{Binding User.Name}"
                             TextTrimming="CharacterEllipsis"
                             TextWrapping="Wrap"
                             Theme="{StaticResource BodyTextBlockStyle}" />
@@ -163,15 +163,15 @@
                     <controls:IconText
                         DockPanel.Dock="Right"
                         Symbol="TextAlignLeft"
-                        Text="{Binding Entry.TextLength, Converter={x:Static converters:PixevalConverters.NumberEllipsis}}" />
+                        Text="{Binding TextLength, Converter={x:Static converters:PixevalConverters.NumberEllipsis}}" />
                     <controls:IconText
                         DockPanel.Dock="Right"
                         Symbol="Heart"
-                        Text="{Binding Entry.TotalFavorite, Converter={x:Static converters:PixevalConverters.NumberEllipsis}}" />
+                        Text="{Binding TotalBookmarks, Converter={x:Static converters:PixevalConverters.NumberEllipsis}}" />
                     <controls:IconText
                         DockPanel.Dock="Right"
                         Symbol="Eye"
-                        Text="{Binding Entry.TotalView, Converter={x:Static converters:PixevalConverters.NumberEllipsis}}" />
+                        Text="{Binding TotalView, Converter={x:Static converters:PixevalConverters.NumberEllipsis}}" />
                 </DockPanel>
                 <DockPanel
                     DockPanel.Dock="Bottom"
@@ -179,15 +179,15 @@
                     LastChildFill="False">
                     <controls:PixevalBadge
                         DockPanel.Dock="Left"
-                        IsVisible="{Binding Entry.IsAiGenerated}"
+                        IsVisible="{Binding IsAiGenerated}"
                         Mode="Ai" />
                     <controls:PixevalBadge DockPanel.Dock="Left"
-                                           Mode="{Binding Entry.XRestrict, Converter={x:Static converters:PixevalConverters.RestrictBadgeModeConverter}}" />
+                                           Mode="{Binding XRestrict, Converter={x:Static converters:PixevalConverters.RestrictBadgeModeConverter}}" />
                 </DockPanel>
                 <ItemsControl
                     x:Name="TagsList"
                     DockPanel.Dock="Top"
-                    ItemsSource="{Binding Entry.Tags}">
+                    ItemsSource="{Binding Tags}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel ItemSpacing="5" LineSpacing="5" />
