@@ -101,9 +101,8 @@ flowchart TD
         P3_6["3.6 [专项] 网络韧性与会话安全防护 [已完成]<br/>【吸收修复】H7(通用API端点), H8(用户横幅), H10(鉴权失效同步), H11(MyId防护), 2.3(429限流串行化)"]
     end
 
-    subgraph Phase4 ["Phase 4: 表现层极致瘦身与跨平台交付 (Thin UI 终局)"]
+    subgraph Phase4 ["Phase 4: 表现层极致瘦身 (Thin UI 终局) [已完成]"]
         P4_1["4.1 ViewModel 彻底去业务化 (纯 Reactive Binding) [已完成]<br/>【物理清退】删除 8 个 *ItemViewModel 包装类；XAML 直绑原生模型；快照计算下沉至 Rust"]
-        P4_2["4.2 统一跨平台 CI/CD (Windows / Linux / macOS) [待启动]"]
     end
 
     subgraph Phase5 ["Phase 5: 深度领域业务与系统底层全量下沉 (达成 100% Rust Core) [已完成]"]
@@ -140,12 +139,20 @@ flowchart TD
         P8_4["8.4 基础设施归入 Common [已完成]<br/>• Collections、Converters、Markup、Logging、IO 收编至 Common<br/>• 保留 i18n 与各 crate 目录。特性命名空间仍为 Pixeval.Attributes"]
     end
 
+    subgraph Phase9 ["Phase 9: Avalonia 表现层现代化与反模式消除 (Avalonia Modernization) [待启动]"]
+        P9_1["9.1 MVVM 纯粹化与 Code-Behind 彻底减负<br/>• SearchPage/SettingsMainView 业务抽取至 ViewModel<br/>• 消除 async void，全面转为强类型 [RelayCommand]<br/>• WorkView DataTemplate 移除事件转发，改走路由命令与行为"]
+        P9_2["9.2 UI 上下文解耦与视觉树硬依赖拔除<br/>• 建立 IDialogService / IClipboardService / INotificationService<br/>• 彻底消除 TopLevel.GetTopLevel 视觉树爬取与 ViewContainer 强耦合<br/>• 拔除 Code-Behind 中 App.Services! 伪 IoC 坏味道"]
+        P9_3["9.3 虚拟化面板与容器回收现代化<br/>• 重构 WorkListBox，回归 Avalonia 11 原生 ItemContainerGenerator 与 recycleKey<br/>• 优化自定义虚拟化面板，消除缩放与动态调整时的排版抖动"]
+        P9_4["9.4 图像异步加载与控件生命周期响应式重构<br/>• 重构 Source.cs 附加属性加载管道<br/>• 消除手动 AddClassHandler 与生命周期字典，提高长列表滚动帧率"]
+    end
+
     Phase2 --> Phase3
     Phase3 --> Phase4
     Phase4 --> Phase5
     Phase5 --> Phase6
     Phase6 --> Phase7
     Phase7 --> Phase8
+    Phase8 --> Phase9
 ```
 
 ---
@@ -317,7 +324,7 @@ flowchart TD
 
 ---
 
-### 阶段 4：表现层极致瘦身与跨平台交付 (Phase 4)
+### 阶段 4：表现层极致瘦身 (Phase 4: Thin UI) (已完成)
 
 #### 4.1 ViewModel 彻底去业务化 (纯 Reactive Binding) (已完成)
 - **功能目标**：
@@ -368,10 +375,6 @@ flowchart TD
   - 表现层 100% 消除 `*ItemViewModel` 实体包装类，XAML DataTemplate 均以 `Pixeval.Native.*` 原生实体为 DataContext。
   - 列表滚动流无任何包装堆分配，长列表 GC 停顿时间显著下降；下载中心与作品查看器无任何 UI 线程卡顿。
   - 全工程编译通过，警告数为 0，现有自动化测试全绿通过。
-
-#### 4.2 统一跨平台 CI/CD 流水线 (待启动)
-- **目标**：
-  - 配置 GitHub Actions 原生矩阵编译：Windows (`x86_64-pc-windows-msvc`), Linux (`x86_64-unknown-linux-gnu`), macOS (`aarch64-apple-darwin`, `x86_64-apple-darwin`)，实现全平台 Native 动态库与 Avalonia 前端的一键交叉编译与分发。
 
 ---
 
@@ -808,6 +811,76 @@ src/Pixeval/
   - [x] 顶层目录为 `Assets`、`Booru`、`Cache`、`Common`、`Config`、`Controls`、`Download`、`Filters`、`i18n`、`Mako`、`Media`、`Pixiv`、`SauceNao`、`Services`、`Storage`、`Subscription`、`Themes`、`Update`、`ViewModels`、`Views`。
   - [x] `Pixeval`、`Pixeval.Desktop`、`Pixeval.Tests` 编译 0 警告、0 错误。`EnableMcp=false` 时应用工程同样通过。
   - [x] `Pixeval.Tests` 全量套件通过。唯一跳过项是本机缺少扩展宿主原生库时，`InstalledExtensionHostsShouldLoadAndExposeMetadata` 既有的 Inconclusive。
+
+---
+
+### 阶段 9：Avalonia 表现层现代化与反模式消除 (Phase 9: Avalonia Modernization & Anti-Pattern Remediation) [待启动]
+
+在 Phase 2 至 Phase 7 的 Rust 下沉以及 Phase 8 的目录拓扑与命名空间彻底规范化之后，Pixeval 的领域内核与 Rust 运行时已经完全稳固（UniFFI 直绑，无 DTO/Adapter 包装）。然而，表现层代码中仍遗留着大量由于历史演化和 WPF/UWP 习惯带来的 Avalonia 反模式：
+
+1. **Code-Behind 越俎代庖充当 Presenter**：`SearchPage.axaml.cs`（超 500 行）、`SettingsMainView.axaml.cs`（近 300 行）等文件充斥着防抖、计时器、取消逻辑、事件捕获与跨视图跳转编排；多处存在 `async void` 事件处理器（未捕获异常直接造成进程级崩溃）；`WorkView.axaml` 中 DataTemplate 卡片通过 C# 自定义事件转发业务请求。
+2. **视觉树爬取与服务定位器乱象 (Visual Tree Crawling & Anti-Pattern Service Location)**：跨控件通信和系统弹窗/剪贴板/通知充斥着 `TopLevel.GetTopLevel(this)?.ViewContainer`（依赖控件必须 Attached to Visual Tree，若未挂载或生命周期失步则静默失效或抛出 NRE）；多处 View 的 Code-Behind 直接通过 `App.Services!.GetRequiredService<T>()` 甚至 `App.Services?.GetService<INavigationService>() ?? new NavigationService()` 手动提取依赖，将 View 变成了粗糙的编排器。
+3. **虚拟化与容器回收摩擦 (Virtualization Friction)**：`WorkListBox` 在 `PrepareContainerForItemOverride` 中手动通过 `FindDataTemplate().Build()` 强行干预 ItemContainerGenerator 内部生命周期；自定义面板（`VirtualizingAdaptiveGrid`, `VirtualizingWrapPanel`, `CachedVirtualizingPanel`）在窗口 Resize、DPI 切换或长列表滚动时存在偶发抖动与 Measure/Arrange 开销。
+4. **非标准图像加载管道 (Image Loading Pipeline Over-engineering)**：`Source.cs` 附加属性依靠静态构造函数挂载 `AddClassHandler` 与内部 `SourceLoadLifetime` 字典追踪控件生命周期，并直接静态耦合 `App.Services`，在长列表高速滚动中引入不必要的生命周期簿记与 GC 压力。
+
+阶段 9 聚焦于将 Avalonia 表现层彻底现代化，拔除所有反模式，使代码质量与架构纯净度达到专业级现代 XAML 应用标准。
+
+#### 9.1 MVVM 纯粹化与 Code-Behind 彻底减负 (View Code-Behind Decoupling & Pure MVVM)
+- **痛点与反模式**：
+  - `SearchPage.axaml.cs`（510 行）充当巨石 Presenter，手写搜索防抖逻辑、联想词补全调度、取消令牌追踪以及多子页路由。
+  - `SettingsMainView.axaml.cs`（293 行）包含大量设置项联动、弹窗编排及配置变更回写逻辑。
+  - 广泛存在 `async void` 事件处理器（如搜索输入、点击事件、页面导航），异常未被捕获时会导致不可控的应用崩溃。
+  - `WorkView.axaml` 中卡片项（`NovelItem`、`IllustrationItem`、`BooruItem`）通过 C# 自定义事件 `RequestAddToBookmark`、`RequestOpenUserInfoPage` 逐层冒泡至 `WorkView.axaml.cs`，破坏了声明式数据绑定的纯粹性。
+- **重构方案**：
+  - **搜索与设置 ViewModel 彻底收归业务**：将 `SearchPage.axaml.cs` 中的防抖（Debounce）、取消令牌管理、标签联想补全状态、搜索模式切换全面下沉至 `SearchPageViewModel`；将 `SettingsMainView.axaml.cs` 中的设置导航、导入导出及重置逻辑迁入 `SettingsPageViewModel`。
+  - **消除 `async void`，全面拥抱强类型 `[RelayCommand]`**：所有异步交互改写为 CommunityToolkit.Mvvm 的 `[RelayCommand]`，自动获得 `AsyncRelayCommand` 提供的生命周期控制、异常隔离以及执行中的并发与禁用状态控制（`CanExecute`）。
+  - **卡片交互声明式重构**：`WorkView` DataTemplate 中的卡片彻底移除自定义 C# 事件转发机制，改用 RoutedCommand、强类型 Attached Behavior 或直接数据绑定到统一的强类型命令（如 `IArtworkActionService` 关联命令或顶级路由命令）。
+- **验收标准**：
+  - [ ] `SearchPage.axaml.cs` 与 `SettingsMainView.axaml.cs` 代码量显著削减（原则上仅保留必要的纯视觉交互与初始化），业务逻辑全部在对应 ViewModel 闭环。
+  - [ ] 整个 `Views/` 目录下消除所有非 Avalonia 框架必需的 `async void` 方法，全面转为 `IAsyncRelayCommand` 或 `Task` 封装。
+  - [ ] `WorkView.axaml` 模板中不再声明自定义 C# 事件监听，卡片操作通过声明式命令或行为触发。
+
+#### 9.2 UI 上下文解耦与视觉树硬依赖拔除 (Visual Tree Decoupling & UI Services)
+- **痛点与反模式**：
+  - 全工程有超过 40 处调用 `TopLevel.GetTopLevel(this)?.ViewContainer` 来显示通知（`ShowSuccess` / `ShowError` / `ShowWarning`）、弹出弹窗或访问 `Launcher` / `StorageProvider` / `Clipboard`。这种视觉树爬取对控件生命周期高度敏感（未挂载到视觉树时返回 `null` 并静默丢失操作），且使得表现层逻辑无法进行隔离单元测试。
+  - 大量 View 的 Code-Behind（如 `WorkBookmarksPage`、`WorkFollowingPage`、`WorkInfoPane` 等）充斥着 `App.Services!.GetRequiredService<T>()`，将 View 变成了粗糙的服务定位器与数据拉取调度器。
+- **重构方案**：
+  - **建立现代前端 UI 服务抽象**：
+    - `INotificationService`：提供强类型的应用内通知展示（`ShowSuccess`, `ShowError`, `ShowWarning`, `ShowInfo`），支持基于主容器的通知队列与非侵入式弹框。
+    - `IDialogService`：统一的内容对话框与确认弹窗调度服务，摆脱直接持有窗口句柄。
+    - `IClipboardService`：跨平台的文本/图像剪贴板读写门面。
+    - `IStoragePickerService`：文件/文件夹选择与保存抽象。
+    - `ILauncherService`：外部 URL 与系统文件管理器打开抽象。
+  - **视觉树解耦与生命周期安全托管**：由顶级窗口/主外壳容器（`MainWindow` / `TabViewContainer`）在初始化与生命周期挂载时作为提供者向 UI 服务注入 `TopLevel` / 宿主引用，ViewModel 与辅助逻辑直接注入 UI 服务接口，彻底移除代码中的 `TopLevel.GetTopLevel(this)?.ViewContainer` 链式调用。
+  - **彻底拔除 View Code-Behind 中的伪 IoC 服务定位**：属于页面呈现与布局参数的，通过 `{di:Service}` 标记扩展在 XAML 声明式消费；属于业务交互与数据拉取的，由对应 ViewModel 统一通过构造函数依赖注入，View 不再负责业务客户端的解析。
+- **验收标准**：
+  - [ ] 消除业务 View 中对 `TopLevel.GetTopLevel(this)?.ViewContainer` 的直接调用，跨视图弹窗与通知全部经由统一 UI 服务分发。
+  - [ ] 业务 View Code-Behind 中不再出现裸调 `App.Services!.GetRequiredService<...>()` 拉取领域引擎或网络客户端的行为。
+  - [ ] 新增的 UI 服务抽象支持单元测试 Mock / Stub 注入，确保无 UI 树环境下核心交互可测试。
+
+#### 9.3 虚拟化面板与容器回收现代化 (Modern Virtualization & Clean Container Recycling)
+- **痛点与反模式**：
+  - `WorkListBox.cs` 在 `PrepareContainerForItemOverride` 中通过 `this.FindDataTemplate(item)?.Build(item)` 手工实例化 `WorkItem` 并强行赋值给 `ListBoxItem.Content`，通过 `AttachedProperty` 追踪内部卡片并手工触发 `Recycle()`。这种做法违背了 Avalonia 11 的原生 `ItemContainerGenerator` 回收管线设计，绕过了框架的数据模板生命周期与动态回收机制。
+  - `Controls/Panels/` 下的自定义虚拟化面板（`VirtualizingAdaptiveGrid`、`VirtualizingWrapPanel`、`CachedVirtualizingPanel`）在窗口宽度动态变动或高 DPI 缩放比例切换时，存在偶发的排版跳动、余量舍入误差及不必要的重新 Measure/Arrange。
+- **重构方案**：
+  - **回归 Avalonia 11 原生 ItemContainerGenerator 体系**：重构 `WorkListBox`，移除侵入式的模板手动构建与附加属性生命周期劫持，遵循 Avalonia 11 标准的容器重用模式（利用 `ItemContainerGenerator`、`recycleKey` 以及标准的模板池机制），将作品卡片的重用、挂载与数据绑定交给 Avalonia 框架原生流转。
+  - **优化与现代化虚拟化面板**：对 `VirtualizingAdaptiveGrid` 与 `VirtualizingWrapPanel` 等自定义面板的滚动步长计算、边界舍入、DPI 补偿与视口缓存范围进行全面审查与优化，消除缩放时的布局颤动与长列表高速滑动时的掉帧。
+- **验收标准**：
+  - [ ] `WorkListBox` 移除侵入式的 `FindDataTemplate().Build()` 手动模板构建逻辑，完全遵循 Avalonia 11 容器回收规范。
+  - [ ] 在窗口频繁缩放、DPI 切换以及快速连续滚动的场景下，作品流列表排版稳定无抖动，无容器错位或模板泄露。
+  - [ ] 列表滑动帧率平稳，GC 停顿维持在极低水平。
+
+#### 9.4 图像异步加载与控件生命周期响应式重构 (Image Loading Pipeline Modernization)
+- **痛点与反模式**：
+  - `Controls/Source.cs`（近 500 行）采用静态构造函数为 `AnimatedImage`、`AvatarImage`、`Image`、`Border`、`Panel` 注册 `AddClassHandler`，并使用静态属性 `Images => App.Services!.GetRequiredService<IImageProviderService>()`，设计过度且与 DI 容器静态耦合。
+  - 内部依赖 `SourceLoadLifetime`、`SourceLoadOperation` 及多个附加属性字典在控件外部跟踪加载与取消，长列表滚动飞划时存在多重取消调度摩擦与生命周期异步竞态。
+- **重构方案**：
+  - **轻量响应式附加属性加载管线**：重构 `Source.cs` 附加属性体系，消除重量级全局 `AddClassHandler` 和外部生命周期字典，改为利用 Avalonia 标准的 `GetObservable(...)` 响应式流配合控件原生生命周期（`AttachedToVisualTree` / `DetachedFromVisualTree`）。
+  - **健壮的图片取消与缓存回填流**：依托已有的 `IImageProviderService` 与底层 `CacheEngine`，优化加载令牌（CancellationToken）取消粒度，确保在控件被虚拟化回收或重用时能够毫秒级中断未完成的磁盘/网络解码任务，杜绝图片错位重叠与无效内存占用。
+- **验收标准**：
+  - [ ] `Source.cs` 剥离静态服务定位器耦合与重型 `AddClassHandler` 字典跟踪，管线清晰可维护。
+  - [ ] 在万级图库高速快速滑动时，图像请求能即时取消与复用，无内存泄漏、无图片显示错位。
+  - [ ] 全工程 0 编译错误、0 警告，现有自动化测试套件全绿通过。
 
 
 
