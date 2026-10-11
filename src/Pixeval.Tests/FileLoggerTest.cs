@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Utilities;
+using Pixeval.Common.Logging;
 
 namespace Pixeval.Tests;
 

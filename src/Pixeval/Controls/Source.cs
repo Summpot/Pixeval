@@ -10,17 +10,23 @@ using AnimatedControls.Avalonia;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
-using Avalonia.Interactivity;
 using Avalonia.Media;
-using Avalonia.Threading;
-using Misaki;
+using Avalonia.Media.Imaging;
+using Pixeval.Pixiv;
+using Pixeval.Services.Media;
 using Pixeval.Utilities;
-using Pixeval.Utilities.IO.Caching;
 
 namespace Pixeval.Controls;
 
 public static class Source
 {
+    public static readonly AttachedProperty<IImageProviderService?> ImageProviderProperty =
+        AvaloniaProperty.RegisterAttached<Control, IImageProviderService?>(
+            "ImageProvider",
+            typeof(Source),
+            defaultValue: null,
+            inherits: true);
+
     public static readonly AttachedProperty<string?> CacheProperty =
         AvaloniaProperty.RegisterAttached<Control, string?>(
             "Cache",
@@ -39,12 +45,6 @@ public static class Source
             typeof(Source),
             defaultValue: false);
 
-    public static readonly AttachedProperty<Control?> DecodeTargetProperty =
-        AvaloniaProperty.RegisterAttached<Image, Control?>("DecodeTarget", typeof(Source));
-
-    private static readonly AttachedProperty<SizedImageLoader?> SizedImageLoaderProperty =
-        AvaloniaProperty.RegisterAttached<Image, SizedImageLoader?>("SizedImageLoader", typeof(Source));
-
     private static readonly AttachedProperty<SourceLoadLifetime?> CacheLoadLifetimeProperty =
         AvaloniaProperty.RegisterAttached<Control, SourceLoadLifetime?>(
             "CacheLoadLifetime",
@@ -62,20 +62,26 @@ public static class Source
         AvaloniaProperty.RegisterAttached<Control, string>(
             "Platform",
             typeof(Source),
-            defaultValue: IPlatformInfo.Pixiv);
+            defaultValue: PlatformConstants.Pixiv);
+
+    private static readonly AttachedProperty<bool> IsDetachedHookedProperty =
+        AvaloniaProperty.RegisterAttached<Control, bool>(
+            "IsDetachedHooked",
+            typeof(Source),
+            defaultValue: false);
 
     static Source()
     {
-        _ = CacheProperty.Changed.AddClassHandler<AnimatedImage>(OnAnimatedImageChanged);
-        _ = CacheProperty.Changed.AddClassHandler<AvatarImage>(OnAvatarImageChanged);
-        _ = CacheProperty.Changed.AddClassHandler<Image>(OnImageChanged);
-        _ = DecodeTargetProperty.Changed.AddClassHandler<Image>(OnDecodeTargetChanged);
-        _ = PlatformProperty.Changed.AddClassHandler<Image>((image, _) => image.GetValue(SizedImageLoaderProperty)?.UpdateRequest());
-
-        _ = BackgroundCacheProperty.Changed.AddClassHandler<Border>(OnBorderBackgroundCacheChanged);
-        _ = BackgroundCacheProperty.Changed.AddClassHandler<Panel>(OnPanelBackgroundCacheChanged);
-        _ = BackgroundCacheProperty.Changed.AddClassHandler<TemplatedControl>(OnTemplatedControlBackgroundCacheChanged);
+        CacheProperty.Changed.AddClassHandler<Control>(OnCacheChanged);
+        BackgroundCacheProperty.Changed.AddClassHandler<Control>(OnBackgroundCacheChanged);
+        ImageProviderProperty.Changed.AddClassHandler<Control>(OnImageProviderChanged);
     }
+
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public static IImageProviderService? GetImageProvider(Control element) => element.GetValue(ImageProviderProperty);
+
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public static void SetImageProvider(Control element, IImageProviderService? value) => element.SetValue(ImageProviderProperty, value);
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static string? GetCache(Control element) => element.GetValue(CacheProperty);
@@ -101,123 +107,64 @@ public static class Source
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static void SetPlatform(Control element, string value) => element.SetValue(PlatformProperty, value);
 
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public static Control? GetDecodeTarget(Image element) => element.GetValue(DecodeTargetProperty);
-
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public static void SetDecodeTarget(Image element, Control? value) => element.SetValue(DecodeTargetProperty, value);
-
-    private static void OnDecodeTargetChanged(Image element, AvaloniaPropertyChangedEventArgs e)
+    private static void OnImageProviderChanged(Control element, AvaloniaPropertyChangedEventArgs e)
     {
-        element.Source = null;
-        AbandonLoad(element, CacheLoadLifetimeProperty);
-        element.GetValue(SizedImageLoaderProperty)?.Dispose();
-        element.ClearValue(SizedImageLoaderProperty);
-        if (GetDecodeTarget(element) is { } target)
-            element.SetValue(SizedImageLoaderProperty, new SizedImageLoader(element, target));
-        OnImageChanged(element, e);
+        if (e.NewValue is not IImageProviderService images)
+        {
+            AbandonLoad(element, CacheLoadLifetimeProperty);
+            AbandonLoad(element, BackgroundCacheLoadLifetimeProperty);
+            return;
+        }
+
+        if (GetCache(element) is { } cacheKey && !GetLoaded(element))
+        {
+            LoadCacheCore(element, cacheKey, images);
+        }
+
+        if (GetBackgroundCache(element) is { } bgKey && !GetLoaded(element))
+        {
+            LoadBackgroundCacheCore(element, bgKey, images);
+        }
     }
 
-    private static async void OnAnimatedImageChanged(AnimatedImage element, AvaloniaPropertyChangedEventArgs e)
+    private static void OnCacheChanged(Control element, AvaloniaPropertyChangedEventArgs e)
     {
         if (e.GetNewValue<string>() is not { } value)
         {
-            element.Source = null;
+            ClearImageSource(element);
             AbandonLoad(element, CacheLoadLifetimeProperty);
             SetLoaded(element, false);
             return;
         }
 
-        element.Source = null;
+        ClearImageSource(element);
         SetLoaded(element, false);
+
+        if (GetImageProvider(element) is not { } images)
+            return;
+
+        LoadCacheCore(element, value, images);
+    }
+
+    private static async void LoadCacheCore(Control element, string value, IImageProviderService images)
+    {
         var lifetime = BeginLoad(element, CacheLoadLifetimeProperty);
         try
         {
-            var bitmap = await CacheHelper.GetAnimatedBitmapAsync(GetPlatform(element), value, token: lifetime.Token);
-            if (!lifetime.TrySetSource(bitmap))
-                return;
-            if (GetCache(element) != value)
+            IDisposable bitmap;
+            var platform = GetPlatform(element);
+            if (element is AnimatedImage or AvatarImage)
             {
-                lifetime.Dispose();
-                return;
+                bitmap = await images.GetAnimatedBitmapAsync(platform, value, token: lifetime.Token);
             }
-
-            element.Source = bitmap;
-            SetLoaded(element, true);
-        }
-        catch (OperationCanceledException) when (lifetime.Token.IsCancellationRequested)
-        {
-        }
-    }
-
-    private static async void OnAvatarImageChanged(AvatarImage element, AvaloniaPropertyChangedEventArgs e)
-    {
-        if (e.GetNewValue<string>() is not { } value)
-        {
-            element.Source = null;
-            AbandonLoad(element, CacheLoadLifetimeProperty);
-            SetLoaded(element, false);
-            return;
-        }
-
-        element.Source = null;
-        SetLoaded(element, false);
-        var lifetime = BeginLoad(element, CacheLoadLifetimeProperty);
-        try
-        {
-            var bitmap = await CacheHelper.GetAnimatedBitmapAsync(GetPlatform(element), value, token: lifetime.Token);
-            if (!lifetime.TrySetSource(bitmap))
-                return;
-            if (GetCache(element) != value)
+            else if (element is Image)
             {
-                lifetime.Dispose();
-                return;
+                bitmap = await images.GetBitmapAsync(platform, value, token: lifetime.Token);
             }
-
-            element.Source = bitmap;
-            SetLoaded(element, true);
-        }
-        catch (OperationCanceledException) when (lifetime.Token.IsCancellationRequested)
-        {
-        }
-    }
-
-    private static void OnImageChanged(Image element, AvaloniaPropertyChangedEventArgs e)
-    {
-        if (element.GetValue(SizedImageLoaderProperty) is { } loader)
-        {
-            loader.UpdateRequest();
-            return;
-        }
-
-        element.Source = null;
-        AbandonLoad(element, CacheLoadLifetimeProperty);
-        SetLoaded(element, false);
-        if (GetCache(element) is not { } value)
-            return;
-
-        // Let all template bindings settle, including the optional decode target.
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (GetCache(element) != value)
-                return;
-            if (element.GetValue(SizedImageLoaderProperty) is { } imageLoader)
-                imageLoader.UpdateRequest();
             else
-                _ = LoadImageAsync(element, value);
-        }, DispatcherPriority.Loaded);
-    }
-
-    private static async Task LoadImageAsync(Image element, string value)
-    {
-        var lifetime = BeginLoad(element, CacheLoadLifetimeProperty);
-        try
-        {
-            var bitmap = await CacheHelper.GetBitmapAsync(
-                GetPlatform(element),
-                value,
-                decodeToken: lifetime.DecodeToken,
-                token: lifetime.Token);
+            {
+                return;
+            }
 
             if (!lifetime.TrySetSource(bitmap))
                 return;
@@ -227,45 +174,20 @@ public static class Source
                 return;
             }
 
-            element.Source = bitmap;
+            SetImageSource(element, bitmap);
             SetLoaded(element, true);
         }
-        catch (OperationCanceledException) when (lifetime.Token.IsCancellationRequested || lifetime.DecodeToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (lifetime.Token.IsCancellationRequested)
         {
-            lifetime.Dispose();
         }
     }
 
-    private static async void OnBorderBackgroundCacheChanged(Border element, AvaloniaPropertyChangedEventArgs e)
+    private static void OnBackgroundCacheChanged(Control element, AvaloniaPropertyChangedEventArgs e)
     {
-        await OnBackgroundCacheChangedCore(
-            element,
-            e,
-            Border.BackgroundProperty);
-    }
+        var backgroundProperty = GetBackgroundProperty(element);
+        if (backgroundProperty is null)
+            return;
 
-    private static async void OnPanelBackgroundCacheChanged(Panel element, AvaloniaPropertyChangedEventArgs e)
-    {
-        await OnBackgroundCacheChangedCore(
-            element,
-            e,
-            Panel.BackgroundProperty);
-    }
-
-    private static async void OnTemplatedControlBackgroundCacheChanged(TemplatedControl element, AvaloniaPropertyChangedEventArgs e)
-    {
-        await OnBackgroundCacheChangedCore(
-            element,
-            e,
-            TemplatedControl.BackgroundProperty);
-    }
-
-    private static async Task OnBackgroundCacheChangedCore<TControl>(
-        TControl element,
-        AvaloniaPropertyChangedEventArgs e,
-        AvaloniaProperty<IBrush?> backgroundProperty)
-        where TControl : Control
-    {
         if (e.GetNewValue<string>() is not { } value)
         {
             element.ClearValue(backgroundProperty);
@@ -276,15 +198,23 @@ public static class Source
 
         element.ClearValue(backgroundProperty);
         SetLoaded(element, false);
+
+        if (GetImageProvider(element) is not { } images)
+            return;
+
+        LoadBackgroundCacheCore(element, value, images);
+    }
+
+    private static async void LoadBackgroundCacheCore(Control element, string value, IImageProviderService images)
+    {
+        var backgroundProperty = GetBackgroundProperty(element);
+        if (backgroundProperty is null)
+            return;
+
         var lifetime = BeginLoad(element, BackgroundCacheLoadLifetimeProperty);
         try
         {
-            var bitmap = await CacheHelper.GetBitmapAsync(
-                GetPlatform(element),
-                value,
-                decodeToken: lifetime.DecodeToken,
-                token: lifetime.Token);
-
+            var bitmap = await images.GetBitmapAsync(GetPlatform(element), value, token: lifetime.Token);
             if (!lifetime.TrySetSource(bitmap))
                 return;
             if (GetBackgroundCache(element) != value)
@@ -303,14 +233,54 @@ public static class Source
                 brush = new ImageBrush(bitmap) { Stretch = Stretch.UniformToFill };
             }
 
-            _ = element.SetValue(backgroundProperty, brush);
+            element.SetValue(backgroundProperty, brush);
             SetLoaded(element, true);
         }
-        catch (OperationCanceledException) when (lifetime.Token.IsCancellationRequested || lifetime.DecodeToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (lifetime.Token.IsCancellationRequested)
         {
-            lifetime.Dispose();
         }
     }
+
+    private static void ClearImageSource(Control element)
+    {
+        switch (element)
+        {
+            case AnimatedImage animatedImage:
+                animatedImage.Source = null;
+                break;
+            case AvatarImage avatarImage:
+                avatarImage.Source = null;
+                break;
+            case Image image:
+                image.Source = null;
+                break;
+        }
+    }
+
+    private static void SetImageSource(Control element, IDisposable bitmap)
+    {
+        switch (element)
+        {
+            case AnimatedImage animatedImage:
+                animatedImage.Source = (IAnimatedBitmap)bitmap;
+                break;
+            case AvatarImage avatarImage:
+                avatarImage.Source = (IAnimatedBitmap)bitmap;
+                break;
+            case Image image:
+                image.Source = (Bitmap)bitmap;
+                break;
+        }
+    }
+
+    private static AvaloniaProperty<IBrush?>? GetBackgroundProperty(Control element) =>
+        element switch
+        {
+            Border => Border.BackgroundProperty,
+            Panel => Panel.BackgroundProperty,
+            TemplatedControl => TemplatedControl.BackgroundProperty,
+            _ => null
+        };
 
     private static SourceLoadOperation BeginLoad(
         Control element,
@@ -322,8 +292,12 @@ public static class Source
             element.SetValue(lifetimeProperty, lifetime);
         }
 
-        TryRegisterLifetime(element, lifetime);
-        UpdateRegistrationRetry(element);
+        if (!element.GetValue(IsDetachedHookedProperty))
+        {
+            element.SetValue(IsDetachedHookedProperty, true);
+            element.DetachedFromVisualTree += OnElementDetached;
+        }
+
         return lifetime.BeginLoad();
     }
 
@@ -334,39 +308,24 @@ public static class Source
         element.GetValue(lifetimeProperty)?.AbandonCurrent();
     }
 
-    private static void OnElementLoaded(object? sender, RoutedEventArgs e)
+    private static void OnElementDetached(object? sender, VisualTreeAttachmentEventArgs e)
     {
         if (sender is not Control element)
             return;
 
-        if (element.GetValue(CacheLoadLifetimeProperty) is { } cacheLifetime)
-            TryRegisterLifetime(element, cacheLifetime);
-        if (element.GetValue(BackgroundCacheLoadLifetimeProperty) is { } backgroundLifetime)
-            TryRegisterLifetime(element, backgroundLifetime);
-        UpdateRegistrationRetry(element);
+        DisposeLifetime(element, CacheLoadLifetimeProperty);
+        DisposeLifetime(element, BackgroundCacheLoadLifetimeProperty);
     }
 
-    private static void TryRegisterLifetime(Control element, SourceLoadLifetime lifetime)
+    private static void DisposeLifetime(
+        Control element,
+        AttachedProperty<SourceLoadLifetime?> lifetimeProperty)
     {
-        if (lifetime.IsRegistered || lifetime.IsDisposed)
-            return;
-
-        var args = new ViewModelDisposalEventArgs(ViewModelDisposal.ViewModelDisposalEvent, lifetime);
-        element.RaiseEvent(args);
-        if (args.Handled)
-            lifetime.MarkRegistered();
-    }
-
-    private static void UpdateRegistrationRetry(Control element)
-    {
-        element.Loaded -= OnElementLoaded;
-        if (RequiresRegistration(element.GetValue(CacheLoadLifetimeProperty))
-            || RequiresRegistration(element.GetValue(BackgroundCacheLoadLifetimeProperty)))
-            element.Loaded += OnElementLoaded;
-        return;
-
-        static bool RequiresRegistration(SourceLoadLifetime? lifetime) =>
-            lifetime is { IsRegistered: false, IsDisposed: false };
+        if (element.GetValue(lifetimeProperty) is { } lifetime)
+        {
+            lifetime.Dispose();
+            element.ClearValue(lifetimeProperty);
+        }
     }
 }
 
@@ -376,13 +335,9 @@ internal sealed class SourceLoadLifetime : IDisposable
     private readonly HashSet<SourceLoadOperation> _operations = [];
     private SourceLoadOperation? _current;
 
-    public bool IsRegistered { get; private set; }
-
     public bool IsDisposed { get; private set; }
 
-    public void MarkRegistered() => IsRegistered = true;
-
-    public SourceLoadOperation BeginLoad(bool preserveCurrentSource = false)
+    public SourceLoadOperation BeginLoad()
     {
         var operation = new SourceLoadOperation(OnOperationDisposed);
         SourceLoadOperation? previous = null;
@@ -407,8 +362,7 @@ internal sealed class SourceLoadLifetime : IDisposable
 
         // Recycling a container only makes its old result obsolete. Let the cache fill finish so
         // virtualized scrolling doesn't turn every binding change into a canceled HTTP request.
-        if (!preserveCurrentSource)
-            previous?.Abandon();
+        previous?.Abandon();
         return operation;
     }
 
@@ -458,7 +412,6 @@ internal sealed class SourceLoadOperation : IDisposable
     private readonly Action<SourceLoadOperation> _onDisposed;
     private readonly Lock _gate = new();
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly CancellationTokenSource _decodeCancellationTokenSource = new();
     private IDisposable? _source;
     private bool _isAbandoned;
     private bool _isDisposed;
@@ -467,12 +420,9 @@ internal sealed class SourceLoadOperation : IDisposable
     {
         _onDisposed = onDisposed;
         Token = _cancellationTokenSource.Token;
-        DecodeToken = _decodeCancellationTokenSource.Token;
     }
 
     public CancellationToken Token { get; }
-
-    public CancellationToken DecodeToken { get; }
 
     public bool TrySetSource(IDisposable source)
     {
@@ -507,7 +457,6 @@ internal sealed class SourceLoadOperation : IDisposable
                 return;
 
             _isAbandoned = true;
-            _decodeCancellationTokenSource.Cancel();
             source = _source;
             _source = null;
             if (source is null)
@@ -539,9 +488,6 @@ internal sealed class SourceLoadOperation : IDisposable
 
     private void Complete(bool cancel)
     {
-        _decodeCancellationTokenSource.Cancel();
-        _decodeCancellationTokenSource.Dispose();
-
         if (cancel)
             _cancellationTokenSource.Cancel();
         _cancellationTokenSource.Dispose();

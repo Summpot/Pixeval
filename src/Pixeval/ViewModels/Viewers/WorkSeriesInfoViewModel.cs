@@ -10,12 +10,12 @@ public sealed record WorkSeriesInfoViewModel(
     WorkSeriesNavigationViewModel? Next = null,
     string? PositionText = null)
 {
-    public static WorkSeriesInfoViewModel? Create(Misaki.IArtworkInfo? work, SimpleWorkType workType)
+    public static WorkSeriesInfoViewModel? Create(object? work, SimpleWorkType workType)
     {
         var series = work switch
         {
-            Pixeval.Native.Mako.Illustration illust => illust.Series,
-            Pixeval.Native.Mako.Novel novel => novel.Series,
+            Pixeval.Mako.Illustration illust => illust.Series,
+            Pixeval.Mako.Novel novel => novel.Series,
             _ => null
         };
         return series is { Id: > 0 } s ? new(workType, s.Id, s.Title) : null;
@@ -37,7 +37,7 @@ public sealed record WorkSeriesInfoViewModel(
                 : null;
     }
 
-    public static WorkSeriesInfoViewModel? Create(NovelContent content, Pixeval.Native.Mako.Series? fallback)
+    public static WorkSeriesInfoViewModel? Create(NovelContent content, Pixeval.Mako.Series? fallback)
     {
         var id = content.SeriesId ?? fallback?.Id;
         if (id is not > 0)

@@ -5,10 +5,10 @@
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:fluent="using:FluentIcons.Avalonia"
-    xmlns:markup="using:Pixeval.Views.Markup"
+    xmlns:markup="using:Pixeval.Common.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:viewModels="using:Pixeval.ViewModels"
-    x:DataType="{x:Type viewModels:DownloadFolderViewModel}"
+    xmlns:download="using:Pixeval.Download"
+    x:DataType="{x:Type download:DownloadFolderSnapshot}"
     HorizontalAlignment="Stretch"
     mc:Ignorable="d"
     d:DesignHeight="90"
@@ -30,7 +30,7 @@
                 Width="48"
                 Height="48"
                 VerticalAlignment="Center"
-                controls:Source.Cache="{Binding Subscription.AvatarUrl}"/>
+                controls:Source.Cache="{Binding AvatarUrl}"/>
             <fluent:SymbolIcon
                 Grid.Column="2"
                 VerticalAlignment="Center"

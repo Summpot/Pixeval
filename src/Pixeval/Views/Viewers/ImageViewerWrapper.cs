@@ -5,8 +5,9 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.Config;
 using Pixeval.Controls;
-using Pixeval.Models.Options;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 
@@ -36,7 +37,7 @@ public class ImageViewerWrapper : ContentControl
 
     public ImageViewerBase ImageViewer => (ImageViewerBase) Content!;
 
-    public bool IsSwipeMode { get; } = App.AppViewModel.AppSettings.BrowsingExperienceSettings.BrowseMode is BrowseMode.Swipe;
+    public bool IsSwipeMode { get; } = App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.BrowseMode is BrowseMode.Swipe;
 
     public SwipeImageViewer? SwipeImageViewer => Content as SwipeImageViewer;
 
@@ -46,7 +47,7 @@ public class ImageViewerWrapper : ContentControl
         ImageViewerBase imageViewer = IsSwipeMode
             ? new SwipeImageViewer()
             : new ContinuousImageViewer();
-        imageViewer.BrowseDirection = App.AppViewModel.AppSettings.BrowsingExperienceSettings.BrowseDirection;
+        imageViewer.BrowseDirection = App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.BrowseDirection;
         Content = imageViewer;
     }
 

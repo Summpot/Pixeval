@@ -17,6 +17,8 @@ url.workspace = true
 http.workspace = true
 bytes.workspace = true
 httpdate.workspace = true
+hex.workspace = true
+md-5.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

@@ -3,17 +3,24 @@
 
 using Avalonia;
 using Avalonia.Controls.Templates;
-using Misaki;
-
 namespace Pixeval.Views.Viewers;
 
 public partial class WorkInfoPage : IconContentPage
 {
+    public static readonly StyledProperty<object?> WorkProperty =
+        AvaloniaProperty.Register<WorkInfoPage, object?>(nameof(Work));
+
     public static readonly StyledProperty<object?> ActionZoneProperty =
         AvaloniaProperty.Register<WorkInfoPage, object?>(nameof(ActionZone));
 
     public static readonly StyledProperty<IDataTemplate> ActionZoneTemplateProperty =
         AvaloniaProperty.Register<WorkInfoPage, IDataTemplate>(nameof(ActionZoneTemplate));
+
+    public object? Work
+    {
+        get => GetValue(WorkProperty);
+        set => SetValue(WorkProperty, value);
+    }
 
     public object? ActionZone
     {
@@ -31,9 +38,9 @@ public partial class WorkInfoPage : IconContentPage
     {
     }
 
-    public WorkInfoPage(IArtworkInfo? viewModel)
+    public WorkInfoPage(object? work)
     {
-        DataContext = viewModel;
+        Work = work;
         InitializeComponent();
     }
 }

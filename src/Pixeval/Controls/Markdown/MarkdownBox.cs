@@ -23,12 +23,11 @@ using Markdown.Avalonia.StyleCollections;
 using Markdown.Avalonia.Svg;
 using Markdown.Avalonia.SyntaxHigh;
 using Markdown.Avalonia.Utils;
-using Misaki;
-using Pixeval.AppManagement;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.Pixiv;
+using Pixeval.Services.Core;
 using Pixeval.Utilities;
-using Pixeval.Utilities.GitHub;
-using Pixeval.Utilities.IO.Caching;
-using Pixeval.Views.Viewers;
+using Pixeval.Services.Update;
 
 namespace Pixeval.Controls;
 
@@ -41,6 +40,18 @@ public sealed class MarkdownHyperlinkClickedEventArgs(string url) : EventArgs
 
 public class MarkdownBox : MarkdownScrollViewer
 {
+    private static IClipboardService Clipboard =>
+        App.Services?.GetService<IClipboardService>() ?? NullClipboardService.Instance;
+
+    private static ILauncherService Launcher =>
+        App.Services?.GetService<ILauncherService>() ?? NullLauncherService.Instance;
+
+    private static INavigationService? Navigation =>
+        App.Services?.GetService<INavigationService>();
+
+    private readonly AsyncRelayCommand<string> _copySelectionCommand = new(static text =>
+        text is null ? Task.CompletedTask : Clipboard.SetTextAsync(text));
+
     private const double AnchorScrollOffset = 12;
     private const string CodePadTypeName = "Markdown.Avalonia.SyntaxHigh.CodePad";
     private const string CodeBlockClass = "CodeBlock";
@@ -119,8 +130,8 @@ public class MarkdownBox : MarkdownScrollViewer
         Plugins.Plugins.Add(new SyntaxHighlight());
         Plugins.Plugins.Add(new PixevalHtmlPlugin());
         Plugins.Plugins.Add(new SvgFormat());
-        Plugins.PathResolver = new PixevalPathResolver();
-        Plugins.HyperlinkCommand = new RelayCommand<string>(OnHyperlinkClicked);
+        Plugins.PathResolver = new PixevalPathResolver(this);
+        Plugins.HyperlinkCommand = new AsyncRelayCommand<string>(OnHyperlinkClickedAsync);
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -145,26 +156,20 @@ public class MarkdownBox : MarkdownScrollViewer
         }
     }
 
-    protected override async void OnKeyDown(KeyEventArgs e)
+    protected override void OnKeyDown(KeyEventArgs e)
     {
         if (KeyboardShortcut.MatchesCopy(e)
-            && TryGetVisualSelectedText() is { Length: > 0 } selectedText
-            && TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+            && TryGetVisualSelectedText() is { Length: > 0 } selectedText)
         {
-            var item = new DataTransferItem();
-            item.Set(DataFormat.Text, selectedText);
-            var data = new DataTransfer();
-            data.Add(item);
-
             e.Handled = true;
-            await clipboard.SetDataAsync(data);
+            _copySelectionCommand.Execute(selectedText);
             return;
         }
 
         base.OnKeyDown(e);
     }
 
-    private async void OnHyperlinkClicked(string? url)
+    private async Task OnHyperlinkClickedAsync(string? url)
     {
         if (string.IsNullOrWhiteSpace(url))
             return;
@@ -180,17 +185,10 @@ public class MarkdownBox : MarkdownScrollViewer
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             return;
 
-        if (TopLevel.GetTopLevel(this) is not
-            {
-                ViewContainer: { } viewContainer,
-                Launcher: { } launcher
-            })
-            return;
-
         if (uri.Scheme is not AppInfo.AppProtocol)
-            await launcher.LaunchUriAsync(uri);
+            await Launcher.LaunchUriAsync(uri);
         else if (uri.Host is "illust" && uri.AbsolutePath.Trim('/') is { } id)
-            viewContainer.CreateIllustrationPage(id, IPlatformInfo.Pixiv);
+            Navigation?.NavigateToIllustration(id, PlatformConstants.Pixiv);
     }
 
     private bool TryScrollToAnchor(string url)
@@ -464,18 +462,7 @@ public class MarkdownBox : MarkdownScrollViewer
         };
         copyButton.Classes.Add("CopyButton");
         ToolTip.SetTip(copyButton, "复制代码");
-        copyButton.Click += async (_, _) =>
-        {
-            if (TopLevel.GetTopLevel(textEditor)?.Clipboard is { } clipboard)
-            {
-                var item = new DataTransferItem();
-                item.Set(DataFormat.Text, textEditor.Text ?? "");
-                var data = new DataTransfer();
-                data.Add(item);
-
-                await clipboard.SetDataAsync(data);
-            }
-        };
+        copyButton.Command = new AsyncRelayCommand(() => Clipboard.SetTextAsync(textEditor.Text ?? ""));
 
         var toolbar = new StackPanel
         {
@@ -502,7 +489,7 @@ public class MarkdownBox : MarkdownScrollViewer
 
     private static bool IsNonNegative(double value) => !double.IsNaN(value) && value >= 0;
 
-    private sealed class PixevalPathResolver : IPathResolver
+    private sealed class PixevalPathResolver(MarkdownBox owner) : IPathResolver
     {
         private readonly DefaultPathResolver _defaultPathResolver = new();
 
@@ -531,7 +518,14 @@ public class MarkdownBox : MarkdownScrollViewer
             if (Uri.TryCreate(relativeOrAbsolutePath, UriKind.Absolute, out var uri)
                 && uri.Scheme is "http" or "https")
             {
-                return await CacheHelper.GetImageStreamAsync(ResolvePlatform(uri), uri.OriginalString).ConfigureAwait(false);
+                if (Pixeval.Controls.Source.GetImageProvider(owner) is { } images)
+                {
+                    return await images
+                        .GetImageStreamAsync(ResolvePlatform(uri), uri.OriginalString)
+                        .ConfigureAwait(false);
+                }
+
+                return null;
             }
 
             return await (_defaultPathResolver.ResolveImageResource(relativeOrAbsolutePath) ?? Task.FromResult<Stream?>(null)).ConfigureAwait(false);
@@ -543,10 +537,10 @@ public class MarkdownBox : MarkdownScrollViewer
             if (GitHubHttpOptions.IsGitHubHost(host))
                 return GitHubHttpClientProvider.PlatformKey;
             if (IsHostOrSubdomain(host, "pixiv.net") || IsHostOrSubdomain(host, "pximg.net"))
-                return IPlatformInfo.Pixiv;
+                return PlatformConstants.Pixiv;
             if (IsHostOrSubdomain(host, "donmai.us"))
-                return IPlatformInfo.Danbooru;
-            return IPlatformInfo.All;
+                return PlatformConstants.Danbooru;
+            return PlatformConstants.All;
         }
 
         private static bool IsHostOrSubdomain(string host, string domain) =>

@@ -5,18 +5,20 @@
     xmlns:common="using:FluentIcons.Common"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:di="using:Pixeval.Common.Markup"
     xmlns:local="using:Pixeval.Views.Viewers"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
-    xmlns:markup1="using:Pixeval.Views.Markup"
+    xmlns:markup1="using:Pixeval.Common.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:options="using:Pixeval.Models.Options"
+    xmlns:options="using:Pixeval.Config"
     xmlns:pixeval="using:Pixeval"
     xmlns:ss="using:SmoothScroll.Avalonia.Controls"
     xmlns:viewers="using:Pixeval.ViewModels.Viewers"
-    xmlns:views="using:Pixeval.Views"
+    xmlns:views="using:Pixeval.Config"
     x:DataType="{x:Type viewers:IllustrationViewerPageViewModel}"
     x:Name="Root"
-    Header="{Binding CurrentIllustration.Entry.Title, FallbackValue={x:Null}}"
+    controls:IllustrationAutoPlayBehavior.IsEnabled="True"
+    Header="{Binding Title, FallbackValue={x:Null}}"
     mc:Ignorable="d"
     d:DesignHeight="450"
     d:DesignWidth="800">
@@ -139,7 +141,7 @@
         <controls:FloatingPaneView
             x:Name="EntryViewerFloatingPaneView"
             Grid.Row="0"
-            IsDocked="{Binding OpenWorkInfo, Source={x:Static views:PixevalSettings.Instance}, Mode=TwoWay}"
+            IsDocked="{Binding OpenWorkInfo, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}, Mode=TwoWay}"
             PaneVerticalAlignment="Top">
             <controls:FloatingPaneView.Pane>
                 <Border Name="FloatingPaneBorder">
@@ -255,7 +257,7 @@
                                         Label="{I18N {x:Static pixeval:MiscResources.Play}}">
                                         <CommandBarToggleButton.IsVisible>
                                             <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                                <Binding FallbackValue="False" Path="CurrentIllustration.IsPicGif" />
+                                                <Binding FallbackValue="False" Path="IsPicGif" />
                                                 <Binding Mode="OneTime" Path="#I.IsSwipeMode" />
                                             </MultiBinding>
                                         </CommandBarToggleButton.IsVisible>

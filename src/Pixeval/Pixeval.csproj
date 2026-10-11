@@ -8,6 +8,7 @@
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 		<EnableMcp Condition="'$(EnableMcp)' == ''">true</EnableMcp>
 		<DefineConstants Condition="'$(EnableMcp)' == 'true'">$(DefineConstants);PIXEVAL_MCP</DefineConstants>
+		<NoWarn>$(NoWarn);CS0114;CS8618;IL2026;IL3050;IL2075;CA1416;AVLN3001</NoWarn>
 		<NoWarn Condition="'$(Configuration)' != 'Release'">$(NoWarn);PE1002</NoWarn>
 		
 		<Version>5.0.13.0</Version>
@@ -15,7 +16,7 @@
 		<FileVersion>$(Version)</FileVersion>
 		<InformationalVersion>$(Version)</InformationalVersion>
 		<UniFFICrateName>pixeval_native</UniFFICrateName>
-		<UniFFINamespace>Pixeval.Native;pixeval_filters=Filters;pixeval_cache=Cache;pixeval_maho=Maho;pixeval_mako=Mako;pixeval_download=Download;pixeval_storage=Storage;pixeval_subscription=Subscription;pixeval_config=Config;pixeval_mcp=Mcp;pixeval_plugin=Plugin;pixeval_novel=Novel;pixeval_media=Media;pixeval_booru=Booru;pixeval_saucenao=SauceNao;pixeval_update=Update</UniFFINamespace>
+		<UniFFINamespace>Pixeval.Ffi;pixeval_filters=global::Pixeval.Filters;pixeval_cache=global::Pixeval.Cache;pixeval_maho=global::Pixeval.Maho;pixeval_mako=global::Pixeval.Mako;pixeval_download=global::Pixeval.Download;pixeval_storage=global::Pixeval.Storage;pixeval_subscription=global::Pixeval.Subscription;pixeval_config=global::Pixeval.Config;pixeval_mcp=global::Pixeval.Mcp;pixeval_plugin=global::Pixeval.Plugin;pixeval_novel=global::Pixeval.Novel;pixeval_media=global::Pixeval.Media;pixeval_booru=global::Pixeval.Booru;pixeval_saucenao=global::Pixeval.SauceNao;pixeval_update=global::Pixeval.Update</UniFFINamespace>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 	</PropertyGroup>
 
@@ -47,15 +48,14 @@
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
 		<PackageReference Include="Markdown.Avalonia" Version="12.0.0-a3" />
 		<!--<PackageReference Include="SmoothScroll.Avalonia" Version="12.0.0.12" />-->
-		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.17" />
+		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.12" />
 		<PackageReference Include="TabView.Avalonia" Version="1.0.0" />
 		<PackageReference Include="Velopack" Version="1.2.158" />
         
-        <PackageReference Include="SkiaSharp" Version="4.152.1" />
-		<PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.152.1" />
-		<PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" Version="4.152.1" />
-		<PackageReference Include="UniFFISharp" Version="0.2.9" />
-		<PackageReference Include="Misaki" Version="1.0.0.6" />
+        <PackageReference Include="SkiaSharp" Version="3.119.4" />
+		<PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" />
+		<PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" Version="3.119.4" />
+		<PackageReference Include="UniFFISharp" Version="0.2.10" />
 	</ItemGroup>
 
 
@@ -72,8 +72,16 @@
 
 	<ItemGroup Condition="'$(EnableMcp)' != 'true'">
 		<AvaloniaXaml Remove="Views\Settings\McpHelpSection.axaml" />
-		<Compile Remove="AppManagement\IPixevalMcpService.cs" />
-		<Compile Remove="Models\McpServer\**\*.cs" />
+		<Compile Remove="Services\Background\IPixevalMcpService.cs" />
+		<Compile Remove="Services\Background\PixevalMcpService.cs" />
+		<Compile Remove="Services\Background\HelpPageJsonContext.cs" />
+		<Compile Remove="Services\Background\JsonSchemaObject.cs" />
+		<Compile Remove="Services\Background\McpJsonRpcError.cs" />
+		<Compile Remove="Services\Background\McpToolSchema.cs" />
+		<Compile Remove="Services\Background\McpToolsListResponse.cs" />
+		<Compile Remove="Services\Background\McpToolsListResult.cs" />
+		<Compile Remove="ViewModels\Settings\McpToolItemViewModel.cs" />
+		<Compile Remove="ViewModels\Settings\McpToolParameterItemViewModel.cs" />
 		<Compile Remove="Views\Settings\McpHelpSection.Mcp.cs" />
 		<Compile Remove="Views\Settings\McpHelpSection.McpTools.cs" />
 	</ItemGroup>

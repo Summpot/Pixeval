@@ -19,6 +19,9 @@ flate2.workspace = true
 pixeval_maho.workspace = true
 bytes.workspace = true
 http.workspace = true
+zune-jpeg = { version = "0.5", default-features = false }
+zune-core = { version = "0.5", default-features = false }
+png.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

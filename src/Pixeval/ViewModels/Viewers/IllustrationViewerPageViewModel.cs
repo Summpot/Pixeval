@@ -6,34 +6,31 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Controls;
-using Avalonia.Layout;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
-using Pixeval.AppManagement;
-using Pixeval.Models.Pixiv;
 using Pixeval.I18N;
-using Pixeval.Models.Blocking;
-using Pixeval.Models.Options;
+using Pixeval.Pixiv;
+using Pixeval.Config;
+using Pixeval.Booru;
+using Pixeval.Mako;
 using Pixeval.Utilities;
-using Pixeval.Views.Capability;
+using Pixeval.ViewModels;
 using Pixeval.Views.Viewers;
 
 namespace Pixeval.ViewModels.Viewers;
 
-public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewModel, IDisposable
+public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewModel, IDisposable, IIllustrationAutoPlayTarget
 {
-    private readonly DispatcherTimer _autoPlayTimer = new();
-
-    private readonly Dictionary<int, IllustrationItemViewModel> _refreshedIllustrations = [];
+    private readonly MakoClient _makoClient;
+    private readonly AppSettings _appSettings;
+    private readonly FileLogger? _logger;
+    private readonly Dictionary<int, object> _refreshedIllustrations = [];
 
     private readonly bool _needRefresh;
 
     private CancellationTokenSource _loadingCts = new();
 
-    private readonly ISourceView<IllustrationItemViewModel>? _sourceView;
+    private readonly IReadOnlyList<object>? _illustrations;
 
     [ObservableProperty]
     public partial bool IsLoading { get; private set; }
@@ -44,30 +41,69 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     [ObservableProperty]
     public partial WorkSeriesInfoViewModel? SeriesInfo { get; private set; }
 
-    public string? LogoUri => CurrentIllustration?.Entry.Platform is { } platform ? $"avares://Pixeval/Assets/Platforms/{platform}.png" : null;
+    public string? LogoUri => CurrentIllustration switch
+    {
+        Illustration => $"avares://Pixeval/Assets/Platforms/{PlatformConstants.Pixiv}.png",
+        BooruPost bp => $"avares://Pixeval/Assets/Platforms/{bp.Platform}.png",
+        _ => null
+    };
+
+    public ArtworkUiState? CurrentUiState => CurrentIllustration is { } ill ? ArtworkUiStateStore.GetOrCreate(ill) : null;
+
+    public string? Title => CurrentIllustration switch
+    {
+        Illustration ill => ill.Title,
+        BooruPost bp => bp.Title,
+        _ => null
+    };
+
+    public Uri? WebsiteUri => CurrentIllustration switch
+    {
+        Illustration ill => ill.WebsiteUri,
+        BooruPost bp => bp.WebsiteUri,
+        _ => null
+    };
+
+    public bool IsBookmarkSupported => CurrentIllustration is Illustration ill && ill.IsBookmarkSupported;
+
+    public bool IsPicGif => CurrentIllustration is Illustration { IsPicGif: true };
 
     /// <summary>
     /// 
     /// </summary>
     /// <param name="illustrationViewModel"></param>
     /// <param name="needRefresh"></param>
-    public IllustrationViewerPageViewModel(IllustrationItemViewModel illustrationViewModel, bool needRefresh)
+    public IllustrationViewerPageViewModel(
+        object illustrationViewModel,
+        bool needRefresh,
+        MakoClient? makoClient = null,
+        AppSettings? appSettings = null,
+        FileLogger? logger = null)
     {
+        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
+        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
+        _logger = logger ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<FileLogger>(App.Services!);
         _needRefresh = needRefresh;
         CurrentIllustration = illustrationViewModel;
-        InitializeAutoPlayTimer();
         CurrentWorkIndex = 0;
     }
 
-    public IllustrationViewerPageViewModel(IIdentityInfo info)
+    public IllustrationViewerPageViewModel(
+        string id,
+        string platform,
+        MakoClient? makoClient = null,
+        AppSettings? appSettings = null,
+        FileLogger? logger = null)
     {
-        InitializeAutoPlayTimer();
-        _ = LoadSingleIllustrationAsync(info, _loadingCts.Token);
+        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
+        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
+        _logger = logger ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<FileLogger>(App.Services!);
+        _ = LoadSingleIllustrationAsync(id, platform, _loadingCts.Token);
     }
 
-    private async Task LoadSingleIllustrationAsync(IIdentityInfo i, CancellationToken token)
+    private async Task LoadSingleIllustrationAsync(string id, string platform, CancellationToken token)
     {
-        var illustration = await LoadIllustrationAsync(i, item => CurrentIllustration = item, token);
+        var illustration = await LoadIllustrationAsync(id, platform, item => CurrentIllustration = item, token);
 
         if (illustration is not null && !token.IsCancellationRequested)
             CurrentWorkIndex = 0;
@@ -79,47 +115,27 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// <param name="dataProvider"></param>
     /// <param name="currentIllustrationIndex"></param>
     /// <param name="needRefresh"></param>
+    /// <param name="makoClient"></param>
+    /// <param name="appSettings"></param>
+    /// <param name="logger"></param>
     /// <remarks>
     /// illustrations should contain only one item if the illustration is a single
     /// otherwise it contains the entire manga data
     /// </remarks>
-    public IllustrationViewerPageViewModel(ISourceView<IllustrationItemViewModel> dataProvider, int currentIllustrationIndex, bool needRefresh)
+    public IllustrationViewerPageViewModel(
+        IReadOnlyList<object> illustrations,
+        int currentIllustrationIndex,
+        bool needRefresh,
+        MakoClient? makoClient = null,
+        AppSettings? appSettings = null,
+        FileLogger? logger = null)
     {
+        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
+        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
+        _logger = logger ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<FileLogger>(App.Services!);
         _needRefresh = needRefresh;
-        _sourceView = dataProvider;
-        InitializeAutoPlayTimer();
+        _illustrations = illustrations;
         CurrentWorkIndex = currentIllustrationIndex;
-    }
-
-    public IReadOnlyList<Page> PanePages => CreatePanePages(CurrentIllustration?.Entry);
-
-    private static IReadOnlyList<Page> CreatePanePages(IArtworkInfo? entry)
-    {
-        if (entry is not Illustration { Id: var id } illustration)
-            return [];
-
-        var pages = new List<Page>
-        {
-            new WorkInfoPage(illustration)
-            {
-                ActionZone = new Border
-                {
-                    Width = 32,
-                    Height = 32,
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    VerticalAlignment = VerticalAlignment.Top,
-                    IsHitTestVisible = false
-                }
-            }
-        };
-
-        if (!BlockedContentHelper.IsBlockedPlaceholder(illustration))
-        {
-            pages.Add(new CommentsPage(new CommentsViewViewModel(SimpleWorkType.Illustration, id)));
-            pages.Add(new WorkRelatedPage(illustration.Id, SimpleWorkType.Illustration) { IsCommandBarCollapsed = true });
-        }
-
-        return pages;
     }
 
     #region Current相关
@@ -127,7 +143,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// <summary>
     /// 当前插画
     /// </summary>
-    public IllustrationItemViewModel? CurrentIllustration
+    public object? CurrentIllustration
     {
         get
         {
@@ -139,7 +155,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
             return CurrentWorkIndex < 0 || CurrentWorkIndex >= WorkCount
                 ? null
-                : _sourceView?.View[CurrentWorkIndex];
+                : _illustrations?[CurrentWorkIndex];
         }
         private set
         {
@@ -212,12 +228,12 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
             && index == CurrentWorkIndex)
         {
             CurrentImage = new ImageViewerViewModel(currentIllustration);
-            await LoadSeriesInfoAsync(currentIllustration.Entry, index, token);
+            await LoadSeriesInfoAsync(currentIllustration, index, token);
         }
 
         return;
 
-        async ValueTask<IllustrationItemViewModel?> GetCurrentIllustrationAsync(int workIndex)
+        async ValueTask<object?> GetCurrentIllustrationAsync(int workIndex)
         {
             if (!_needRefresh)
             {
@@ -225,25 +241,33 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
                 return CurrentIllustration;
             }
 
-            if (_sourceView is not null && _refreshedIllustrations.TryGetValue(workIndex, out var cached))
+            if (_illustrations is not null && _refreshedIllustrations.TryGetValue(workIndex, out var cached))
             {
                 IsLoading = false;
                 return cached;
             }
 
             // 需刷新
-            if (CurrentIllustration is not { Entry: IIdentityInfo info })
+            (string? platform, string? id) = CurrentIllustration switch
+            {
+                Illustration ill => (PlatformConstants.Pixiv, ill.Id.ToString()),
+                BooruPost bp => (bp.PlatformName, bp.Id),
+                _ => (null, null)
+            };
+
+            if (platform is null || id is null)
             {
                 IsLoading = false;
                 return null;
             }
 
             return await LoadIllustrationAsync(
-                info,
+                id,
+                platform,
                 item =>
                 {
-                    // 单项刷新写回当前项，列表刷新只缓存到当前 Viewer，避免污染原始 SourceView。
-                    if (_sourceView is null)
+                    // 单项刷新写回当前项，列表刷新只缓存到当前 Viewer，避免污染原始列表。
+                    if (_illustrations is null)
                         CurrentIllustration = item;
                     else
                         _refreshedIllustrations[workIndex] = item;
@@ -252,7 +276,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         }
     }
 
-    private async Task LoadSeriesInfoAsync(IArtworkInfo entry, int index, CancellationToken token)
+    private async Task LoadSeriesInfoAsync(object entry, int index, CancellationToken token)
     {
         SeriesInfo = WorkSeriesInfoViewModel.Create(entry, SimpleWorkType.Illustration);
         if (entry is not Illustration { Series: not null } illustration)
@@ -260,7 +284,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
         try
         {
-            var response = await App.AppViewModel.MakoClient.GetMangaSeriesContextAsync(illustration.Id);
+            var response = await _makoClient.GetMangaSeriesContextAsync(illustration.Id);
             token.ThrowIfCancellationRequested();
             if (index == CurrentWorkIndex && !_disposed)
                 SeriesInfo = WorkSeriesInfoViewModel.Create(response);
@@ -270,9 +294,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         }
         catch (Exception e)
         {
-            App.AppViewModel.AppServiceProvider
-                .GetRequiredService<FileLogger>()
-                .LogError(nameof(LoadSeriesInfoAsync), e);
+            _logger?.LogError(nameof(LoadSeriesInfoAsync), e);
         }
     }
 
@@ -284,13 +306,13 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         return _loadingCts.Token;
     }
 
-    private async Task<IllustrationItemViewModel?> LoadIllustrationAsync(IIdentityInfo info, Action<IllustrationItemViewModel> onLoaded, CancellationToken token)
+    private async Task<object?> LoadIllustrationAsync(string id, string platform, Action<object> onLoaded, CancellationToken token)
     {
         IsLoading = true;
         LoadErrorMessage = null;
         try
         {
-            var entry = await info.TryGetArtworkInfoAsync();
+            var entry = await ViewerHelper.TryGetArtworkAsync(platform, id);
             token.ThrowIfCancellationRequested();
             if (entry is null)
             {
@@ -298,7 +320,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
                 return null;
             }
 
-            var item = IllustrationItemViewModel.CreateInstance(BlockedContentHelper.Replace(entry));
+            var item = BlockedContentHelper.Replace(entry);
             onLoaded(item);
             return item;
         }
@@ -352,8 +374,12 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     private void NotifyCurrentIllustrationChanged()
     {
         OnPropertyChanged(nameof(CurrentIllustration));
+        OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(WebsiteUri));
+        OnPropertyChanged(nameof(CurrentUiState));
+        OnPropertyChanged(nameof(IsBookmarkSupported));
+        OnPropertyChanged(nameof(IsPicGif));
         OnPropertyChanged(nameof(LogoUri));
-        OnPropertyChanged(nameof(PanePages));
     }
 
     private void NotifyPageNavigationChanged()
@@ -379,7 +405,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     /// <summary>
     /// 插画列表
     /// </summary>
-    public IReadOnlyList<IllustrationItemViewModel>? Illustrations => _sourceView?.View;
+    public IReadOnlyList<object>? Illustrations => _illustrations;
 
     #endregion
 
@@ -387,29 +413,28 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
     public int AutoPlayInterval
     {
-        get => App.AppViewModel.AppSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayInterval;
+        get => _appSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayInterval;
         set
         {
             value = int.Clamp(value, 1, 60);
-            if (App.AppViewModel.AppSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayInterval == value)
+            if (_appSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayInterval == value)
                 return;
 
-            App.AppViewModel.AppSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayInterval = value;
+            _appSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayInterval = value;
             SaveAutoPlaySettings();
             OnPropertyChanged();
-            UpdateAutoPlayTimerInterval();
         }
     }
 
     public IllustrationViewerAutoPlayMode AutoPlayMode
     {
-        get => App.AppViewModel.AppSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayMode;
+        get => _appSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayMode;
         set
         {
-            if (App.AppViewModel.AppSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayMode == value)
+            if (_appSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayMode == value)
                 return;
 
-            App.AppViewModel.AppSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayMode = value;
+            _appSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayMode = value;
             SaveAutoPlaySettings();
             OnPropertyChanged();
         }
@@ -417,13 +442,13 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
     public IllustrationViewerAutoPlayScope AutoPlayScope
     {
-        get => App.AppViewModel.AppSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayScope;
+        get => _appSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayScope;
         set
         {
-            if (App.AppViewModel.AppSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayScope == value)
+            if (_appSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayScope == value)
                 return;
 
-            App.AppViewModel.AppSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayScope = value;
+            _appSettings.BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayScope = value;
             SaveAutoPlaySettings();
             OnPropertyChanged();
         }
@@ -431,34 +456,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
     [ObservableProperty] public partial bool IsAutoPlaying { get; set; }
 
-    partial void OnIsAutoPlayingChanged(bool value)
-    {
-        if (value)
-            StartAutoPlay();
-        else
-            StopAutoPlay();
-        return;
-
-        void StartAutoPlay()
-        {
-            UpdateAutoPlayTimerInterval();
-            _autoPlayTimer.Start();
-        }
-
-        void StopAutoPlay() => _autoPlayTimer.Stop();
-    }
-
-    private void InitializeAutoPlayTimer()
-    {
-        _autoPlayTimer.Tick += AutoPlayTimerOnTick;
-        UpdateAutoPlayTimerInterval();
-    }
-
-    private void UpdateAutoPlayTimerInterval() => _autoPlayTimer.Interval = TimeSpan.FromSeconds(AutoPlayInterval);
-
-    private void AutoPlayTimerOnTick(object? sender, EventArgs e) => MoveAutoPlayNext();
-
-    private void MoveAutoPlayNext()
+    public void MoveAutoPlayNext()
     {
         switch (AutoPlayScope, AutoPlayMode)
         {
@@ -488,7 +486,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         }
     }
 
-    private static void SaveAutoPlaySettings() => AppInfo.SaveAppSettings(App.AppViewModel.AppSettings);
+    private void SaveAutoPlaySettings() => AppInfo.SaveAppSettings(_appSettings);
 
     #endregion
 
@@ -507,7 +505,6 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         _loadingCts.Dispose();
         IsAutoPlaying = false;
         CurrentImage = null!;
-        _sourceView?.Dispose();
     }
 
     #endregion

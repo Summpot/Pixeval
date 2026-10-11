@@ -9,21 +9,21 @@ using System.Threading;
 using System.Threading.Tasks;
 using AnimatedControls.Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluentIcons.Common;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.Commands.Transformers;
 using Pixeval.I18N;
-using Pixeval.Models.Extensions;
+using Pixeval.Services.Background;
+using Pixeval.Booru;
+using Pixeval.Cache;
+using Pixeval.Mako;
 using Pixeval.Utilities;
-using Pixeval.Utilities.IO;
-using Pixeval.Utilities.IO.Caching;
+using Pixeval.Common.IO;
 
 namespace Pixeval.ViewModels.Viewers;
 
@@ -151,7 +151,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         ReleaseLoadingPreview();
     }
 
-    public bool IsPicGif => _entry.ImageType is ImageType.SingleAnimatedImage;
+    public bool IsPicGif => _entry is Illustration { IsPicGif: true };
 
     private bool IsGifLoadSuccessfully => LoadSuccessfully && IsPicGif;
 
@@ -168,8 +168,8 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
 
     private bool _thumbnailLoaded;
     private readonly string _platform;
-    private readonly IArtworkInfo _entry;
-    private readonly Func<Control?, int, Task> _saveImageAsync;
+    private readonly object _entry;
+    private readonly object _saveTarget;
 
     public int Index { get; }
 
@@ -194,13 +194,13 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     /// <inheritdoc/>
     public SingleViewerViewModel(
         string platform,
-        IArtworkInfo entry,
+        object entry,
         int index,
-        Func<Control?, int, Task> saveImageAsync)
+        object? saveTarget = null)
     {
         _platform = platform;
         _entry = entry;
-        _saveImageAsync = saveImageAsync;
+        _saveTarget = saveTarget ?? entry;
         Index = index;
         DisplaySource.Changed += DisplaySourceOnChanged;
         TransformerExtensionItems = [.. TransformerExtensions.Select(extension => new ImageTransformerExtensionCommandItem(this, extension))];
@@ -280,7 +280,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
                 token => LoadWithPreviewAsync(false, token), _lifetimeCancellationTokenSource.Token);
             if (source is null && !_disposed)
                 source = await DisplaySource.UpdateAsync(
-                    _ => Task.FromResult<IAnimatedBitmap?>(CacheHelper.AnimatedImageNotAvailable.Value),
+                    _ => Task.FromResult<IAnimatedBitmap?>(Images.AnimatedImageNotAvailable),
                     _lifetimeCancellationTokenSource.Token);
         }
         catch (OperationCanceledException) when (_lifetimeCancellationTokenSource.IsCancellationRequested)
@@ -316,16 +316,21 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
 
     private async Task<IAnimatedBitmap?> LoadWithPreviewAsync(bool original, CancellationToken token)
     {
-        using var preview = new ProgressiveImagePreview(bitmap => PublishLoadingPreviewAsync(bitmap, token),
-            () => Volatile.Read(ref _previewConsumers) > 0);
-        return await LoadImageAsync(original, preview, token);
+        Action<DecodedPreviewFrame>? onPreview = Volatile.Read(ref _previewConsumers) > 0
+            ? frame => PublishLoadingPreview(frame, token)
+            : null;
+        return await LoadImageAsync(original, onPreview, token);
     }
 
-    private async Task PublishLoadingPreviewAsync(Bitmap bitmap, CancellationToken token)
+    private void PublishLoadingPreview(DecodedPreviewFrame frame, CancellationToken token)
     {
-        await Dispatcher.UIThread.InvokeAsync(() =>
+        if (_disposed || Volatile.Read(ref _previewConsumers) is 0)
+            return;
+
+        var bitmap = frame.ToWriteableBitmap();
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
-            if (_disposed || _previewConsumers is 0)
+            if (_disposed || Volatile.Read(ref _previewConsumers) is 0)
             {
                 bitmap.Dispose();
                 return;
@@ -363,21 +368,36 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         LoadingProgress = progress;
     }
 
+    private IEnumerable<(string Url, int Width, int Height)> GetThumbnailCandidates()
+    {
+        switch (_entry)
+        {
+            case Illustration ill:
+                if (!string.IsNullOrEmpty(ill.OriginalUrl)) yield return (ill.OriginalUrl, (int) ill.Width, (int) ill.Height);
+                if (!string.IsNullOrEmpty(ill.ImageUrls?.Large)) yield return (ill.ImageUrls.Large, (int) ill.Width, (int) ill.Height);
+                if (!string.IsNullOrEmpty(ill.ImageUrls?.Medium)) yield return (ill.ImageUrls.Medium, (int) ill.Width, (int) ill.Height);
+                if (!string.IsNullOrEmpty(ill.ImageUrls?.SquareMedium)) yield return (ill.ImageUrls.SquareMedium, (int) ill.Width, (int) ill.Height);
+                break;
+            case BooruPost bp:
+                if (!string.IsNullOrEmpty(bp.OriginalUrl)) yield return (bp.OriginalUrl, (int) bp.Width, (int) bp.Height);
+                if (!string.IsNullOrEmpty(bp.LargeFileUrl)) yield return (bp.LargeFileUrl, (int) bp.Width, (int) bp.Height);
+                if (!string.IsNullOrEmpty(bp.PreviewFileUrl)) yield return (bp.PreviewFileUrl, (int) bp.Width, (int) bp.Height);
+                break;
+        }
+    }
+
     private async Task<Bitmap?> LoadThumbnailImageOverrideAsync(CancellationToken token, int maximumDimension = 100)
     {
-        var candidates = _entry.Thumbnails.ToList();
-        while (candidates.PickMax() is { } frame)
+        foreach (var (url, w, h) in GetThumbnailCandidates())
         {
             token.ThrowIfCancellationRequested();
-            _ = candidates.Remove(frame);
-            await using var stream = CacheHelper.TryGetStream(frame.ImageUri.OriginalString);
+            await using var stream = Images.TryGetStream(url);
             if (stream is null)
                 continue;
 
             // Reuse the largest already-downloaded thumbnail; never start a placeholder download.
-            var width = frame is { Width: > 0, Height: > 0 }
-                ? Math.Max(1, (int) (frame.Width * Math.Min(1d,
-                    maximumDimension / (double) Math.Max(frame.Width, frame.Height))))
+            var width = w > 0 && h > 0
+                ? Math.Max(1, (int) (w * Math.Min(1d, maximumDimension / (double) Math.Max(w, h))))
                 : maximumDimension;
             try
             {
@@ -391,57 +411,53 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         return null;
     }
 
-    private async Task<IAnimatedBitmap?> LoadImageAsync(bool isOriginal, ProgressiveImagePreview? preview = null, CancellationToken token = default)
+    private async Task<IAnimatedBitmap?> LoadImageAsync(bool isOriginal, Action<DecodedPreviewFrame>? onPreview = null, CancellationToken token = default)
     {
         switch (_entry)
         {
-            // 当下载图集的其中一张图片时，ImageType会为ImageSet
-            case ISingleImage { ImageType: ImageType.SingleImage or ImageType.ImageSet } singleImage:
+            case Illustration { IsPicGif: true } ill:
             {
-                var f = isOriginal ? singleImage : singleImage.Thumbnails.PickMax();
-                if (f is null)
+                var metadata = ill.UgoiraMetadata ?? await App.Services!.GetRequiredService<MakoClient>().GetUgoiraMetadataAsync(ill.Id);
+                var zipUrl = isOriginal ? (metadata.LargeUrl ?? metadata.MediumUrl) : metadata.MediumUrl;
+                if (string.IsNullOrEmpty(zipUrl))
                     return null;
-                return await CacheHelper.GetSingleImageAsync(
+                var delays = metadata.Delays;
+                return await Images.GetUgoiraAnimatedImageAsync(
                     _platform,
-                    f,
+                    new Uri(zipUrl),
+                    delays,
                     new Progress<double>(UpdateLoadingProgress),
-                    preview is null ? null : preview.UpdateAsync, token);
+                    onPreview, token);
             }
-            case ISingleAnimatedImage { ImageType: ImageType.SingleAnimatedImage } singleAnimatedImage:
+            case Illustration ill:
             {
-                var f = isOriginal
-                    ? singleAnimatedImage
-                    : (await singleAnimatedImage.AnimatedThumbnails.ApplyAsync(t => t
-                        .TryPreloadListAsync(singleAnimatedImage, token: token))).PickMax();
-                token.ThrowIfCancellationRequested();
-                if (f is null)
+                var url = isOriginal
+                    ? (ill.OriginalUrl ?? ill.ImageUrls?.Large ?? ill.ImageUrls?.Medium)
+                    : (ill.ImageUrls?.Large ?? ill.ImageUrls?.Medium ?? ill.OriginalUrl);
+                if (string.IsNullOrEmpty(url))
                     return null;
-                switch (f.PreferredAnimatedImageType)
-                {
-                    case SingleAnimatedImageType.MultiFiles:
-                    {
-                        return await CacheHelper.GetAnimatedImageSeparatedAsync(
-                            _platform,
-                            f,
-                            new Progress<double>(UpdateLoadingProgress),
-                            preview is null ? null : preview.UpdateAsync, token);
-                    }
-                    case SingleAnimatedImageType.SingleZipFile or SingleAnimatedImageType.SingleFile:
-                    {
-                        return await CacheHelper.GetSingleAnimatedImageAsync(
-                            _platform,
-                            f,
-                            new Progress<double>(UpdateLoadingProgress),
-                            preview is null ? null : f.PreferredAnimatedImageType is SingleAnimatedImageType.SingleZipFile
-                                ? preview.UpdateZipAsync : preview.UpdateAsync, token);
-                    }
-                }
-
-                break;
+                return await Images.GetSingleImageAsync(
+                    _platform,
+                    url,
+                    new Progress<double>(UpdateLoadingProgress),
+                    onPreview, token);
             }
+            case BooruPost bp:
+            {
+                var url = isOriginal
+                    ? (bp.OriginalUrl ?? bp.LargeFileUrl ?? bp.PreviewFileUrl)
+                    : (bp.LargeFileUrl ?? bp.PreviewFileUrl ?? bp.OriginalUrl);
+                if (string.IsNullOrEmpty(url))
+                    return null;
+                return await Images.GetSingleImageAsync(
+                    _platform,
+                    url,
+                    new Progress<double>(UpdateLoadingProgress),
+                    onPreview, token);
+            }
+            default:
+                return null;
         }
-
-        return null;
     }
 
     partial void OnTransformedSourceChanging(IAnimatedBitmap? value)
@@ -453,17 +469,17 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanViewOriginal))]
     private async Task ViewOriginalAsync(Control? control)
     {
-        var viewContainer = control is null ? null : TopLevel.GetTopLevel(control)?.ViewContainer;
+        _ = control;
         IsProcessingImage = true;
         try
         {
-            viewContainer?.ShowInformation(I18NManager.GetResource(ImageViewerPageResources.LoadingOriginalImage));
+            Notifications.ShowInformation(I18NManager.GetResource(ImageViewerPageResources.LoadingOriginalImage));
             LoadingProgress = null;
             var source = await DisplaySource.UpdateAsync(
                 token => LoadWithPreviewAsync(true, token), _lifetimeCancellationTokenSource.Token);
             if (source is null)
             {
-                viewContainer?.ShowError(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadFailed));
+                Notifications.ShowError(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadFailed));
                 return;
             }
 
@@ -474,14 +490,14 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
             }
 
             TransformedSource = source;
-            viewContainer?.ShowSuccess(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadedSuccessfully));
+            Notifications.ShowSuccess(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadedSuccessfully));
         }
         catch (OperationCanceledException) when (_lifetimeCancellationTokenSource.IsCancellationRequested)
         {
         }
         catch
         {
-            viewContainer?.ShowError(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadFailed));
+            Notifications.ShowError(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadFailed));
         }
         finally
         {
@@ -492,16 +508,16 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
 
     internal async Task ExecuteTransformerExtensionAsync(IImageTransformerCommandExtension extension, Control? control)
     {
-        var viewContainer = control is null ? null : TopLevel.GetTopLevel(control)?.ViewContainer;
+        _ = control;
         try
         {
-            viewContainer?.ShowInformation(I18NManager.GetResource(ImageViewerPageResources.ApplyingTransformerExtensions));
+            Notifications.ShowInformation(I18NManager.GetResource(ImageViewerPageResources.ApplyingTransformerExtensions));
             await TransformExtensionCommand.ExecuteAsync(extension);
-            viewContainer?.ShowSuccess(I18NManager.GetResource(ImageViewerPageResources.TransformerExtensionFinishedSuccessfully));
+            Notifications.ShowSuccess(I18NManager.GetResource(ImageViewerPageResources.TransformerExtensionFinishedSuccessfully));
         }
         catch
         {
-            viewContainer?.ShowError(I18NManager.GetResource(ImageViewerPageResources.TransformerExtensionFailed));
+            Notifications.ShowError(I18NManager.GetResource(ImageViewerPageResources.TransformerExtensionFailed));
         }
     }
 
@@ -527,7 +543,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
             {
                 await extension.TransformAsync(source, destination);
                 destination.Position = 0;
-                var transformedSource = IAnimatedBitmap.Load(destination, true);
+                var transformedSource = Images.LoadAnimatedBitmap(destination);
                 var updatedSource = await DisplaySource.UpdateAsync(
                     _ => Task.FromResult<IAnimatedBitmap?>(transformedSource), _lifetimeCancellationTokenSource.Token);
                 if (_disposed)
@@ -575,52 +591,54 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand(CanExecute = nameof(LoadSuccessfully))]
-    private async Task CopyAsync(Control control)
+    private Task CopyAsync(Control control)
     {
+        _ = control;
         if (DisplaySource.Frames is not [var singleFrame])
-            return;
-        if (TopLevel.GetTopLevel(control) is not
-            { ViewContainer: { } viewContainer, Clipboard: { } clipboard })
-            return;
-        await clipboard.SetBitmapAsync(singleFrame);
-        await clipboard.FlushAsync();
-        viewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+            return Task.CompletedTask;
+
+        return ArtworkActions.CopyBitmapAsync(singleFrame);
     }
 
     [RelayCommand]
-    private Task SaveImageAsync(Control? control) => _saveImageAsync(control, Index);
-
-    [RelayCommand(CanExecute = nameof(LoadSuccessfully))]
-    private async Task SaveAsAsync(Control control)
+    private Task SaveImageAsync(Control? control)
     {
-        if (DisplaySource.Frames is not [var singleFrame])
-            return;
-        if (TopLevel.GetTopLevel(control) is not
-            { ViewContainer: { } viewContainer, StorageProvider: { } storageProvider })
-            return;
-        var file = await storageProvider.SaveFilePickerAsync(new()
+        _ = control;
+        return _saveTarget switch
         {
-            FileTypeChoices =
-            [
-                new("PNG")
-                {
-                    Patterns = ["*.png"],
-                    MimeTypes = ["image/png"]
-                }
-            ],
-            DefaultExtension = "png",
-            SuggestedFileName = _entry.Id
-        });
-
-        if (file is null)
-            return;
-
-        var stream = await file.OpenWriteAsync();
-        singleFrame.Save(stream, new PngBitmapEncoderOptions());
-        viewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.Saved), file.Path.OriginalString);
+            Illustration illustration => ArtworkActions.SaveIllustrationAsync(illustration, Index),
+            _ => ArtworkActions.SaveWorkAsync(_saveTarget)
+        };
     }
 
-    private static ExtensionService ExtensionService => App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>();
+    [RelayCommand(CanExecute = nameof(LoadSuccessfully))]
+    private Task SaveAsAsync(Control control)
+    {
+        _ = control;
+        if (DisplaySource.Frames is not [var singleFrame])
+            return Task.CompletedTask;
+
+        return ArtworkActions.SaveBitmapAsAsync(singleFrame, GetEntryIdString());
+    }
+
+    private string GetEntryIdString() => _entry switch
+    {
+        Illustration ill => ill.Id.ToString(),
+        BooruPost bp => bp.Id.ToString(),
+        _ => "image"
+    };
+
+    private static ExtensionService ExtensionService => App.Services!.GetRequiredService<ExtensionService>();
+
+    private static IArtworkActionService ArtworkActions =>
+        App.Services?.GetService<IArtworkActionService>() ?? NullArtworkActionService.Instance;
+
+    private static INotificationService Notifications =>
+        App.Services?.GetService<INotificationService>() ?? NullNotificationService.Instance;
+
+    private static IImageProviderService Images =>
+        App.Services?.GetService<IImageProviderService>()
+        ?? throw new InvalidOperationException();
 }
 
 public sealed class ImageTransformerExtensionCommandItem

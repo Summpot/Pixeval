@@ -20,6 +20,12 @@ pub enum PluginError {
     ExtensionLoadFailed { message: String },
     #[error("Plugin not found: {id}")]
     NotFound { id: String },
+    #[error("Invalid plugin archive: {message}")]
+    InvalidArchive { message: String },
+    #[error("Plugin installation failed: {message}")]
+    InstallFailed { message: String },
+    #[error("Security violation: {message}")]
+    Security { message: String },
     #[error("IO error: {message}")]
     Io { message: String },
 }

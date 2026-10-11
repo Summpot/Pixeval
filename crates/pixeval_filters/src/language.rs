@@ -2,8 +2,8 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ast::FilterQuery;
 use crate::completions::{
-    FilterCompletionDefinition, FilterCompletionItem, FilterFullCompletionDefinition,
-    FilterValueCompletionCallback, FilterValueCompletionContext,
+    FilterCompletionDefinition, FilterCompletionItem, FilterCompletionKind,
+    FilterFullCompletionDefinition, FilterValueCompletionCallback, FilterValueCompletionContext,
 };
 use crate::diagnostics::FilterDiagnostic;
 use crate::parser::Parser;
@@ -27,6 +27,20 @@ pub struct FilterLanguage {
     value_hint_completions: HashMap<FilterValueKind, Vec<FilterCompletionDefinition>>,
     full_completion_covered_syntax_prefixes: Vec<String>,
     special_starters: Vec<char>,
+}
+
+pub(crate) fn apply_completion(utf16: &[u16], span: FilterTextSpan, insert_text: &str) -> String {
+    let start = (span.start as usize).min(utf16.len());
+    let end = (span.end() as usize).min(utf16.len());
+    let mut result = String::new();
+    if let Ok(prefix) = String::from_utf16(&utf16[..start]) {
+        result.push_str(&prefix);
+    }
+    result.push_str(insert_text);
+    if let Ok(suffix) = String::from_utf16(&utf16[end..]) {
+        result.push_str(&suffix);
+    }
+    result
 }
 
 impl FilterLanguage {
@@ -171,6 +185,7 @@ impl FilterLanguage {
             let mut group_completions = Vec::new();
             let mut seen = HashSet::new();
             self.append_intrinsic_completions(
+                utf16,
                 "",
                 replacement_span,
                 &mut group_completions,
@@ -207,12 +222,15 @@ impl FilterLanguage {
                             .starts_with(&frag_str.to_lowercase()))
                         && seen.insert(item.key.clone())
                     {
+                        let completed_text = apply_completion(utf16, context.value_span, &item.insert_text);
                         filtered.push(FilterCompletionItem::new(
                             item.display_text,
                             item.insert_text,
+                            completed_text,
                             context.value_span,
                             item.description,
                             false,
+                            FilterCompletionKind::Value,
                         ));
                     }
                 }
@@ -238,6 +256,7 @@ impl FilterLanguage {
         let mut seen = HashSet::new();
 
         self.append_intrinsic_completions(
+            utf16,
             completion_fragment,
             replacement_span,
             &mut completions,
@@ -260,18 +279,21 @@ impl FilterLanguage {
             };
             let key = format!("{}|{:?}", default_text.syntax_key, default_text.metadata);
             if seen.insert(key) {
+                let completed_text = apply_completion(utf16, replacement_span, &insert_text);
                 completions.push(FilterCompletionItem::new(
                     example,
                     insert_text,
+                    completed_text,
                     replacement_span,
                     default_text.description.clone(),
                     false,
+                    FilterCompletionKind::Keyword,
                 ));
             }
         }
 
         if completion_fragment.is_empty() {
-            self.append_full_completions(replacement_span, &mut completions, &mut seen, is_negated);
+            self.append_full_completions(utf16, replacement_span, &mut completions, &mut seen, is_negated);
         }
 
         for m in &self.matches {
@@ -296,12 +318,22 @@ impl FilterLanguage {
 
             let key = format!("{}|{:?}", m.syntax_key, m.metadata);
             if seen.insert(key) {
+                let kind = if m.header_text.starts_with('#') || m.header_text.starts_with('@') {
+                    FilterCompletionKind::Prefix
+                } else if m.value_kind == FilterValueKind::Flag {
+                    FilterCompletionKind::Flag
+                } else {
+                    FilterCompletionKind::Keyword
+                };
+                let completed_text = apply_completion(utf16, replacement_span, &insert_text);
                 completions.push(FilterCompletionItem::new(
                     completion,
                     insert_text,
+                    completed_text,
                     replacement_span,
                     m.description.clone(),
                     false,
+                    kind,
                 ));
             }
         }
@@ -436,9 +468,11 @@ impl FilterLanguage {
                 FilterCompletionItem::new(
                     &d.display_text,
                     &token_text,
+                    text,
                     context.token_span,
                     d.description.clone(),
                     true,
+                    FilterCompletionKind::Hint,
                 )
             })
             .collect();
@@ -448,6 +482,7 @@ impl FilterLanguage {
 
     fn append_intrinsic_completions(
         &self,
+        utf16: &[u16],
         fragment: &str,
         replacement_span: FilterTextSpan,
         completions: &mut Vec<FilterCompletionItem>,
@@ -482,12 +517,15 @@ impl FilterLanguage {
                     format!("({}", c.insert_text)
                 };
 
+                let completed_text = apply_completion(utf16, replacement_span, &insert_text);
                 completions.push(FilterCompletionItem::new(
                     &c.display_text,
                     insert_text,
+                    completed_text,
                     replacement_span,
                     c.description.clone(),
                     false,
+                    FilterCompletionKind::Operator,
                 ));
             }
         }
@@ -495,6 +533,7 @@ impl FilterLanguage {
 
     fn append_full_completions(
         &self,
+        utf16: &[u16],
         replacement_span: FilterTextSpan,
         completions: &mut Vec<FilterCompletionItem>,
         seen: &mut HashSet<String>,
@@ -509,12 +548,15 @@ impl FilterLanguage {
                     fc.insert_text.clone()
                 };
 
+                let completed_text = apply_completion(utf16, replacement_span, &insert_text);
                 completions.push(FilterCompletionItem::new(
                     &fc.display_text,
                     insert_text,
+                    completed_text,
                     replacement_span,
                     fc.description.clone(),
                     false,
+                    FilterCompletionKind::Flag,
                 ));
             }
         }

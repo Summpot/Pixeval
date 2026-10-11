@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement;
 using Pixeval.Extensions.Common;
-using Pixeval.Models.Extensions;
+using Pixeval.Services.Background;
 using Pixeval.Utilities;
+using Pixeval.Common.Logging;
+using Pixeval.Services.Core;
 
 namespace Pixeval.Tests;
 
@@ -85,6 +86,86 @@ public sealed class ExtensionServiceTest
             default:
                 Assert.IsNotNull(extension.GetType().FullName, $"{dll} extension type name is null.");
                 break;
+        }
+    }
+
+    [TestMethod]
+    public void EnumerateLocalExtensionHostsShouldReturnEmptyForEmptyDirectory()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), nameof(Pixeval), Guid.NewGuid().ToString("N"));
+        _ = Directory.CreateDirectory(tempDir);
+        try
+        {
+            var hosts = ExtensionService.EnumerateLocalExtensionHosts(tempDir);
+            Assert.AreEqual(0, System.Linq.Enumerable.Count(hosts));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, true);
+        }
+    }
+
+    [TestMethod]
+    public void UninstallTargetResolutionAndCleanupViaPluginEngine()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), nameof(Pixeval), Guid.NewGuid().ToString("N"));
+        var extensionsFolder = Path.Combine(tempDir, "Extensions");
+        _ = Directory.CreateDirectory(extensionsFolder);
+        try
+        {
+            using var engine = new Pixeval.Plugin.PluginHostEngine("5.0.0");
+
+            var directFile = Path.Combine(extensionsFolder, "plugin.dll");
+            File.WriteAllText(directFile, "test");
+            var rel1 = engine.GetUninstallTargetRelativePath(directFile, extensionsFolder);
+            Assert.AreEqual("plugin.dll", rel1);
+
+            var subDir = Path.Combine(extensionsFolder, "SubPlugin");
+            _ = Directory.CreateDirectory(subDir);
+            var subFile = Path.Combine(subDir, "plugin.dll");
+            File.WriteAllText(subFile, "test");
+            var rel2 = engine.GetUninstallTargetRelativePath(subFile, extensionsFolder);
+            Assert.AreEqual("SubPlugin", rel2);
+
+            var failed = engine.CleanPendingUninstalls(["plugin.dll", "SubPlugin"], extensionsFolder);
+            Assert.AreEqual(0, failed.Count);
+            Assert.IsFalse(File.Exists(directFile));
+            Assert.IsFalse(Directory.Exists(subDir));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, true);
+        }
+    }
+
+    [TestMethod]
+    public void VerifyAndInstallPluginShouldRejectInvalidFile()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), nameof(Pixeval), Guid.NewGuid().ToString("N"));
+        _ = Directory.CreateDirectory(tempDir);
+        try
+        {
+            using var engine = new Pixeval.Plugin.PluginHostEngine("5.0.0");
+            var fakePackage = Path.Combine(tempDir, "fake.unknown");
+            File.WriteAllText(fakePackage, "not a plugin");
+
+            var threw = false;
+            try
+            {
+                _ = engine.VerifyAndInstallPlugin(fakePackage, tempDir);
+            }
+            catch (Pixeval.Plugin.PluginError)
+            {
+                threw = true;
+            }
+            Assert.IsTrue(threw, "Expected PluginError when verifying invalid package");
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, true);
         }
     }
 }

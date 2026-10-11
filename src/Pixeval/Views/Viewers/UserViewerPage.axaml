@@ -2,14 +2,16 @@
     x:Class="Pixeval.Views.Viewers.UserViewerPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:capability="using:Pixeval.Views.Works"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:di="using:Pixeval.Common.Markup"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
-    xmlns:utilities="using:Pixeval.Utilities"
+    xmlns:utilities="using:Pixeval.Common"
     xmlns:viewers="using:Pixeval.ViewModels.Viewers"
-    xmlns:views="using:Pixeval.Views"
+    xmlns:views="using:Pixeval.Config"
     x:DataType="{x:Type viewers:UserViewerPageViewModel}"
     Design.DataContext="{x:Static utilities:DesignHelper.DesignUserViewerPageViewModel}"
     Header="{Binding Header}"
@@ -31,7 +33,7 @@
                 controls:Source.BackgroundCache="{Binding BackgroundUrl}"
                 DockPanel.Dock="Top"
                 ExpandDirection="Up"
-                IsExpanded="{Binding OpenUserInfo, Source={x:Static views:PixevalSettings.Instance}, Mode=TwoWay}"
+                IsExpanded="{Binding OpenUserInfo, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}, Mode=TwoWay}"
                 PropertyChanged="UserInfoExpander_OnPropertyChanged">
                 <Expander.Header>
                     <DockPanel>
@@ -166,7 +168,13 @@
                     </StackPanel>
                 </Border>
             </Expander>
-            <TabbedPage Pages="{Binding TabPages}" />
+            <TabbedPage>
+                <capability:WorkPostsPage User="{Binding UserDetail.User}" />
+                <capability:WorkBookmarksPage User="{Binding UserDetail.User}" />
+                <capability:UserFollowingPage UserId="{Binding Id}" />
+                <capability:UserMyPixivPage UserId="{Binding Id}" />
+                <capability:RelatedUsersPage UserId="{Binding Id}" />
+            </TabbedPage>
         </DockPanel>
         <controls:ViewerStateOverlay ErrorMessage="{Binding LoadErrorMessage}" IsLoading="{Binding IsLoading}" />
     </Grid>

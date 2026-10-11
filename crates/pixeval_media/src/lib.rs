@@ -196,7 +196,7 @@ mod tests {
         let csv = std::fs::read_to_string(orig_out.join("intervals in milliseconds.csv")).unwrap();
         assert_eq!(csv, "100,120");
 
-        // MP4 should return UnsupportedFormat if not supported
+        // MP4 synthesis test
         let mp4_out = dir.path().join("ugoira.mp4");
         let mp4_res = engine.synthesize_ugoira_from_zip(
             zip_path.to_str().unwrap().to_string(),
@@ -206,6 +206,52 @@ mod tests {
         );
         if !engine.is_mp4_supported() {
             assert!(mp4_res.is_err());
+        } else {
+            assert!(mp4_res.is_ok(), "MP4 encoding failed: {:?}", mp4_res);
+            assert!(mp4_out.exists());
+            let len = std::fs::metadata(&mp4_out).unwrap().len();
+            assert!(len > 0, "Generated MP4 file is empty");
         }
+    }
+
+    #[test]
+    fn test_ugoira_mp4_dedicated() {
+        let engine = MediaEngine::new();
+        if !engine.is_mp4_supported() {
+            println!("MP4 not supported on this platform, skipping dedicated test");
+            return;
+        }
+
+        let dir = get_test_temp_dir();
+        let f1 = dir.path().join("f1.jpg");
+        let f2 = dir.path().join("f2.jpg");
+        let f3 = dir.path().join("f3.jpg");
+        std::fs::write(&f1, create_test_jpeg(100, 100, 255, 0, 0)).unwrap();
+        std::fs::write(&f2, create_test_jpeg(100, 100, 0, 255, 0)).unwrap();
+        std::fs::write(&f3, create_test_jpeg(100, 100, 0, 0, 255)).unwrap();
+
+        let frames = vec![
+            f1.to_str().unwrap().to_string(),
+            f2.to_str().unwrap().to_string(),
+            f3.to_str().unwrap().to_string(),
+        ];
+        let delays = vec![80, 120, 150];
+
+        let mp4_out = dir.path().join("output.mp4");
+        engine
+            .synthesize_ugoira_from_frames(
+                frames,
+                mp4_out.to_str().unwrap().to_string(),
+                UgoiraFormat::Mp4,
+                delays,
+            )
+            .expect("Failed to synthesize MP4 from frames");
+
+        assert!(mp4_out.exists());
+        let bytes = std::fs::read(&mp4_out).unwrap();
+        assert!(bytes.len() > 16, "File too small");
+        // Verify MP4 ftyp box signature in the first 16 bytes
+        let has_ftyp = bytes.windows(4).take(16).any(|w| w == b"ftyp");
+        assert!(has_ftyp, "MP4 output missing 'ftyp' box");
     }
 }

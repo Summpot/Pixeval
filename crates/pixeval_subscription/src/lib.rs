@@ -13,9 +13,127 @@ pub use error::*;
 pub use models::*;
 pub use queue::*;
 
+#[uniffi::export]
+pub fn compute_subscription_folder_snapshot(
+    subscription_id: i64,
+    items: Vec<FolderTaskItemState>,
+    is_fetching: bool,
+    fetched_count: u32,
+    retry_at_timestamp: Option<i64>,
+) -> SubscriptionFolderSnapshot {
+    let total_count = items.len() as u32;
+    if total_count == 0 {
+        return SubscriptionFolderSnapshot {
+            subscription_id,
+            total_count: 0,
+            active_count: 0,
+            completed_count: 0,
+            error_count: 0,
+            progress_percentage: 100.0,
+            current_state: 7, // Completed
+            is_fetching,
+            fetched_count,
+            retry_at_timestamp,
+        };
+    }
+
+    let mut active_count = 0u32;
+    let mut completed_count = 0u32;
+    let mut error_count = 0u32;
+    let mut sum_progress = 0.0f64;
+
+    let mut has_error = false;
+    let mut has_cancelled = false;
+    let mut has_paused = false;
+    let mut has_running = false;
+    let mut has_queued = false;
+    let mut has_pending = false;
+
+    for item in &items {
+        active_count += item.active_count;
+        completed_count += item.completed_count;
+        error_count += item.error_count;
+        sum_progress += item.progress_percentage;
+
+        match item.state {
+            5 => has_error = true,     // Error = 5
+            4 => has_cancelled = true, // Cancelled = 4
+            3 => has_paused = true,    // Paused = 3
+            2 => has_running = true,   // Running = 2
+            1 => has_queued = true,    // Queued = 1
+            6 => has_pending = true,   // Pending = 6
+            _ => {}
+        }
+    }
+
+    let current_state = if has_error {
+        5 // Error
+    } else if has_cancelled {
+        4 // Cancelled
+    } else if has_paused {
+        3 // Paused
+    } else if has_running {
+        2 // Running
+    } else if has_queued {
+        1 // Queued
+    } else if has_pending {
+        6 // Pending
+    } else {
+        7 // Completed
+    };
+
+    let progress_percentage = sum_progress / total_count as f64;
+
+    SubscriptionFolderSnapshot {
+        subscription_id,
+        total_count,
+        active_count,
+        completed_count,
+        error_count,
+        progress_percentage,
+        current_state,
+        is_fetching,
+        fetched_count,
+        retry_at_timestamp,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_compute_subscription_folder_snapshot() {
+        let items = vec![
+            FolderTaskItemState {
+                state: 2, // Running
+                progress_percentage: 50.0,
+                active_count: 1,
+                completed_count: 0,
+                error_count: 0,
+            },
+            FolderTaskItemState {
+                state: 7, // Completed
+                progress_percentage: 100.0,
+                active_count: 0,
+                completed_count: 1,
+                error_count: 0,
+            },
+        ];
+
+        let snapshot = compute_subscription_folder_snapshot(123, items, true, 5, Some(1700000000));
+        assert_eq!(snapshot.subscription_id, 123);
+        assert_eq!(snapshot.total_count, 2);
+        assert_eq!(snapshot.active_count, 1);
+        assert_eq!(snapshot.completed_count, 1);
+        assert_eq!(snapshot.error_count, 0);
+        assert_eq!(snapshot.progress_percentage, 75.0);
+        assert_eq!(snapshot.current_state, 2); // Running
+        assert!(snapshot.is_fetching);
+        assert_eq!(snapshot.fetched_count, 5);
+        assert_eq!(snapshot.retry_at_timestamp, Some(1700000000));
+    }
+
 
     #[test]
     fn test_duplicate_stop_fuse() {
@@ -94,5 +212,56 @@ mod tests {
         engine.cancel_all();
         assert_eq!(engine.get_pending_count(), 0);
         assert!(!engine.is_sync_in_progress());
+    }
+
+    struct TestCallback {
+        daemon_states: std::sync::Arc<std::sync::Mutex<Vec<bool>>>,
+    }
+
+    impl SubscriptionProgressCallback for TestCallback {
+        fn on_fetch_state_changed(&self, _state: SubscriptionFetchState) {}
+        fn on_subscription_updated(&self, _id: i64, _name: String, _acc: String, _av: String) {}
+        fn on_item_fetched(&self, _item: SubscriptionDownloadItem) {}
+        fn on_duplicate_stopped(&self, _id: i64, _count: u32) {}
+        fn on_sync_finished(&self) {}
+        fn on_new_works_ingested(&self, _count: u32) {}
+        fn on_daemon_state_changed(&self, is_running: bool) {
+            self.daemon_states.lock().unwrap().push(is_running);
+        }
+    }
+
+    #[test]
+    fn test_daemon_lifecycle() {
+        let engine = SubscriptionSyncEngine::new(None, None);
+        assert!(!engine.is_daemon_running());
+        assert_eq!(engine.get_daemon_interval(), 1800);
+
+        engine.start_daemon(60);
+        assert!(engine.is_daemon_running());
+        assert_eq!(engine.get_daemon_interval(), 60);
+
+        engine.set_daemon_interval(120);
+        assert_eq!(engine.get_daemon_interval(), 120);
+
+        engine.stop_daemon();
+        assert!(!engine.is_daemon_running());
+    }
+
+    #[test]
+    fn test_daemon_callback_notification() {
+        let daemon_states = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let cb = TestCallback {
+            daemon_states: std::sync::Arc::clone(&daemon_states),
+        };
+        let engine = SubscriptionSyncEngine::new(None, Some(Box::new(cb)));
+
+        engine.start_daemon(10);
+        assert!(engine.is_daemon_running());
+
+        engine.stop_daemon();
+        assert!(!engine.is_daemon_running());
+
+        let states = daemon_states.lock().unwrap().clone();
+        assert_eq!(states, vec![true, false]);
     }
 }

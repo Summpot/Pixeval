@@ -5,8 +5,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Filters;
 using Pixeval.Filters.Analysis;
 using Pixeval.Filters.Syntax;
-using Pixeval.Models.Filters;
-using Pixeval.Native.Filters;
 
 namespace Pixeval.Tests;
 

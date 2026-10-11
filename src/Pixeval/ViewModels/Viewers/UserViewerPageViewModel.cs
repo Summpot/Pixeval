@@ -2,18 +2,16 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using System.Collections.Generic;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Pixeval.Models.Blocking;
-using Pixeval.Models.Pixiv;
-using Pixeval.Native.Mako;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.Controls;
+using Pixeval.Pixiv;
+using Pixeval.Mako;
 using Pixeval.Utilities;
-using Pixeval.Views;
-using Pixeval.Views.Capability;
 
 namespace Pixeval.ViewModels.Viewers;
 
@@ -30,13 +28,17 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     public partial string? LoadErrorMessage { get; private set; }
 
+    private IDisposable? _userUiStateSubscription;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Id))]
     [NotifyPropertyChangedFor(nameof(Header))]
     [NotifyPropertyChangedFor(nameof(AvatarUrl))]
     [NotifyPropertyChangedFor(nameof(BackgroundUrl))]
-    [NotifyPropertyChangedFor(nameof(TabPages))]
+    [NotifyPropertyChangedFor(nameof(CurrentUiState))]
     public partial SingleUserResponse? UserDetail { get; private set; }
+
+    public UserUiState? CurrentUiState => UserDetail?.User is { } u ? UserUiStateStore.GetOrCreate(u) : null;
 
     public string Header => UserDetail?.User.Name ?? Id.ToString();
 
@@ -46,33 +48,55 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
 
     public string? BackgroundUrl => UserDetail?.Profile.BackgroundImageUrl ?? AvatarUrl;
 
-    public IReadOnlyList<ContentPage> TabPages => UserDetail is { User: var user }
-        ?
-        [
-            new WorkPostsPage(user),
-            new WorkBookmarksPage(user),
-            new UserFollowingPage(Id),
-            new UserMyPixivPage(Id),
-            new RelatedUsersPage(Id),
-        ]
-        : [];
+    private readonly MakoClient? _makoClient;
+    private readonly IUserSessionService? _userSessionService;
 
-    public UserViewerPageViewModel(SingleUserResponse userDetail)
+    private static MakoClient? ResolveMakoClient(MakoClient? makoClient) =>
+        makoClient ?? (App.Services is { } services ? services.GetRequiredService<MakoClient>() : null);
+
+    public UserViewerPageViewModel(
+        SingleUserResponse userDetail,
+        MakoClient? makoClient = null,
+        IUserSessionService? userSessionService = null)
     {
+        _makoClient = ResolveMakoClient(makoClient);
+        _userSessionService = userSessionService ?? App.Services?.GetService<IUserSessionService>();
         Id = userDetail.User.Id;
         UserDetail = userDetail;
     }
 
-    public UserViewerPageViewModel(long userId)
+    public UserViewerPageViewModel(
+        long userId,
+        MakoClient? makoClient = null,
+        IUserSessionService? userSessionService = null)
     {
+        _makoClient = ResolveMakoClient(makoClient);
+        _userSessionService = userSessionService ?? App.Services?.GetService<IUserSessionService>();
         Id = userId;
         _ = LoadUserAsync(userId);
     }
 
     partial void OnUserDetailChanged(SingleUserResponse? value)
     {
-        if (value is not null)
-            IsFollowed = value.User.IsFollowed;
+        _userUiStateSubscription?.Dispose();
+        _userUiStateSubscription = null;
+
+        if (value?.User is { } user)
+        {
+            var state = UserUiStateStore.GetOrCreate(user);
+            IsFollowed = (state.FollowState & HeartButtonState.Checked) is not 0;
+
+            void OnStateChanged(object? _, PropertyChangedEventArgs e)
+            {
+                if (e.PropertyName == nameof(UserUiState.FollowState))
+                {
+                    IsFollowed = (state.FollowState & HeartButtonState.Checked) is not 0;
+                }
+            }
+
+            state.PropertyChanged += OnStateChanged;
+            _userUiStateSubscription = new ActionDisposable(() => state.PropertyChanged -= OnStateChanged);
+        }
 
         FollowCommand.NotifyCanExecuteChanged();
         FollowPrivatelyCommand.NotifyCanExecuteChanged();
@@ -82,6 +106,9 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
 
     private async Task LoadUserAsync(long userId)
     {
+        if (_makoClient is null)
+            return;
+
         var token = _loadingCts.Token;
 
         IsLoading = true;
@@ -89,7 +116,7 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         try
         {
             var userDetail = BlockedContentHelper.Replace(
-                await App.AppViewModel.MakoClient.GetUserFromIdAsync(userId, token));
+                await _makoClient.GetUserFromIdAsync(userId, token));
             if (_disposed)
                 return;
 
@@ -110,7 +137,7 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private bool CanFollow => Id != PixevalSettings.MyId;
+    private bool CanFollow => Id != (_userSessionService?.CurrentUserId ?? 0);
 
     private bool CanBlockUser => UserDetail is { UserEntity: var user }
                                  && !BlockedContentHelper.IsBlocked(user);
@@ -128,11 +155,14 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private async Task FollowAsync()
     {
-        var result = await MakoHelper.SetFollowAsync(Id, true, false);
+        if (_makoClient is null)
+            return;
+
+        var result = await _makoClient.SetFollowAsync(Id, true, false);
         if (result)
         {
             if (UserDetail?.User is { } user)
-                user.IsFollowedState = true;
+                UserUiStateStore.UpdateFollow(user, HeartButtonState.Checked);
             IsFollowed = true;
         }
     }
@@ -140,11 +170,14 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private async Task FollowPrivatelyAsync()
     {
-        var result = await MakoHelper.SetFollowAsync(Id, true, true);
+        if (_makoClient is null)
+            return;
+
+        var result = await _makoClient.SetFollowAsync(Id, true, true);
         if (result)
         {
             if (UserDetail?.User is { } user)
-                user.IsFollowedState = true;
+                UserUiStateStore.UpdateFollow(user, HeartButtonState.Checked);
             IsFollowed = true;
         }
     }
@@ -152,11 +185,14 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private async Task UnfollowAsync()
     {
-        var result = await MakoHelper.SetFollowAsync(Id, false);
+        if (_makoClient is null)
+            return;
+
+        var result = await _makoClient.SetFollowAsync(Id, false);
         if (result)
         {
             if (UserDetail?.User is { } user)
-                user.IsFollowedState = false;
+                UserUiStateStore.UpdateFollow(user, HeartButtonState.Unchecked);
             IsFollowed = false;
         }
     }
@@ -171,6 +207,8 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
             return;
 
         _disposed = true;
+        _userUiStateSubscription?.Dispose();
+        _userUiStateSubscription = null;
         IsLoading = false;
         _loadingCts.Cancel();
         _loadingCts.Dispose();

@@ -4,10 +4,11 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement.Settings;
-using Pixeval.Models.Pixiv;
+using Pixeval.Config;
+using Pixeval.Pixiv;
 using Pixeval.Utilities;
-using Pixeval.Native.Mako;
+using Pixeval.Services.Network;
+using Pixeval.Mako;
 
 namespace Pixeval.Tests;
 
@@ -16,7 +17,7 @@ public sealed class MakoClientTest
 {
     private static MakoClient CreateTestClient(PixivDomainFrontingSettings settings)
     {
-        var config = MakoHelper.CreateMakoConfiguration(settings);
+        var config = ProxyHelper.CreateMakoConfiguration(settings);
         return new MakoClient(config);
     }
 
@@ -69,7 +70,7 @@ public sealed class MakoClientTest
         using var engine = client.NovelRecommended(includeRanking: true, includePrivacy: true);
 
         // Verify that NovelFetchEngine implements IAsyncEnumerable<Novel>
-        Assert.IsInstanceOfType<IAsyncEnumerable<Novel>>(engine);
+        Assert.IsInstanceOfType<IAsyncEnumerable<Mako.Novel>>(engine);
 
         Assert.AreEqual(0u, engine.RequestedPages());
 
@@ -136,14 +137,14 @@ public sealed class MakoClientTest
     public void MakoClientCreateConfigurationShouldPreserveResolvers()
     {
         var settings = new PixivDomainFrontingSettings();
-        var config = MakoHelper.CreateMakoConfiguration(settings, cooldownMs: 800, splitDelayMs: 150, proxyUrl: "http://127.0.0.1:7890");
+        var config = ProxyHelper.CreateMakoConfiguration(settings, cooldownMs: 800, splitDelayMs: 150, proxyUrl: "http://127.0.0.1:7890");
 
         Assert.IsTrue(config.DomainFrontingEnabled);
         Assert.AreEqual(800ul, config.CooldownMs);
         Assert.AreEqual(150ul, config.SplitDelayMs);
         Assert.AreEqual("http://127.0.0.1:7890", config.ProxyUrl);
-        Assert.IsTrue(config.HostIps.ContainsKey(MakoHelper.AppApiHost));
-        Assert.IsTrue(config.HostIps[MakoHelper.AppApiHost].Count > 0);
+        Assert.IsTrue(config.HostIps.ContainsKey(MakoHttpOptions.AppApiHost));
+        Assert.IsTrue(config.HostIps[MakoHttpOptions.AppApiHost].Count > 0);
     }
 
     [TestMethod]
@@ -151,7 +152,7 @@ public sealed class MakoClientTest
     {
         var settings = new PixivDomainFrontingSettings();
         using var client = CreateTestClient(settings);
-        var updatedConfig = MakoHelper.CreateMakoConfiguration(settings, cooldownMs: 500, splitDelayMs: 80, proxyUrl: "http://127.0.0.1:1080");
+        var updatedConfig = ProxyHelper.CreateMakoConfiguration(settings, cooldownMs: 500, splitDelayMs: 80, proxyUrl: "http://127.0.0.1:1080");
         client.UpdateConfiguration(updatedConfig);
     }
 
@@ -219,13 +220,13 @@ public sealed class MakoClientTest
     }
 
     [TestMethod]
-    public void MakoHelperSpotlightShouldReturnFetchEngineWithMapping()
+    public void MakoSpotlightShouldReturnFetchEngineWithMapping()
     {
         var settings = new PixivDomainFrontingSettings();
         using var client = CreateTestClient(settings);
 
         var spotlightStream = client.Spotlight("all");
-        Assert.IsInstanceOfType<Pixeval.Models.Pixiv.IFetchEngine<SpotlightArticle>>(spotlightStream);
+        Assert.IsInstanceOfType<Pixeval.Pixiv.IFetchEngine<SpotlightArticle>>(spotlightStream);
 
         // Verify native SpotlightArticle extensions
         var article = new SpotlightArticle(
@@ -243,7 +244,7 @@ public sealed class MakoClientTest
         Assert.AreEqual("Pure Title", article.PureTitle);
         Assert.AreEqual("https://example.com/thumb.jpg", article.Thumbnail);
         Assert.AreEqual("https://example.com/article", article.ArticleUrl);
-        Assert.AreEqual(Pixeval.Models.Pixiv.SpotlightCategory.Spotlight, article.CategoryEnum);
+        Assert.AreEqual(Pixeval.Pixiv.SpotlightCategory.Spotlight, article.CategoryEnum);
         Assert.AreEqual("Subcategory", article.SubcategoryLabel);
         Assert.AreEqual(new System.Uri("https://www.pixivision.net/a/12345"), article.WebsiteUri);
         Assert.AreEqual(new System.Uri("pixeval://spotlight/12345"), article.AppUri);

@@ -1,7 +1,9 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Layout;
 using Pixeval.Utilities;
 
@@ -105,4 +107,19 @@ internal static class LayoutAlignmentHelper
             ? distributableSpace - DistributionEpsilon
             : 0;
     }
+}
+
+internal static class LayoutQuantizationHelper
+{
+    public static double QuantizeToDevicePixels(double value, double scale)
+    {
+        if (!double.IsFinite(value))
+            return value;
+        if (scale <= 0 || !double.IsFinite(scale))
+            scale = 1.0;
+        return Math.Round(value * scale) / scale;
+    }
+
+    public static double GetRenderScaling(Visual visual) =>
+        TopLevel.GetTopLevel(visual)?.RenderScaling is { } s && s > 0 && double.IsFinite(s) ? s : 1.0;
 }

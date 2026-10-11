@@ -3,6 +3,7 @@ using System.Windows.Input;
 using Avalonia.Input;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Utilities;
+using Pixeval.Common;
 
 namespace Pixeval.Tests;
 

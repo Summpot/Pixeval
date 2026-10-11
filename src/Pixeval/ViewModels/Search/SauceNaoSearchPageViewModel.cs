@@ -5,10 +5,11 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.Config;
 using Pixeval.Utilities;
 
 namespace Pixeval.ViewModels.Search;
@@ -25,7 +26,7 @@ public sealed partial class SauceNaoSearchPageViewModel : ViewModelBase, IDispos
     [ObservableProperty]
     public partial bool FileSelected { get; private set; }
 
-    public static string ApiKey => App.AppViewModel.AppSettings.SearchSettings.SauceNaoApiKey;
+    public static string ApiKey => App.Services!.GetRequiredService<AppSettings>().SearchSettings.SauceNaoApiKey;
 
     public static bool IsApiKeyExisted => !string.IsNullOrWhiteSpace(ApiKey);
 
@@ -35,13 +36,20 @@ public sealed partial class SauceNaoSearchPageViewModel : ViewModelBase, IDispos
 
         try
         {
-            using var memoryStream = Streams.RentStream();
-            await stream.CopyToAsync(memoryStream);
-            File = memoryStream.ToArray();
+            if (stream is MemoryStream ms)
+            {
+                File = ms.ToArray();
+            }
+            else
+            {
+                using var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                File = memoryStream.ToArray();
+            }
             FileSelected = true;
-            memoryStream.Position = 0;
+            using var readStream = new MemoryStream(File.ToArray());
             Image?.Dispose();
-            Image = new Bitmap(memoryStream);
+            Image = new Bitmap(readStream);
         }
         catch (Exception)
         {
@@ -50,18 +58,18 @@ public sealed partial class SauceNaoSearchPageViewModel : ViewModelBase, IDispos
     }
 
     [RelayCommand]
-    public async Task PasteAsync(Control control)
+    public async Task PasteAsync(Control? control)
     {
+        _ = control;
         ObjectDisposedException.ThrowIf(_isDisposed, this);
 
-        if (TopLevel.GetTopLevel(control) is not { Clipboard: { } clipboard })
-            return;
+        var clipboard = App.Services?.GetService<IClipboardService>() ?? NullClipboardService.Instance;
         if (await clipboard.TryGetBitmapAsync() is { } bitmap)
             try
             {
                 Image?.Dispose();
                 Image = bitmap;
-                using var memoryStream = Streams.RentStream();
+                using var memoryStream = new MemoryStream();
                 bitmap.Save(memoryStream, new PngBitmapEncoderOptions());
                 File = memoryStream.ToArray();
                 FileSelected = true;

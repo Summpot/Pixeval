@@ -8,43 +8,42 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Misaki;
-using Pixeval.AppManagement;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
-using Pixeval.Models.Home;
-using Pixeval.Models.Options;
-using Pixeval.Models.Pixiv;
-using Pixeval.Native.Mako;
+using Pixeval.Config;
+using Pixeval.Pixiv;
+using Pixeval.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Home;
-using Pixeval.Views.Capability;
+using Pixeval.Views.Works;
 using Pixeval.Views.Search;
 using Pixeval.Views.Viewers;
 
 namespace Pixeval.Views.Home;
 
-public static class HomeCardDefinitions
+public sealed class HomeCardDefinitions
 {
-    private static readonly FrozenDictionary<HomePageCardSourceKind, HomeCardDefinition> _BySourceKind;
+    private readonly MakoClient _makoClient;
+    private readonly INavigationService _navigation;
+    private readonly IUserSessionService _session;
+    private readonly FrozenDictionary<HomePageCardSourceKind, HomeCardDefinition> _bySourceKind;
 
-    static HomeCardDefinitions()
+    public HomeCardDefinitions(MakoClient makoClient, INavigationService navigation, IUserSessionService session)
     {
+        _makoClient = makoClient;
+        _navigation = navigation;
+        _session = session;
         All =
         [
             new(
                 HomePageCardSourceKind.WorkRecommended,
-                HomeCardParameterKinds.WorkType,
-                CreateWorkPreviewSourceFactory(card => App.AppViewModel.MakoClient.WorkRecommended(card.WorkType)),
+                CreateWorkPreviewSourceFactory(card => _makoClient.WorkRecommended(card.WorkType)),
                 OpenWorkRecommendedPage,
                 card => [GetDescription(card.WorkType)]),
             new(
                 HomePageCardSourceKind.WorkBookmarks,
-                HomeCardParameterKinds.UserId
-                | HomeCardParameterKinds.SimpleWorkType
-                | HomeCardParameterKinds.PrivacyPolicy
-                | HomeCardParameterKinds.Tag,
-                CreateWorkPreviewSourceFactory(card => App.AppViewModel.MakoClient.WorkBookmarks(card.SimpleWorkType, card.UserId, card.PrivacyPolicy, card.Tag)),
+                CreateWorkPreviewSourceFactory(card => _makoClient.WorkBookmarks(card.SimpleWorkType, card.UserId, card.PrivacyPolicy, card.Tag)),
                 OpenWorkBookmarksPage,
                 card =>
                 [
@@ -52,14 +51,10 @@ public static class HomeCardDefinitions
                     GetDescription(card.SimpleWorkType),
                     GetDescription(card.PrivacyPolicy),
                     .. string.IsNullOrWhiteSpace(card.Tag) ? [] : new[] { $"#{card.Tag}" }
-                ],
-                useCurrentUserAsDefault: true),
+                ]),
             new(
                 HomePageCardSourceKind.WorkRanking,
-                HomeCardParameterKinds.SimpleWorkType
-                | HomeCardParameterKinds.RankOption
-                | HomeCardParameterKinds.RankingDate,
-                CreateWorkPreviewSourceFactory(card => App.AppViewModel.MakoClient.WorkRanking(card.SimpleWorkType, card.RankOption, card.GetRankingDate())),
+                CreateWorkPreviewSourceFactory(card => _makoClient.WorkRanking(card.SimpleWorkType, card.RankOption, card.GetRankingDate())),
                 OpenWorkRankingPage,
                 card =>
                 [
@@ -71,160 +66,144 @@ public static class HomeCardDefinitions
                 ]),
             new(
                 HomePageCardSourceKind.WorkNew,
-                HomeCardParameterKinds.WorkType,
-                CreateWorkPreviewSourceFactory(card => App.AppViewModel.MakoClient.WorkNew(card.WorkType)),
+                CreateWorkPreviewSourceFactory(card => _makoClient.WorkNew(card.WorkType)),
                 OpenWorkNewPage,
                 card => [GetDescription(card.WorkType)]),
             new(
                 HomePageCardSourceKind.WorkFollowing,
-                HomeCardParameterKinds.SimpleWorkType | HomeCardParameterKinds.PrivacyPolicy,
-                CreateWorkPreviewSourceFactory(card => App.AppViewModel.MakoClient.WorkFollowing(card.SimpleWorkType, card.PrivacyPolicy)),
+                CreateWorkPreviewSourceFactory(card => _makoClient.WorkFollowing(card.SimpleWorkType, card.PrivacyPolicy)),
                 OpenWorkFollowingPage,
                 card => [GetDescription(card.SimpleWorkType), GetDescription(card.PrivacyPolicy)]),
             new(
                 HomePageCardSourceKind.WorkMyPixiv,
-                HomeCardParameterKinds.SimpleWorkType,
-                CreateWorkPreviewSourceFactory(card => App.AppViewModel.MakoClient.WorkMyPixiv(card.SimpleWorkType)),
+                CreateWorkPreviewSourceFactory(card => _makoClient.WorkMyPixiv(card.SimpleWorkType)),
                 OpenWorkMyPixivPage,
                 card => [GetDescription(card.SimpleWorkType)]),
             new(
                 HomePageCardSourceKind.WorkRelated,
-                HomeCardParameterKinds.EntryId | HomeCardParameterKinds.SimpleWorkType,
-                CreateWorkPreviewSourceFactory(card => App.AppViewModel.MakoClient.WorkRelated(card.EntryId, card.SimpleWorkType)),
+                CreateWorkPreviewSourceFactory(card => _makoClient.WorkRelated(card.EntryId, card.SimpleWorkType)),
                 OpenWorkRelatedPage,
                 card => [card.EntryId.ToString(CultureInfo.InvariantCulture), GetDescription(card.SimpleWorkType)]),
             new(
                 HomePageCardSourceKind.SingleSeries,
-                HomeCardParameterKinds.SeriesId | HomeCardParameterKinds.SimpleWorkType,
                 CreateSingleSeriesPreviewSourceAsync,
                 OpenSingleSeries,
                 card => [card.SeriesId.ToString(CultureInfo.InvariantCulture), GetDescription(card.SimpleWorkType)]),
             new(
                 HomePageCardSourceKind.WorkPosts,
-                HomeCardParameterKinds.UserId | HomeCardParameterKinds.WorkType,
-                CreateWorkPreviewSourceFactory(card => App.AppViewModel.MakoClient.WorkPosted(card.WorkType, card.UserId)),
+                CreateWorkPreviewSourceFactory(card => _makoClient.WorkPosted(card.WorkType, card.UserId)),
                 OpenWorkPostsPage,
-                card => [$"@{card.UserId}", GetDescription(card.WorkType)],
-                useCurrentUserAsDefault: true),
+                card => [$"@{card.UserId}", GetDescription(card.WorkType)]),
             new(
                 HomePageCardSourceKind.WorkSearch,
-                HomeCardParameterKinds.SimpleWorkType | HomeCardParameterKinds.SearchText,
                 CreateWorkPreviewSourceFactory(card => card.SimpleWorkType is SimpleWorkType.Novel
                     ? string.IsNullOrWhiteSpace(card.SearchText)
-                        ? App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<IArtworkInfo>())
-                        : App.AppViewModel.MakoClient.NovelSearch(new NovelSearchArguments(card.SearchText)).ToFetchEngine()
+                        ? _makoClient.Computed(AsyncEnumerable.Empty<object>())
+                        : _makoClient.NovelSearch(new NovelSearchArguments(card.SearchText)).ToFetchEngine()
                     : string.IsNullOrWhiteSpace(card.SearchText)
-                        ? App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<IArtworkInfo>())
-                        : App.AppViewModel.MakoClient.IllustrationSearch(new IllustrationSearchArguments(card.SearchText)).ToFetchEngine()),
+                        ? _makoClient.Computed(AsyncEnumerable.Empty<object>())
+                        : _makoClient.IllustrationSearch(new IllustrationSearchArguments(card.SearchText)).ToFetchEngine()),
                 OpenWorkSearchPage,
                 card => [GetDescription(card.SimpleWorkType), card.SearchText ?? ""]),
             new(
                 HomePageCardSourceKind.UserRecommended,
-                HomeCardParameterKinds.None,
-                CreateUserPreviewSourceFactory(_ => App.AppViewModel.MakoClient.UserRecommended().ToFetchEngine()),
+                CreateUserPreviewSourceFactory(_ => _makoClient.UserRecommended().ToFetchEngine()),
                 OpenUserRecommendedPage),
             new(
                 HomePageCardSourceKind.UserSearch,
-                HomeCardParameterKinds.SearchText,
                 CreateUserPreviewSourceFactory(card => string.IsNullOrWhiteSpace(card.SearchText)
-                    ? App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<User>())
-                    : App.AppViewModel.MakoClient.UserSearch(card.SearchText).ToFetchEngine()),
+                    ? _makoClient.Computed(AsyncEnumerable.Empty<User>())
+                    : _makoClient.UserSearch(card.SearchText).ToFetchEngine()),
                 OpenUserSearchPage,
                 card => [card.SearchText ?? ""]),
             new(
                 HomePageCardSourceKind.UserFollowing,
-                HomeCardParameterKinds.UserId | HomeCardParameterKinds.PrivacyPolicy,
-                CreateUserPreviewSourceFactory(card => App.AppViewModel.MakoClient.UserFollowing(card.UserId, card.PrivacyPolicy)),
+                CreateUserPreviewSourceFactory(card => _makoClient.UserFollowing(card.UserId, card.PrivacyPolicy)),
                 OpenUserFollowingPage,
-                card => [$"@{card.UserId}", GetDescription(card.PrivacyPolicy)],
-                useCurrentUserAsDefault: true),
+                card => [$"@{card.UserId}", GetDescription(card.PrivacyPolicy)]),
             new(
                 HomePageCardSourceKind.UserFollower,
-                HomeCardParameterKinds.None,
-                CreateUserPreviewSourceFactory(_ => App.AppViewModel.MakoClient.UserFollower()),
+                CreateUserPreviewSourceFactory(_ =>
+                {
+                    var userId = _session.CurrentUserId;
+                    if (userId <= 0)
+                        throw new InvalidOperationException("User is not logged in");
+                    return _makoClient.UserFollower(userId).ToFetchEngine();
+                }),
                 OpenUserFollowerPage),
             new(
                 HomePageCardSourceKind.UserMyPixiv,
-                HomeCardParameterKinds.UserId,
-                CreateUserPreviewSourceFactory(card => App.AppViewModel.MakoClient.UserMyPixiv(card.UserId)),
+                CreateUserPreviewSourceFactory(card => _makoClient.UserMyPixiv(card.UserId)),
                 OpenUserMyPixivPage,
-                card => [$"@{card.UserId}"],
-                useCurrentUserAsDefault: true),
+                card => [$"@{card.UserId}"]),
             new(
                 HomePageCardSourceKind.Spotlight,
-                HomeCardParameterKinds.None,
                 CreateSpotlightViewModelAsync,
                 OpenSpotlightPage),
             new(
                 HomePageCardSourceKind.SingleImage,
-                HomeCardParameterKinds.EntryId,
                 CreateSingleImageViewModelAsync,
                 OpenSingleImage,
                 card => [card.EntryId.ToString(CultureInfo.InvariantCulture)]),
             new(
                 HomePageCardSourceKind.SingleNovel,
-                HomeCardParameterKinds.EntryId,
                 CreateSingleNovelViewModelAsync,
                 OpenSingleNovel,
-                card => [card.EntryId.ToString(CultureInfo.InvariantCulture)],
-                workType: WorkType.Novel,
-                simpleWorkType: SimpleWorkType.Novel),
+                card => [card.EntryId.ToString(CultureInfo.InvariantCulture)]),
             new(
                 HomePageCardSourceKind.SingleUser,
-                HomeCardParameterKinds.UserId,
                 CreateSingleUserViewModelAsync,
                 OpenSingleUser,
                 card => [$"@{card.UserId}"])
         ];
-        _BySourceKind = All.ToFrozenDictionary(static definition => definition.SourceKind);
+        _bySourceKind = All.ToFrozenDictionary(static definition => definition.SourceKind);
     }
 
-    public static IReadOnlyList<HomeCardDefinition> All { get; }
+    public IReadOnlyList<HomeCardDefinition> All { get; }
 
-    public static HomeCardDefinition Get(HomePageCardSourceKind sourceKind) =>
-        _BySourceKind.TryGetValue(sourceKind, out var definition)
+    public HomeCardDefinition Get(HomePageCardSourceKind sourceKind) =>
+        _bySourceKind.TryGetValue(sourceKind, out var definition)
             ? definition
-            : _BySourceKind[HomePageCardSourceKind.WorkRecommended];
+            : _bySourceKind[HomePageCardSourceKind.WorkRecommended];
 
-    public static string BuildTitle(HomePageCardLayout card) => Get(card.SourceKind).BuildTitle(card);
+    public string BuildTitle(HomePageCardLayout card) => Get(card.SourceKind).BuildTitle(card);
 
-    public static void OpenPreviewItem(TopLevel topLevel, object? parameter, ISimpleViewViewModel? vm)
+    public static void OpenPreviewItem(INavigationService navigation, ILauncherService launcher, object? parameter, ISimpleViewViewModel? vm)
     {
         switch (parameter, vm)
         {
-            case (NovelItemViewModel viewModel, NovelViewViewModel viewViewModel):
-                topLevel.ViewContainer?.CreateNovelPage(viewModel, viewViewModel.DataProvider.CloneRef());
+            case (Mako.Novel novel, NovelViewViewModel viewViewModel):
+                navigation.CreateNovelPage(novel, (IReadOnlyList<Mako.Novel>) viewViewModel.View);
                 break;
-            case (IllustrationItemViewModel viewModel, IllustrationViewViewModel viewViewModel):
-                topLevel.ViewContainer?.CreateIllustrationPage(viewModel, viewViewModel.DataProvider.CloneRef());
+            case (object work, IllustrationViewViewModel viewViewModel):
+                navigation.CreateIllustrationPage(work, (IReadOnlyList<object>) viewViewModel.View);
                 break;
-            case (UserItemViewModel viewModel, _):
-                topLevel.ViewContainer?.CreateUserPage(viewModel.UserId);
+            case (User user, _):
+                navigation.CreateUserPage(user.RawId);
                 break;
-            case (SpotlightItemViewModel viewModel, _):
-                if (topLevel.Launcher is { } launcher)
-                    _ = launcher.LaunchUriAsync(new(viewModel.Entry.ArticleUrl));
+            case (SpotlightArticle article, _):
+                _ = launcher.LaunchUriAsync(new(article.ArticleUrl));
                 break;
         }
     }
 
     private static Func<HomePageCardLayout, Task<HomeCardPreviewSource>> CreateWorkPreviewSourceFactory(
-        Func<HomePageCardLayout, IFetchEngine<IArtworkInfo>> engineFactory) =>
+        Func<HomePageCardLayout, IFetchEngine<object>> engineFactory) =>
         card => Task.FromResult(CreateWorkPreviewSource(engineFactory(card)));
 
     private static Func<HomePageCardLayout, Task<HomeCardPreviewSource>> CreateUserPreviewSourceFactory(
         Func<HomePageCardLayout, IFetchEngine<User>> engineFactory) =>
         card => Task.FromResult(CreateUserPreviewSource(engineFactory(card)));
 
-    private static Task<HomeCardPreviewSource> CreateSpotlightViewModelAsync(HomePageCardLayout card)
+    private Task<HomeCardPreviewSource> CreateSpotlightViewModelAsync(HomePageCardLayout card)
     {
-        var engine = App.AppViewModel.MakoClient.Spotlight().ToFetchEngine();
+        var engine = _makoClient.Spotlight().ToFetchEngine();
         return Task.FromResult(new HomeCardPreviewSource(CreateSpotlightViewModel(engine)));
     }
 
-    private static async Task<HomeCardPreviewSource> CreateSingleSeriesPreviewSourceAsync(HomePageCardLayout card)
+    private async Task<HomeCardPreviewSource> CreateSingleSeriesPreviewSourceAsync(HomePageCardLayout card)
     {
-        var (detail, firstWork, engine) = await App.AppViewModel.MakoClient.GetWorkSeriesAsync(card.SimpleWorkType, card.SeriesId);
+        var (detail, firstWork, engine) = await _makoClient.GetWorkSeriesAsync(card.SimpleWorkType, card.SeriesId);
         IWorkViewViewModel viewModel = card.SimpleWorkType is SimpleWorkType.Novel
             ? new NovelViewViewModel()
             : new IllustrationViewViewModel();
@@ -232,41 +211,41 @@ public static class HomeCardDefinitions
         return new(viewModel, new SingleSeriesOpeningContext(detail, firstWork));
     }
 
-    private static async Task<HomeCardPreviewSource> CreateSingleImageViewModelAsync(HomePageCardLayout card)
+    private async Task<HomeCardPreviewSource> CreateSingleImageViewModelAsync(HomePageCardLayout card)
     {
-        var engine = App.AppViewModel.MakoClient.Computed(Single(await App.AppViewModel.MakoClient.GetIllustrationFromIdAsync(card.EntryId)));
+        var engine = _makoClient.Computed(Single(await _makoClient.GetIllustrationFromIdAsync(card.EntryId)));
         return new(CreateIllustrationViewModel(engine));
     }
 
-    private static async Task<HomeCardPreviewSource> CreateSingleNovelViewModelAsync(HomePageCardLayout card)
+    private async Task<HomeCardPreviewSource> CreateSingleNovelViewModelAsync(HomePageCardLayout card)
     {
-        var engine = App.AppViewModel.MakoClient.Computed(Single(await App.AppViewModel.MakoClient.GetNovelFromIdAsync(card.EntryId)));
+        var engine = _makoClient.Computed(Single(await _makoClient.GetNovelFromIdAsync(card.EntryId)));
         return new(CreateNovelViewModel(engine));
     }
 
-    private static async Task<HomeCardPreviewSource> CreateSingleUserViewModelAsync(HomePageCardLayout card)
+    private async Task<HomeCardPreviewSource> CreateSingleUserViewModelAsync(HomePageCardLayout card)
     {
-        var userDetail = await App.AppViewModel.MakoClient.GetUserFromIdAsync(card.UserId);
-        var engine = App.AppViewModel.MakoClient.Computed(Single(userDetail.User));
+        var userDetail = await _makoClient.GetUserFromIdAsync(card.UserId);
+        var engine = _makoClient.Computed(Single(userDetail.User));
         return new(CreateUserViewModel(engine), new SingleUserOpeningContext(userDetail));
     }
 
-    private static HomeCardPreviewSource CreateWorkPreviewSource(IFetchEngine<IArtworkInfo> engine) =>
-        new(engine is IFetchEngine<Novel> novelEngine
+    private static HomeCardPreviewSource CreateWorkPreviewSource(IFetchEngine<object> engine) =>
+        new(engine is IFetchEngine<Mako.Novel> novelEngine
             ? CreateNovelViewModel(novelEngine)
             : CreateIllustrationViewModel(engine));
 
     private static HomeCardPreviewSource CreateUserPreviewSource(IFetchEngine<User> engine) =>
         new(CreateUserViewModel(engine));
 
-    private static IllustrationViewViewModel CreateIllustrationViewModel(IFetchEngine<IArtworkInfo> engine)
+    private static IllustrationViewViewModel CreateIllustrationViewModel(IFetchEngine<object> engine)
     {
         var viewModel = new IllustrationViewViewModel();
         viewModel.ResetEngine(engine);
         return viewModel;
     }
 
-    private static NovelViewViewModel CreateNovelViewModel(IFetchEngine<Novel> engine)
+    private static NovelViewViewModel CreateNovelViewModel(IFetchEngine<Mako.Novel> engine)
     {
         var viewModel = new NovelViewViewModel();
         viewModel.ResetEngine(engine);
@@ -276,135 +255,124 @@ public static class HomeCardDefinitions
     private static UserViewViewModel CreateUserViewModel(IFetchEngine<User> engine)
     {
         var viewModel = new UserViewViewModel();
-        viewModel.ResetEngine(engine, static (user, _) => new(user));
+        viewModel.ResetEngine(engine);
         return viewModel;
     }
 
     private static SpotlightViewViewModel CreateSpotlightViewModel(IFetchEngine<SpotlightArticle> engine)
     {
         var viewModel = new SpotlightViewViewModel();
-        viewModel.ResetEngine(engine, static (spotlight, _) => new(spotlight));
+        viewModel.ResetEngine(engine);
         return viewModel;
     }
 
-    private static void OpenWorkRecommendedPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenWorkRecommendedPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkRecommendedPage(card.WorkType, source.TakeViewModel<IWorkViewViewModel>()));
+        _navigation.NavigateTo<WorkRecommendedPage>(card.WorkType);
     }
 
-    private static void OpenWorkNewPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenWorkNewPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkNewPage(card.WorkType, source.TakeViewModel<IWorkViewViewModel>()));
+        _navigation.NavigateTo<WorkNewPage>(card.WorkType);
     }
 
-    private static void OpenWorkPostsPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenWorkPostsPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkPostsPage(CreateUserBasicInfo(card), card.WorkType, source.TakeViewModel<IWorkViewViewModel>()));
+        _navigation.NavigateTo<WorkPostsPage>((CreateUserBasicInfo(card), card.WorkType));
     }
 
-    private static void OpenWorkBookmarksPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenWorkBookmarksPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkBookmarksPage(
-            CreateUserBasicInfo(card),
-            card.SimpleWorkType,
-            card.PrivacyPolicy,
-            card.Tag,
-            source.TakeViewModel<IWorkViewViewModel>()));
+        _navigation.NavigateTo<WorkBookmarksPage>(
+            (CreateUserBasicInfo(card), card.SimpleWorkType, card.PrivacyPolicy, card.Tag));
     }
 
-    private static void OpenWorkRankingPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenWorkRankingPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkRankingPage(
-            card.SimpleWorkType,
-            card.RankOption,
-            card.GetRankingDate().LocalDateTime,
-            source.TakeViewModel<IWorkViewViewModel>()));
+        _navigation.NavigateTo<WorkRankingPage>(
+            (card.SimpleWorkType, card.RankOption, card.GetRankingDate().LocalDateTime));
     }
 
-    private static void OpenWorkFollowingPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenWorkFollowingPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkFollowingPage(card.SimpleWorkType, card.PrivacyPolicy, source.TakeViewModel<IWorkViewViewModel>()));
+        _navigation.NavigateTo<WorkFollowingPage>((card.SimpleWorkType, card.PrivacyPolicy));
     }
 
-    private static void OpenWorkMyPixivPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenWorkMyPixivPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkMyPixivPage(card.SimpleWorkType, source.TakeViewModel<IWorkViewViewModel>()));
+        _navigation.NavigateTo<WorkMyPixivPage>(card.SimpleWorkType);
     }
 
-    private static void OpenWorkRelatedPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenWorkRelatedPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        topLevel.ViewContainer?.NavigateTo(new WorkRelatedPage(card.EntryId, card.SimpleWorkType, source.TakeViewModel<IWorkViewViewModel>()));
+        _navigation.NavigateTo<WorkRelatedPage>((card.EntryId, card.SimpleWorkType));
     }
 
-    private static void OpenSingleSeries(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenSingleSeries(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        var context = source.GetOpeningContext<SingleSeriesOpeningContext>();
-        topLevel.ViewContainer?.CreateSeriesPage(
-            card.SimpleWorkType,
-            card.SeriesId,
-            context.SeriesDetail,
-            context.FirstWork,
-            source.TakeViewModel<IWorkViewViewModel>());
+        _navigation.NavigateToSeries(card.SimpleWorkType, card.SeriesId);
     }
 
-    private static void OpenWorkSearchPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenWorkSearchPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
         var searchText = card.SearchText ?? "";
-        topLevel.ViewContainer?.NavigateTo(new WorkSearchResultPage(
+        _navigation.NavigateToWorkSearch(
             searchText,
             new IllustrationSearchArguments(searchText),
             new NovelSearchArguments(searchText),
-            card.SimpleWorkType,
-            source.TakeViewModel<IWorkViewViewModel>()));
+            card.SimpleWorkType);
     }
 
-    private static void OpenUserRecommendedPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenUserRecommendedPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        topLevel.ViewContainer?.NavigateTo(new UserRecommendedPage(source.TakeViewModel<UserViewViewModel>()));
+        _navigation.NavigateTo<UserRecommendedPage>();
     }
 
-    private static void OpenUserSearchPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenUserSearchPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        topLevel.ViewContainer?.NavigateTo(new UserSearchResultPage(card.SearchText, source.TakeViewModel<UserViewViewModel>()));
+        _navigation.NavigateToUserSearch(card.SearchText);
     }
 
-    private static void OpenUserFollowingPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenUserFollowingPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        topLevel.ViewContainer?.NavigateTo(new UserFollowingPage(card.UserId, card.PrivacyPolicy, source.TakeViewModel<UserViewViewModel>()));
+        _navigation.NavigateTo<UserFollowingPage>((card.UserId, card.PrivacyPolicy));
     }
 
-    private static void OpenUserFollowerPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenUserFollowerPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        topLevel.ViewContainer?.NavigateTo(new UserFollowerPage(source.TakeViewModel<UserViewViewModel>()));
+        _navigation.NavigateTo<UserFollowerPage>();
     }
 
-    private static void OpenUserMyPixivPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenUserMyPixivPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        topLevel.ViewContainer?.NavigateTo(new UserMyPixivPage(card.UserId, source.TakeViewModel<UserViewViewModel>()));
+        _navigation.NavigateTo<UserMyPixivPage>(card.UserId);
     }
 
-    private static void OpenSpotlightPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenSpotlightPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        topLevel.ViewContainer?.NavigateTo(new SpotlightPage(source.TakeViewModel<SpotlightViewViewModel>()));
+        _navigation.NavigateTo<SpotlightPage>();
     }
 
-    private static void OpenSingleImage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenSingleImage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
         if (source.GetViewModel<IllustrationViewViewModel>().Source.FirstOrDefault() is { } viewModel)
-            topLevel.ViewContainer?.CreateIllustrationPage(viewModel);
+            _navigation.NavigateToIllustration(viewModel);
     }
 
-    private static void OpenSingleNovel(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
+    private void OpenSingleNovel(HomePageCardLayout card, HomeCardPreviewSource source)
     {
         if (source.GetViewModel<NovelViewViewModel>().Source.FirstOrDefault() is { } viewModel)
-            topLevel.ViewContainer?.CreateNovelPage(viewModel);
+            _navigation.NavigateToNovel(viewModel);
     }
 
-    private static void OpenSingleUser(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel) =>
-        topLevel.ViewContainer?.CreateUserPage(source.GetOpeningContext<SingleUserOpeningContext>().UserDetail);
+    private void OpenSingleUser(HomePageCardLayout card, HomeCardPreviewSource source) =>
+        _navigation.NavigateToUser(source.GetOpeningContext<SingleUserOpeningContext>().UserDetail);
 
-    private static User CreateUserBasicInfo(HomePageCardLayout card) =>
-        PixevalSettings.MyUser is { } me && card.UserId == PixevalSettings.MyId
+    private User CreateUserBasicInfo(HomePageCardLayout card)
+    {
+        var myUser = _session.CurrentUserEntity;
+        var myId = _session.CurrentUserId;
+        return myUser is { } me && card.UserId == myId
             ? me
             : new User(
                 card.UserId,
@@ -413,10 +381,11 @@ public static class HomeCardDefinitions
                 new ProfileImageUrls(null, null, null, AppInfo.ImageNotAvailablePath),
                 false,
                 null);
+    }
 
     private sealed record SingleSeriesOpeningContext(
         Series SeriesDetail,
-        IWorkEntry FirstWork);
+        IWorkEntry? FirstWork);
 
     private sealed record SingleUserOpeningContext(SingleUserResponse UserDetail);
 

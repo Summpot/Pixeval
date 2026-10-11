@@ -1,17 +1,20 @@
-﻿<UserControl
+<UserControl
     x:Class="Pixeval.Views.Home.HomePageCardControl"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:cfg="using:Pixeval.Config"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:di="using:Pixeval.Common.Markup"
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:homeViewModels="using:Pixeval.ViewModels.Home"
     xmlns:local="using:Pixeval.Views.Home"
+    xmlns:mako="using:Pixeval.Mako"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
     xmlns:viewModels="using:Pixeval.ViewModels"
-    xmlns:views="using:Pixeval.Views"
+    xmlns:views="using:Pixeval.Config"
     x:DataType="{x:Type local:HomePageCardControl}"
     x:Name="Root"
     Padding="0"
@@ -118,7 +121,7 @@
             ClipToBounds="True"
             CornerRadius="16">
             <DockPanel VerticalSpacing="16">
-                <Border DockPanel.Dock="Bottom" IsVisible="{Binding !HideHomePageCardTitle, Source={x:Static views:PixevalSettings.Instance}}">
+                <Border DockPanel.Dock="Bottom" IsVisible="{Binding !HideHomePageCardTitle, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}}">
                     <DockPanel>
                         <Button
                             Width="28"
@@ -165,7 +168,7 @@
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.DataTemplates>
-                            <DataTemplate x:DataType="{x:Type viewModels:IllustrationItemViewModel}">
+                            <DataTemplate x:DataType="{x:Type mako:Illustration}">
                                 <Button
                                     Classes="preview-item"
                                     Command="{Binding $parent[local:HomePageCardControl].OpenPreviewItemCommand}"
@@ -176,7 +179,7 @@
                                 </Button>
                             </DataTemplate>
 
-                            <DataTemplate x:DataType="{x:Type viewModels:NovelItemViewModel}">
+                            <DataTemplate x:DataType="{x:Type mako:Novel}">
                                 <Button
                                     Classes="preview-item"
                                     Command="{Binding $parent[local:HomePageCardControl].OpenPreviewItemCommand}"
@@ -186,7 +189,7 @@
                                             DockPanel.Dock="Bottom"
                                             FontSize="12"
                                             MaxLines="1"
-                                            Text="{Binding Entry.Title}"
+                                            Text="{Binding Title}"
                                             TextTrimming="CharacterEllipsis"
                                             TextWrapping="Wrap" />
                                         <Border ClipToBounds="True" CornerRadius="{StaticResource ControlCornerRadius}">
@@ -196,7 +199,7 @@
                                 </Button>
                             </DataTemplate>
 
-                            <DataTemplate x:DataType="{x:Type viewModels:UserItemViewModel}">
+                            <DataTemplate x:DataType="{x:Type mako:User}">
                                 <Button
                                     Classes="preview-item"
                                     Command="{Binding $parent[local:HomePageCardControl].OpenPreviewItemCommand}"
@@ -205,7 +208,7 @@
                                 </Button>
                             </DataTemplate>
 
-                            <DataTemplate x:DataType="{x:Type viewModels:SpotlightItemViewModel}">
+                            <DataTemplate x:DataType="{x:Type mako:SpotlightArticle}">
                                 <Button
                                     Classes="preview-item"
                                     Command="{Binding $parent[local:HomePageCardControl].OpenPreviewItemCommand}"
@@ -215,7 +218,7 @@
                                             DockPanel.Dock="Bottom"
                                             FontSize="12"
                                             MaxLines="1"
-                                            Text="{Binding Entry.PureTitle}"
+                                            Text="{Binding PureTitle}"
                                             TextTrimming="CharacterEllipsis"
                                             TextWrapping="Wrap" />
                                         <Border ClipToBounds="True" CornerRadius="{StaticResource ControlCornerRadius}">
@@ -255,14 +258,14 @@
             x:Name="ResizeHandlesLayer"
             IsVisible="{Binding #Root.IsEditing}"
             PointerPressed="ResizeHandle_OnPointerPressed">
-            <Border Classes="corner top left" Tag="{x:Static local:HomeCardEditAction.ResizeTopLeft}" />
-            <Border Classes="horizontal top" Tag="{x:Static local:HomeCardEditAction.ResizeTop}" />
-            <Border Classes="corner top right" Tag="{x:Static local:HomeCardEditAction.ResizeTopRight}" />
-            <Border Classes="vertical right" Tag="{x:Static local:HomeCardEditAction.ResizeRight}" />
-            <Border Classes="corner right bottom" Tag="{x:Static local:HomeCardEditAction.ResizeBottomRight}" />
-            <Border Classes="horizontal bottom" Tag="{x:Static local:HomeCardEditAction.ResizeBottom}" />
-            <Border Classes="corner bottom left" Tag="{x:Static local:HomeCardEditAction.ResizeBottomLeft}" />
-            <Border Classes="vertical left" Tag="{x:Static local:HomeCardEditAction.ResizeLeft}" />
+            <Border Classes="corner top left" Tag="{x:Static cfg:HomeCardEditAction.ResizeTopLeft}" />
+            <Border Classes="horizontal top" Tag="{x:Static cfg:HomeCardEditAction.ResizeTop}" />
+            <Border Classes="corner top right" Tag="{x:Static cfg:HomeCardEditAction.ResizeTopRight}" />
+            <Border Classes="vertical right" Tag="{x:Static cfg:HomeCardEditAction.ResizeRight}" />
+            <Border Classes="corner right bottom" Tag="{x:Static cfg:HomeCardEditAction.ResizeBottomRight}" />
+            <Border Classes="horizontal bottom" Tag="{x:Static cfg:HomeCardEditAction.ResizeBottom}" />
+            <Border Classes="corner bottom left" Tag="{x:Static cfg:HomeCardEditAction.ResizeBottomLeft}" />
+            <Border Classes="vertical left" Tag="{x:Static cfg:HomeCardEditAction.ResizeLeft}" />
         </Panel>
 
         <Button

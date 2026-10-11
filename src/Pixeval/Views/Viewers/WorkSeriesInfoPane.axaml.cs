@@ -4,8 +4,7 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Misaki;
-using Pixeval.Models.Pixiv;
+using Pixeval.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
@@ -31,26 +30,26 @@ public partial class WorkSeriesInfoPane : UserControl
     private void OpenSeriesButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (ViewModel is not { } viewModel
-            || TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
+            || this.AppNavigation is not { } navigator)
             return;
 
-        viewContainer.CreateSeriesPage(viewModel.WorkType, viewModel.Id);
+        navigator.CreateSeriesPage(viewModel.WorkType, viewModel.Id);
     }
 
     private void NavigationButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (ViewModel is not { } viewModel
             || sender is not Control { Tag: WorkSeriesNavigationViewModel navigation }
-            || TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
+            || this.AppNavigation is not { } navigator)
             return;
 
         if (viewModel.WorkType is SimpleWorkType.Novel)
-            viewContainer.CreateNovelPage(navigation.Id);
+            navigator.CreateNovelPage(navigation.Id);
         else if (navigation.Illustration is { } illustration)
-            viewContainer.CreateIllustrationPage(new IllustrationItemViewModel(illustration));
+            navigator.CreateIllustrationPage(illustration);
         else
-            viewContainer.CreateIllustrationPage(
+            navigator.CreateIllustrationPage(
                 navigation.Id.ToString(),
-                IPlatformInfo.Pixiv);
+                PlatformConstants.Pixiv);
     }
 }

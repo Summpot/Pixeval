@@ -51,9 +51,7 @@ impl From<MahoError> for UpdateError {
                 message: format!("HTTP status {code}"),
             },
             MahoError::Json { message } => UpdateError::Json { message },
-            MahoError::Io(e) => UpdateError::Io {
-                message: e.to_string(),
-            },
+            MahoError::Io { message } => UpdateError::Io { message },
             other => UpdateError::Network {
                 message: other.to_string(),
             },

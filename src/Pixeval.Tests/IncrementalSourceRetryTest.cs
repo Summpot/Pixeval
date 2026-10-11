@@ -3,20 +3,17 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Misaki;
-using Pixeval.Collections;
-using Pixeval.Models.Pixiv;
+using Pixeval.Common.Collections;
+using Pixeval.Pixiv;
 using Pixeval.ViewModels;
+using Pixeval.ViewModels.Works;
 
 namespace Pixeval.Tests;
 
 [TestClass]
 public sealed class IncrementalSourceRetryTest
 {
-    private sealed record TestItem(string Id) : IIdentityInfo
-    {
-        public string Platform => "pixiv";
-    }
+    private sealed record TestItem(string Id);
 
     [TestMethod]
     public async Task InterruptedPageStopsAndResumesTheSameEnumerator()

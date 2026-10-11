@@ -5,8 +5,8 @@
     xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:local="using:Pixeval.Controls"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
-    xmlns:markup1="using:Pixeval.Views.Markup"
-    xmlns:mcpServer="using:Pixeval.Models.McpServer"
+    xmlns:markup1="using:Pixeval.Common.Markup"
+    xmlns:mcpServer="using:Pixeval.ViewModels.Settings"
     xmlns:pixeval="using:Pixeval"
     xmlns:settings="using:Pixeval.Views.Settings">
     <StackPanel Spacing="10">

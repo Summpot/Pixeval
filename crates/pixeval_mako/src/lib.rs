@@ -18,6 +18,8 @@ pub use throttle::*;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::future::Future;
+    use std::pin::Pin;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -416,5 +418,96 @@ mod tests {
         // If TOKIO1 had no timer reactor, this would panic!
         let poll = fut.as_mut().poll(&mut cx);
         assert_eq!(poll, Poll::Ready(Ok(42)));
+    }
+
+    #[test]
+    fn test_tag_translation_cache_and_ranking_facade() {
+        let config = MakoConfigurationDto::default();
+        let client = MakoClient::new(config).unwrap();
+
+        // 1. Tag Translation Cache
+        assert_eq!(client.translate_tag("cat".to_string()), None);
+        client.cache_tag_translation("cat".to_string(), "猫".to_string());
+        assert_eq!(client.translate_tag("cat".to_string()), Some("猫".to_string()));
+
+        let tags = vec![
+            Tag { name: "dog".to_string(), translated_name: Some("犬".to_string()) },
+            Tag { name: "bird".to_string(), translated_name: None },
+        ];
+        client.cache_tags(&tags);
+        assert_eq!(client.translate_tag("dog".to_string()), Some("犬".to_string()));
+        assert_eq!(client.translate_tag("bird".to_string()), None);
+
+        let all_translations = client.get_cached_tag_translations();
+        assert_eq!(all_translations.get("cat").map(|s| s.as_str()), Some("猫"));
+        assert_eq!(all_translations.get("dog").map(|s| s.as_str()), Some("犬"));
+
+        // 2. Ranking date
+        let max_date = client.ranking_max_date();
+        assert!(!max_date.is_empty());
+        assert!(chrono::NaiveDate::parse_from_str(&max_date, "%Y-%m-%d").is_ok());
+
+        // 3. Ranking mode validation
+        let invalid_mode = client.work_ranking_unified("illust".to_string(), "invalid_mode".to_string(), None);
+        assert!(invalid_mode.is_err());
+
+        let invalid_date = client.work_ranking_unified("illust".to_string(), "day".to_string(), Some("2026/10/09".to_string()));
+        assert!(invalid_date.is_err());
+
+        let valid = client.work_ranking_unified("illust".to_string(), "day".to_string(), Some("2026-10-09".to_string()));
+        assert!(valid.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_comment_fetch_engine() {
+        struct MockCommentFetcher;
+        impl PageFetcher<CommentRecord> for MockCommentFetcher {
+            fn fetch_page<'a>(
+                &'a self,
+                next_url: Option<&'a str>,
+            ) -> Pin<Box<dyn Future<Output = PageFetchResult<CommentRecord>> + Send + 'a>> {
+                Box::pin(async move {
+                    if next_url == Some("page2") {
+                        Ok((
+                            vec![CommentRecord {
+                                id: 2,
+                                comment: "second comment".to_string(),
+                                date: "2026-10-09T10:00:00Z".to_string(),
+                                user: User::default(),
+                                has_replies: false,
+                                stamp: None,
+                            }],
+                            None,
+                        ))
+                    } else {
+                        Ok((
+                            vec![CommentRecord {
+                                id: 1,
+                                comment: "first comment".to_string(),
+                                date: "2026-10-09T09:00:00Z".to_string(),
+                                user: User::default(),
+                                has_replies: true,
+                                stamp: None,
+                            }],
+                            Some("page2".to_string()),
+                        ))
+                    }
+                })
+            }
+        }
+
+        let engine = Arc::new(MakoFetchEngine::new(Arc::new(MockCommentFetcher), Some("page1".to_string())));
+        let comment_engine = CommentFetchEngine::new(engine);
+
+        let first = comment_engine.next().await.unwrap();
+        assert_eq!(first.id, 1);
+        assert_eq!(first.comment, "first comment");
+        assert!(first.has_replies);
+
+        let second = comment_engine.next().await.unwrap();
+        assert_eq!(second.id, 2);
+        assert_eq!(second.comment, "second comment");
+
+        assert!(comment_engine.next().await.is_none());
     }
 }

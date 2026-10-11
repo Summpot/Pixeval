@@ -9,18 +9,19 @@ using Avalonia.Controls.Metadata;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Pixeval.I18N;
-using Pixeval.Models.Pixiv;
+using Pixeval.Pixiv;
+using Pixeval.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Views.Viewers;
 
 [PseudoClasses(":docked", ":locked")]
 public partial class IllustrationViewerInfoPane : UserControl
 {
-    private IllustrationViewerPageViewModel ViewModel => (IllustrationViewerPageViewModel) DataContext!;
+    private IllustrationViewerPageViewModel? ViewModel => DataContext as IllustrationViewerPageViewModel;
 
     public static readonly StyledProperty<bool> IsDockedProperty = AvaloniaProperty.Register<IllustrationViewerInfoPane, bool>(
         nameof(IsDocked));
@@ -54,24 +55,27 @@ public partial class IllustrationViewerInfoPane : UserControl
             PseudoClasses.Set(":locked", IsLocked);
     }
 
-    private async void AddToBookmarkButton_OnRightClick(object? sender, ContextRequestedEventArgs e)
+    private void AddToBookmarkButton_OnRightClick(object? sender, ContextRequestedEventArgs e) =>
+        this.RunInteraction(() => AddToBookmarkButton_OnRightClickAsync(sender, e));
+
+    private async Task AddToBookmarkButton_OnRightClickAsync(object? sender, ContextRequestedEventArgs e)
     {
-        if (sender is Control c && ViewModel.CurrentIllustration is { Id: { } idStr } && long.TryParse(idStr, out var id))
+        if (sender is Control c && ViewModel?.CurrentIllustration is Illustration ill)
             await BookmarkTagSelectorFlyoutHelper.ShowAsync(
                 c,
                 SimpleWorkType.Illustration,
-                id,
+                ill.Id,
                 AddToBookmarkAsync,
                 PlacementMode.TopEdgeAlignedRight);
     }
 
     private async Task AddToBookmarkAsync((bool IsPrivate, IReadOnlyList<string>? Tags) e)
     {
-        if (ViewModel.CurrentIllustration is not IWorkViewModel current)
+        if (ViewModel?.CurrentIllustration is not IWorkEntry current)
             return;
 
-        await current.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, this));
-        TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
+        await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
+        this.Notifications.ShowSuccess(
             I18NManager.GetResource(MiscResources.AddedToBookmark));
     }
     

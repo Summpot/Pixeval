@@ -1,21 +1,23 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use pixeval_maho::{DnsResolver, MahoConfig, MahoHttpClient};
 
-use crate::downloader::{compute_file_sha256_sync, download_file_resumable};
-use crate::error::UpdateError;
-use crate::github::{
-    convert_and_sort_releases, fetch_github_releases, fetch_release_checksums,
+use crate::downloader::{
+    RETRY_DELAYS, apply_timeout, compute_file_sha256_sync, download_bytes, download_file_resumable,
+    download_text, is_retryable,
 };
+use crate::error::UpdateError;
+use crate::github::{convert_and_sort_releases, fetch_github_releases, fetch_release_checksums};
 use crate::models::{
     AppRelease, RawGitHubRelease, ReleaseAsset, UpdateCheckResult, UpdateNetworkOptions,
 };
-use crate::version::{compare_version_strings, UpdateState};
+use crate::version::{UpdateState, compare_version_strings};
 
 /// 下载进度回调接口 (UniFFI 导出)
 #[uniffi::export(callback_interface)]
@@ -289,11 +291,13 @@ impl UpdateEngine {
             asset.sha256.as_deref(),
             progress_callback.as_deref(),
             cancel_token.as_deref(),
+            None,
         )
         .await
     }
 
-    /// 下载任意文件并可选校验 SHA-256
+    /// 下载任意文件并可选校验 SHA-256。
+    /// `timeout_minutes` 与 Velopack 一致，单位是分钟；空值或非正数表示不限时。
     pub async fn download_file(
         &self,
         url: String,
@@ -301,14 +305,62 @@ impl UpdateEngine {
         expected_sha256: Option<String>,
         progress_callback: Option<Box<dyn UpdateProgressCallback>>,
         cancel_token: Option<Arc<UpdateCancellationToken>>,
+        headers: Option<HashMap<String, String>>,
+        timeout_minutes: Option<f64>,
     ) -> Result<String, UpdateError> {
-        download_file_resumable(
-            &self.client,
-            &url,
-            Path::new(&destination_path),
-            expected_sha256.as_deref(),
-            progress_callback.as_deref(),
-            cancel_token.as_deref(),
+        apply_timeout(
+            async {
+                let mut attempt = 0usize;
+                loop {
+                    match download_file_resumable(
+                        &self.client,
+                        &url,
+                        Path::new(&destination_path),
+                        expected_sha256.as_deref(),
+                        progress_callback.as_deref(),
+                        cancel_token.as_deref(),
+                        headers.as_ref(),
+                    )
+                    .await
+                    {
+                        Ok(value) => return Ok(value),
+                        Err(err) if attempt < RETRY_DELAYS.len() && is_retryable(&err) => {
+                            tokio::time::sleep(RETRY_DELAYS[attempt]).await;
+                            attempt += 1;
+                        }
+                        Err(err) => return Err(err),
+                    }
+                }
+            },
+            timeout_minutes,
+        )
+        .await
+    }
+
+    /// 把更新资源下载到内存。
+    pub async fn download_bytes(
+        &self,
+        url: String,
+        headers: Option<HashMap<String, String>>,
+        timeout_minutes: Option<f64>,
+    ) -> Result<Vec<u8>, UpdateError> {
+        apply_timeout(
+            download_bytes(&self.client, &url, headers.as_ref()),
+            timeout_minutes,
+        )
+        .await
+    }
+
+    /// 把更新资源下载为 UTF-8 文本。
+    pub async fn download_text(
+        &self,
+        url: String,
+        headers: Option<HashMap<String, String>>,
+        timeout_minutes: Option<f64>,
+    ) -> Result<String, UpdateError> {
+        apply_timeout(
+            download_text(&self.client, &url, headers.as_ref()),
+            timeout_minutes,
         )
         .await
     }
@@ -340,11 +392,14 @@ mod tests {
     use crate::downloader::compute_file_sha256;
 
     fn get_test_temp_dir() -> tempfile::TempDir {
-        let repo_tmp = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../target/tmp");
+        let repo_tmp =
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/tmp");
         let _ = std::fs::create_dir_all(&repo_tmp);
         if repo_tmp.exists() {
-            tempfile::Builder::new().prefix("test_").tempdir_in(repo_tmp).unwrap()
+            tempfile::Builder::new()
+                .prefix("test_")
+                .tempdir_in(repo_tmp)
+                .unwrap()
         } else {
             tempfile::Builder::new().prefix("test_").tempdir().unwrap()
         }
@@ -379,14 +434,26 @@ mod tests {
     async fn test_verify_file_sha256() {
         let temp_dir = get_test_temp_dir();
         let file_path = temp_dir.path().join("verify.txt");
-        tokio::fs::write(&file_path, b"test content for sha256").await.unwrap();
+        tokio::fs::write(&file_path, b"test content for sha256")
+            .await
+            .unwrap();
 
         let engine = UpdateEngine::new(None);
         // echo -n "test content for sha256" | sha256sum -> 20689b7fae1aa14cfc9a41926c483a912aaad7ea4b971c26b5278c775a22830a
         let sha256 = compute_file_sha256(&file_path).await.unwrap();
 
-        assert!(engine.verify_file_sha256(file_path.to_str().unwrap().to_string(), sha256.clone()).unwrap());
-        assert!(!engine.verify_file_sha256(file_path.to_str().unwrap().to_string(), "0000000000000000000000000000000000000000000000000000000000000000".to_string()).unwrap());
+        assert!(
+            engine
+                .verify_file_sha256(file_path.to_str().unwrap().to_string(), sha256.clone())
+                .unwrap()
+        );
+        assert!(
+            !engine
+                .verify_file_sha256(
+                    file_path.to_str().unwrap().to_string(),
+                    "0000000000000000000000000000000000000000000000000000000000000000".to_string()
+                )
+                .unwrap()
+        );
     }
 }
-

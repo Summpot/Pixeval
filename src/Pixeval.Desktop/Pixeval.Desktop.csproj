@@ -17,6 +17,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
+		<PackageReference Include="Summpot.SkiaSharp.Static" Version="3.119.4-avalonia.12.1.2-r1" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -31,4 +32,5 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
+
 </Project>

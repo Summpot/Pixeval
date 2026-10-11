@@ -2,10 +2,10 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Pixeval.AppManagement;
 
 namespace Pixeval.Views.Settings;
 
@@ -21,7 +21,10 @@ public partial class AboutPage : IconContentPage
 
     public string CurrentVersionText => AppInfo.AppVersion.CurrentVersionFullText;
 
-    private async void LoadData()
+    private void LoadData() =>
+        this.RunInteraction(() => LoadDataAsync());
+
+    private async Task LoadDataAsync()
     {
         LicenseTextBlock.Markdown = await AppInfo.GetAssetStringAsync("GPLv3.md");
         await Supporter.GetSupportersAsync();

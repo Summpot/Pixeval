@@ -2,7 +2,9 @@
 // Licensed under the GPL-3.0 License.
 
 use crate::layout::models::{
-    CardNormalizationItem, CardNormalizationResult, GridPlacement, GridPosition, HomeCardBounds,
+    card_param_flags, CardNormalizationItem, CardNormalizationResult, GridPlacement, GridPosition,
+    HomeCardBounds, HomeCardEditAction, HomeCardMetadata, HomePageCardLayout,
+    HomePageCardSourceKind,
 };
 
 pub fn is_within_grid(bounds: HomeCardBounds, row_count: i32, column_count: i32) -> bool {
@@ -205,4 +207,356 @@ pub fn normalize_cards(
         removed_indices,
         changed,
     }
+}
+
+pub fn calculate_edit_candidate(
+    action: HomeCardEditAction,
+    start_bounds: HomeCardBounds,
+    delta_column: i32,
+    delta_row: i32,
+    row_count: i32,
+    column_count: i32,
+) -> HomeCardBounds {
+    let mut left = start_bounds.column;
+    let mut top = start_bounds.row;
+    let mut right = start_bounds.column + start_bounds.column_span;
+    let mut bottom = start_bounds.row + start_bounds.row_span;
+
+    match action {
+        HomeCardEditAction::Move => {
+            left = start_bounds.column + delta_column;
+            top = start_bounds.row + delta_row;
+            right = left + start_bounds.column_span;
+            bottom = top + start_bounds.row_span;
+        }
+        HomeCardEditAction::ResizeLeft => {
+            left += delta_column;
+        }
+        HomeCardEditAction::ResizeTop => {
+            top += delta_row;
+        }
+        HomeCardEditAction::ResizeRight => {
+            right += delta_column;
+        }
+        HomeCardEditAction::ResizeBottom => {
+            bottom += delta_row;
+        }
+        HomeCardEditAction::ResizeTopLeft => {
+            left += delta_column;
+            top += delta_row;
+        }
+        HomeCardEditAction::ResizeTopRight => {
+            right += delta_column;
+            top += delta_row;
+        }
+        HomeCardEditAction::ResizeBottomRight => {
+            right += delta_column;
+            bottom += delta_row;
+        }
+        HomeCardEditAction::ResizeBottomLeft => {
+            left += delta_column;
+            bottom += delta_row;
+        }
+    }
+
+    const MINIMUM_SPAN: i32 = 1;
+    if right - left < MINIMUM_SPAN {
+        match action {
+            HomeCardEditAction::ResizeLeft
+            | HomeCardEditAction::ResizeTopLeft
+            | HomeCardEditAction::ResizeBottomLeft => {
+                left = right - MINIMUM_SPAN;
+            }
+            _ => {
+                right = left + MINIMUM_SPAN;
+            }
+        }
+    }
+
+    if bottom - top < MINIMUM_SPAN {
+        match action {
+            HomeCardEditAction::ResizeTop
+            | HomeCardEditAction::ResizeTopLeft
+            | HomeCardEditAction::ResizeTopRight => {
+                top = bottom - MINIMUM_SPAN;
+            }
+            _ => {
+                bottom = top + MINIMUM_SPAN;
+            }
+        }
+    }
+
+    let row_count = row_count.max(1);
+    let column_count = column_count.max(1);
+
+    if action == HomeCardEditAction::Move {
+        let width = right - left;
+        let height = bottom - top;
+        left = left.clamp(0, (column_count - width).max(0));
+        top = top.clamp(0, (row_count - height).max(0));
+        right = left + width;
+        bottom = top + height;
+    } else {
+        left = left.clamp(0, (column_count - MINIMUM_SPAN).max(0));
+        top = top.clamp(0, (row_count - MINIMUM_SPAN).max(0));
+        right = right.clamp(left + MINIMUM_SPAN, column_count);
+        bottom = bottom.clamp(top + MINIMUM_SPAN, row_count);
+    }
+
+    HomeCardBounds {
+        column: left,
+        row: top,
+        column_span: right - left,
+        row_span: bottom - top,
+    }
+}
+
+pub fn get_card_metadata(source_kind: HomePageCardSourceKind) -> HomeCardMetadata {
+    use card_param_flags::*;
+    match source_kind {
+        HomePageCardSourceKind::WorkRecommended => HomeCardMetadata {
+            source_kind,
+            parameter_flags: WORK_TYPE,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: false,
+        },
+        HomePageCardSourceKind::WorkBookmarks => HomeCardMetadata {
+            source_kind,
+            parameter_flags: USER_ID | SIMPLE_WORK_TYPE | PRIVACY_POLICY | TAG,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: true,
+        },
+        HomePageCardSourceKind::WorkRanking => HomeCardMetadata {
+            source_kind,
+            parameter_flags: SIMPLE_WORK_TYPE | RANK_OPTION | RANKING_DATE,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: false,
+        },
+        HomePageCardSourceKind::WorkNew => HomeCardMetadata {
+            source_kind,
+            parameter_flags: WORK_TYPE,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: false,
+        },
+        HomePageCardSourceKind::WorkFollowing => HomeCardMetadata {
+            source_kind,
+            parameter_flags: SIMPLE_WORK_TYPE | PRIVACY_POLICY,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: false,
+        },
+        HomePageCardSourceKind::WorkMyPixiv => HomeCardMetadata {
+            source_kind,
+            parameter_flags: SIMPLE_WORK_TYPE,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: false,
+        },
+        HomePageCardSourceKind::WorkRelated => HomeCardMetadata {
+            source_kind,
+            parameter_flags: ENTRY_ID | SIMPLE_WORK_TYPE,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: false,
+        },
+        HomePageCardSourceKind::SingleSeries => HomeCardMetadata {
+            source_kind,
+            parameter_flags: SERIES_ID | SIMPLE_WORK_TYPE,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: false,
+        },
+        HomePageCardSourceKind::WorkPosts => HomeCardMetadata {
+            source_kind,
+            parameter_flags: USER_ID | WORK_TYPE,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: true,
+        },
+        HomePageCardSourceKind::WorkSearch => HomeCardMetadata {
+            source_kind,
+            parameter_flags: SIMPLE_WORK_TYPE | SEARCH_TEXT,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: false,
+        },
+        HomePageCardSourceKind::UserRecommended => HomeCardMetadata {
+            source_kind,
+            parameter_flags: 0,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: false,
+        },
+        HomePageCardSourceKind::UserSearch => HomeCardMetadata {
+            source_kind,
+            parameter_flags: SEARCH_TEXT,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: false,
+        },
+        HomePageCardSourceKind::UserFollowing => HomeCardMetadata {
+            source_kind,
+            parameter_flags: USER_ID | PRIVACY_POLICY,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: true,
+        },
+        HomePageCardSourceKind::UserFollower => HomeCardMetadata {
+            source_kind,
+            parameter_flags: 0,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: false,
+        },
+        HomePageCardSourceKind::UserMyPixiv => HomeCardMetadata {
+            source_kind,
+            parameter_flags: USER_ID,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: true,
+        },
+        HomePageCardSourceKind::Spotlight => HomeCardMetadata {
+            source_kind,
+            parameter_flags: 0,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: false,
+        },
+        HomePageCardSourceKind::SingleImage => HomeCardMetadata {
+            source_kind,
+            parameter_flags: ENTRY_ID,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: false,
+        },
+        HomePageCardSourceKind::SingleNovel => HomeCardMetadata {
+            source_kind,
+            parameter_flags: ENTRY_ID,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 2,
+            default_simple_work_type: 1,
+            default_privacy_policy: 0,
+            use_current_user_as_default: false,
+        },
+        HomePageCardSourceKind::SingleUser => HomeCardMetadata {
+            source_kind,
+            parameter_flags: USER_ID,
+            default_column_span: 2,
+            default_row_span: 2,
+            default_work_type: 0,
+            default_simple_work_type: 0,
+            default_privacy_policy: 0,
+            use_current_user_as_default: false,
+        },
+    }
+}
+
+pub fn get_all_card_metadata() -> Vec<HomeCardMetadata> {
+    const ALL_KINDS: &[HomePageCardSourceKind] = &[
+        HomePageCardSourceKind::WorkRecommended,
+        HomePageCardSourceKind::WorkBookmarks,
+        HomePageCardSourceKind::WorkRanking,
+        HomePageCardSourceKind::WorkNew,
+        HomePageCardSourceKind::WorkFollowing,
+        HomePageCardSourceKind::WorkMyPixiv,
+        HomePageCardSourceKind::WorkRelated,
+        HomePageCardSourceKind::SingleSeries,
+        HomePageCardSourceKind::WorkPosts,
+        HomePageCardSourceKind::WorkSearch,
+        HomePageCardSourceKind::UserRecommended,
+        HomePageCardSourceKind::UserSearch,
+        HomePageCardSourceKind::UserFollowing,
+        HomePageCardSourceKind::UserFollower,
+        HomePageCardSourceKind::UserMyPixiv,
+        HomePageCardSourceKind::Spotlight,
+        HomePageCardSourceKind::SingleImage,
+        HomePageCardSourceKind::SingleNovel,
+        HomePageCardSourceKind::SingleUser,
+    ];
+    ALL_KINDS.iter().map(|&k| get_card_metadata(k)).collect()
+}
+
+pub fn create_default_cards() -> Vec<HomePageCardLayout> {
+    vec![
+        HomePageCardLayout {
+            source_kind: HomePageCardSourceKind::Spotlight,
+            column: 0,
+            row: 0,
+            column_span: 1,
+            row_span: 2,
+            ..Default::default()
+        },
+        HomePageCardLayout {
+            source_kind: HomePageCardSourceKind::UserRecommended,
+            column: 0,
+            row: 2,
+            column_span: 1,
+            row_span: 2,
+            ..Default::default()
+        },
+        HomePageCardLayout {
+            source_kind: HomePageCardSourceKind::WorkRecommended,
+            column: 0,
+            row: 4,
+            column_span: 1,
+            row_span: 3,
+            ..Default::default()
+        },
+    ]
 }

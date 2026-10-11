@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Native.Cache;
+using Pixeval.Cache;
 
 namespace Pixeval.Tests;
 

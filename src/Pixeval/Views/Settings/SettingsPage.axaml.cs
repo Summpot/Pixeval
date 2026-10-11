@@ -5,7 +5,6 @@ using System;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Pixeval.AppManagement;
 using Pixeval.Controls;
 using Pixeval.I18N;
 using Pixeval.Utilities;
@@ -31,19 +30,7 @@ public partial class SettingsPage : NavigationPage
     /// <summary>
     /// 保存设置
     /// </summary>
-    private void ValueSaving(object? parent)
-    {
-        if (DataContext is not SettingsPageViewModel vm)
-            return;
-
-        foreach (var extensionGroup in vm.ExtensionGroups)
-            foreach (var settingsEntry in extensionGroup)
-                settingsEntry.ValueSaving(extensionGroup.Model.Values);
-
-        AppInfo.SaveSettings();
-        // Parent is TabsView
-        TopLevel.GetTopLevel(parent as Control)?.ViewContainer?.ShowSuccess(I18NManager.GetResource(SettingsMainViewResources.SettingsSaved));
-    }
+    private void ValueSaving(object? parent) => (DataContext as SettingsPageViewModel)?.SaveSettings();
 
     public static string ReleaseTitle => GetReleaseTitle(AppInfo.AppVersion.CurrentVersion);
 
@@ -53,7 +40,7 @@ public partial class SettingsPage : NavigationPage
     public static string GetReleaseTitle(string version) =>
         I18NManager.GetResource(SettingsMainViewResources.ReleaseNoteDialog.TitleFormatted, version);
 
-    public static Control CreateReleaseNotes(Pixeval.Native.Update.AppRelease? release) =>
+    public static Control CreateReleaseNotes(Pixeval.Update.AppRelease? release) =>
         new MarkdownBox { Markdown = release?.ReleaseNotes ?? I18NManager.GetResource(SettingsMainViewResources.ReleaseNoteDialog.Empty) };
 
     public static async Task<Control> GetReleaseNotesAsync()

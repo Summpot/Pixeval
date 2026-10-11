@@ -8,6 +8,10 @@ tokio = { workspace = true, features = ["full"] }
 async-compat.workspace = true
 tokio-util = { workspace = true, features = ["io"] }
 pixeval_maho.workspace = true
+pixeval_mako.workspace = true
+pixeval_media.workspace = true
+pixeval_novel.workspace = true
+pixeval_storage.workspace = true
 futures-util = { workspace = true, default-features = false, features = ["std"] }
 thiserror.workspace = true
 serde.workspace = true

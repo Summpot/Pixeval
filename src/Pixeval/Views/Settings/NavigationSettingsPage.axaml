@@ -10,10 +10,12 @@
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:navigation="using:Pixeval.Models.Navigation"
+    xmlns:navigation="using:Pixeval.Config"
     xmlns:pixeval="using:Pixeval"
     xmlns:settings="using:Pixeval.Views.Settings"
     xmlns:utilities="using:Pixeval.Utilities"
+    xmlns:core="using:Pixeval.Services.Core"
+    xmlns:common2="using:Pixeval.Common"
     x:DataType="{x:Type settings:NavigationSettingsPage}"
     Header="{I18N {x:Static pixeval:MainPageResources+Tab.NavigationSettings}}"
     mc:Ignorable="d"
@@ -79,12 +81,12 @@
                 <controls:SettingsExpander Header="{I18N {x:Static pixeval:NavigationSettingsPageResources+ReferencePages.Header}}" HeaderIcon="{markup:SymbolIcon DocumentBulletList}">
                     <controls:SettingsExpander.Items>
                         <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
-                            <ItemsControl ItemsSource="{x:Static utilities:NavigationPageRegistry.Pages}">
+                            <ItemsControl ItemsSource="{x:Static core:NavigationPageRegistry.Pages}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="{x:Type navigation:NavigationPageDefinition}">
                                         <Button
                                             HorizontalAlignment="Stretch"
-                                            Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                                            Click="{x:Static common2:AvaloniaHelper.CopyTagToClipboard}"
                                             Tag="{Binding StringFormat={}{0}}">
                                             <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
                                                 <fluent:SymbolIcon
@@ -108,12 +110,12 @@
                 <controls:SettingsExpander Header="{I18N {x:Static pixeval:NavigationSettingsPageResources+ReferenceIcons.Header}}" HeaderIcon="{markup:SymbolIcon Icons}">
                     <controls:SettingsExpander.Items>
                         <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
-                            <ItemsControl ItemsSource="{x:Static utilities:NavigationPageRegistry.ColorSymbols}">
+                            <ItemsControl ItemsSource="{x:Static core:NavigationPageRegistry.ColorSymbols}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="{x:Type common:Symbol}">
                                         <Button
                                             Padding="2"
-                                            Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                                            Click="{x:Static common2:AvaloniaHelper.CopyTagToClipboard}"
                                             Tag="{Binding StringFormat={}{0}}"
                                             ToolTip.Tip="{Binding}">
                                             <fluent:SymbolIcon IconVariant="Color" Symbol="{Binding}" />

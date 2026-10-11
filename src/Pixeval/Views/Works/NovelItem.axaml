@@ -1,0 +1,216 @@
+<work:WorkItem
+    x:Class="Pixeval.Views.Works.NovelItem"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Pixeval.Controls"
+    xmlns:converters="using:Pixeval.Common.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:markup="using:FluentIcons.Avalonia.Markup"
+    xmlns:markup1="using:Pixeval.Common.Markup"
+    xmlns:mako="using:Pixeval.Mako"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:model="using:Pixeval.Pixiv"
+    xmlns:novel="using:Pixeval.ViewModels.Works"
+    xmlns:pixeval="using:Pixeval"
+    xmlns:utilities="using:Pixeval.Common"
+    xmlns:work="using:Pixeval.Views.Works"
+    x:DataType="{x:Type mako:Novel}"
+    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+    Design.DataContext="{x:Static utilities:DesignHelper.DesignNovelViewModel}"
+    Theme="{StaticResource RoundedButtonStyle}"
+    mc:Ignorable="d"
+    d:DesignHeight="200"
+    d:DesignWidth="400">
+    <ContentControl>
+        <Grid ClipToBounds="True" ColumnDefinitions="Auto,*">
+            <Grid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem
+                        controls:ArtworkStateBehavior.TrackBookmark="True"
+                        controls:BookmarkTagSelectorBehavior.IsEnabled="True"
+                        Command="{x:Static novel:WorkCommands.BookmarkCommand}"
+                        CommandParameter="{Binding}"
+                        Header="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
+                        Icon="{markup1:SymbolIconEx Heart}"
+                        IsVisible="{Binding IsBookmarkSupported}" />
+                    <MenuItem
+                        controls:ArtworkStateBehavior.TrackWatchLater="True"
+                        Command="{x:Static novel:WorkCommands.AddToWatchLaterCommand}"
+                        CommandParameter="{Binding}"
+                        Header="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}"
+                        Icon="{markup1:SymbolIconEx Clock}" />
+                    <MenuItem
+                        Command="{x:Static novel:WorkCommands.OpenUserInfoPageCommand}"
+                        CommandParameter="{Binding}"
+                        Header="{I18N {x:Static pixeval:EntryItemResources.OpenUserInfoPage}}"
+                        Icon="{markup:SymbolIcon Person}" />
+                    <MenuItem
+                        Command="{x:Static novel:WorkCommands.OpenSeriesPageCommand}"
+                        CommandParameter="{Binding}"
+                        Header="{I18N {x:Static pixeval:EntryItemResources.OpenSeries}}"
+                        Icon="{markup:SymbolIcon SquareMultiple}"
+                        IsVisible="{Binding HasSeries}" />
+                    <Separator />
+                    <MenuItem
+                        Command="{x:Static novel:WorkCommands.SaveCommand}"
+                        CommandParameter="{Binding}"
+                        Header="{I18N {x:Static pixeval:EntryItemResources.Save}}"
+                        Icon="{markup:SymbolIcon Save}" />
+                    <Separator />
+                    <MenuItem
+                        Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                        Header="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
+                        Icon="{markup:SymbolIcon GlobeArrowUp}"
+                        Tag="{Binding WebsiteUri}" />
+                    <MenuItem
+                        Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                        Header="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
+                        Icon="{markup:SymbolIcon LinkMultiple}"
+                        Tag="{Binding WebsiteUri}" />
+                    <MenuItem
+                        Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                        Header="{I18N {x:Static pixeval:EntryItemResources.GenerateLink}}"
+                        Icon="{markup:SymbolIcon Link}"
+                        Tag="{Binding AppUri}" />
+                </ContextMenu>
+            </Grid.ContextMenu>
+            <controls:ConstrainedBox
+                Grid.Column="0"
+                AspectRatio="427:600"
+                PointerEntered="InputElement_OnPointerEntered"
+                PointerExited="InputElement_OnPointerExited">
+                <Panel>
+                    <Image
+                        x:Name="CoverImage"
+                        controls:Source.Cache="{Binding ThumbnailUrl}"
+                        Stretch="UniformToFill">
+                        <Image.Transitions>
+                            <Transitions>
+                                <DoubleTransition
+                                    Easing="CubicEaseOut"
+                                    Property="Opacity"
+                                    Duration="0:0:0.5" />
+                            </Transitions>
+                        </Image.Transitions>
+                    </Image>
+                    <controls:MarkdownBox
+                        x:Name="DescriptionBlock"
+                        Margin="0,30,0,10"
+                        Padding="10,0"
+                        Markdown="{Binding Caption}"
+                        Opacity="0">
+                        <controls:MarkdownBox.Transitions>
+                            <Transitions>
+                                <DoubleTransition
+                                    Easing="CubicEaseOut"
+                                    Property="Opacity"
+                                    Duration="0:0:0.5" />
+                            </Transitions>
+                        </controls:MarkdownBox.Transitions>
+                    </controls:MarkdownBox>
+                </Panel>
+            </controls:ConstrainedBox>
+
+            <controls:HeartButton
+                Grid.Column="0"
+                Width="30"
+                Height="30"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                controls:ArtworkStateBehavior.TrackBookmark="True"
+                Command="{x:Static novel:WorkCommands.BookmarkCommand}"
+                CommandParameter="{Binding}"
+                IsVisible="{Binding IsBookmarkSupported}">
+                
+                <controls:HeartButton.CacheMode>
+                    <BitmapCache SnapsToDevicePixels="False" RenderAtScale="1"/>
+                </controls:HeartButton.CacheMode>
+            </controls:HeartButton>
+
+            <DockPanel
+                Grid.Column="1"
+                Margin="10"
+                HorizontalSpacing="10"
+                VerticalSpacing="10">
+                <TextBlock
+                    DockPanel.Dock="Top"
+                    MaxLines="3"
+                    Text="{Binding Title, Mode=OneTime}"
+                    TextTrimming="CharacterEllipsis"
+                    TextWrapping="Wrap"
+                    Theme="{StaticResource CaptionStrongTextBlockStyle}" />
+                <DockPanel DockPanel.Dock="Top">
+                    <TextBlock
+                        VerticalAlignment="Bottom"
+                        DockPanel.Dock="Right"
+                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                        Text="{Binding CreateDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}"
+                        TextTrimming="CharacterEllipsis"
+                        Theme="{StaticResource BodyTextBlockStyle}" />
+                    <Button Padding="2" Command="{x:Static novel:WorkCommands.OpenUserInfoPageCommand}" CommandParameter="{Binding}">
+                        <TextBlock
+                            x:Name="AuthorTextBlock"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                            MaxLines="1"
+                            Text="{Binding User.Name}"
+                            TextTrimming="CharacterEllipsis"
+                            TextWrapping="Wrap"
+                            Theme="{StaticResource BodyTextBlockStyle}" />
+                    </Button>
+                </DockPanel>
+                <DockPanel
+                    DockPanel.Dock="Bottom"
+                    HorizontalSpacing="10"
+                    LastChildFill="False">
+                    <controls:IconText
+                        DockPanel.Dock="Right"
+                        Symbol="TextAlignLeft"
+                        Text="{Binding TextLength, Converter={x:Static converters:PixevalConverters.NumberEllipsis}}" />
+                    <controls:IconText
+                        DockPanel.Dock="Right"
+                        Symbol="Heart"
+                        Text="{Binding TotalBookmarks, Converter={x:Static converters:PixevalConverters.NumberEllipsis}}" />
+                    <controls:IconText
+                        DockPanel.Dock="Right"
+                        Symbol="Eye"
+                        Text="{Binding TotalView, Converter={x:Static converters:PixevalConverters.NumberEllipsis}}" />
+                </DockPanel>
+                <DockPanel
+                    DockPanel.Dock="Bottom"
+                    HorizontalSpacing="3"
+                    LastChildFill="False">
+                    <controls:PixevalBadge
+                        DockPanel.Dock="Left"
+                        IsVisible="{Binding IsAiGenerated}"
+                        Mode="Ai" />
+                    <controls:PixevalBadge DockPanel.Dock="Left"
+                                           Mode="{Binding XRestrict, Converter={x:Static converters:PixevalConverters.RestrictBadgeModeConverter}}" />
+                </DockPanel>
+                <ItemsControl
+                    x:Name="TagsList"
+                    DockPanel.Dock="Top"
+                    ItemsSource="{Binding Tags}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel ItemSpacing="5" LineSpacing="5" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="{x:Type mako:Tag}">
+                            <Button
+                                Padding="2"
+                                Click="TagButton_OnClicked"
+                                CornerRadius="{StaticResource ControlCornerRadius}">
+                                <TextBlock
+                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                    Text="{Binding ToolTip, Mode=OneTime}"
+                                    TextWrapping="NoWrap"
+                                    Theme="{StaticResource CaptionTextBlockStyle}" />
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </DockPanel>
+        </Grid>
+    </ContentControl>
+</work:WorkItem>
