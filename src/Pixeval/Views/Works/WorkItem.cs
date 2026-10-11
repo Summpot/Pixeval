@@ -34,35 +34,6 @@ public class WorkItem : EntryItem, IWorkAnimatable
         DataContext = null;
     }
 
-    public event EventHandler<Control, object>? RequestOpenUserInfoPage;
-
-    public event EventHandler<Control, object>? RequestAddToBookmark;
-
-    protected void AddToBookmark_OnRightClick(object sender, ContextRequestedEventArgs e)
-    {
-        RequestAddToBookmark?.Invoke(this, DataContext!);
-    }
-
-    protected void OpenUserInfoPage_OnClicked(object sender, RoutedEventArgs e)
-    {
-        RequestOpenUserInfoPage?.Invoke(this, DataContext!);
-    }
-
-    protected void OpenSeriesPage_OnClicked(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Control { DataContext: { } work }
-            || this.AppNavigation is not { } navigator)
-            return;
-
-        var series = (work as IWorkEntry)?.Series;
-        if (series is not { Id: > 0 })
-            return;
-
-        navigator.CreateSeriesPage(
-            work is Mako.Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration,
-            series.Id);
-    }
-
     public void StartAnimation()
     {
         if (ElementComposition.GetElementVisual(this) is not { } visual)

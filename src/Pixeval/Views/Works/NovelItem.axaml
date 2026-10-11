@@ -27,9 +27,9 @@
                 <ContextMenu>
                     <MenuItem
                         controls:ArtworkStateBehavior.TrackBookmark="True"
+                        controls:BookmarkTagSelectorBehavior.IsEnabled="True"
                         Command="{x:Static novel:WorkCommands.BookmarkCommand}"
                         CommandParameter="{Binding}"
-                        ContextRequested="AddToBookmark_OnRightClick"
                         Header="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
                         Icon="{markup1:SymbolIconEx Heart}"
                         IsVisible="{Binding IsBookmarkSupported}" />
@@ -40,11 +40,13 @@
                         Header="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}"
                         Icon="{markup1:SymbolIconEx Clock}" />
                     <MenuItem
-                        Click="OpenUserInfoPage_OnClicked"
+                        Command="{x:Static novel:WorkCommands.OpenUserInfoPageCommand}"
+                        CommandParameter="{Binding}"
                         Header="{I18N {x:Static pixeval:EntryItemResources.OpenUserInfoPage}}"
                         Icon="{markup:SymbolIcon Person}" />
                     <MenuItem
-                        Click="OpenSeriesPage_OnClicked"
+                        Command="{x:Static novel:WorkCommands.OpenSeriesPageCommand}"
+                        CommandParameter="{Binding}"
                         Header="{I18N {x:Static pixeval:EntryItemResources.OpenSeries}}"
                         Icon="{markup:SymbolIcon SquareMultiple}"
                         IsVisible="{Binding HasSeries}" />
@@ -145,7 +147,7 @@
                         Text="{Binding CreateDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}"
                         TextTrimming="CharacterEllipsis"
                         Theme="{StaticResource BodyTextBlockStyle}" />
-                    <Button Padding="2" Click="AuthorButton_OnClick">
+                    <Button Padding="2" Command="{x:Static novel:WorkCommands.OpenUserInfoPageCommand}" CommandParameter="{Binding}">
                         <TextBlock
                             x:Name="AuthorTextBlock"
                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"

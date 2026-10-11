@@ -149,9 +149,6 @@ public partial class WorkContainer : UserControl
     private void AddAllToBookmarkButton_OnRightClicked(object? sender, ContextRequestedEventArgs e) =>
         _ = WorkContainerBatchOperations.RequestAddToBookmarkWithTagSelectorAsync(AddAllToBookmarkButton, DataContext as IOperableViewViewModel, null);
 
-    private void WorkView_OnRequestAddToBookmark(Control sender, object e) =>
-        _ = WorkContainerBatchOperations.RequestAddToBookmarkWithTagSelectorAsync(sender, DataContext as IOperableViewViewModel, e);
-
     private void SaveAllButton_OnClicked(object? sender, RoutedEventArgs e) =>
         _ = WorkContainerBatchOperations.SaveAllAsync(this, DataContext as IOperableViewViewModel);
 

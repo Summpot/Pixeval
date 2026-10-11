@@ -16,7 +16,7 @@
     xmlns:viewModels="using:Pixeval.ViewModels.Search"
     xmlns:views="using:Pixeval.Views.Shell"
     x:DataType="{x:Type viewModels:SearchPageViewModel}"
-    DataContext="{x:Static viewModels:SearchPageViewModel.Instance}"
+    DataContext="{markup1:Service Type={x:Type viewModels:SearchPageViewModel}}"
     mc:Ignorable="d"
     d:DesignHeight="450"
     d:DesignWidth="800">
@@ -47,6 +47,8 @@
                         x:Name="SearchAutoCompleteBox"
                         FilterMode="None"
                         IsTextCompletionEnabled="False"
+                        ItemsSource="{Binding SearchCompletionItems}"
+                        SelectedItem="{Binding SelectedSearchCompletion, Mode=TwoWay}"
                         ItemSelector="SearchAutoCompleteBox_OnSelectItem"
                         ItemTemplate="{StaticResource SearchCompletionTemplate}"
                         KeyDown="SearchAutoCompleteBox_OnKeyDown"
@@ -54,10 +56,12 @@
                         PlaceholderText="{I18N {x:Static pixeval:SearchResources+SearchBox.PlaceholderText}}"
                         Tapped="SearchAutoCompleteBox_OnTapped"
                         TemplateApplied="SearchAutoCompleteBox_OnTemplateApplied"
-                        Text="{Binding SearchText, Mode=TwoWay}"
-                        TextChanged="SearchAutoCompleteBox_OnTextChanged">
+                        Text="{Binding SearchText, Mode=TwoWay}">
                         <AutoCompleteBox.InnerRightContent>
-                            <Button Click="SearchButton_OnClick" Content="{markup:SymbolIcon Search, FontSize=16}" />
+                            <Button
+                                Command="{Binding SearchCommand}"
+                                CommandParameter="{Binding #AdvancedExpander.IsExpanded}"
+                                Content="{markup:SymbolIcon Search, FontSize=16}" />
                         </AutoCompleteBox.InnerRightContent>
                     </AutoCompleteBox>
                 </Expander.Header>
@@ -79,7 +83,9 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type x:String}">
-                            <Button Click="PinnedTagButton_OnClick">
+                            <Button
+                                Command="{Binding OpenPinnedTagCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                CommandParameter="{Binding}">
                                 <Button.Content>
                                     <StackPanel Orientation="Horizontal" Spacing="5">
                                         <TextBlock Text="{Binding}" />
@@ -89,11 +95,13 @@
                                 <Button.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem
-                                            Click="CopyButton_OnClick"
+                                            Command="{Binding CopyCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                            CommandParameter="{Binding}"
                                             Header="{I18N {x:Static pixeval:SearchResources+SearchHistory.Copy}}"
                                             Icon="{markup:SymbolIcon Copy}" />
                                         <MenuItem
-                                            Click="UnpinButton_OnClick"
+                                            Command="{Binding UnpinCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                            CommandParameter="{Binding}"
                                             Header="{I18N {x:Static pixeval:SearchResources+SearchHistory.Unpin}}"
                                             Icon="{markup:SymbolIcon PinOff}" />
                                     </ContextMenu>
@@ -103,7 +111,9 @@
                     </ItemsControl.ItemTemplate>
                     <ItemsControl.DataTemplates>
                         <DataTemplate DataType="{x:Type storage:SearchHistoryRecord}">
-                            <Button Click="SearchHistoryButton_OnClick">
+                            <Button
+                                Command="{Binding OpenHistoryCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                CommandParameter="{Binding}">
                                 <Button.Content>
                                     <StackPanel Orientation="Horizontal" Spacing="5">
                                         <TextBlock Text="{Binding Value}" />
@@ -116,15 +126,18 @@
                                 <Button.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem
-                                            Click="CopyButton_OnClick"
+                                            Command="{Binding CopyCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                            CommandParameter="{Binding}"
                                             Header="{I18N {x:Static pixeval:SearchResources+SearchHistory.Copy}}"
                                             Icon="{markup:SymbolIcon Copy}" />
                                         <MenuItem
-                                            Click="AddPinnedTagButton_OnClick"
+                                            Command="{Binding AddPinnedTagCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                            CommandParameter="{Binding}"
                                             Header="{I18N {x:Static pixeval:SearchResources+SearchHistory.AddPinnedTag}}"
                                             Icon="{markup:SymbolIcon Pin}" />
                                         <MenuItem
-                                            Click="DeleteButton_OnClick"
+                                            Command="{Binding DeleteHistoryCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                            CommandParameter="{Binding}"
                                             Header="{I18N {x:Static pixeval:SearchResources+SearchHistory.Delete}}"
                                             Icon="{markup:SymbolIcon Delete}" />
                                     </ContextMenu>
@@ -166,7 +179,8 @@
                             <Button
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
-                                Click="TrendingTagButton_OnClick">
+                                Command="{Binding OpenTrendingTagCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                CommandParameter="{Binding}">
                                 <Button.Content>
                                     <DockPanel VerticalSpacing="5">
                                         <TextBlock

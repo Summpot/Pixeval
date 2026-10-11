@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Selection;
 using Avalonia.Data.Converters;
@@ -21,33 +22,35 @@ namespace Pixeval.Views.Works;
 
 public sealed partial class WorkView : UserControl, IDisposable
 {
-    private static INavigationService NavigationService =>
-        App.Services?.GetService<INavigationService>() ?? new NavigationService();
-
-    private bool _isDisposed;
-
-    public event EventHandler<Control, object>? RequestAddToBookmark;
+    public static readonly StyledProperty<ThumbnailLayoutType> LayoutTypeProperty =
+        AvaloniaProperty.Register<WorkView, ThumbnailLayoutType>(
+            nameof(LayoutType),
+            ThumbnailLayoutType.LinedFlow);
 
     public ThumbnailLayoutType LayoutType
     {
-        get;
-        set
-        {
-            field = value;
-            UpdateLayoutPseudoClasses();
-        }
+        get => GetValue(LayoutTypeProperty);
+        set => SetValue(LayoutTypeProperty, value);
     }
+
+    private INavigationService NavigationService =>
+        this.AppNavigation ?? new NavigationService();
+
+    private bool _isDisposed;
 
     public static FuncValueConverter<bool, SelectionMode> SelectionModeConverter { get; } =
         new(b => b ? SelectionMode.Multiple : SelectionMode.Single);
+
+    static WorkView()
+    {
+        LayoutTypeProperty.Changed.AddClassHandler<WorkView>((view, _) => view.UpdateLayoutPseudoClasses());
+    }
 
     private void StyledElement_OnDataContextChanged(object? sender, EventArgs e) => UpdateLayoutPseudoClasses();
 
     public WorkView()
     {
         InitializeComponent();
-        LayoutType = App.Services!.GetRequiredService<AppSettings>()
-            .BrowsingExperienceSettings.ThumbnailLayout.ThumbnailLayoutType;
     }
 
     private void UpdateLayoutPseudoClasses()
@@ -171,16 +174,6 @@ public sealed partial class WorkView : UserControl, IDisposable
         oldViewModel?.Dispose();
     }
 
-    private void WorkItem_OnRequestAddToBookmark(Control sender, object e) => RequestAddToBookmark?.Invoke(sender, e);
-
-    public void WorkItem_OnRequestOpenUserInfoPage(Control sender, object e)
-    {
-        if (e is IWorkEntry { User.Id: var id })
-        {
-            NavigationService.NavigateToUser(id, this);
-        }
-    }
-
     private void ListBox_OnContainerPrepared(object? sender, ContainerPreparedEventArgs e)
     {
         if (e.Container is not ListBoxItem lbi)
@@ -215,7 +208,6 @@ public sealed partial class WorkView : UserControl, IDisposable
 
         _isDisposed = true;
         WorkListBox.ItemsSource = null;
-        RequestAddToBookmark = null;
         var d = DataContext;
         DataContext = null!;
         if (d is IDisposable viewModel)

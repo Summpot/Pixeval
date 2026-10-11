@@ -30,14 +30,6 @@ public partial class NovelItem : WorkItem
         nav.NavigateToWorkSearch(tag.Name, SimpleWorkType.Novel, this);
     }
 
-    private void AuthorButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Control { DataContext: Mako.Novel vm })
-            return;
-        var nav = this.GetUiService<INavigationService>() ?? new NavigationService();
-        nav.NavigateToUser(vm.User.Id, this);
-    }
-
     private void InputElement_OnPointerEntered(object? sender, PointerEventArgs e)
     {
         CoverImage.Opacity = 0;

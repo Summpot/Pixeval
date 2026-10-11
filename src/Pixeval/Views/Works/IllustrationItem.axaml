@@ -27,9 +27,9 @@
             <ContextMenu>
                 <MenuItem
                     controls:ArtworkStateBehavior.TrackBookmark="True"
+                    controls:BookmarkTagSelectorBehavior.IsEnabled="True"
                     Command="{x:Static viewModels:WorkCommands.BookmarkCommand}"
                     CommandParameter="{Binding}"
-                    ContextRequested="AddToBookmark_OnRightClick"
                     Header="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
                     Icon="{markup1:SymbolIconEx Heart}"
                     IsVisible="{Binding IsBookmarkSupported}" />
@@ -40,11 +40,13 @@
                     Header="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}"
                     Icon="{markup1:SymbolIconEx Clock}" />
                 <MenuItem
-                    Click="OpenUserInfoPage_OnClicked"
+                    Command="{x:Static viewModels:WorkCommands.OpenUserInfoPageCommand}"
+                    CommandParameter="{Binding}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.OpenUserInfoPage}}"
                     Icon="{markup:SymbolIcon Person}" />
                 <MenuItem
-                    Click="OpenSeriesPage_OnClicked"
+                    Command="{x:Static viewModels:WorkCommands.OpenSeriesPageCommand}"
+                    CommandParameter="{Binding}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.OpenSeries}}"
                     Icon="{markup:SymbolIcon SquareMultiple}"
                     IsVisible="{Binding HasSeries}" />

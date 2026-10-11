@@ -11,7 +11,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
     xmlns:utilities="using:Pixeval.Common"
-    xmlns:viewModels="using:Pixeval.ViewModels"
+    xmlns:viewModels="using:Pixeval.ViewModels.Works"
     x:DataType="{x:Type mako:Series}"
     HorizontalContentAlignment="Stretch"
     VerticalContentAlignment="Stretch"
@@ -29,7 +29,8 @@
                     Header="{I18N {x:Static pixeval:SeriesPageResources.ViewLatestContent}}"
                     Icon="{markup:SymbolIcon ArrowRight}" />
                 <MenuItem
-                    Click="AuthorButton_OnClick"
+                    Command="{x:Static viewModels:WorkCommands.OpenUserInfoPageCommand}"
+                    CommandParameter="{Binding}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.OpenUserInfoPage}}"
                     Icon="{markup:SymbolIcon Person}" />
                 <Separator />
@@ -72,7 +73,7 @@
                     Text="{Binding LastPublishedContentDatetime, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}"
                     TextTrimming="CharacterEllipsis"
                     Theme="{StaticResource CaptionTextBlockStyle}" />
-                <Button Padding="2" Click="AuthorButton_OnClick">
+                <Button Padding="2" Command="{x:Static viewModels:WorkCommands.OpenUserInfoPageCommand}" CommandParameter="{Binding}">
                     <TextBlock
                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                         MaxLines="2"

@@ -105,6 +105,6 @@
         <work:WorkView
             x:Name="WorkView"
             DataContextChanged="WorkView_OnDataContextChanged"
-            RequestAddToBookmark="WorkView_OnRequestAddToBookmark" />
+            LayoutType="{Binding BrowsingExperienceSettings.ThumbnailLayout.ThumbnailLayoutType, Source={markup1:Service Type={x:Type options:AppSettings}}, DataType={x:Type options:AppSettings}}" />
     </DockPanel>
 </UserControl>

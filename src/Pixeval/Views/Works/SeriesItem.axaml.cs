@@ -31,15 +31,4 @@ public partial class SeriesItem : EntryItem
                 latestContentId.ToString(CultureInfo.InvariantCulture),
                 PlatformConstants.Pixiv);
     }
-
-    private void AuthorButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Control { DataContext: Series viewModel })
-            return;
-        if (this.AppNavigation is not { } navigator)
-            return;
-
-        if (viewModel.User is { } user)
-            navigator.CreateUserPage(user.Id);
-    }
 }

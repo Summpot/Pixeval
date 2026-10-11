@@ -37,13 +37,13 @@
             </ListBox.Styles>
             <ListBox.DataTemplates>
                 <DataTemplate x:DataType="{x:Type mako:Novel}">
-                    <local:NovelItem RequestAddToBookmark="WorkItem_OnRequestAddToBookmark" RequestOpenUserInfoPage="WorkItem_OnRequestOpenUserInfoPage" />
+                    <local:NovelItem />
                 </DataTemplate>
                 <DataTemplate x:DataType="{x:Type mako:Illustration}">
-                    <local:IllustrationItem RequestAddToBookmark="WorkItem_OnRequestAddToBookmark" RequestOpenUserInfoPage="WorkItem_OnRequestOpenUserInfoPage" />
+                    <local:IllustrationItem />
                 </DataTemplate>
                 <DataTemplate x:DataType="{x:Type booru:BooruPost}">
-                    <local:BooruItem RequestAddToBookmark="WorkItem_OnRequestAddToBookmark" RequestOpenUserInfoPage="WorkItem_OnRequestOpenUserInfoPage" />
+                    <local:BooruItem />
                 </DataTemplate>
             </ListBox.DataTemplates>
         </local:WorkListBox>

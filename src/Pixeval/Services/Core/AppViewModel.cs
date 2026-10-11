@@ -164,6 +164,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
                 provider.GetRequiredService<WorkSubscriptionDownloadService>())
             .AddSingleton(extensionService)
             .AddTransient<Pixeval.ViewModels.Settings.SettingsPageViewModel>()
+            .AddSingleton<Pixeval.ViewModels.Search.SearchPageViewModel>()
 #if PIXEVAL_MCP
             .AddSingleton<IPixevalMcpService>(t =>
                 new PixevalMcpService(this, t.GetRequiredService<FileLogger>()))

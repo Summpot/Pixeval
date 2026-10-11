@@ -18,6 +18,29 @@ public static class WorkCommands
         App.Services?.GetService<IArtworkActionService>()
         ?? NullArtworkActionService.Instance;
 
+    private static INavigationService NavigationService =>
+        App.Services?.GetService<INavigationService>()
+        ?? new NavigationService();
+
+    public static IRelayCommand<object> OpenUserInfoPageCommand { get; } = new RelayCommand<object>(param =>
+    {
+        if (param is IWorkEntry { User.Id: var id } && id > 0)
+            NavigationService.NavigateToUser(id);
+        else if (param is Series { User.Id: var seriesUserId } && seriesUserId > 0)
+            NavigationService.NavigateToUser(seriesUserId);
+        else if (param is User { Id: var userId } && userId > 0)
+            NavigationService.NavigateToUser(userId);
+    });
+
+    public static IRelayCommand<IWorkEntry> OpenSeriesPageCommand { get; } = new RelayCommand<IWorkEntry>(work =>
+    {
+        var series = work?.Series;
+        if (series is not { Id: > 0 })
+            return;
+        var workType = work is Mako.Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
+        NavigationService.NavigateToSeries(workType, series.Id);
+    });
+
     public static IAsyncRelayCommand<IWorkEntry> BookmarkCommand => ActionService.BookmarkCommand;
 
     public static IAsyncRelayCommand<BookmarkRequest> AddToBookmarkCommand => ActionService.AddToBookmarkCommand;
