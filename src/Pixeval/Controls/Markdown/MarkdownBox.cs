@@ -130,7 +130,7 @@ public class MarkdownBox : MarkdownScrollViewer
         Plugins.Plugins.Add(new SyntaxHighlight());
         Plugins.Plugins.Add(new PixevalHtmlPlugin());
         Plugins.Plugins.Add(new SvgFormat());
-        Plugins.PathResolver = new PixevalPathResolver();
+        Plugins.PathResolver = new PixevalPathResolver(this);
         Plugins.HyperlinkCommand = new AsyncRelayCommand<string>(OnHyperlinkClickedAsync);
     }
 
@@ -489,7 +489,7 @@ public class MarkdownBox : MarkdownScrollViewer
 
     private static bool IsNonNegative(double value) => !double.IsNaN(value) && value >= 0;
 
-    private sealed class PixevalPathResolver : IPathResolver
+    private sealed class PixevalPathResolver(MarkdownBox owner) : IPathResolver
     {
         private readonly DefaultPathResolver _defaultPathResolver = new();
 
@@ -518,9 +518,14 @@ public class MarkdownBox : MarkdownScrollViewer
             if (Uri.TryCreate(relativeOrAbsolutePath, UriKind.Absolute, out var uri)
                 && uri.Scheme is "http" or "https")
             {
-                return await App.Services!.GetRequiredService<IImageProviderService>()
-                    .GetImageStreamAsync(ResolvePlatform(uri), uri.OriginalString)
-                    .ConfigureAwait(false);
+                if (Pixeval.Controls.Source.GetImageProvider(owner) is { } images)
+                {
+                    return await images
+                        .GetImageStreamAsync(ResolvePlatform(uri), uri.OriginalString)
+                        .ConfigureAwait(false);
+                }
+
+                return null;
             }
 
             return await (_defaultPathResolver.ResolveImageResource(relativeOrAbsolutePath) ?? Task.FromResult<Stream?>(null)).ConfigureAwait(false);

@@ -12,6 +12,9 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.Controls;
+using Pixeval.Services.Media;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using TabView.Avalonia;
@@ -57,6 +60,7 @@ public partial class TabViewContainer : ViewContainerBase
     {
         _services = services;
         UiServices.SetProvider(this, services);
+        Source.SetImageProvider(this, services.GetService<IImageProviderService>());
         _updateCoordinator = updateCoordinator;
         _uiHost = uiHost;
         _navigation = navigation;
@@ -83,6 +87,9 @@ public partial class TabViewContainer : ViewContainerBase
         if (TopLevel.GetTopLevel(this) is not { } topLevel)
             return;
 
+        var imageProvider = _services.GetService<IImageProviderService>();
+        Source.SetImageProvider(topLevel, imageProvider);
+        Source.SetImageProvider(this, imageProvider);
         Manager = new WindowNotificationManager(topLevel)
         {
             MaxItems = 3,
