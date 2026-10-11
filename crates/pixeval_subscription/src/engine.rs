@@ -48,6 +48,16 @@ struct EngineInner {
     is_daemon_running: bool,
 }
 
+impl Drop for EngineInner {
+    fn drop(&mut self) {
+        if let Some(cb) = self.callback.take() {
+            SUBSCRIPTION_RUNTIME.spawn(async move {
+                drop(cb);
+            });
+        }
+    }
+}
+
 #[derive(Clone, uniffi::Object)]
 pub struct SubscriptionSyncEngine {
     inner: Arc<Mutex<EngineInner>>,

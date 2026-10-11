@@ -7,7 +7,7 @@ using Pixeval.Storage;
 
 namespace Pixeval.Mako;
 
-public abstract partial record WorkEntry : IWorkEntry, IArtworkSerializable
+public partial union WorkEntry : IWorkEntry, IArtworkSerializable
 {
     public IWorkEntry AsWorkEntry => this switch
     {

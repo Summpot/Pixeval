@@ -55,6 +55,13 @@ pub struct McpServer {
     is_running: Arc<RwLock<bool>>,
 }
 
+impl Drop for McpServer {
+    fn drop(&mut self) {
+        let tools = Arc::clone(&self.tools);
+        std::thread::spawn(move || drop(tools));
+    }
+}
+
 struct SessionBridgeWrapper(Box<dyn McpSessionBridge>);
 
 impl McpSessionBridge for SessionBridgeWrapper {

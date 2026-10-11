@@ -132,6 +132,16 @@ pub struct MakoClient {
     tag_translation_cache: Arc<parking_lot::RwLock<std::collections::HashMap<String, String>>>,
 }
 
+impl Drop for MakoClient {
+    fn drop(&mut self) {
+        if Arc::strong_count(&self.session_callback) == 1 {
+            if let Some(cb) = self.session_callback.write().take() {
+                std::thread::spawn(move || drop(cb));
+            }
+        }
+    }
+}
+
 #[uniffi::export(async_runtime = "tokio")]
 impl MakoClient {
     #[uniffi::constructor]

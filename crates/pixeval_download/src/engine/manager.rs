@@ -52,6 +52,21 @@ pub struct DownloadManager {
     pub(crate) snapshot_emit_scheduled: Arc<AtomicBool>,
 }
 
+impl Drop for DownloadManager {
+    fn drop(&mut self) {
+        let cb = self.callback.take();
+        let page_cb = self.page_callback.write().take();
+        let enc = self.encoder.write().take();
+        if cb.is_some() || page_cb.is_some() || enc.is_some() {
+            DOWNLOAD_RUNTIME.spawn(async move {
+                drop(cb);
+                drop(page_cb);
+                drop(enc);
+            });
+        }
+    }
+}
+
 #[uniffi::export]
 impl DownloadManager {
     #[uniffi::constructor]

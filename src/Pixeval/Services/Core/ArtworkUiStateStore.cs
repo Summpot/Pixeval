@@ -40,9 +40,17 @@ public static class ArtworkUiStateStore
         EnsureStorageObserver();
     }
 
+    private static object UnwrapEntry(object entry) => entry switch
+    {
+        WorkEntry we => we.AsWorkEntry,
+        WorkEntry.Illust illust => illust.Illustration,
+        WorkEntry.NovelWork novel => novel.Novel,
+        _ => entry
+    };
+
     public static string GetKey(object entry)
     {
-        var targetEntry = entry is WorkEntry we ? we.AsWorkEntry : entry;
+        var targetEntry = UnwrapEntry(entry);
         if (WatchLaterRecord.TryCreateWorkKey(targetEntry, out var key))
             return key;
 
@@ -63,7 +71,7 @@ public static class ArtworkUiStateStore
         var key = GetKey(entry);
         return s_states.GetOrAdd(key, _ =>
         {
-            var targetEntry = entry is WorkEntry we ? we.AsWorkEntry : entry;
+            var targetEntry = UnwrapEntry(entry);
             var bookmarkState = targetEntry switch
             {
                 Illustration ill => ill.IsBookmarked ? HeartButtonState.Checked : HeartButtonState.Unchecked,
