@@ -1,0 +1,43 @@
+<ResourceDictionary
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
+    xmlns:markup="using:FluentIcons.Avalonia.Markup"
+    xmlns:work="using:Pixeval.Views.Works">
+    <Design.PreviewWith>
+        <StackPanel
+            Width="250"
+            Background="{DynamicResource SystemRegionBrush}"
+            Spacing="10">
+            <work:AddNewBookmarkTagItem Height="50" />
+        </StackPanel>
+    </Design.PreviewWith>
+
+    <ControlTheme x:Key="{x:Type work:AddNewBookmarkTagItem}" TargetType="{x:Type work:AddNewBookmarkTagItem}">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel>
+                    <m3:IconButton
+                        Name="PART_AddButton"
+                        VerticalAlignment="Center"
+                        IsVisible="{TemplateBinding IsExpanded,
+                                                    Converter={x:Static BoolConverters.Not}}"
+                        Symbol="Add"
+                        Theme="{StaticResource MaterialTonalIconButtonTheme}" />
+                    <StackPanel
+                        VerticalAlignment="Center"
+                        IsVisible="{TemplateBinding IsExpanded}"
+                        Orientation="Horizontal"
+                        Spacing="4">
+                        <TextBox Name="PART_TextBox" MinWidth="120" />
+                        <m3:IconButton
+                            Name="PART_ConfirmButton"
+                            Symbol="Check"
+                            Theme="{StaticResource MaterialTonalIconButtonTheme}" />
+                        <m3:IconButton Name="PART_CancelButton" Symbol="Close" />
+                    </StackPanel>
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+</ResourceDictionary>

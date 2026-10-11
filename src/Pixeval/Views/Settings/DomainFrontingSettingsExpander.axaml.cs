@@ -6,7 +6,7 @@ using AutoSettingsPage.Avalonia;
 using AutoSettingsPage.Models;
 using Avalonia;
 using CommunityToolkit.Avalonia.Controls;
-using Pixeval.Models.Settings.Entries;
+using Pixeval.Config;
 
 namespace Pixeval.Views.Settings;
 

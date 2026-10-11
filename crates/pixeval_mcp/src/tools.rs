@@ -3,7 +3,7 @@ use std::sync::Arc;
 use serde_json::json;
 
 use pixeval_cache::CacheEngine;
-use pixeval_download::{DownloadManager, DownloadTaskKey};
+use pixeval_download::DownloadManager;
 use pixeval_mako::MakoClient;
 use pixeval_plugin::PluginHostEngine;
 use pixeval_storage::StorageEngine;
@@ -1540,18 +1540,23 @@ impl McpToolRegistry {
             }
             // 38. download_tasks
             "download_tasks" => {
-                let tasks = self.download.list_tasks();
-                let list: Vec<_> = tasks
+                let snapshot = self.download.current_page_snapshot();
+                let mut items = snapshot.ordinary_items;
+                for folder in snapshot.folders {
+                    items.extend(folder.items);
+                }
+                let list: Vec<_> = items
                     .into_iter()
                     .enumerate()
-                    .map(|(i, t)| {
+                    .map(|(i, item)| {
                         json!({
                             "queueIndex": i,
-                            "url": t.url,
-                            "destination": t.destination,
-                            "state": format!("{:?}", t.state),
-                            "downloadedBytes": t.downloaded_bytes,
-                            "totalBytes": t.total_bytes
+                            "destination": item.key.destination,
+                            "openDestination": item.open_destination,
+                            "title": item.title,
+                            "artworkId": item.artwork_id,
+                            "state": format!("{:?}", item.state),
+                            "progress": item.progress_percentage
                         })
                     })
                     .collect();
@@ -1698,17 +1703,19 @@ impl McpToolRegistry {
                     .map(|s| s.eq_ignore_ascii_case("novel"))
                     .unwrap_or(false);
 
+                let path_macro = "@{id}.@{ext}".to_string();
                 if is_novel {
                     match self.mako.get_novel(id).await {
                         Ok(novel) => {
-                            let dest = format!("novel_{id}.txt");
-                            let key = DownloadTaskKey::new_ordinary(dest.clone());
-                            let url = novel.image_urls.original.or(novel.image_urls.large).unwrap_or_default();
-                            self.download.enqueue_task(key, url, dest.clone(), true);
+                            let payload = serde_json::to_string(&novel).unwrap_or_default();
+                            let destination = self.download.enqueue_pixiv(payload, true, -1, path_macro, String::new(), 0, String::new());
+                            if destination.is_empty() {
+                                return CallToolResult::error("Failed to enqueue novel download.");
+                            }
                             CallToolResult::json(&json!({
                                 "success": true,
                                 "id": id,
-                                "destination": dest
+                                "destination": destination
                             }))
                         }
                         Err(e) => CallToolResult::error(format!("Failed to get novel for download: {e}")),
@@ -1716,31 +1723,16 @@ impl McpToolRegistry {
                 } else {
                     match self.mako.get_illustration(id).await {
                         Ok(illust) => {
-                            let mut enqueued = Vec::new();
-                            if illust.meta_pages.is_empty() {
-                                let url = illust.meta_single_page.original_image_url
-                                    .or(illust.image_urls.original)
-                                    .or(illust.image_urls.large)
-                                    .unwrap_or_default();
-                                let dest = format!("{id}_p0.jpg");
-                                let key = DownloadTaskKey::new_ordinary(dest.clone());
-                                self.download.enqueue_task(key, url, dest.clone(), true);
-                                enqueued.push(dest);
-                            } else {
-                                for (i, page) in illust.meta_pages.iter().enumerate() {
-                                    let url = page.image_urls.original.clone()
-                                        .or(page.image_urls.large.clone())
-                                        .unwrap_or_default();
-                                    let dest = format!("{id}_p{i}.jpg");
-                                    let key = DownloadTaskKey::new_ordinary(dest.clone());
-                                    self.download.enqueue_task(key, url, dest.clone(), true);
-                                    enqueued.push(dest);
-                                }
+                            let payload = serde_json::to_string(&illust).unwrap_or_default();
+                            let destination = self.download.enqueue_pixiv(payload, false, -1, path_macro, String::new(), 0, String::new());
+                            if destination.is_empty() {
+                                return CallToolResult::error("Failed to enqueue illustration download.");
                             }
                             CallToolResult::json(&json!({
                                 "success": true,
                                 "id": id,
-                                "enqueuedFiles": enqueued
+                                "destination": destination,
+                                "enqueuedFiles": [destination.clone()]
                             }))
                         }
                         Err(e) => CallToolResult::error(format!("Failed to get illustration for download: {e}")),
@@ -1756,11 +1748,15 @@ impl McpToolRegistry {
                 let queue_index = arguments.get("queueIndex").and_then(|v| v.as_u64()).map(|u| u as usize);
                 let destination = arguments.get("destination").and_then(|v| v.as_str());
 
-                let tasks = self.download.list_tasks();
+                let snapshot = self.download.current_page_snapshot();
+                let mut items = snapshot.ordinary_items;
+                for folder in snapshot.folders {
+                    items.extend(folder.items);
+                }
                 let target_task = if let Some(idx) = queue_index {
-                    tasks.get(idx).cloned()
+                    items.get(idx).cloned()
                 } else if let Some(dest) = destination {
-                    tasks.into_iter().find(|t| t.destination == dest)
+                    items.into_iter().find(|item| item.key.destination == dest || item.open_destination == dest)
                 } else {
                     None
                 };
@@ -1768,17 +1764,17 @@ impl McpToolRegistry {
                 if let Some(task) = target_task {
                     let key = task.key;
                     let success = match action {
-                        "Pause" => self.download.pause_task_ref(&key),
-                        "Resume" => self.download.resume_task_ref(&key),
-                        "Cancel" => self.download.cancel_task_ref(&key),
-                        "Retry" => self.download.reset_task_ref(&key),
-                        "Remove" => self.download.remove_task_ref(&key),
+                        "Pause" => self.download.pause_work(key.clone()),
+                        "Resume" => self.download.resume_work(key.clone()),
+                        "Cancel" => self.download.cancel_work(key.clone()),
+                        "Retry" => self.download.reset_work(key.clone()),
+                        "Remove" => self.download.remove_work(key.clone(), false),
                         _ => return CallToolResult::error(format!("Unsupported action '{action}'.")),
                     };
                     CallToolResult::json(&json!({
                         "success": success,
                         "action": action,
-                        "destination": task.destination
+                        "destination": task.open_destination
                     }))
                 } else {
                     CallToolResult::error("Specified task not found in download queue.")

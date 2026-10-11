@@ -165,4 +165,48 @@ impl ConfigEngine {
     ) -> CardNormalizationResult {
         normalize_cards(cards, row_count, column_count)
     }
+
+    pub fn get_card_metadata(&self, source_kind: HomePageCardSourceKind) -> HomeCardMetadata {
+        get_card_metadata(source_kind)
+    }
+
+    pub fn get_all_card_metadata(&self) -> Vec<HomeCardMetadata> {
+        get_all_card_metadata()
+    }
+
+    pub fn create_default_cards(&self) -> Vec<HomePageCardLayout> {
+        create_default_cards()
+    }
+
+    pub fn layout_calculate_edit_candidate(
+        &self,
+        action: HomeCardEditAction,
+        start_bounds: HomeCardBounds,
+        delta_column: i32,
+        delta_row: i32,
+        row_count: i32,
+        column_count: i32,
+    ) -> HomeCardBounds {
+        calculate_edit_candidate(action, start_bounds, delta_column, delta_row, row_count, column_count)
+    }
+
+    pub fn parse_home_page_cards_yaml(&self, yaml: String) -> Result<Vec<HomePageCardLayout>, ConfigError> {
+        let cards: Vec<HomePageCardLayout> = serde_yaml::from_str(&yaml)?;
+        Ok(cards)
+    }
+
+    pub fn format_home_page_cards_yaml(&self, cards: Vec<HomePageCardLayout>) -> Result<String, ConfigError> {
+        let yaml = serde_yaml::to_string(&cards)?;
+        Ok(yaml)
+    }
+
+    pub fn load_home_page_cards_from_file(&self, path: String) -> Result<Vec<HomePageCardLayout>, ConfigError> {
+        let raw = fs::read_to_string(&path)?;
+        self.parse_home_page_cards_yaml(raw)
+    }
+
+    pub fn save_home_page_cards_to_file(&self, path: String, cards: Vec<HomePageCardLayout>) -> Result<(), ConfigError> {
+        let content = self.format_home_page_cards_yaml(cards)?;
+        self.save_to_file(path, content)
+    }
 }

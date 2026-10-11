@@ -8,9 +8,9 @@ using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Pixeval.Collections;
+using Pixeval.Common.Collections;
 using Pixeval.I18N;
-using Pixeval.Models.Home;
+using Pixeval.Config;
 
 namespace Pixeval.ViewModels.Home;
 
@@ -29,7 +29,7 @@ public sealed partial class HomeCardPreviewViewModel(
     [ObservableProperty]
     public partial ISimpleViewViewModel? ViewModel { get; private set; }
 
-    public IReadOnlyCollection<INotifyPropertyChanged> Items => ViewModel?.View ?? [];
+    public IReadOnlyCollection<object> Items => ViewModel?.View ?? [];
 
     [ObservableProperty]
     public partial string? PlaceholderText { get; private set; } = I18NManager.GetResource(HomePageResources.CardPreview.LoadingTextBlock.Text);
@@ -51,7 +51,7 @@ public sealed partial class HomeCardPreviewViewModel(
 
     public Task EnsureLoadedAsync() => ViewModel is null ? LoadAsync() : Task.CompletedTask;
 
-    public HomeCardPreviewSource? CloneSource() => _source?.CloneRef();
+    public HomeCardPreviewSource? Source => _source;
 
     private async Task LoadCoreAsync()
     {

@@ -4,6 +4,7 @@ using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.I18N;
 using Pixeval.Utilities;
+using Pixeval.Common;
 
 [assembly: Parallelize(Scope = ExecutionScope.MethodLevel)]
 

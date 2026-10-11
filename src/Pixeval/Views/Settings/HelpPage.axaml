@@ -9,7 +9,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
     xmlns:settings="using:Pixeval.Views.Settings"
-    xmlns:views="using:Pixeval.Views"
+    xmlns:views="using:Pixeval.Views.Shell"
     mc:Ignorable="d"
     d:DesignHeight="800"
     d:DesignWidth="600">

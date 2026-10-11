@@ -1,6 +1,7 @@
 using System;
 using Avalonia;
-using Pixeval.AppManagement;
+using Pixeval.Common;
+using Pixeval.Services.Core;
 using Pixeval.Utilities;
 using Velopack;
 

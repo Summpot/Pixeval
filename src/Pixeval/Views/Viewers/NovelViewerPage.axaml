@@ -1,22 +1,28 @@
-<views:IconContentPage
+<shell:IconContentPage
     x:Class="Pixeval.Views.Viewers.NovelViewerPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:capability="using:Pixeval.Views.Works"
     xmlns:controls="using:Pixeval.Controls"
-    xmlns:converters="using:Pixeval.Views.Converters"
+    xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:di="using:Pixeval.Common.Markup"
     xmlns:local="using:Pixeval.Views.Viewers"
+    xmlns:mako="using:Pixeval.Mako"
+    xmlns:pixiv="using:Pixeval.Pixiv"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
-    xmlns:markup1="using:Pixeval.Views.Markup"
+    xmlns:markup1="using:Pixeval.Common.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:novel="using:Pixeval.ViewModels"
+    xmlns:novel="using:Pixeval.ViewModels.Works"
     xmlns:pixeval="using:Pixeval"
-    xmlns:utilities="using:Pixeval.Utilities"
+    xmlns:utilities="using:Pixeval.Common"
     xmlns:viewers="using:Pixeval.ViewModels.Viewers"
     xmlns:views="using:Pixeval.Views"
-    xmlns:work="using:Pixeval.Views.Work"
+    xmlns:config="using:Pixeval.Config"
+    xmlns:shell="using:Pixeval.Views.Shell"
+    xmlns:work="using:Pixeval.Views.Works"
     x:DataType="{x:Type viewers:NovelViewerPageViewModel}"
-    Header="{Binding CurrentNovel.Entry.Title, FallbackValue={x:Null}}"
+    Header="{Binding CurrentNovel.Title, FallbackValue={x:Null}}"
     mc:Ignorable="d"
     d:DesignHeight="600"
     d:DesignWidth="1000">
@@ -25,11 +31,26 @@
             x:Name="InfoSplitView"
             Grid.Row="0"
             DisplayMode="Inline"
-            IsPaneOpen="{Binding OpenWorkInfo, Source={x:Static views:PixevalSettings.Instance}, Mode=TwoWay}">
+            IsPaneOpen="{Binding OpenWorkInfo, Source={di:Service Type={x:Type config:PixevalSettings}}, DataType={x:Type config:PixevalSettings}, Mode=TwoWay}">
             <SplitView.Pane>
                 <DockPanel>
                     <local:WorkSeriesInfoPane DataContext="{Binding SeriesInfo}" DockPanel.Dock="Bottom" />
-                    <TabbedPage Pages="{Binding PanePages}" TabPlacement="Bottom" />
+                    <TabbedPage x:Name="NovelTabbedPage" TabPlacement="Bottom">
+                        <local:WorkInfoPage
+                            controls:TabPageInclusion.IsIncluded="{Binding CurrentNovel, Converter={x:Static ObjectConverters.IsNotNull}}"
+                            Work="{Binding CurrentNovel}" />
+                        <local:CommentsPage
+                            controls:TabPageInclusion.IsIncluded="{Binding CurrentNovel, Converter={x:Static converters:PixevalConverters.IsInteractiveWork}}"
+                            ParentId="{Binding CurrentNovel.Id}"
+                            ParentType="{x:Static pixiv:SimpleWorkType.Novel}" />
+                        <capability:WorkRelatedPage
+                            controls:TabPageInclusion.IsIncluded="{Binding CurrentNovel, Converter={x:Static converters:PixevalConverters.IsInteractiveWork}}"
+                            IsCommandBarCollapsed="True"
+                            WorkId="{Binding CurrentNovel.Id}"
+                            WorkType="{x:Static pixiv:SimpleWorkType.Novel}" />
+                        <local:NovelViewerSettingsPage
+                            controls:TabPageInclusion.IsIncluded="{Binding CurrentNovel, Converter={x:Static converters:PixevalConverters.IsInteractiveWork}}" />
+                    </TabbedPage>
                 </DockPanel>
             </SplitView.Pane>
 
@@ -40,26 +61,26 @@
                     DockPanel.Dock="Top"
                     IsDynamicOverflowEnabled="True">
                     <CommandBarButton
-                        Command="{Binding CurrentNovel.BookmarkCommand, FallbackValue={x:Null}}"
-                        CommandParameter="{Binding $self, Mode=OneTime}"
+                        Command="{x:Static novel:WorkCommands.BookmarkCommand}"
+                        CommandParameter="{Binding CurrentNovel}"
                         ContextRequested="AddToBookmarkButton_OnClick"
                         Icon="{markup1:SymbolIconEx Heart,
-                                                    IconVariant={Binding CurrentNovel.IsBookmarkedDisplay,
+                                                    IconVariant={Binding CurrentUiState.BookmarkState,
                                                                          Converter={x:Static converters:PixevalConverters.StateToIconVariant}}}"
                         IsVisible="{Binding CurrentNovel.IsBookmarkSupported, FallbackValue={x:False}}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}" />
                     <CommandBarSeparator />
                     <CommandBarButton
-                        Command="{Binding CurrentNovel.SaveCommand, FallbackValue={x:Null}}"
-                        CommandParameter="{Binding $self, Mode=OneTime}"
+                        Command="{x:Static novel:WorkCommands.SaveCommand}"
+                        CommandParameter="{Binding CurrentNovel}"
                         Icon="{markup:SymbolIcon Save}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.Save}}" />
                     <CommandBarSeparator />
                     <CommandBarButton
-                        Command="{Binding CurrentNovel.AddToWatchLaterCommand, FallbackValue={x:Null}}"
-                        CommandParameter="{Binding $self, Mode=OneTime}"
+                        Command="{x:Static novel:WorkCommands.AddToWatchLaterCommand}"
+                        CommandParameter="{Binding CurrentNovel}"
                         Icon="{markup1:SymbolIconEx Clock,
-                                                    IconVariant={Binding CurrentNovel.IsInWatchLater,
+                                                    IconVariant={Binding CurrentUiState.IsInWatchLater,
                                                                          Converter={x:Static converters:PixevalConverters.BoolToIconVariant}}}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}" />
                     <!--<CommandBarButton
@@ -135,7 +156,7 @@
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="{x:Type novel:NovelItemViewModel}">
+                <DataTemplate x:DataType="{x:Type mako:Novel}">
                     <Image
                         Width="80"
                         Height="80"
@@ -171,9 +192,9 @@
                         MaxWidth="350"
                         VerticalAlignment="Center"
                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                        IsVisible="{Binding CurrentNovel.Entry.Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue={x:Null}}"
+                        IsVisible="{Binding CurrentNovel.Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue={x:Null}}"
                         Symbol="AppTitle"
-                        Text="{Binding CurrentNovel.Entry.Title, FallbackValue={x:Null}}" />
+                        Text="{Binding CurrentNovel.Title, FallbackValue={x:Null}}" />
                 </StackPanel>
 
                 <StackPanel
@@ -192,4 +213,4 @@
             </Grid>
         </Border>
     </Grid>
-</views:IconContentPage>
+</shell:IconContentPage>

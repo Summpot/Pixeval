@@ -114,11 +114,9 @@ public abstract partial class ImageViewerBase : UserControl
     {
         if (CurrentPageViewModel?.DisplaySource?.Frames is not [var singleFrame])
             return;
-        if (TopLevel.GetTopLevel(this) is not { ViewContainer: { } viewContainer, Clipboard: { } clipboard })
-            return;
-
+        var clipboard = this.ClipboardService;
         await clipboard.SetBitmapAsync(singleFrame);
         await clipboard.FlushAsync();
-        viewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+        this.Notifications.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
     }
 }

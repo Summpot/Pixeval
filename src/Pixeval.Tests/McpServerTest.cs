@@ -9,13 +9,13 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Native.Cache;
-using Pixeval.Native.Download;
-using Pixeval.Native.Mako;
-using Pixeval.Native.Mcp;
-using Pixeval.Native.Plugin;
-using Pixeval.Native.Storage;
-using Pixeval.Native.Subscription;
+using Pixeval.Cache;
+using Pixeval.Download;
+using Pixeval.Mako;
+using Pixeval.Mcp;
+using Pixeval.Plugin;
+using Pixeval.Storage;
+using Pixeval.Subscription;
 
 namespace Pixeval.Tests;
 

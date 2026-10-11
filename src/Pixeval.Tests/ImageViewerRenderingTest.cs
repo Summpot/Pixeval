@@ -17,16 +17,16 @@ using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Native.Booru;
-using Misaki;
-using Pixeval.AppManagement;
+using Pixeval.Booru;
 using Pixeval.I18N;
 using Pixeval.Utilities;
-using Pixeval.Models.Extensions;
+using Pixeval.Services.Background;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
 using SmoothScroll.Avalonia.Controls;
 using Size = Avalonia.Size;
+using Pixeval.Common;
+using Pixeval.Services.Core;
 
 namespace Pixeval.Tests;
 
@@ -63,7 +63,7 @@ public sealed class ImageViewerRenderingTest
                     using var model = new SingleViewerViewModel("test", new BooruPost(
                         "1", "md5", BooruPlatform.Danbooru, "https://example.com/test.jpg", null, null,
                         100, 100, 0, "jpg", DateTimeOffset.UtcNow.ToString("o"), "1", "test",
-                        null, "general", [], null, false, 0, false, false, null), 0, (_, _) => Task.CompletedTask);
+                        null, "general", [], null, false, 0, false, false, null), 0);
                     using var thumbnail = CreateSource(size);
                     if (sourceReadyBeforeAttachment)
                     {

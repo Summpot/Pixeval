@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using Avalonia.Media;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
-using Pixeval.Models.Navigation;
+using Pixeval.Config;
 
 namespace Pixeval.Views.Settings;
 

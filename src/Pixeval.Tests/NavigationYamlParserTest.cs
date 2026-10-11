@@ -3,8 +3,9 @@ using System.Globalization;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.I18N;
-using Pixeval.Models.Navigation;
+using Pixeval.Config;
 using Pixeval.Utilities;
+using Pixeval.Common;
 
 namespace Pixeval.Tests;
 

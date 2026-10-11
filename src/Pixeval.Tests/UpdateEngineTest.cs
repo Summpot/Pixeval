@@ -7,9 +7,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement;
-using Pixeval.AppManagement.Settings;
-using Pixeval.Native.Update;
+using Pixeval.Config;
+using Pixeval.Update;
+using Pixeval.Services.Update;
 
 namespace Pixeval.Tests;
 

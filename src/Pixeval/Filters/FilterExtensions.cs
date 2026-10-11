@@ -2,7 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using Pixeval.Native.Filters;
+using Pixeval.Filters;
 
 namespace Pixeval.Filters;
 

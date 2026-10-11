@@ -3,37 +3,33 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using AutoSettingsPage;
-using AutoSettingsPage.Avalonia;
-using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Pixeval.AppManagement.Settings;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.Config;
 using Pixeval.I18N;
-using Pixeval.Models.Blocking;
-using Pixeval.Models.Pixiv;
-using Pixeval.Models.Settings;
+using Pixeval.Pixiv;
+using Pixeval.Mako;
 using Pixeval.Utilities;
-using Pixeval.Views.Capability;
-using Pixeval.Views.Settings;
-using Pixeval.Views.Viewers;
 
 namespace Pixeval.ViewModels.Viewers;
 
 public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDisposable
 {
-    private readonly Dictionary<int, NovelItemViewModel> _refreshedNovels = [];
+    private readonly MakoClient _makoClient;
+    private readonly AppSettings _appSettings;
+    private readonly StorageEngine _storageEngine;
+
+    private readonly Dictionary<int, Mako.Novel> _refreshedNovels = [];
 
     private readonly bool _needRefresh;
 
-    private readonly ISourceView<NovelItemViewModel>? _sourceView;
+    private readonly IReadOnlyList<Mako.Novel>? _novels;
 
     [ObservableProperty]
     public partial bool IsLoading { get; private set; }
@@ -44,40 +40,52 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
     [ObservableProperty]
     public partial WorkSeriesInfoViewModel? SeriesInfo { get; private set; }
 
-    public IReadOnlyList<Page> PanePages => CurrentNovel is not { } currentNovel
-        ? []
-        : BlockedContentHelper.IsBlockedPlaceholder(currentNovel.Entry)
-            ? [new WorkInfoPage(currentNovel.Entry)]
-            :
-            [
-                new WorkInfoPage(currentNovel.Entry),
-                new CommentsPage(new CommentsViewViewModel(SimpleWorkType.Novel, currentNovel.Entry.Id)),
-                new WorkRelatedPage(currentNovel.Entry.Id, SimpleWorkType.Novel) { IsCommandBarCollapsed = true },
-                SettingsPage
-            ];
-
-    public NovelViewerPageViewModel(NovelItemViewModel novelViewModel, bool needRefresh)
+    public NovelViewerPageViewModel(
+        Mako.Novel novelViewModel,
+        bool needRefresh,
+        MakoClient? makoClient = null,
+        AppSettings? appSettings = null,
+        StorageEngine? storageEngine = null)
     {
+        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
+        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
+        _storageEngine = storageEngine ?? App.Services!.GetRequiredService<StorageEngine>();
         _needRefresh = needRefresh;
         CurrentNovel = novelViewModel;
         CurrentWorkIndex = 0;
     }
 
-    public NovelViewerPageViewModel(long id)
+    public NovelViewerPageViewModel(
+        long id,
+        MakoClient? makoClient = null,
+        AppSettings? appSettings = null,
+        StorageEngine? storageEngine = null)
     {
+        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
+        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
+        _storageEngine = storageEngine ?? App.Services!.GetRequiredService<StorageEngine>();
         _ = LoadSingleNovelAsync(id, _loadingCts.Token);
     }
 
-    public NovelViewerPageViewModel(ISourceView<NovelItemViewModel> dataProvider, int currentNovelIndex, bool needRefresh)
+    public NovelViewerPageViewModel(
+        IReadOnlyList<Mako.Novel> novels,
+        int currentNovelIndex,
+        bool needRefresh,
+        MakoClient? makoClient = null,
+        AppSettings? appSettings = null,
+        StorageEngine? storageEngine = null)
     {
+        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
+        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
+        _storageEngine = storageEngine ?? App.Services!.GetRequiredService<StorageEngine>();
         _needRefresh = needRefresh;
-        _sourceView = dataProvider;
+        _novels = novels;
         CurrentWorkIndex = currentNovelIndex;
     }
 
-    public IReadOnlyList<NovelItemViewModel>? Novels => _sourceView?.View;
+    public IReadOnlyList<Mako.Novel>? Novels => _novels;
 
-    public NovelItemViewModel? CurrentNovel
+    public Mako.Novel? CurrentNovel
     {
         get
         {
@@ -89,7 +97,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
             return CurrentWorkIndex < 0 || CurrentWorkIndex >= WorkCount
                 ? null
-                : _sourceView?.View[CurrentWorkIndex];
+                : _novels?[CurrentWorkIndex];
         }
         private set
         {
@@ -98,11 +106,13 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             field = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(NovelId));
-            OnPropertyChanged(nameof(PanePages));
+            OnPropertyChanged(nameof(CurrentUiState));
         }
     }
 
-    public long NovelId => CurrentNovel?.Entry.Id ?? 0;
+    public ArtworkUiState? CurrentUiState => CurrentNovel is { } nov ? ArtworkUiStateStore.GetOrCreate(nov) : null;
+
+    public long NovelId => CurrentNovel?.Id ?? 0;
 
     public override int CurrentWorkIndex
     {
@@ -120,11 +130,13 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             OnPropertyChanged();
             OnPropertyChanged(nameof(NovelId));
             OnPropertyChanged(nameof(CurrentNovel));
-            OnPropertyChanged(nameof(PanePages));
         }
         // 第一次赋值属性时会判断 value == field，如果是0则无法进入set方法体
         // ReSharper disable once MemberInitializerValueIgnored
     } = -1;
+
+    private bool _suppressMarkerSync;
+    private CancellationTokenSource? _syncMarkerCts;
 
     public override int CurrentPageIndex
     {
@@ -141,7 +153,36 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             PrevCommand.NotifyCanExecuteChanged();
             NextWorkCommand.NotifyCanExecuteChanged();
             PrevWorkCommand.NotifyCanExecuteChanged();
+
+            if (!_suppressMarkerSync && CurrentNovel is { Id: var novelId } && novelId > 0 && PageCount > 0)
+            {
+                SyncMarkerDebounced(novelId, value);
+            }
         }
+    }
+
+    private void SyncMarkerDebounced(long novelId, int pageIndex)
+    {
+        _syncMarkerCts?.Cancel();
+        _syncMarkerCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        _syncMarkerCts = cts;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(1500, cts.Token);
+                if (cts.Token.IsCancellationRequested || _disposed)
+                    return;
+
+                await _makoClient.AddNovelMarkerAsync(novelId, pageIndex + 1);
+            }
+            catch
+            {
+                // Silent cloud sync - non-intrusive
+            }
+        }, cts.Token);
     }
 
     public override int PageCount => _pageMarkdowns.Count;
@@ -155,33 +196,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
     #region Settings
 
-    private ObservableCollection<string>? _subscribedNovelFontFamily;
-
-    private SettingsSubView SettingsPage
-    {
-        get
-        {
-            LocalSettingsEntryHelper.Initialize();
-            return new SettingsSubView(
-                SettingsBuilder.CreateGroupList(App.AppViewModel.AppSettings)
-                    .NewGroup(t => t.NovelSettings, group => group
-                        .Color(t => t.NovelBackground, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelBackground)))
-                        .Color(t => t.NovelFontColor, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelFontColor)))
-                        .Font(t => t.NovelFontFamily, t =>
-                        {
-                            t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelFontFamilyObject));
-                            _subscribedNovelFontFamily = t.Value;
-                            _subscribedNovelFontFamily.CollectionChanged += OnNovelFontFamilyChanged;
-                        })
-                        .Enum(t => t.NovelFontWeight, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelFontWeight)))
-                        .Int(t => t.NovelFontSize, 5, 100, 1, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelFontSize)))
-                        .Int(t => t.NovelLineHeight, 0, 150, 1, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelLineHeight)))
-                        .Int(t => t.NovelMaxWidth, 50, 10000, 50, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelMaxWidth))))
-                    .Build()[0]);
-        }
-    }
-
-    private static AppSettings Settings => App.AppViewModel.AppSettings;
+    private AppSettings Settings => _appSettings;
 
     public uint NovelBackground => Settings.NovelSettings.NovelBackground;
 
@@ -197,8 +212,13 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
     public int NovelMaxWidth => Settings.NovelSettings.NovelMaxWidth;
 
-    private void OnNovelFontFamilyChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
-        OnPropertyChanged(nameof(NovelFontFamilyObject));
+    public void NotifyNovelBackgroundChanged() => OnPropertyChanged(nameof(NovelBackground));
+    public void NotifyNovelFontColorChanged() => OnPropertyChanged(nameof(NovelFontColor));
+    public void NotifyNovelFontFamilyChanged() => OnPropertyChanged(nameof(NovelFontFamilyObject));
+    public void NotifyNovelFontWeightChanged() => OnPropertyChanged(nameof(NovelFontWeight));
+    public void NotifyNovelFontSizeChanged() => OnPropertyChanged(nameof(NovelFontSize));
+    public void NotifyNovelLineHeightChanged() => OnPropertyChanged(nameof(NovelLineHeight));
+    public void NotifyNovelMaxWidthChanged() => OnPropertyChanged(nameof(NovelMaxWidth));
 
     #endregion
 
@@ -240,32 +260,66 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             if (currentNovel is null || index != CurrentWorkIndex || _disposed)
                 return;
 
-            if (BlockedContentHelper.IsBlockedPlaceholder(currentNovel.Entry))
+            if (BlockedContentHelper.IsBlockedPlaceholder(currentNovel))
                 _pageMarkdowns = [I18NManager.GetResource(BlockedContentResources.Work)];
             else
             {
-                SeriesInfo = WorkSeriesInfoViewModel.Create(currentNovel.Entry, SimpleWorkType.Novel);
-                var content = await currentNovel.ContentAsync;
+                SeriesInfo = WorkSeriesInfoViewModel.Create(currentNovel, SimpleWorkType.Novel);
+                var content = await _makoClient.GetNovelContentStructuredAsync(currentNovel.Id);
                 token.ThrowIfCancellationRequested();
                 if (index != CurrentWorkIndex || _disposed)
                     return;
 
-                SeriesInfo = WorkSeriesInfoViewModel.Create(content, currentNovel.Entry.Series);
-                App.AppViewModel.AddBrowseHistory(currentNovel.Entry);
+                SeriesInfo = WorkSeriesInfoViewModel.Create(content, currentNovel.Series);
+                _storageEngine.HistoryRepository.AddBrowseHistory(currentNovel);
                 var markdowns = await Task.Run(() => BuildPageMarkdowns(content), token);
                 token.ThrowIfCancellationRequested();
                 if (index != CurrentWorkIndex || _disposed)
                     return;
 
                 _pageMarkdowns = markdowns;
-            }
 
-            CurrentPageIndex = 0;
+                var targetPage = 0;
+                if (content.Marker is { Page: > 0 } marker && marker.Page <= markdowns.Count)
+                {
+                    targetPage = marker.Page - 1;
+                }
+                else
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var markers = await _makoClient.GetNovelMarkersAsync();
+                            var match = markers.MarkedNovels.FirstOrDefault(x => x.Novel.Id == currentNovel.Id);
+                            if (match is { NovelMarker: { Page: > 0 and var page } } && page <= _pageMarkdowns.Count)
+                            {
+                                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                                {
+                                    if (!_disposed && CurrentNovel?.Id == currentNovel.Id && CurrentPageIndex == 0)
+                                    {
+                                        _suppressMarkerSync = true;
+                                        CurrentPageIndex = page - 1;
+                                        _suppressMarkerSync = false;
+                                    }
+                                });
+                            }
+                        }
+                        catch
+                        {
+                            // Silent
+                        }
+                    });
+                }
+
+                _suppressMarkerSync = true;
+                CurrentPageIndex = targetPage;
+                _suppressMarkerSync = false;
+            }
             OnPropertyChanged(nameof(PageCount));
             OnPropertyChanged(nameof(IsMultiPage));
             OnPropertyChanged(nameof(CurrentNovel));
             OnPropertyChanged(nameof(NovelId));
-            OnPropertyChanged(nameof(PanePages));
         }
         catch (OperationCanceledException)
         {
@@ -285,39 +339,28 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
         static List<string> BuildPageMarkdowns(NovelContent content)
         {
-            var engine = new Pixeval.Native.Novel.NovelEngine();
-            var images = content.Images
-                .Select(x => new Pixeval.Native.Novel.NovelImageRenderDto(x.NovelImageId, x.ThumbnailUrl, ""))
-                .ToList();
-            var illusts = content.Illustrations
-                .Select(x => new Pixeval.Native.Novel.NovelIllustRenderDto(x.Id, x.Page, x.ThumbnailUrl, x.AppUri.OriginalString, x.WebsiteUri.OriginalString, ""))
-                .ToList();
-
-            var pages = engine.RenderPagesMarkdown(content.Text, images, illusts);
-            if (pages.Count is 0)
-                pages.Add("");
-
-            return pages;
+            var pages = content.RenderMarkdownPages();
+            return pages as List<string> ?? [.. pages];
         }
     }
 
-    private async Task<NovelItemViewModel?> GetCurrentNovelAsync(int index, CancellationToken token)
+    private async Task<Mako.Novel?> GetCurrentNovelAsync(int index, CancellationToken token)
     {
         if (!_needRefresh)
             return CurrentNovel;
 
-        if (_sourceView is not null && _refreshedNovels.TryGetValue(index, out var cached))
+        if (_novels is not null && _refreshedNovels.TryGetValue(index, out var cached))
             return cached;
 
-        if (CurrentNovel is not { Entry.Id: var id })
+        if (CurrentNovel is not { Id: var id })
             return null;
 
         return await LoadNovelAsync(
             id,
             novel =>
             {
-                // 单项刷新写回当前项，列表刷新只缓存到当前 Viewer，避免污染原始 SourceView。
-                if (_sourceView is null)
+                // 单项刷新写回当前项，列表刷新只缓存到当前 Viewer，避免污染原始列表。
+                if (_novels is null)
                     CurrentNovel = novel;
                 else
                     _refreshedNovels[index] = novel;
@@ -333,18 +376,17 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         return _loadingCts.Token;
     }
 
-    private async Task<NovelItemViewModel?> LoadNovelAsync(long id, Action<NovelItemViewModel> onLoaded, CancellationToken token)
+    private async Task<Mako.Novel?> LoadNovelAsync(long id, Action<Mako.Novel> onLoaded, CancellationToken token)
     {
         IsLoading = true;
         LoadErrorMessage = null;
         try
         {
             var novel = BlockedContentHelper.Replace(
-                await App.AppViewModel.MakoClient.GetNovelFromIdAsync(id, token));
+                await _makoClient.GetNovelFromIdAsync(id, token));
             token.ThrowIfCancellationRequested();
-            var viewModel = NovelItemViewModel.CreateInstance(novel);
-            onLoaded(viewModel);
-            return viewModel;
+            onLoaded(novel);
+            return novel;
         }
         catch (OperationCanceledException)
         {
@@ -370,15 +412,10 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
         _disposed = true;
         IsLoading = false;
+        _syncMarkerCts?.Cancel();
+        _syncMarkerCts?.Dispose();
         _loadingCts.Cancel();
         _loadingCts.Dispose();
-        if (_subscribedNovelFontFamily is { } novelFontFamily)
-        {
-            novelFontFamily.CollectionChanged -= OnNovelFontFamilyChanged;
-            _subscribedNovelFontFamily = null;
-        }
-
-        _sourceView?.Dispose();
     }
 
     #endregion

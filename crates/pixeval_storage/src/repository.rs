@@ -431,6 +431,50 @@ impl HistoryRepository {
         Ok(results)
     }
 
+    pub fn query_search_history_suggestions(
+        &self,
+        pattern: &str,
+        limit: u32,
+    ) -> Result<Vec<SearchHistoryRecord>, StorageError> {
+        let conn = self.conn.lock();
+        let mut results = Vec::new();
+        let trimmed = pattern.trim();
+        if trimmed.is_empty() {
+            let mut stmt = conn.prepare(
+                "SELECT HistoryEntryId, Value, TranslatedName, CAST(Time AS TEXT) FROM SearchHistoryEntry ORDER BY HistoryEntryId DESC LIMIT ?1",
+            )?;
+            let rows = stmt.query_map(params![limit], |row| {
+                Ok(SearchHistoryRecord {
+                    history_entry_id: row.get(0)?,
+                    value: row.get(1)?,
+                    translated_name: row.get(2)?,
+                    time: row.get(3)?,
+                })
+            })?;
+            for r in rows {
+                results.push(r?);
+            }
+        } else {
+            let like_pattern = format!("%{}%", trimmed);
+            let prefix_pattern = format!("{}%", trimmed);
+            let mut stmt = conn.prepare(
+                "SELECT HistoryEntryId, Value, TranslatedName, CAST(Time AS TEXT) FROM SearchHistoryEntry WHERE Value LIKE ?1 OR (TranslatedName IS NOT NULL AND TranslatedName LIKE ?1) ORDER BY (CASE WHEN Value LIKE ?2 THEN 0 ELSE 1 END), HistoryEntryId DESC LIMIT ?3",
+            )?;
+            let rows = stmt.query_map(params![like_pattern, prefix_pattern, limit], |row| {
+                Ok(SearchHistoryRecord {
+                    history_entry_id: row.get(0)?,
+                    value: row.get(1)?,
+                    translated_name: row.get(2)?,
+                    time: row.get(3)?,
+                })
+            })?;
+            for r in rows {
+                results.push(r?);
+            }
+        }
+        Ok(results)
+    }
+
     pub fn try_delete_search_history_by_value(&self, value: String) -> Result<bool, StorageError> {
         let conn = self.conn.lock();
         let affected = conn.execute(

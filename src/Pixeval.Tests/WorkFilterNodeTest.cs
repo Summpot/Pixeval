@@ -3,15 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Filters;
-using Pixeval.Models.Filters;
-using Pixeval.Native.Filters;
 
 namespace Pixeval.Tests;
 
 [TestClass]
 public sealed class WorkFilterNodeTest
 {
-    private static readonly FilterLanguage _Language = WorkFilterLanguage.Instance;
+    private static readonly FilterCompletionEngine _Language = WorkFilterLanguage.Instance;
 
     [TestMethod]
     public void WorkFilterNodesShouldSupportAllPredicatesAndGroups()

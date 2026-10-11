@@ -1,7 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Models.Home;
-using Pixeval.Models.Options;
-using Pixeval.Native.Config;
+using Pixeval.Config;
 
 namespace Pixeval.Tests;
 

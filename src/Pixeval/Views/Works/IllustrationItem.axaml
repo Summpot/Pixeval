@@ -1,0 +1,157 @@
+<work:WorkItem
+    x:Class="Pixeval.Views.Works.IllustrationItem"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Pixeval.Controls"
+    xmlns:converters="using:Pixeval.Common.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:fluent="using:FluentIcons.Avalonia"
+    xmlns:markup="using:FluentIcons.Avalonia.Markup"
+    xmlns:markup1="using:Pixeval.Common.Markup"
+    xmlns:mako="using:Pixeval.Mako"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:pixeval="using:Pixeval"
+    xmlns:utilities="using:Pixeval.Common"
+    xmlns:viewModels="using:Pixeval.ViewModels.Works"
+    xmlns:work="using:Pixeval.Views.Works"
+    x:DataType="{x:Type mako:Illustration}"
+    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+    Design.DataContext="{x:Static utilities:DesignHelper.DesignIllustrationViewModel}"
+    RenderTransformOrigin="50%,50%"
+    Theme="{StaticResource RoundedButtonStyle}"
+    mc:Ignorable="d"
+    d:DesignHeight="250"
+    d:DesignWidth="300">
+    <ContentControl ClipToBounds="True">
+        <ContentControl.ContextMenu>
+            <ContextMenu>
+                <MenuItem
+                    controls:ArtworkStateBehavior.TrackBookmark="True"
+                    controls:BookmarkTagSelectorBehavior.IsEnabled="True"
+                    Command="{x:Static viewModels:WorkCommands.BookmarkCommand}"
+                    CommandParameter="{Binding}"
+                    Header="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
+                    Icon="{markup1:SymbolIconEx Heart}"
+                    IsVisible="{Binding IsBookmarkSupported}" />
+                <MenuItem
+                    controls:ArtworkStateBehavior.TrackWatchLater="True"
+                    Command="{x:Static viewModels:WorkCommands.AddToWatchLaterCommand}"
+                    CommandParameter="{Binding}"
+                    Header="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}"
+                    Icon="{markup1:SymbolIconEx Clock}" />
+                <MenuItem
+                    Command="{x:Static viewModels:WorkCommands.OpenUserInfoPageCommand}"
+                    CommandParameter="{Binding}"
+                    Header="{I18N {x:Static pixeval:EntryItemResources.OpenUserInfoPage}}"
+                    Icon="{markup:SymbolIcon Person}" />
+                <MenuItem
+                    Command="{x:Static viewModels:WorkCommands.OpenSeriesPageCommand}"
+                    CommandParameter="{Binding}"
+                    Header="{I18N {x:Static pixeval:EntryItemResources.OpenSeries}}"
+                    Icon="{markup:SymbolIcon SquareMultiple}"
+                    IsVisible="{Binding HasSeries}" />
+                <Separator />
+                <MenuItem
+                    Command="{x:Static viewModels:WorkCommands.CopyCommand}"
+                    CommandParameter="{Binding #ThumbnailImage, Mode=OneTime}"
+                    Header="{I18N {x:Static pixeval:EntryItemResources.Copy}}"
+                    Icon="{markup:SymbolIcon Copy}"
+                    IsEnabled="{Binding #ThumbnailImage.(controls:Source.Loaded)}" />
+                <MenuItem
+                    Command="{x:Static viewModels:WorkCommands.SaveCommand}"
+                    CommandParameter="{Binding}"
+                    Header="{I18N {x:Static pixeval:EntryItemResources.Save}}"
+                    Icon="{markup:SymbolIcon Save}" />
+                <Separator />
+                <MenuItem
+                    Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                    Header="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
+                    Icon="{markup:SymbolIcon GlobeArrowUp}"
+                    Tag="{Binding WebsiteUri}" />
+                <MenuItem
+                    Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                    Header="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
+                    Icon="{markup:SymbolIcon LinkMultiple}"
+                    Tag="{Binding WebsiteUri}" />
+                <MenuItem
+                    Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                    Header="{I18N {x:Static pixeval:EntryItemResources.GenerateLink}}"
+                    Icon="{markup:SymbolIcon Link}"
+                    Tag="{Binding AppUri}" />
+            </ContextMenu>
+        </ContentControl.ContextMenu>
+        <Border HorizontalAlignment="Stretch">
+            <Panel>
+                <controls:ConstrainedBox
+                    x:Name="ThumbnailBounds"
+                    AspectRatio="{Binding AspectRatio, Converter={x:Static converters:PixevalConverters.ToAspectRatio}}"
+                    RestrictArrange="False">
+                    <Image
+                        x:Name="ThumbnailImage"
+                        controls:Source.Cache="{Binding ThumbnailUrl}"
+                        controls:Source.DecodeTarget="{Binding #ThumbnailBounds}"
+                        Stretch="UniformToFill" />
+                </controls:ConstrainedBox>
+                <controls:Skeleton IsVisible="{Binding !#ThumbnailImage.(controls:Source.Loaded)}" />
+                <controls:HeartButton
+                    Width="30"
+                    Height="30"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    controls:ArtworkStateBehavior.TrackBookmark="True"
+                    Command="{x:Static viewModels:WorkCommands.BookmarkCommand}"
+                    CommandParameter="{Binding}"
+                    IsVisible="{Binding IsBookmarkSupported}">
+                    
+                    <controls:HeartButton.CacheMode>
+                        <BitmapCache SnapsToDevicePixels="False" RenderAtScale="1"/>
+                    </controls:HeartButton.CacheMode>
+                </controls:HeartButton>
+                <Border
+                    Margin="5"
+                    Padding="5"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Background="{DynamicResource ControlOnImageFillColorDefaultBrush}"
+                    CornerRadius="{StaticResource ControlCornerRadius}"
+                    IsVisible="{Binding HasSeries}">
+                    <fluent:SymbolIcon
+                        FontSize="{StaticResource SmallIconFontSize}"
+                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                        Symbol="SquareMultiple" />
+                </Border>
+                <DockPanel
+                    Margin="10"
+                    VerticalAlignment="Bottom"
+                    HorizontalSpacing="3"
+                    LastChildFill="False">
+                    <controls:PixevalBadge
+                        DockPanel.Dock="Left"
+                        IsVisible="{Binding IsAiGenerated}"
+                        Mode="Ai" />
+                    <controls:PixevalBadge DockPanel.Dock="Left" Mode="{Binding SafeRating, Converter={x:Static converters:PixevalConverters.SafeBadgeModeConverter}}" />
+                </DockPanel>
+                <Border
+                    Margin="5"
+                    Padding="5"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
+                    Background="{DynamicResource ControlOnImageFillColorDefaultBrush}"
+                    CornerRadius="{StaticResource ControlCornerRadius}"
+                    IsVisible="{Binding !IsPicOne}">
+                    <Panel>
+                        <controls:IconText
+                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                            IsVisible="{Binding IsPicSet}"
+                            Symbol="ImageMultiple"
+                            Text="{Binding PageCount}" />
+                        <fluent:SymbolIcon
+                            FontSize="{StaticResource SmallIconFontSize}"
+                            IsVisible="{Binding IsPicGif}"
+                            Symbol="Gif" />
+                    </Panel>
+                </Border>
+            </Panel>
+        </Border>
+    </ContentControl>
+</work:WorkItem>

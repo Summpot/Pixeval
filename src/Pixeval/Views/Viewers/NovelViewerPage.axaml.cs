@@ -9,10 +9,12 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Pixeval.Controls;
 using Pixeval.I18N;
-using Pixeval.Models.Pixiv;
+using Pixeval.Pixiv;
+using Pixeval.Mako;
 using Pixeval.Utilities;
+using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Views.Viewers;
 
@@ -55,9 +57,12 @@ public partial class NovelViewerPage : IconContentPage
             ViewModel.CurrentPageIndex = pageIndex;
     }
 
-    private async void AddToBookmarkButton_OnClick(object? sender, ContextRequestedEventArgs e)
+    private void AddToBookmarkButton_OnClick(object? sender, ContextRequestedEventArgs e) =>
+        this.RunInteraction(() => AddToBookmarkButton_OnClickAsync(sender, e));
+
+    private async Task AddToBookmarkButton_OnClickAsync(object? sender, ContextRequestedEventArgs e)
     {
-        if (sender is Control c && ViewModel.CurrentNovel is { Entry.Id: var id })
+        if (sender is Control c && ViewModel.CurrentNovel is { Id: var id })
             await BookmarkTagSelectorFlyoutHelper.ShowAsync(
                 c,
                 SimpleWorkType.Novel,
@@ -70,8 +75,8 @@ public partial class NovelViewerPage : IconContentPage
     {
         if (ViewModel.CurrentNovel is { } current)
         {
-            await current.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, this));
-            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
+            await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
+            this.Notifications.ShowSuccess(
                 I18NManager.GetResource(MiscResources.AddedToBookmark));
         }
     }

@@ -3,9 +3,9 @@
 
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.Input;
-using Pixeval.AppManagement;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.Config;
 using Pixeval.I18N;
-using Pixeval.Models.Home;
 using Pixeval.Utilities;
 
 namespace Pixeval.Views.Home;
@@ -32,16 +32,19 @@ public sealed partial class HomePage
             if (!TryFindFreePosition(width, height, out var column, out var row)
                 && !TryFindBestFittingFreePosition(width, height, out width, out height, out column, out row))
             {
-                TopLevel.GetTopLevel(this)?.ViewContainer?.ShowWarning(
+                this.Notifications.ShowWarning(
                     I18NManager.GetResource(HomePageResources.NoSpaceWarning.Title),
                     I18NManager.GetResource(HomePageResources.NoSpaceWarning.Content));
                 return;
             }
 
-            draft.Column = column;
-            draft.Row = row;
-            draft.ColumnSpan = width;
-            draft.RowSpan = height;
+            draft = draft with
+            {
+                Column = column,
+                Row = row,
+                ColumnSpan = width,
+                RowSpan = height
+            };
             _cards.Add(draft);
             SelectCard(draft);
             SaveLayout();
@@ -65,14 +68,14 @@ public sealed partial class HomePage
     {
         var rows = DecimalToPositiveInt(decimal.Clamp(ViewModel.GridRowsValue, MinimumGridSize, MaximumGridSize));
         var columns = DecimalToPositiveInt(decimal.Clamp(ViewModel.GridColumnsValue, MinimumGridSize, MaximumGridSize));
-        var settings = App.AppViewModel.AppSettings.ApplicationSettings.HomePage;
+        var settings = this.GetRequiredUiService<AppSettings>().ApplicationSettings.HomePage;
         if (settings.HomePageRows == rows && settings.HomePageColumns == columns)
             return;
 
         if (!CanResizeGrid(rows, columns))
         {
             UpdateGridSizeControls();
-            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowWarning(
+            this.Notifications.ShowWarning(
                 I18NManager.GetResource(HomePageResources.GridShrinkBlockedWarning.Title),
                 I18NManager.GetResource(HomePageResources.GridShrinkBlockedWarning.Content));
             return;
@@ -106,18 +109,31 @@ public sealed partial class HomePage
                               || !CanPlace(_selectedCard, newColumn, newRow, newColumnSpan, newRowSpan))
         {
             UpdateSelectedCardControls();
-            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowWarning(
+            this.Notifications.ShowWarning(
                 I18NManager.GetResource(HomePageResources.LayoutConflictWarning.Title),
                 I18NManager.GetResource(HomePageResources.LayoutConflictWarning.Content));
             return;
         }
 
-        _selectedCard.Column = newColumn;
-        _selectedCard.Row = newRow;
-        _selectedCard.ColumnSpan = newColumnSpan;
-        _selectedCard.RowSpan = newRowSpan;
+        var index = _cards.IndexOf(_selectedCard);
+        var updated = _selectedCard with
+        {
+            Column = newColumn,
+            Row = newRow,
+            ColumnSpan = newColumnSpan,
+            RowSpan = newRowSpan
+        };
+        if (TryGetCardControl(_selectedCard, out var control))
+        {
+            control.UpdateCard(updated);
+            ApplyCardLayout(control);
+        }
+        if (index >= 0)
+        {
+            _cards[index] = updated;
+        }
+        _selectedCard = updated;
         SaveLayout();
-        UpdateSelectedCardLayoutVisual();
         UpdateSelectedCardControls();
     }
 
@@ -130,9 +146,19 @@ public sealed partial class HomePage
         if (_selectedCard.BackgroundColor == color)
             return;
 
-        _selectedCard.BackgroundColor = color;
+        var index = _cards.IndexOf(_selectedCard);
+        var updated = _selectedCard with { BackgroundColor = color };
+        if (TryGetCardControl(_selectedCard, out var control))
+        {
+            control.UpdateCard(updated);
+            control.UpdateBackground();
+        }
+        if (index >= 0)
+        {
+            _cards[index] = updated;
+        }
+        _selectedCard = updated;
         SaveLayout();
-        UpdateSelectedCardLayoutVisual();
     }
 
     private void HomeCardControl_OnCardSelected(object? sender, HomeCardSelectedEventArgs e)
@@ -153,7 +179,15 @@ public sealed partial class HomePage
             _activeCardControl = null;
 
         if (e.HasChanged)
+        {
+            var index = _cards.IndexOf(e.OriginalCard);
+            if (index >= 0)
+                _cards[index] = e.Card;
+            if (_selectedCard == e.OriginalCard)
+                _selectedCard = e.Card;
+
             SaveLayout();
+        }
 
         RefreshSelectionVisuals();
         UpdateSelectedCardControls();
@@ -221,7 +255,7 @@ public sealed partial class HomePage
 
     private void ShowInvalidParameterWarning()
     {
-        TopLevel.GetTopLevel(this)?.ViewContainer?.ShowWarning(
+        this.Notifications.ShowWarning(
             I18NManager.GetResource(HomePageResources.InvalidSourceParameterWarning.Title),
             I18NManager.GetResource(HomePageResources.InvalidSourceParameterWarning.Content));
     }
@@ -230,9 +264,9 @@ public sealed partial class HomePage
 
     private static int DecimalToPositiveInt(decimal? value) => int.Max(1, (int) (value ?? 1));
 
-    private static void SaveLayout()
+    private void SaveLayout()
     {
-        AppInfo.SaveAppSettings(App.AppViewModel.AppSettings);
-        AppInfo.SaveHomePageCards(App.AppViewModel.HomePageCards);
+        AppInfo.SaveAppSettings(this.GetRequiredUiService<AppSettings>());
+        AppInfo.SaveHomePageCards(this.GetRequiredUiService<HomePageCardSession>().Cards);
     }
 }

@@ -3,17 +3,21 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:common="using:FluentIcons.Common"
+    xmlns:capability="using:Pixeval.Views.Works"
     xmlns:controls="using:Pixeval.Controls"
-    xmlns:converters="using:Pixeval.Views.Converters"
+    xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Pixeval.Views.Viewers"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
-    xmlns:markup1="using:Pixeval.Views.Markup"
+    xmlns:markup1="using:Pixeval.Common.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
-    xmlns:utilities="using:Pixeval.Utilities"
-    xmlns:viewModels="using:Pixeval.ViewModels"
+    xmlns:utilities="using:Pixeval.Common"
+    xmlns:viewModels="using:Pixeval.ViewModels.Works"
     xmlns:viewers="using:Pixeval.ViewModels.Viewers"
+    xmlns:mako="using:Pixeval.Mako"
+    xmlns:pixiv="using:Pixeval.Pixiv"
+    xmlns:booru="using:Pixeval.Booru"
     x:DataType="{x:Type viewers:IllustrationViewerPageViewModel}"
     Name="InfoPaneRoot"
     mc:Ignorable="d"
@@ -71,8 +75,8 @@
                             <controls:VirtualizingStackPanel Orientation="Horizontal" Spacing="5" />
                         </ItemsPanelTemplate>
                     </ListBox.ItemsPanel>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="{x:Type viewModels:IllustrationItemViewModel}">
+                    <ListBox.DataTemplates>
+                        <DataTemplate x:DataType="{x:Type mako:Illustration}">
                             <Border
                                 Width="80"
                                 Height="80"
@@ -81,7 +85,16 @@
                                 <Image controls:Source.Cache="{Binding ThumbnailUrl}" Stretch="UniformToFill" />
                             </Border>
                         </DataTemplate>
-                    </ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="{x:Type booru:BooruPost}">
+                            <Border
+                                Width="80"
+                                Height="80"
+                                ClipToBounds="True"
+                                CornerRadius="{StaticResource ControlCornerRadius}">
+                                <Image controls:Source.Cache="{Binding ThumbnailUrl}" Stretch="UniformToFill" />
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.DataTemplates>
                 </ListBox>
                 <CommandBar
                     x:Name="BottomActionBar"
@@ -91,25 +104,25 @@
                     DefaultLabelPosition="Collapsed"
                     IsDynamicOverflowEnabled="False">
                     <CommandBarButton
-                        Command="{Binding CurrentIllustration.BookmarkCommand, FallbackValue={x:Null}}"
-                        CommandParameter="{Binding $self, Mode=OneTime}"
+                        Command="{x:Static viewModels:WorkCommands.BookmarkCommand}"
+                        CommandParameter="{Binding CurrentIllustration}"
                         ContextRequested="AddToBookmarkButton_OnRightClick"
                         Icon="{markup1:SymbolIconEx Heart,
-                                                    IconVariant={Binding CurrentIllustration.IsBookmarkedDisplay,
+                                                    IconVariant={Binding CurrentUiState.BookmarkState,
                                                                          Converter={x:Static converters:PixevalConverters.StateToIconVariant}}}"
-                        IsVisible="{Binding CurrentIllustration.IsBookmarkSupported, FallbackValue={x:False}}"
+                        IsVisible="{Binding IsBookmarkSupported, FallbackValue={x:False}}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}" />
                     <CommandBarButton
-                        Command="{Binding CurrentIllustration.SaveCommand, FallbackValue={x:Null}}"
-                        CommandParameter="{Binding $self, Mode=OneTime}"
+                        Command="{x:Static viewModels:WorkCommands.SaveCommand}"
+                        CommandParameter="{Binding CurrentIllustration}"
                         Icon="{markup:SymbolIcon SaveMultiple}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.Save}}" />
                     <CommandBarSeparator />
                     <CommandBarButton
-                        Command="{Binding CurrentIllustration.AddToWatchLaterCommand, FallbackValue={x:Null}}"
-                        CommandParameter="{Binding $self, Mode=OneTime}"
+                        Command="{x:Static viewModels:WorkCommands.AddToWatchLaterCommand}"
+                        CommandParameter="{Binding CurrentIllustration}"
                         Icon="{markup1:SymbolIconEx Clock,
-                                                    IconVariant={Binding CurrentIllustration.IsInWatchLater,
+                                                    IconVariant={Binding CurrentUiState.IsInWatchLater,
                                                                          Converter={x:Static converters:PixevalConverters.BoolToIconVariant}}}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}" />
                     <!--<CommandBarButton
@@ -121,19 +134,19 @@
                         Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
                         Icon="{markup:SymbolIcon LinkMultiple}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
-                        Tag="{Binding CurrentIllustration.WebsiteUri, FallbackValue={x:Null}}" />
+                        Tag="{Binding WebsiteUri, FallbackValue={x:Null}}" />
                     <CommandBarButton
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                         Icon="{markup:SymbolIcon GlobeArrowUp}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
-                        Tag="{Binding CurrentIllustration.WebsiteUri, FallbackValue={x:Null}}" />
+                        Tag="{Binding WebsiteUri, FallbackValue={x:Null}}" />
                 </CommandBar>
             </StackPanel>
 
             <DockPanel VerticalAlignment="Stretch" ClipToBounds="True">
                 <local:WorkSeriesInfoPane DataContext="{Binding SeriesInfo}" DockPanel.Dock="Bottom" />
                 <Panel>
-                    <local:WorkInfoPane Name="InfoPaneSection" ArtworkInfo="{Binding CurrentIllustration.Entry, FallbackValue={x:Null}}">
+                    <local:WorkInfoPane Name="InfoPaneSection" ArtworkInfo="{Binding CurrentIllustration, FallbackValue={x:Null}}">
                         <local:WorkInfoPane.ActionZone>
                             <Border
                                 Width="32"
@@ -147,11 +160,31 @@
                         Name="TabbedPageSection"
                         Background="Transparent"
                         IsVisible="{Binding #InfoPaneRoot.IsDocked}"
-                        Pages="{Binding PanePages}"
                         TabPlacement="Top">
                         <TabbedPage.Resources>
                             <Thickness x:Key="TabbedPageTabStripPadding">0,0,60,0</Thickness>
                         </TabbedPage.Resources>
+                        <local:WorkInfoPage
+                            controls:TabPageInclusion.IsIncluded="{Binding CurrentIllustration, Converter={x:Static converters:PixevalConverters.IsIllustration}}"
+                            Work="{Binding CurrentIllustration}">
+                            <local:WorkInfoPage.ActionZone>
+                                <Border
+                                    Width="32"
+                                    Height="32"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    IsHitTestVisible="False" />
+                            </local:WorkInfoPage.ActionZone>
+                        </local:WorkInfoPage>
+                        <local:CommentsPage
+                            controls:TabPageInclusion.IsIncluded="{Binding CurrentIllustration, Converter={x:Static converters:PixevalConverters.IsInteractiveIllustration}}"
+                            ParentId="{Binding CurrentIllustration, Converter={x:Static converters:PixevalConverters.IllustrationId}}"
+                            ParentType="{x:Static pixiv:SimpleWorkType.Illustration}" />
+                        <capability:WorkRelatedPage
+                            controls:TabPageInclusion.IsIncluded="{Binding CurrentIllustration, Converter={x:Static converters:PixevalConverters.IsInteractiveIllustration}}"
+                            IsCommandBarCollapsed="True"
+                            WorkId="{Binding CurrentIllustration, Converter={x:Static converters:PixevalConverters.IllustrationId}}"
+                            WorkType="{x:Static pixiv:SimpleWorkType.Illustration}" />
                     </TabbedPage>
                 </Panel>
             </DockPanel>

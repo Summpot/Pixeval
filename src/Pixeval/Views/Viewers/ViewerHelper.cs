@@ -2,96 +2,85 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
-using Pixeval.Models.Pixiv;
+using Pixeval.Pixiv;
+using Pixeval.Booru;
+using Pixeval.Mako;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
-using Pixeval.Views.ViewContainers;
+using Pixeval.Views.Shell;
 
 namespace Pixeval.Views.Viewers;
 
 public static class ViewerHelper
 {
-    /// <param name="control"></param>
-    extension(ViewContainerBase control)
+    extension(INavigationService navigation)
     {
         #region Illustration
 
         /// <summary>
         /// 此方法无法加载更多插画，加载单张图使用
         /// </summary>
-        public void CreateIllustrationPage(IIdentityInfo info)
-        {
-            control.NavigateTo(new IllustrationViewerPage(new(info)));
-        }
-
-        /// <summary>
-        /// 此方法无法加载更多插画，加载单张图使用
-        /// </summary>
         public void CreateIllustrationPage(string id, string platform)
         {
-            control.NavigateTo(new IllustrationViewerPage(new(new SimpleIdentityInfo(id, platform))));
+            navigation.NavigateToIllustration(id, platform);
         }
 
         /// <summary>
         /// 此方法无法加载更多插画
         /// </summary>
-        /// <typeparam name="T">为了方便协变采用泛型</typeparam>
-        /// <param name="illustrationViewModel">指定的插画ViewModel</param>
+        /// <param name="illustrationViewModel">指定的插画实体</param>
         /// <param name="needRefresh"></param>
-        public void CreateIllustrationPage<T>(T illustrationViewModel, bool needRefresh = false) where T : IllustrationItemViewModel
+        public void CreateIllustrationPage(object illustrationViewModel, bool needRefresh = false)
         {
-            control.NavigateTo(new IllustrationViewerPage(new(illustrationViewModel, needRefresh)));
+            navigation.NavigateToIllustration(illustrationViewModel, null, needRefresh);
         }
 
         /// <summary>
-        /// 此方法可以使用<paramref name="sourceView"/>来加载更多插画
+        /// 此方法可以使用<paramref name="items"/>来浏览更多插画
         /// </summary>
-        /// <param name="illustrationViewModel">指定的插画ViewModel</param>
-        /// <param name="sourceView">指定的插画ViewModel所在的SourceView</param>
+        /// <param name="illustrationViewModel">指定的插画实体</param>
+        /// <param name="items">指定的插画实体所在列表</param>
         /// <param name="needRefresh">是否需要刷新插画（如从数据库中加载的则需要刷新）</param>
-        public void CreateIllustrationPage(IllustrationItemViewModel illustrationViewModel, ISourceView<IllustrationItemViewModel> sourceView, bool needRefresh = false)
+        public void CreateIllustrationPage(object illustrationViewModel, IReadOnlyList<object> items, bool needRefresh = false)
         {
-            var index = sourceView.View.IndexOf(illustrationViewModel);
-            control.NavigateTo(new IllustrationViewerPage(new(sourceView, index, needRefresh)));
+            navigation.NavigateToIllustration(illustrationViewModel, items, needRefresh);
         }
 
         #endregion
 
-        #region Novel
+        #region Mako.Novel
 
         /// <summary>
         /// 此方法无法加载更多小说，加载单个小说使用
         /// </summary>
         public void CreateNovelPage(long id)
         {
-            control.NavigateTo(new NovelViewerPage(new(id)));
+            navigation.NavigateToNovel(id);
         }
 
         /// <summary>
         /// 此方法无法加载更多小说
         /// </summary>
-        /// <typeparam name="T">为了方便协变采用泛型</typeparam>
-        /// <param name="novelViewModel">指定的小说ViewModel</param>
+        /// <param name="novel">指定的小说实体</param>
         /// <param name="needRefresh">是否需要刷新小说（如从数据库中加载的则需要刷新）</param>
-        public void CreateNovelPage<T>(T novelViewModel, bool needRefresh = false) where T : NovelItemViewModel
+        public void CreateNovelPage(Mako.Novel novel, bool needRefresh = false)
         {
-            control.NavigateTo(new NovelViewerPage(new(novelViewModel, needRefresh)));
+            navigation.NavigateToNovel(novel, null, needRefresh);
         }
 
         /// <summary>
-        /// 此方法可以使用<paramref name="sourceView"/>来加载更多小说
+        /// 此方法可以使用<paramref name="items"/>来浏览更多小说
         /// </summary>
-        /// <param name="novelViewModel">指定的小说ViewModel</param>
-        /// <param name="sourceView">指定的小说ViewModel所在的SourceView</param>
+        /// <param name="novel">指定的小说实体</param>
+        /// <param name="items">指定的小说所在列表</param>
         /// <param name="needRefresh">是否需要刷新小说（如从数据库中加载的则需要刷新）</param>
-        public void CreateNovelPage(NovelItemViewModel novelViewModel, ISourceView<NovelItemViewModel> sourceView, bool needRefresh = false)
+        public void CreateNovelPage(Mako.Novel novel, IReadOnlyList<Mako.Novel> items, bool needRefresh = false)
         {
-            var index = sourceView.View.IndexOf(novelViewModel);
-            control.NavigateTo(new NovelViewerPage(new(sourceView, index, needRefresh)));
+            navigation.NavigateToNovel(novel, items, needRefresh);
         }
 
         #endregion
@@ -100,17 +89,17 @@ public static class ViewerHelper
 
         public void CreateSeriesPage(SimpleWorkType workType, long seriesId)
         {
-            control.NavigateTo(new SeriesViewerPage(new(workType, seriesId)));
+            navigation.NavigateToSeries(workType, seriesId);
         }
 
         public void CreateSeriesPage(
             SimpleWorkType workType,
             long seriesId,
             Series seriesDetail,
-            IWorkEntry firstWork,
+            IWorkEntry? firstWork,
             IWorkViewViewModel worksViewModel)
         {
-            control.NavigateTo(new SeriesViewerPage(new(workType, seriesId, seriesDetail, firstWork, worksViewModel)));
+            navigation.NavigateToSeries(workType, seriesId, seriesDetail, firstWork, worksViewModel);
         }
 
         #endregion
@@ -119,37 +108,53 @@ public static class ViewerHelper
 
         public void CreateUserPage(long userId)
         {
-            control.NavigateTo(new UserViewerPage(new(userId)));
+            navigation.NavigateToUser(userId);
         }
 
         public void CreateUserPage(SingleUserResponse userDetail)
         {
-            var viewModel = new UserViewerPageViewModel(userDetail);
-            control.NavigateTo(new UserViewerPage(viewModel));
+            navigation.NavigateToUser(userDetail);
         }
 
         #endregion
     }
 
-    extension(IIdentityInfo info)
+    public static async Task<object?> TryGetArtworkAsync(string platform, string id)
     {
-        public async Task<IArtworkInfo?> TryGetArtworkInfoAsync()
+        try
         {
-            var getArtworkService = App.AppViewModel.GetPlatformService<IGetArtworkService>(info.Platform);
-            if (getArtworkService is null)
-                return null;
-            try
+            if (string.Equals(platform, PlatformConstants.Pixiv, StringComparison.OrdinalIgnoreCase))
             {
-                return await getArtworkService.GetArtworkAsync(info.Id);
+                if (long.TryParse(id, out var illustId))
+                    return await App.Services!.GetRequiredService<MakoClient>().GetIllustrationAsync(illustId);
             }
-            catch (Exception e)
+            else
             {
-                var logger = App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>();
-                logger.LogError(nameof(TryGetArtworkInfoAsync), e);
-                return null;
+                var booruPlatform = BooruPlatformExtensions.FromPlatformString(platform);
+                var client = App.Services!.GetRequiredService<BooruClient>();
+                return await client.GetPostAsync(booruPlatform, id);
             }
         }
+        catch (Exception e)
+        {
+            var logger = App.Services!.GetRequiredService<FileLogger>();
+            logger.LogError(nameof(TryGetArtworkAsync), e);
+        }
+
+        return null;
+    }
+
+    private static int IndexOf<T>(IReadOnlyList<T> list, T item)
+    {
+        if (list is IList<T> iList)
+            return iList.IndexOf(item);
+
+        for (var i = 0; i < list.Count; i++)
+        {
+            if (EqualityComparer<T>.Default.Equals(list[i], item))
+                return i;
+        }
+
+        return -1;
     }
 }
-
-internal record SimpleIdentityInfo(string Id, string Platform) : IIdentityInfo;

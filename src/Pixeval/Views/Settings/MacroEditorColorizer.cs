@@ -5,9 +5,9 @@ using System.Collections.Generic;
 using Avalonia.Media;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
-using Pixeval.Native.Download;
+using Pixeval.Download;
 
-namespace Pixeval.Controls.Settings;
+namespace Pixeval.Views.Settings;
 
 public sealed class MacroEditorColorizer : DocumentColorizingTransformer
 {

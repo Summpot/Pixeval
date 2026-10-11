@@ -5,7 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Misaki;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.Pixiv;
+using Pixeval.Booru;
+using Pixeval.Mako;
 
 namespace Pixeval.ViewModels.Viewers;
 
@@ -13,23 +16,29 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
 {
     private bool _isDisposed;
 
-    public ImageViewerViewModel(IllustrationItemViewModel thumbnailViewModel)
+    public ImageViewerViewModel(object thumbnailViewModel)
     {
         ThumbnailViewModel = thumbnailViewModel;
-        var platform = thumbnailViewModel.Entry.Platform;
+        var entry = thumbnailViewModel;
+        var platform = entry switch
+        {
+            Illustration => PlatformConstants.Pixiv,
+            BooruPost bp => bp.PlatformName,
+            _ => PlatformConstants.Pixiv
+        };
 
-        var entry = thumbnailViewModel.Entry;
-
-        Images = entry is not IImageSet set
-            ? [new(platform, entry, 0, thumbnailViewModel.SaveImageAsync)]
-            : set.Pages.Select((t, i) => new SingleViewerViewModel(platform, t, i, thumbnailViewModel.SaveImageAsync)).ToArray();
+        Images = entry switch
+        {
+            Illustration { Pages.Count: > 1 } ill => ill.Pages.Select((page, index) => new SingleViewerViewModel(platform, page, index, ill)).ToArray(),
+            _ => [new(platform, entry, 0)]
+        };
 
         PageCount = Images.Count;
 
-        App.AppViewModel.AddBrowseHistory(thumbnailViewModel.Entry);
+        App.Services!.GetRequiredService<StorageEngine>().HistoryRepository.AddBrowseHistory(thumbnailViewModel);
     }
 
-    public IllustrationItemViewModel ThumbnailViewModel { get; set; }
+    public object ThumbnailViewModel { get; set; }
 
     public IReadOnlyList<SingleViewerViewModel> Images { get; }
 

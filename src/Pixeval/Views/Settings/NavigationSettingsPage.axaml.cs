@@ -6,9 +6,9 @@ using System.Text;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Pixeval.AppManagement;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
-using Pixeval.Models.Navigation;
+using Pixeval.Config;
 using Pixeval.Utilities;
 
 namespace Pixeval.Views.Settings;
@@ -23,7 +23,7 @@ public sealed partial class NavigationSettingsPage : ContentPage
         InitializeComponent();
         DataContext = this;
         YamlEditor.TextArea.TextView.LineTransformers.Add(_colorizer);
-        SetEditorText(App.AppViewModel.NavigationMenuYamlText);
+        SetEditorText(App.Services!.GetRequiredService<NavigationMenuDocument>().Text);
         ValidateCurrentText();
     }
 
@@ -45,13 +45,12 @@ public sealed partial class NavigationSettingsPage : ContentPage
         if (result.Configuration is null)
             return false;
 
-        App.AppViewModel.NavigationMenuYamlText = YamlEditor.Text ?? "";
-        AppInfo.SaveNavigationMenuYaml(App.AppViewModel.NavigationMenuYamlText);
-        TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
+        this.GetRequiredUiService<NavigationMenuDocument>().Text = YamlEditor.Text ?? "";
+        AppInfo.SaveNavigationMenuYaml(this.GetRequiredUiService<NavigationMenuDocument>().Text);
+        this.Notifications.ShowSuccess(
             I18NManager.GetResource(NavigationSettingsPageResources.Applied));
 
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is ViewContainers.TabViewContainer container)
-            container.ReloadNavigation();
+        this.AppNavigation?.ReloadNavigation();
 
         return true;
     }

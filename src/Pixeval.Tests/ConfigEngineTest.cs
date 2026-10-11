@@ -4,7 +4,7 @@
 using System;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Native.Config;
+using Pixeval.Config;
 
 namespace Pixeval.Tests;
 

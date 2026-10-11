@@ -102,6 +102,16 @@ namespace Pixeval
             public const string Description = "AppSettings.EnablePixivDomainFrontingEntry.Description";
             public const string Header = "AppSettings.EnablePixivDomainFrontingEntry.Header";
         }
+        public static class EnableSubscriptionDaemonEntry
+        {
+            public const string Description = "AppSettings.EnableSubscriptionDaemonEntry.Description";
+            public const string Header = "AppSettings.EnableSubscriptionDaemonEntry.Header";
+        }
+        public static class SubscriptionDaemonIntervalMinutesEntry
+        {
+            public const string Description = "AppSettings.SubscriptionDaemonIntervalMinutesEntry.Description";
+            public const string Header = "AppSettings.SubscriptionDaemonIntervalMinutesEntry.Header";
+        }
         public static class FileCacheSizeLimitInMegabytesEntry
         {
             public const string Description = "AppSettings.FileCacheSizeLimitInMegabytesEntry.Description";
@@ -671,6 +681,7 @@ namespace Pixeval
         }
         public static class NovelDownloadFormat
         {
+            public const string Epub = "Enum.NovelDownloadFormat.Epub";
             public const string Html = "Enum.NovelDownloadFormat.Html";
             public const string Md = "Enum.NovelDownloadFormat.Md";
             public const string OriginalTxt = "Enum.NovelDownloadFormat.OriginalTxt";

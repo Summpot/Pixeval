@@ -3,14 +3,14 @@
 
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
-using Pixeval.Views;
 
 namespace Pixeval.ViewModels.Search;
 
 public abstract partial class SearchArgumentsFormViewModelBase : ViewModelBase
 {
-    protected static readonly string CommonUnspecified = I18NManager.GetResource(SearchResources.Common.Unspecified);
+    public static readonly string CommonUnspecified = I18NManager.GetResource(SearchResources.Common.Unspecified);
 
     public OptionalDateSearchOptionViewModel StartDateOption { get; } = new();
 
@@ -44,7 +44,8 @@ public abstract partial class SearchArgumentsFormViewModelBase : ViewModelBase
             return false;
         }
 
-        if (!(PixevalSettings.Me?.IsPremium ?? false)
+        var isPremium = App.Services?.GetService<Pixeval.Services.Core.IUserSessionService>()?.CurrentUser?.IsPremium ?? false;
+        if (!isPremium
             && SortOption is WorkSortOption.PopularityDescending)
         {
             title = I18NManager.GetResource(SearchResources.Validation.PremiumSort.Title);

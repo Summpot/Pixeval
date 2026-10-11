@@ -17,15 +17,14 @@ using Avalonia.Threading;
 using ComposeAnimation;
 using Material3Expressive.Tokens;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement;
 using Pixeval.I18N;
-using Pixeval.Models.Options;
-using Pixeval.Models.Subscriptions;
-using Pixeval.Native.Mako;
+using Pixeval.Config;
+using Pixeval.Services.Background;
+using Pixeval.Mako;
 using Pixeval.Utilities;
 using Pixeval.Views.Home;
 using Pixeval.Views.Login;
-using Pixeval.Views.ViewContainers;
+using Pixeval.Views.Shell;
 
 [assembly: InternalsVisibleTo("Pixeval.Tests")]
 
@@ -66,7 +65,15 @@ public class App : Application
 #endif
     }
 
+    private static IServiceProvider? s_customServices;
+
     public static AppViewModel AppViewModel { get; private set; } = null!;
+
+    public static IServiceProvider? Services
+    {
+        get => s_customServices ?? AppViewModel?.AppServiceProvider;
+        set => s_customServices = value;
+    }
 
     public static void ApplyAppFontFamily(IEnumerable<string> fontFamilies)
     {
@@ -125,7 +132,7 @@ public class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        var viewContainer = new TabViewContainer();
+        var viewContainer = ActivatorUtilities.CreateInstance<TabViewContainer>(AppViewModel.AppServiceProvider);
 
         switch (ApplicationLifetime)
         {
@@ -174,17 +181,28 @@ public class App : Application
                 && !string.IsNullOrWhiteSpace(refreshToken))
             {
                 AppViewModel.MakoClient.SetRefreshToken(refreshToken);
-                var identifyResult = await AppViewModel.MakoClient.IdentifyTokenAsync();
-                if (identifyResult.Success)
+                var identifyTask = AppViewModel.MakoClient.IdentifyTokenAsync();
+                var completedTask = await Task.WhenAny(identifyTask, Task.Delay(TimeSpan.FromSeconds(8)));
+                if (completedTask == identifyTask)
                 {
-                    var tokenResponse = AppViewModel.MakoClient.GetTokenResponse()
-                        ?? (AppViewModel.MakoClient.GetUser() is { } user
-                            ? new TokenResponse("", 0, "Bearer", refreshToken, user)
-                            : null);
-                    AppViewModel.OnTokenRefreshed(tokenResponse);
-                    viewContainer.NavigateTo(new HomePage());
-                    AppViewModel.QueueWorkSubscriptionSyncAll();
-                    return;
+                    var identifyResult = await identifyTask;
+                    if (identifyResult.Success)
+                    {
+                        var tokenResponse = AppViewModel.MakoClient.GetTokenResponse()
+                            ?? (AppViewModel.MakoClient.GetUser() is { } user
+                                ? new TokenResponse("", 0, "Bearer", refreshToken, user)
+                                : null);
+                        AppViewModel.OnTokenRefreshed(tokenResponse);
+                        AppViewModel.AppServiceProvider.GetRequiredService<INavigationService>()
+                            .NavigateToHome(sourceControl: viewContainer);
+                        AppViewModel.QueueWorkSubscriptionSyncAll();
+                        return;
+                    }
+                }
+                else
+                {
+                    AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+                        .LogWarning("IdentifyTokenAsync timed out after 8 seconds.", null);
                 }
 
                 AppViewModel.OnTokenRefreshed(null);
@@ -199,7 +217,8 @@ public class App : Application
             viewContainer.ShowError(I18NManager.GetResource(MainPageResources.LoggingIn.Failed));
         }
 
-        viewContainer.NavigateTo(new LoginPage());
+        AppViewModel.AppServiceProvider.GetRequiredService<INavigationService>()
+            .NavigateToLogin(sourceControl: viewContainer);
     }
 
     private bool IsLastVisibleWindow(Window window) =>

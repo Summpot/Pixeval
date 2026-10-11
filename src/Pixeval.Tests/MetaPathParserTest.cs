@@ -1,16 +1,12 @@
 using System;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Misaki;
-using Pixeval.AppManagement;
-using Pixeval.AppManagement.Settings;
+using Pixeval.Config;
 using Pixeval.Download;
-using Pixeval.Models.Download;
-using Pixeval.Models.Options;
 using Pixeval.Utilities;
-using Pixeval.Utilities.IO;
-using Pixeval.Native.Download;
-using Pixeval.Native.Storage;
+using Pixeval.Common.IO;
+using Pixeval.Storage;
+using Pixeval.Common;
 
 namespace Pixeval.Tests;
 
@@ -168,9 +164,9 @@ public sealed class MetaPathParserTest
     [TestMethod]
     public void ReduceShouldUseParsedTree()
     {
-        var path = DownloadPathMacroParser.Reduce("@{id}", new ParserContext(DesignHelper.DownloadParserSampleWork(ImageType.SingleImage)));
+        var path = DownloadPathMacroParser.Reduce("@{id}", new ParserContext(DesignHelper.DownloadParserSampleSingleIllustration));
 
-        Assert.AreEqual("12345678", path);
+        Assert.AreEqual("123456", path);
     }
 
     [TestMethod]
@@ -178,15 +174,15 @@ public sealed class MetaPathParserTest
     {
         var path = DownloadPathMacroParser.Reduce(
             "@{publish_time:yyyy-MM-dd}",
-            new ParserContext(DesignHelper.DownloadParserSampleWork(ImageType.SingleImage)));
+            new ParserContext(DesignHelper.DownloadParserSampleSingleIllustration));
 
-        Assert.AreEqual("2020-10-12", path);
+        Assert.AreEqual(DateTimeOffset.UtcNow.ToString("yyyy-MM-dd"), path);
     }
 
     [TestMethod]
     public void PlaceholderMacroShouldStillCountAsEvaluated()
     {
-        var path = DownloadPathMacroParser.Reduce("@{ext}", new ParserContext(DesignHelper.DownloadParserSampleWork(ImageType.SingleImage)));
+        var path = DownloadPathMacroParser.Reduce("@{ext}", new ParserContext(DesignHelper.DownloadParserSampleSingleIllustration));
 
         Assert.AreEqual("<ext>", path);
     }
@@ -202,7 +198,7 @@ public sealed class MetaPathParserTest
     [TestMethod]
     public void FormattedFileExtensionShouldUseExplicitSeparator()
     {
-        var path = DownloadPathMacroParser.Reduce("@{ext:u}", new ParserContext(DesignHelper.DownloadParserSampleWork(ImageType.SingleImage)));
+        var path = DownloadPathMacroParser.Reduce("@{ext:u}", new ParserContext(DesignHelper.DownloadParserSampleSingleIllustration));
 
         Assert.AreEqual("<ext:u>", path);
         Assert.AreEqual("work.PNG", IoHelper.ChangeExtension("work." + path, ".png"));
@@ -213,7 +209,7 @@ public sealed class MetaPathParserTest
     [TestMethod]
     public void WorkSubscriptionGroupMacrosShouldMatchSubscriptionType()
     {
-        var sample = DesignHelper.DownloadParserSampleWork(ImageType.SingleImage);
+        var sample = DesignHelper.DownloadParserSampleSingleIllustration;
 
         Assert.AreEqual(
             "not-group-not-bookmark-not-post-not-series",
@@ -240,7 +236,7 @@ public sealed class MetaPathParserTest
     [TestMethod]
     public void GroupIdShouldUseIntegerFormatter()
     {
-        var sample = DesignHelper.DownloadParserSampleWork(ImageType.SingleImage);
+        var sample = DesignHelper.DownloadParserSampleSingleIllustration;
         var subscription = new WorkSubscriptionRecord(42, WorkSubscriptionType.Posts);
 
         var path = DownloadPathMacroParser.Reduce(
@@ -253,7 +249,7 @@ public sealed class MetaPathParserTest
     [TestMethod]
     public void PicSetIndexShouldPreserveFormatterUntilTokenReplacement()
     {
-        var sample = DesignHelper.DownloadParserSampleWork(ImageType.ImageSet);
+        var sample = DesignHelper.DownloadParserSampleImageSetIllustration;
         var path = DownloadPathMacroParser.Reduce(
             "@{is_pic_set?p@{pic_set_index:00}:}.@{ext}",
             new ParserContext(sample));
@@ -269,7 +265,7 @@ public sealed class MetaPathParserTest
         {
             _ = DownloadPathMacroParser.Reduce(
                 "@{id?yes:no}",
-                new ParserContext(DesignHelper.DownloadParserSampleWork(ImageType.SingleImage)));
+                new ParserContext(DesignHelper.DownloadParserSampleSingleIllustration));
             Assert.Fail("Expected macro reduction to throw.");
         }
         catch (MetaPathError.Evaluation)

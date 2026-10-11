@@ -9,7 +9,8 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.Input;
 using FluentIcons.Common;
-using Pixeval.Models.Home;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.Config;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Home;
 
@@ -23,6 +24,7 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
     public static readonly StyledProperty<bool> IsSelectedProperty =
         AvaloniaProperty.Register<HomePageCardControl, bool>(nameof(IsSelected));
 
+    private readonly HomeCardDefinitions _definitions = App.Services!.GetRequiredService<HomeCardDefinitions>();
     private readonly bool _loadPreview;
     private PointerEditState? _pointerEditState;
     private bool _isDisposed;
@@ -41,7 +43,7 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
         bool loadPreview)
     {
         Card = card;
-        Definition = HomeCardDefinitions.Get(card.SourceKind);
+        Definition = _definitions.Get(card.SourceKind);
         RowCount = rowCount;
         ColumnCount = columnCount;
         PreviewViewModel = new(card, Definition.CreatePreviewSourceAsync);
@@ -62,7 +64,9 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
 
     public event EventHandler<HomeCardDeleteRequestedEventArgs>? DeleteRequested;
 
-    public HomePageCardLayout Card { get; }
+    public HomePageCardLayout Card { get; internal set; }
+
+    public void UpdateCard(HomePageCardLayout card) => Card = card;
 
     private HomeCardDefinition Definition { get; }
 
@@ -101,9 +105,19 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
         CardBorder.Background = new SolidColorBrush(Color.FromUInt32(Card.BackgroundColor));
     }
 
-    protected override async void OnLoaded(RoutedEventArgs e)
+    protected override void OnLoaded(RoutedEventArgs e)
+
     {
+
         base.OnLoaded(e);
+
+        this.RunInteraction(() => OnLoadedAsync(e));
+
+    }
+
+
+    private async Task OnLoadedAsync(RoutedEventArgs e)
+    {
         if (_loadPreview)
             await PreviewViewModel.LoadAsync();
     }
@@ -118,25 +132,21 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
     private void OpenPreviewItem(object? parameter)
     {
         if (parameter is not Control control
-            || TopLevel.GetTopLevel(control) is not { } topLevel)
+            || control.AppNavigation is not { } navigation)
             return;
 
-        HomeCardDefinitions.OpenPreviewItem(topLevel, control.DataContext, PreviewViewModel.ViewModel);
+        HomeCardDefinitions.OpenPreviewItem(navigation, control.LauncherService, control.DataContext, PreviewViewModel.ViewModel);
     }
 
     [RelayCommand]
     private async Task OpenCardPageAsync()
     {
-        if (TopLevel.GetTopLevel(this) is not { } topLevel
-            || topLevel.ViewContainer is null)
-            return;
-
         await PreviewViewModel.EnsureLoadedAsync();
-        var source = PreviewViewModel.CloneSource();
+        var source = PreviewViewModel.Source;
         if (source is null)
             return;
 
-        Definition.OpenCardPage(Card, source, topLevel);
+        Definition.OpenCardPage(Card, source);
     }
 
     public void Dispose()

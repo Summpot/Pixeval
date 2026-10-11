@@ -157,16 +157,18 @@ ruby rt {
                     xhtml.push_str(&format!("<h2>{}</h2>\n", xml_escape(title)));
                 }
                 NovelNode::UploadImage { image_id } => {
-                    let img_name = format!("{image_id}.jpg");
-                    if images.contains_key(&img_name) {
+                    let prefix = format!("{image_id}.");
+                    let found = images.keys().find(|k| k.starts_with(&prefix) || *k == &image_id.to_string());
+                    if let Some(img_name) = found {
                         xhtml.push_str(&format!(
                             "<img src=\"images/{img_name}\" alt=\"{image_id}\"/>\n"
                         ));
                     }
                 }
                 NovelNode::PixivImage { illust_id, page: img_p } => {
-                    let img_name = format!("{illust_id}-{img_p}.jpg");
-                    if images.contains_key(&img_name) {
+                    let prefix = format!("{illust_id}-{img_p}.");
+                    let found = images.keys().find(|k| k.starts_with(&prefix) || *k == &format!("{illust_id}-{img_p}"));
+                    if let Some(img_name) = found {
                         xhtml.push_str(&format!(
                             "<img src=\"images/{img_name}\" alt=\"{illust_id}-{img_p}\"/>\n"
                         ));

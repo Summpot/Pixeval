@@ -1,6 +1,7 @@
 using Avalonia.Media;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Utilities;
+using Pixeval.Common;
 
 namespace Pixeval.Tests;
 
