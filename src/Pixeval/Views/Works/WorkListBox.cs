@@ -2,17 +2,16 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using Avalonia;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
+using Avalonia.LogicalTree;
+using Avalonia.VisualTree;
 
 namespace Pixeval.Views.Works;
 
 public sealed class WorkListBox : ListBox
 {
-    private static readonly AttachedProperty<WorkItem?> ItemProperty =
-        AvaloniaProperty.RegisterAttached<WorkListBox, ListBoxItem, WorkItem?>("Item");
-
     protected override Type StyleKeyOverride => typeof(ListBox);
 
     protected override bool NeedsContainerOverride(object? item, int index, out object? recycleKey)
@@ -31,23 +30,56 @@ public sealed class WorkListBox : ListBox
             return;
         }
 
-        var card = container.GetValue(ItemProperty);
-        if (card is null)
+        if (container is ContentControl contentControl)
         {
-            card = this.FindDataTemplate(item)?.Build(item) as WorkItem
-                ?? throw new InvalidOperationException("Work list templates must create a WorkItem.");
-            container.SetValue(ItemProperty, card);
+            if (contentControl.ContentTemplate is not ContainerRecyclingTemplate
+                && this.FindDataTemplate(item) is { } template)
+            {
+                contentControl.ContentTemplate = new ContainerRecyclingTemplate(template);
+            }
+
+            contentControl.SetCurrentValue(ContentControl.ContentProperty, item);
         }
 
-        card.DataContext = item;
-        ((ListBoxItem) container).Content = card;
         base.PrepareContainerForItemOverride(container, item, index);
     }
 
     protected override void ClearContainerForItemOverride(Control container)
     {
-        container.GetValue(ItemProperty)?.Recycle();
-        base.ClearContainerForItemOverride(container);
+        var card = container.GetLogicalDescendants().OfType<WorkItem>().FirstOrDefault()
+            ?? container.GetVisualDescendants().OfType<WorkItem>().FirstOrDefault();
+        card?.Recycle();
         container.DataContext = null;
+    }
+
+    private sealed class ContainerRecyclingTemplate(IDataTemplate inner) : IRecyclingDataTemplate
+    {
+        private WorkItem? _cachedWorkItem;
+
+        public Control? Build(object? data) => Build(data, null);
+
+        public Control? Build(object? data, Control? existing)
+        {
+            var target = existing as WorkItem ?? _cachedWorkItem;
+            if (target is not null && inner.Match(data))
+            {
+                target.DataContext = data;
+                return target;
+            }
+
+            var control = inner.Build(data);
+            if (control is WorkItem workItem)
+            {
+                _cachedWorkItem = workItem;
+                workItem.DataContext = data;
+                return workItem;
+            }
+
+            if (control is not null)
+                control.DataContext = data;
+            return control;
+        }
+
+        public bool Match(object? data) => inner.Match(data);
     }
 }
