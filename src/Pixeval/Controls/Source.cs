@@ -170,7 +170,7 @@ public static class Source
                 return;
             if (GetCache(element) != value)
             {
-                lifetime.Dispose();
+                bitmap.Dispose();
                 return;
             }
 
@@ -219,7 +219,7 @@ public static class Source
                 return;
             if (GetBackgroundCache(element) != value)
             {
-                lifetime.Dispose();
+                bitmap.Dispose();
                 return;
             }
 
@@ -412,7 +412,6 @@ internal sealed class SourceLoadOperation : IDisposable
     private readonly Action<SourceLoadOperation> _onDisposed;
     private readonly Lock _gate = new();
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private IDisposable? _source;
     private bool _isAbandoned;
     private bool _isDisposed;
 
@@ -431,7 +430,6 @@ internal sealed class SourceLoadOperation : IDisposable
         {
             if (!_isDisposed && !_isAbandoned)
             {
-                _source = source;
                 return true;
             }
 
@@ -450,39 +448,25 @@ internal sealed class SourceLoadOperation : IDisposable
 
     public void Abandon()
     {
-        IDisposable? source;
         lock (_gate)
         {
             if (_isDisposed || _isAbandoned)
                 return;
 
             _isAbandoned = true;
-            source = _source;
-            _source = null;
-            if (source is null)
-                return;
-
-            _isDisposed = true;
         }
-
-        source.Dispose();
-        Complete(cancel: false);
     }
 
     public void Dispose()
     {
-        IDisposable? source;
         lock (_gate)
         {
             if (_isDisposed)
                 return;
 
             _isDisposed = true;
-            source = _source;
-            _source = null;
         }
 
-        source?.Dispose();
         Complete(cancel: true);
     }
 

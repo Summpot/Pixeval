@@ -219,10 +219,8 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         DisplaySource.Dispose();
         TransformedSource = null;
         OriginalSource?.Dispose();
-        var thumbnail = ThumbnailSource;
         OriginalSource = null;
         ThumbnailSource = null;
-        thumbnail?.Dispose();
         ReleaseLoadingPreview();
     }
 
@@ -310,8 +308,8 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     {
         var cached = CachedPreviewSource;
         CachedPreviewSource = null;
-        cached?.Dispose();
         DisplaySource.UpdatePreview(null);
+        cached?.Dispose();
     }
 
     private async Task<IAnimatedBitmap?> LoadWithPreviewAsync(bool original, CancellationToken token)

@@ -71,7 +71,10 @@ internal static class TabContextMenuHelper
             var args = new RoutedEventArgs(ViewModelDisposal.RequestDisposeEvent, target);
             target.RaiseEvent(args);
             if (!args.Handled)
+            {
                 ViewModelDisposal.Dispose(target);
+                target.DataContext = null;
+            }
             _ = pages.Remove(target);
         }
     }
