@@ -84,7 +84,8 @@
   "NovelDownloadFormat": {
     "OriginalTxt": "TXT外挂插图（Pixiv小说原生标签）",
     "Html": "HTML外挂插图",
-    "Md": "MarkDown外挂插图"
+    "Md": "MarkDown外挂插图",
+    "Epub": "EPUB 电子书（内嵌插图）"
   },
   "RankOption": {
     "Day": "每日榜单",

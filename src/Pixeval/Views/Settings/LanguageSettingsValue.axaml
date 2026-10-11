@@ -6,7 +6,7 @@
     xmlns:globalization="using:System.Globalization"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:models="using:AutoSettingsPage.Models"
-    xmlns:utilities="using:Pixeval.Utilities"
+    xmlns:utilities="using:Pixeval.Common"
     x:DataType="{x:Type models:ISingleValueSettingsEntry,
                         x:TypeArguments=x:String}"
     Width="200"

@@ -4,6 +4,7 @@
 		<SkiaSharpVersion>4.154.0</SkiaSharpVersion>
 		<FluentIconsVersion>2.1.341</FluentIconsVersion>
 		<UniFFICargoTargetDir Condition="'$(UniFFICargoTargetDir)' == ''">$(MSBuildThisFileDirectory)target</UniFFICargoTargetDir>
+		<UniFFICargoProfile Condition="'$(UniFFICargoProfile)' == ''">release</UniFFICargoProfile>
 	</PropertyGroup>
 
 	<!-- NativeAOT is an executable publish setting and must not reach library or analyzer projects. -->

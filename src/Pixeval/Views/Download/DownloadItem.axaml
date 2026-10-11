@@ -7,11 +7,10 @@
     xmlns:local="using:Pixeval"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
-    xmlns:markup1="using:Pixeval.Views.Markup"
+    xmlns:markup1="using:Pixeval.Common.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:viewModels="using:Pixeval.ViewModels"
-    x:DataType="{x:Type viewModels:DownloadItemViewModel}"
-    x:Name="Root"
+    xmlns:download="using:Pixeval.Download"
+    x:DataType="{x:Type download:DownloadItemSnapshot}"
     mc:Ignorable="d"
     d:DesignHeight="90"
     d:DesignWidth="800">
@@ -77,7 +76,22 @@
                 </CommandBar.SecondaryCommands>
             </CommandBar>
 
-            <StackPanel Grid.Column="1" Spacing="4">
+        <StackPanel Grid.Column="1" Spacing="4">
+            <TextBlock
+                FontWeight="SemiBold"
+                MaxLines="1"
+                Text="{Binding Title}"
+                TextTrimming="CharacterEllipsis" />
+            <TextBlock
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                MaxLines="1"
+                Text="{Binding Author}"
+                TextTrimming="CharacterEllipsis" />
+            <ProgressBar
+                IsIndeterminate="{Binding IsPending}"
+                Maximum="100"
+                Value="{Binding ProgressPercentage}" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                 <TextBlock
                     x:Name="TitleText"
                     AutomationProperties.Name="{Binding Entry.Title}"
@@ -109,9 +123,23 @@
                     x:Name="GroupStatsText"
                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                     IsVisible="{Binding ShowGroupStats}"
-                    Text="{Binding GroupProgressMessage}"
-                    TextWrapping="Wrap" />
-            </StackPanel>
-        </Grid>
-    </m3:Card>
+                    Orientation="Horizontal"
+                    Spacing="5">
+                    <controls:DigitalSignalItem
+                        x:Name="StateDigitalSignalItem"
+                        Fill="{markup1:BindingDynamicResource {Binding StateBrushKey}}"
+                        IsVisible="{Binding !!ActiveCount}"
+                        Text="{Binding ActiveCount}" />
+                    <controls:DigitalSignalItem
+                        Fill="{DynamicResource SystemFillColorSuccessBrush}"
+                        IsVisible="{Binding !!CompletedCount}"
+                        Text="{Binding CompletedCount}" />
+                    <controls:DigitalSignalItem
+                        Fill="{DynamicResource SystemFillColorCriticalBrush}"
+                        IsVisible="{Binding !!ErrorCount}"
+                        Text="{Binding ErrorCount}" />
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </Grid>
 </UserControl>

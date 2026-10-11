@@ -11,6 +11,8 @@ use image::{Delay, Frame};
 
 use crate::error::MediaError;
 
+pub mod mp4;
+
 #[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum UgoiraFormat {
     Original,
@@ -21,9 +23,7 @@ pub enum UgoiraFormat {
 }
 
 pub fn is_mp4_supported() -> bool {
-    // OS native MP4 encoder fallback check.
-    // If not implemented or not supported on this platform, return false so the UI disables the option.
-    false
+    mp4::is_supported()
 }
 
 /// Synthesize Ugoira frames from a Pixiv zip archive into the target animation format.
@@ -158,6 +158,31 @@ fn synthesize_from_frame_bytes(
     output_path: &str,
     format: UgoiraFormat,
 ) -> Result<(), MediaError> {
+    if format == UgoiraFormat::Mp4 {
+        let temp_path = format!("{output_path}.tmp.mp4");
+        if Path::new(&temp_path).exists() {
+            let _ = std::fs::remove_file(&temp_path);
+        }
+        let result = mp4::encode_mp4(&temp_path, frames_data);
+        if let Err(e) = result {
+            let _ = std::fs::remove_file(&temp_path);
+            return Err(e);
+        }
+
+        // Atomic replacement
+        if Path::new(output_path).exists() {
+            let _ = std::fs::remove_file(output_path);
+        }
+        if let Some(parent) = Path::new(output_path).parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        std::fs::rename(&temp_path, output_path).map_err(|e| MediaError::Io {
+            message: format!("Failed to move temp file to output: {e}"),
+        })?;
+
+        return Ok(());
+    }
+
     let temp_path = format!("{output_path}.pixevaltmp");
     let temp_file = File::create(&temp_path).map_err(|e| MediaError::Io {
         message: format!("Failed to create temp file: {e}"),
@@ -168,9 +193,7 @@ fn synthesize_from_frame_bytes(
         UgoiraFormat::Gif => encode_gif(&mut writer, frames_data),
         UgoiraFormat::Apng => encode_apng(&mut writer, frames_data),
         UgoiraFormat::Webp => encode_webp(&mut writer, frames_data),
-        UgoiraFormat::Mp4 => Err(MediaError::UnsupportedFormat {
-            message: "MP4 encoding is not supported on this platform".into(),
-        }),
+        UgoiraFormat::Mp4 => unreachable!(),
         UgoiraFormat::Original => Err(MediaError::InvalidInput {
             message: "Original format must be extracted to folder".into(),
         }),

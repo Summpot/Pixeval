@@ -132,7 +132,7 @@ impl<T: Send + Sync + 'static> MakoFetchEngine<T> {
     }
 }
 
-use crate::models::{Illustration, Novel, Series, SpotlightArticle, User, WorkEntry};
+use crate::models::{CommentRecord, Illustration, Novel, Series, SpotlightArticle, User, WorkEntry};
 
 #[derive(uniffi::Object)]
 pub struct IllustrationFetchEngine {
@@ -278,6 +278,32 @@ impl SpotlightFetchEngine {
 #[uniffi::export(async_runtime = "tokio")]
 impl SpotlightFetchEngine {
     pub async fn next(&self) -> Option<SpotlightArticle> {
+        self.inner.next().await
+    }
+
+    pub fn cancel(&self) {
+        self.inner.cancel();
+    }
+
+    pub fn requested_pages(&self) -> u32 {
+        self.inner.requested_pages()
+    }
+}
+
+#[derive(uniffi::Object)]
+pub struct CommentFetchEngine {
+    pub(crate) inner: Arc<MakoFetchEngine<CommentRecord>>,
+}
+
+impl CommentFetchEngine {
+    pub fn new(inner: Arc<MakoFetchEngine<CommentRecord>>) -> Self {
+        Self { inner }
+    }
+}
+
+#[uniffi::export(async_runtime = "tokio")]
+impl CommentFetchEngine {
+    pub async fn next(&self) -> Option<CommentRecord> {
         self.inner.next().await
     }
 

@@ -3,14 +3,20 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Pixeval.Collections;
-using Pixeval.Models.Options;
+using Pixeval.Config;
 
-namespace Pixeval.ViewModels;
+namespace Pixeval.ViewModels.Download;
 
 public sealed partial class DownloadItemPageViewModel : ViewModelBase, IDisposable
 {
+    private readonly ObservableCollection<DownloadItemSnapshot>? _ordinaryItems;
+
+    private readonly List<DownloadTaskKey> _filteredKeys = [];
+
     private bool _isDisposed;
 
     [ObservableProperty]
@@ -21,23 +27,40 @@ public sealed partial class DownloadItemPageViewModel : ViewModelBase, IDisposab
 
     public DownloadPageViewModel PageViewModel { get; }
 
-    public DownloadFolderViewModel? Folder { get; }
+    public long? SubscriptionId { get; }
 
-    public AdvancedObservableCollection<DownloadItemViewModel> View { get; }
+    public DownloadFolderSnapshot? Folder =>
+        SubscriptionId is { } subscriptionId
+            ? PageViewModel.Folders.FirstOrDefault(folder => folder.SubscriptionId == subscriptionId)
+            : null;
 
-    partial void OnCurrentOptionChanged(DownloadListOption value) => ResetFilter();
+    public ObservableCollection<DownloadItemSnapshot> View { get; } = [];
+
+    public event Action? ViewRefreshStarting;
+
+    public event Action? ViewRefreshCompleted;
+
+    partial void OnCurrentOptionChanged(DownloadListOption value) => RefreshView();
 
     partial void OnFilterTextChanged(string? value) => ResetFilter();
 
-    public DownloadItemPageViewModel(DownloadPageViewModel pageViewModel, DownloadFolderViewModel? folder = null)
+    public DownloadItemPageViewModel(DownloadPageViewModel pageViewModel, long? subscriptionId = null)
     {
         PageViewModel = pageViewModel;
-        Folder = folder;
-        View = new AdvancedObservableCollection<DownloadItemViewModel>(folder?.Items ?? pageViewModel.OrdinaryItems, true);
-        ResetFilter();
+        SubscriptionId = subscriptionId;
+        if (subscriptionId is null)
+        {
+            _ordinaryItems = pageViewModel.OrdinaryItems;
+            _ordinaryItems.CollectionChanged += OnSourceChanged;
+        }
+        else
+        {
+            pageViewModel.Folders.CollectionChanged += OnFoldersChanged;
+        }
+
+        RefreshView();
     }
 
-    /// <inheritdoc />
     public void Dispose()
     {
         GC.SuppressFinalize(this);
@@ -45,25 +68,52 @@ public sealed partial class DownloadItemPageViewModel : ViewModelBase, IDisposab
             return;
 
         _isDisposed = true;
-        View.Filters.Clear();
-        View.Source = [];
-        View.Dispose();
+        if (_ordinaryItems is not null)
+            _ordinaryItems.CollectionChanged -= OnSourceChanged;
+        else
+            PageViewModel.Folders.CollectionChanged -= OnFoldersChanged;
+        View.Clear();
+        _filteredKeys.Clear();
     }
 
-    private void ResetFilter()
+    private void OnSourceChanged(object? sender, NotifyCollectionChangedEventArgs e) => RefreshView();
+
+    private void OnFoldersChanged(object? sender, NotifyCollectionChangedEventArgs e) => RefreshView();
+
+    private IReadOnlyList<DownloadItemSnapshot> Source =>
+        SubscriptionId is null
+            ? _ordinaryItems ?? []
+            : Folder?.Items ?? [];
+
+    private void RefreshView()
     {
         if (_isDisposed)
             return;
 
-        using (View.DeferFiltersChange())
+        var filterSource = GetCustomSearchResult();
+        var desired = Source.Where(item => item.MatchesOption(CurrentOption, filterSource)).ToList();
+        if (SnapshotListDiff.Matches(View, desired, static item => item.Key))
+            return;
+
+        ViewRefreshStarting?.Invoke();
+        SnapshotListDiff.Apply(View, desired, static item => item.Key);
+        ViewRefreshCompleted?.Invoke();
+    }
+
+    private HashSet<DownloadTaskKey>? GetCustomSearchResult() =>
+        CurrentOption is DownloadListOption.CustomSearch && !string.IsNullOrWhiteSpace(FilterText)
+            ? _filteredKeys.ToHashSet()
+            : null;
+
+    private void UpdateFilteredTasks(string? key)
+    {
+        _filteredKeys.Clear();
+        if (!string.IsNullOrWhiteSpace(key))
         {
-            View.Filters.Clear();
-            View.Filters.Add(IFilter<DownloadItemViewModel>.Create(
-                new HashSet<string> { nameof(DownloadItemViewModel.CurrentState) },
-                item => CurrentOption is DownloadListOption.CustomSearch
-                    ? string.IsNullOrWhiteSpace(FilterText) || item.MatchesSearch(FilterText)
-                    : item.MatchesOption(CurrentOption, null),
-                false));
+            foreach (var item in Source.Where(item => item.MatchesSearch(key)))
+                _filteredKeys.Add(item.Key);
         }
+
+        RefreshView();
     }
 }

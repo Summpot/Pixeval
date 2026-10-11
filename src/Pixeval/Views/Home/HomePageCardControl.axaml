@@ -2,16 +2,20 @@
     x:Class="Pixeval.Views.Home.HomePageCardControl"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:cfg="using:Pixeval.Config"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:di="using:Pixeval.Common.Markup"
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:homeViewModels="using:Pixeval.ViewModels.Home"
     xmlns:local="using:Pixeval.Views.Home"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
+    xmlns:mako="using:Pixeval.Mako"
+    xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
     xmlns:viewModels="using:Pixeval.ViewModels"
-    xmlns:views="using:Pixeval.Views"
+    xmlns:views="using:Pixeval.Config"
     x:DataType="{x:Type local:HomePageCardControl}"
     x:Name="Root"
     Padding="0"
@@ -122,13 +126,7 @@
             ClipToBounds="True"
             CornerRadius="16">
             <DockPanel VerticalSpacing="16">
-                <Border
-                    x:Name="TitleBar"
-                    Padding="8,0,0,0"
-                    Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerLow}}"
-                    CornerRadius="8"
-                    DockPanel.Dock="Bottom"
-                    IsVisible="{Binding !HideHomePageCardTitle, Source={x:Static views:PixevalSettings.Instance}}">
+                <Border DockPanel.Dock="Bottom" IsVisible="{Binding !HideHomePageCardTitle, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}}">
                     <DockPanel>
                         <m3:IconButton
                             x:Name="OpenCardButton"
@@ -177,7 +175,7 @@
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.DataTemplates>
-                            <DataTemplate x:DataType="{x:Type viewModels:IllustrationItemViewModel}">
+                            <DataTemplate x:DataType="{x:Type mako:Illustration}">
                                 <Button
                                     AutomationProperties.Name="{Binding Entry.Title}"
                                     Classes="preview-item"
@@ -190,7 +188,7 @@
                                 </Button>
                             </DataTemplate>
 
-                            <DataTemplate x:DataType="{x:Type viewModels:NovelItemViewModel}">
+                            <DataTemplate x:DataType="{x:Type mako:Novel}">
                                 <Button
                                     AutomationProperties.Name="{Binding Entry.Title}"
                                     Classes="preview-item"
@@ -201,7 +199,7 @@
                                         <TextBlock
                                             DockPanel.Dock="Bottom"
                                             MaxLines="1"
-                                            Text="{Binding Entry.Title}"
+                                            Text="{Binding Title}"
                                             TextTrimming="CharacterEllipsis"
                                             TextWrapping="Wrap"
                                             Theme="{StaticResource CaptionTextBlockStyle}" />
@@ -212,7 +210,7 @@
                                 </Button>
                             </DataTemplate>
 
-                            <DataTemplate x:DataType="{x:Type viewModels:UserItemViewModel}">
+                            <DataTemplate x:DataType="{x:Type mako:User}">
                                 <Button
                                     AutomationProperties.Name="{Binding Username}"
                                     Classes="preview-item"
@@ -223,7 +221,7 @@
                                 </Button>
                             </DataTemplate>
 
-                            <DataTemplate x:DataType="{x:Type viewModels:SpotlightItemViewModel}">
+                            <DataTemplate x:DataType="{x:Type mako:SpotlightArticle}">
                                 <Button
                                     AutomationProperties.Name="{Binding Entry.PureTitle}"
                                     Classes="preview-item"
@@ -234,7 +232,7 @@
                                         <TextBlock
                                             DockPanel.Dock="Bottom"
                                             MaxLines="1"
-                                            Text="{Binding Entry.PureTitle}"
+                                            Text="{Binding PureTitle}"
                                             TextTrimming="CharacterEllipsis"
                                             TextWrapping="Wrap"
                                             Theme="{StaticResource CaptionTextBlockStyle}" />
@@ -281,14 +279,14 @@
             x:Name="ResizeHandlesLayer"
             IsVisible="{Binding #Root.IsEditing}"
             PointerPressed="ResizeHandle_OnPointerPressed">
-            <Border Classes="corner top left" Tag="{x:Static local:HomeCardEditAction.ResizeTopLeft}" />
-            <Border Classes="horizontal top" Tag="{x:Static local:HomeCardEditAction.ResizeTop}" />
-            <Border Classes="corner top right" Tag="{x:Static local:HomeCardEditAction.ResizeTopRight}" />
-            <Border Classes="vertical right" Tag="{x:Static local:HomeCardEditAction.ResizeRight}" />
-            <Border Classes="corner right bottom" Tag="{x:Static local:HomeCardEditAction.ResizeBottomRight}" />
-            <Border Classes="horizontal bottom" Tag="{x:Static local:HomeCardEditAction.ResizeBottom}" />
-            <Border Classes="corner bottom left" Tag="{x:Static local:HomeCardEditAction.ResizeBottomLeft}" />
-            <Border Classes="vertical left" Tag="{x:Static local:HomeCardEditAction.ResizeLeft}" />
+            <Border Classes="corner top left" Tag="{x:Static cfg:HomeCardEditAction.ResizeTopLeft}" />
+            <Border Classes="horizontal top" Tag="{x:Static cfg:HomeCardEditAction.ResizeTop}" />
+            <Border Classes="corner top right" Tag="{x:Static cfg:HomeCardEditAction.ResizeTopRight}" />
+            <Border Classes="vertical right" Tag="{x:Static cfg:HomeCardEditAction.ResizeRight}" />
+            <Border Classes="corner right bottom" Tag="{x:Static cfg:HomeCardEditAction.ResizeBottomRight}" />
+            <Border Classes="horizontal bottom" Tag="{x:Static cfg:HomeCardEditAction.ResizeBottom}" />
+            <Border Classes="corner bottom left" Tag="{x:Static cfg:HomeCardEditAction.ResizeBottomLeft}" />
+            <Border Classes="vertical left" Tag="{x:Static cfg:HomeCardEditAction.ResizeLeft}" />
         </Panel>
 
         <m3:IconButton

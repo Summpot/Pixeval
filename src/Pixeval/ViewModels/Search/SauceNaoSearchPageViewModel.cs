@@ -6,12 +6,12 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Pixeval.I18N;
+using Microsoft.Extensions.DependencyInjection;
+using Pixeval.Config;
 using Pixeval.Utilities;
 
 namespace Pixeval.ViewModels.Search;
@@ -30,16 +30,7 @@ public sealed partial class SauceNaoSearchPageViewModel : ViewModelBase, IDispos
     [NotifyPropertyChangedFor(nameof(CanSearch))]
     public partial bool FileSelected { get; private set; }
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanSearch))]
-    public partial bool IsLoading { get; private set; }
-
-    [ObservableProperty]
-    public partial string? ErrorMessage { get; private set; }
-
-    public bool CanSearch => FileSelected && !IsLoading;
-
-    public static string ApiKey => App.AppViewModel.AppSettings.SearchSettings.SauceNaoApiKey;
+    public static string ApiKey => App.Services!.GetRequiredService<AppSettings>().SearchSettings.SauceNaoApiKey;
 
     public static bool IsApiKeyExisted => !string.IsNullOrWhiteSpace(ApiKey);
 
@@ -72,27 +63,20 @@ public sealed partial class SauceNaoSearchPageViewModel : ViewModelBase, IDispos
         Bitmap? candidate = null;
         try
         {
-            (candidate, var bytes) = await read(operation.Token);
-            if (operation.IsCancellationRequested || _isDisposed)
-                return;
-            if (candidate is null)
+            if (stream is MemoryStream ms)
             {
-                ErrorMessage = I18NManager.GetResource(SearchResources.SauceNAO.ClipboardHasNoImage);
-                return;
+                File = ms.ToArray();
             }
-
-            // Publish only a completely decoded image/file pair. A failed replacement keeps
-            // the previous selection available, and a late read never owns the preview.
-            var previous = Image;
-            File = bytes;
-            Image = candidate;
-            candidate = null;
+            else
+            {
+                using var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream);
+                File = memoryStream.ToArray();
+            }
             FileSelected = true;
-            previous?.Dispose();
-        }
-        catch (Exception) when (operation.IsCancellationRequested || _isDisposed)
-        {
-            // A closed page or a newer image owns the state, including any error message.
+            using var readStream = new MemoryStream(File.ToArray());
+            Image?.Dispose();
+            Image = new Bitmap(readStream);
         }
         catch (Exception)
         {
@@ -110,21 +94,18 @@ public sealed partial class SauceNaoSearchPageViewModel : ViewModelBase, IDispos
     }
 
     [RelayCommand]
-    public async Task PasteAsync(Control control)
+    public async Task PasteAsync(Control? control)
     {
+        _ = control;
         ObjectDisposedException.ThrowIf(_isDisposed, this);
 
-        if (TopLevel.GetTopLevel(control) is not { Clipboard: { } clipboard })
-            return;
-        await LoadImageAsync(async token =>
-        {
-            var bitmap = await clipboard.TryGetBitmapAsync();
+        var clipboard = App.Services?.GetService<IClipboardService>() ?? NullClipboardService.Instance;
+        if (await clipboard.TryGetBitmapAsync() is { } bitmap)
             try
             {
-                token.ThrowIfCancellationRequested();
-                if (bitmap is null)
-                    return (null, []);
-                using var memoryStream = Streams.RentStream();
+                Image?.Dispose();
+                Image = bitmap;
+                using var memoryStream = new MemoryStream();
                 bitmap.Save(memoryStream, new PngBitmapEncoderOptions());
                 return (bitmap, memoryStream.ToArray());
             }

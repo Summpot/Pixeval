@@ -6,11 +6,13 @@ uniffi::setup_scaffolding!();
 pub mod engine;
 pub mod error;
 pub mod planar;
+pub mod progressive;
 pub mod simd;
 
 pub use engine::*;
 pub use error::*;
 pub use planar::*;
+pub use progressive::*;
 pub use simd::*;
 
 #[cfg(test)]

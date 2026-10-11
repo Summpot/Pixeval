@@ -4,20 +4,20 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:enum="using:Pixeval.Models.Pixiv"
+    xmlns:enum="using:Pixeval.Pixiv"
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
-    xmlns:markup1="using:Pixeval.Views.Markup"
+    xmlns:markup1="using:Pixeval.Common.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:model="using:Pixeval.Native.Mako"
+    xmlns:model="using:Pixeval.Mako"
     xmlns:pixeval="using:Pixeval"
     xmlns:search="using:Pixeval.Views.Search"
-    xmlns:storage="using:Pixeval.Native.Storage"
-    xmlns:viewModels="using:Pixeval.ViewModels"
-    xmlns:views="using:Pixeval.Views"
+    xmlns:storage="using:Pixeval.Storage"
+    xmlns:viewModels="using:Pixeval.ViewModels.Search"
+    xmlns:views="using:Pixeval.Views.Shell"
     x:DataType="{x:Type viewModels:SearchPageViewModel}"
-    DataContext="{x:Static viewModels:SearchPageViewModel.Instance}"
+    DataContext="{markup1:Service Type={x:Type viewModels:SearchPageViewModel}}"
     mc:Ignorable="d"
     d:DesignHeight="450"
     d:DesignWidth="800">
@@ -50,18 +50,20 @@
                         AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+SearchBox.PlaceholderText}}"
                         FilterMode="None"
                         IsTextCompletionEnabled="False"
+                        ItemsSource="{Binding SearchCompletionItems}"
+                        SelectedItem="{Binding SelectedSearchCompletion, Mode=TwoWay}"
                         ItemSelector="SearchAutoCompleteBox_OnSelectItem"
                         ItemTemplate="{StaticResource SearchCompletionTemplate}"
                         MinimumPrefixLength="1"
                         PlaceholderText="{I18N {x:Static pixeval:SearchResources+SearchBox.PlaceholderText}}"
                         Tapped="SearchAutoCompleteBox_OnTapped"
                         TemplateApplied="SearchAutoCompleteBox_OnTemplateApplied"
-                        Text="{Binding SearchText, Mode=TwoWay}"
-                        TextChanged="SearchAutoCompleteBox_OnTextChanged">
+                        Text="{Binding SearchText, Mode=TwoWay}">
                         <AutoCompleteBox.InnerRightContent>
                             <m3:IconButton
-                                AutomationProperties.Name="{I18N {x:Static pixeval:MainPageResources+Tab.Search}}"
-                                Click="SearchButton_OnClick"
+                                AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+SauceNAO.Search}}"
+                                Command="{Binding SearchCommand}"
+                                CommandParameter="{Binding #AdvancedExpander.IsExpanded}"
                                 Symbol="Search" />
                         </AutoCompleteBox.InnerRightContent>
                     </AutoCompleteBox>
@@ -85,17 +87,20 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type x:String}">
                             <m3:SuggestionChip
-                                Click="PinnedTagButton_OnClick"
+                                Command="{Binding OpenPinnedTagCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                CommandParameter="{Binding}"
                                 Content="{Binding}"
                                 LeadingIcon="{markup:SymbolIcon Pin}">
                                 <m3:SuggestionChip.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem
-                                            Click="CopyButton_OnClick"
+                                            Command="{Binding CopyCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                            CommandParameter="{Binding}"
                                             Header="{I18N {x:Static pixeval:SearchResources+SearchHistory.Copy}}"
                                             Icon="{markup:SymbolIcon Copy}" />
                                         <MenuItem
-                                            Click="UnpinButton_OnClick"
+                                            Command="{Binding UnpinCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                            CommandParameter="{Binding}"
                                             Header="{I18N {x:Static pixeval:SearchResources+SearchHistory.Unpin}}"
                                             Icon="{markup:SymbolIcon PinOff}" />
                                     </ContextMenu>
@@ -105,7 +110,9 @@
                     </ItemsControl.ItemTemplate>
                     <ItemsControl.DataTemplates>
                         <DataTemplate DataType="{x:Type storage:SearchHistoryRecord}">
-                            <m3:SuggestionChip Click="SearchHistoryButton_OnClick">
+                            <m3:SuggestionChip
+                                Command="{Binding OpenHistoryCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                CommandParameter="{Binding}">
                                 <m3:SuggestionChip.Content>
                                     <StackPanel Spacing="2">
                                         <TextBlock Text="{Binding Value}" TextWrapping="Wrap" />
@@ -119,15 +126,18 @@
                                 <m3:SuggestionChip.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem
-                                            Click="CopyButton_OnClick"
+                                            Command="{Binding CopyCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                            CommandParameter="{Binding}"
                                             Header="{I18N {x:Static pixeval:SearchResources+SearchHistory.Copy}}"
                                             Icon="{markup:SymbolIcon Copy}" />
                                         <MenuItem
-                                            Click="AddPinnedTagButton_OnClick"
+                                            Command="{Binding AddPinnedTagCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                            CommandParameter="{Binding}"
                                             Header="{I18N {x:Static pixeval:SearchResources+SearchHistory.AddPinnedTag}}"
                                             Icon="{markup:SymbolIcon Pin}" />
                                         <MenuItem
-                                            Click="DeleteButton_OnClick"
+                                            Command="{Binding DeleteHistoryCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                            CommandParameter="{Binding}"
                                             Header="{I18N {x:Static pixeval:SearchResources+SearchHistory.Delete}}"
                                             Icon="{markup:SymbolIcon Delete}" />
                                     </ContextMenu>
@@ -173,10 +183,9 @@
                             <m3:Card
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
-                                AutomationProperties.Name="{Binding Tag}"
-                                Click="TrendingTagButton_OnClick"
-                                Theme="{StaticResource ContentCardTheme}"
-                                ToolTip.Tip="{Binding Tag}">
+                                Command="{Binding OpenTrendingTagCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
+                                CommandParameter="{Binding}"
+                                Theme="{StaticResource ContentCardTheme}">
                                 <m3:Card.Content>
                                     <DockPanel VerticalSpacing="5">
                                         <TextBlock

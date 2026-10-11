@@ -6,7 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Native.Media;
+using Pixeval.Media;
 
 namespace Pixeval.Tests;
 

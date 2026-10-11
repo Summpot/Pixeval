@@ -257,9 +257,11 @@ public class VirtualizingWrapPanel : CachedVirtualizingPanel, IOrientationBasedM
 
     private void BuildLayout(Size availableSize, int itemCount)
     {
-        var availableMinor = this.Minor(availableSize);
-        if (!double.IsFinite(availableMinor) || availableMinor <= 0)
-            availableMinor = double.PositiveInfinity;
+        var scale = LayoutQuantizationHelper.GetRenderScaling(this);
+        var rawMinor = this.Minor(availableSize);
+        var availableMinor = !double.IsFinite(rawMinor) || rawMinor <= 0
+            ? double.PositiveInfinity
+            : LayoutQuantizationHelper.QuantizeToDevicePixels(rawMinor, scale);
 
         var key = new LayoutKey(availableMinor, ItemSpacing, LineSpacing, Orientation, ItemsAlignment, ItemWidth, ItemHeight);
         var canContinue = _layoutValid && _layoutKey == key && _layoutItemCount <= itemCount;
@@ -389,6 +391,8 @@ public class VirtualizingWrapPanel : CachedVirtualizingPanel, IOrientationBasedM
         var viewportStart = this.MajorStart(_viewport);
         if (!double.IsFinite(viewportStart))
             viewportStart = 0;
+        else
+            viewportStart = LayoutQuantizationHelper.QuantizeToDevicePixels(viewportStart, LayoutQuantizationHelper.GetRenderScaling(this));
         var viewportLength = this.MajorSize(_viewport);
         if (!double.IsFinite(viewportLength) || viewportLength <= 0)
             viewportLength = _lines[0].MajorSize;

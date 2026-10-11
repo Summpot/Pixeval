@@ -110,6 +110,14 @@ impl StorageEngine {
         self.history_repo.stream_search_histories_cursor(cursor_id, take)
     }
 
+    pub fn query_search_history_suggestions(
+        &self,
+        pattern: String,
+        limit: u32,
+    ) -> Result<Vec<SearchHistoryRecord>, StorageError> {
+        self.history_repo.query_search_history_suggestions(&pattern, limit)
+    }
+
     pub fn try_delete_search_history_by_value(&self, value: String) -> Result<bool, StorageError> {
         self.history_repo.try_delete_search_history_by_value(value)
     }
@@ -576,6 +584,70 @@ impl StorageEngine {
         let conn = self.conn.lock();
         let count: i64 = conn.query_row("SELECT COUNT(*) FROM WorkSubscriptionEntry", [], |row| row.get(0))?;
         Ok(count)
+    }
+
+    pub fn query_subscription_author_suggestions(
+        &self,
+        pattern: String,
+        limit: u32,
+    ) -> Result<Vec<WorkSubscriptionRecord>, StorageError> {
+        let conn = self.conn.lock();
+        let mut results = Vec::new();
+        let trimmed = pattern.trim();
+        if trimmed.is_empty() {
+            let mut stmt = conn.prepare(
+                "SELECT HistoryEntryId, Id, SubscriptionType, WorkKind, Name, Account, AvatarUrl
+                 FROM WorkSubscriptionEntry
+                 WHERE Name != ''
+                 GROUP BY Name, Account
+                 ORDER BY HistoryEntryId DESC
+                 LIMIT ?1",
+            )?;
+            let rows = stmt.query_map(params![limit], |row| {
+                Ok(WorkSubscriptionRecord {
+                    history_entry_id: row.get(0)?,
+                    id: row.get(1)?,
+                    subscription_type: row.get(2)?,
+                    work_kind: row.get(3)?,
+                    title: row.get(4)?,
+                    author: row.get(5)?,
+                    avatar: row.get(6)?,
+                    last_check_time: String::new(),
+                    last_work_id: None,
+                })
+            })?;
+            for r in rows {
+                results.push(r?);
+            }
+        } else {
+            let like_pattern = format!("%{}%", trimmed);
+            let prefix_pattern = format!("{}%", trimmed);
+            let mut stmt = conn.prepare(
+                "SELECT HistoryEntryId, Id, SubscriptionType, WorkKind, Name, Account, AvatarUrl
+                 FROM WorkSubscriptionEntry
+                 WHERE Name != '' AND (Name LIKE ?1 OR Account LIKE ?1)
+                 GROUP BY Name, Account
+                 ORDER BY (CASE WHEN Name LIKE ?2 OR Account LIKE ?2 THEN 0 ELSE 1 END), HistoryEntryId DESC
+                 LIMIT ?3",
+            )?;
+            let rows = stmt.query_map(params![like_pattern, prefix_pattern, limit], |row| {
+                Ok(WorkSubscriptionRecord {
+                    history_entry_id: row.get(0)?,
+                    id: row.get(1)?,
+                    subscription_type: row.get(2)?,
+                    work_kind: row.get(3)?,
+                    title: row.get(4)?,
+                    author: row.get(5)?,
+                    avatar: row.get(6)?,
+                    last_check_time: String::new(),
+                    last_work_id: None,
+                })
+            })?;
+            for r in rows {
+                results.push(r?);
+            }
+        }
+        Ok(results)
     }
 
     // --- Blocked Users ---

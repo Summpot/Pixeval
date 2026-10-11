@@ -1,0 +1,44 @@
+﻿<UserControl
+    x:Class="Pixeval.Views.Works.UserContainer"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Pixeval.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:entry="using:Pixeval.Views.Works"
+    xmlns:markup="using:FluentIcons.Avalonia.Markup"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:pixeval="using:Pixeval"
+    mc:Ignorable="d"
+    d:DesignHeight="450"
+    d:DesignWidth="800">
+
+    <DockPanel>
+        <Grid
+            Margin="12,8"
+            ColumnDefinitions="*,Auto"
+            ColumnSpacing="8"
+            DockPanel.Dock="Top">
+            <CommandBar
+                x:Name="RightToolBar"
+                Grid.Column="1"
+                DefaultLabelPosition="Collapsed"
+                IsDynamicOverflowEnabled="True">
+                <CommandBarButton
+                    x:Name="RefreshButton"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:WorkContainerResources+RefreshButton.Label}}"
+                    Click="RefreshButton_OnClick"
+                    Icon="{markup:SymbolIcon ArrowClockwise}"
+                    Label="{I18N {x:Static pixeval:WorkContainerResources+RefreshButton.Label}}" />
+            </CommandBar>
+
+            <WrapPanel
+                x:Name="ExtraCommandsBar"
+                VerticalAlignment="Center"
+                ItemSpacing="8"
+                LineSpacing="8"
+                Orientation="Horizontal" />
+        </Grid>
+
+        <entry:UserView x:Name="UserView" />
+    </DockPanel>
+</UserControl>

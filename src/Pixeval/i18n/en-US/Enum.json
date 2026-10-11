@@ -84,7 +84,8 @@
   "NovelDownloadFormat": {
     "OriginalTxt": "TXT with Embedded Images (Pixiv native tags)",
     "Html": "HTML with Embedded Images",
-    "Md": "Markdown with Embedded Images"
+    "Md": "Markdown with Embedded Images",
+    "Epub": "EPUB E-Book (Embedded Images)"
   },
   "RankOption": {
     "Day": "Daily",

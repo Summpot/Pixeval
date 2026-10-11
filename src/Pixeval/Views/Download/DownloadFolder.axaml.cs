@@ -4,13 +4,13 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Pixeval.ViewModels;
+using Pixeval.Download;
 
 namespace Pixeval.Views.Download;
 
 public partial class DownloadFolder : UserControl
 {
-    public event Action<DownloadFolder, DownloadFolderViewModel>? OpenRequested;
+    public event Action<DownloadFolder, DownloadFolderSnapshot>? OpenRequested;
 
     public DownloadFolder() => InitializeComponent();
 
@@ -24,7 +24,7 @@ public partial class DownloadFolder : UserControl
 
     private void Button_OnClicked(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is DownloadFolderViewModel vm)
-            OpenRequested?.Invoke(this, vm);
+        if (DataContext is DownloadFolderSnapshot folder)
+            OpenRequested?.Invoke(this, folder);
     }
 }

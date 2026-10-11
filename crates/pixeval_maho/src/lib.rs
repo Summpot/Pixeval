@@ -38,6 +38,12 @@ pub fn locate_server_name(packet: Vec<u8>) -> Option<String> {
     }
 }
 
+#[uniffi::export]
+pub fn is_pixiv_host(host: String) -> bool {
+    let h = host.to_ascii_lowercase();
+    h == "pixiv.net" || h.ends_with(".pixiv.net") || h == "pximg.net" || h.ends_with(".pximg.net")
+}
+
 #[derive(uniffi::Record, Clone, Debug, PartialEq, Eq)]
 pub struct MahoProcessResult {
     pub is_handshake: bool,
@@ -282,5 +288,70 @@ mod tests {
         })
         .join()
         .expect("Thread panicked inside test_compat_tcp_connect_and_timeout");
+    }
+
+    #[test]
+    fn test_is_pixiv_host() {
+        assert!(is_pixiv_host("pixiv.net".to_string()));
+        assert!(is_pixiv_host("app-api.pixiv.net".to_string()));
+        assert!(is_pixiv_host("i.pximg.net".to_string()));
+        assert!(is_pixiv_host("s.pximg.net".to_string()));
+        assert!(is_pixiv_host("pximg.net".to_string()));
+
+        assert!(!is_pixiv_host("google.com".to_string()));
+        assert!(!is_pixiv_host("github.com".to_string()));
+        assert!(!is_pixiv_host("127.0.0.1".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_maho_client_construction_and_options() {
+        use std::collections::HashMap;
+        let mut host_ips = HashMap::new();
+        host_ips.insert("custom.pixiv.net".to_string(), vec!["1.2.3.4".to_string()]);
+
+        let options = MahoClientOptions {
+            domain_fronting_enabled: true,
+            split_delay_ms: 50,
+            host_ips,
+            proxy_url: Some("http://127.0.0.1:7890".to_string()),
+        };
+
+        let client = MahoClient::new(Some(options));
+        let mut updated_ips = HashMap::new();
+        updated_ips.insert("custom2.pixiv.net".to_string(), vec!["5.6.7.8".to_string()]);
+        client.update_options(MahoClientOptions {
+            domain_fronting_enabled: false,
+            split_delay_ms: 0,
+            host_ips: updated_ips,
+            proxy_url: None,
+        });
+    }
+
+    #[tokio::test]
+    async fn test_connector_domain_fronting_proxy_bypass_logic() {
+        use std::net::IpAddr;
+        let resolver = DnsResolver::new();
+        let ip: IpAddr = "127.0.0.1".parse().unwrap();
+        resolver.set_static_ips("bypassed.pixiv.net", vec![ip]);
+
+        let config = std::sync::Arc::new(MahoConfig {
+            enabled: true,
+            split_delay_ms: 0,
+            dns_resolver: resolver,
+        });
+
+        let is_fronted = config.enabled
+            && config
+                .dns_resolver
+                .get_static_ips("bypassed.pixiv.net")
+                .is_some_and(|ips| !ips.is_empty());
+        assert!(is_fronted);
+
+        let not_fronted = config.enabled
+            && config
+                .dns_resolver
+                .get_static_ips("other.domain.com")
+                .is_some_and(|ips| !ips.is_empty());
+        assert!(!not_fronted);
     }
 }

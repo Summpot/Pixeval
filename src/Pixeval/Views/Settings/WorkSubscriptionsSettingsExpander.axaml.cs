@@ -15,14 +15,12 @@ using Avalonia.Threading;
 using CommunityToolkit.Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
-using Pixeval.Models.Pixiv;
+using Pixeval.Pixiv;
 using Pixeval.I18N;
-using Pixeval.Models.Options;
-using Pixeval.Models.Settings.Entries;
-using Pixeval.Models.Subscriptions;
-using Pixeval.Native.Storage;
+using Pixeval.Config;
+using Pixeval.Services.Background;
+using Pixeval.Storage;
 using Pixeval.Utilities;
-using Pixeval.ViewModels.Settings;
 
 namespace Pixeval.Views.Settings;
 
@@ -43,7 +41,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
 
     private bool _isLoaded;
 
-    public ObservableCollection<WorkSubscriptionItemViewModel> Subscriptions { get; } = [];
+    public ObservableCollection<WorkSubscriptionRecord> Subscriptions { get; } = [];
 
     public WorkSubscriptionsSettingsEntry Entry
     {
@@ -61,7 +59,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
     }
 
     private static IWorkSubscriptionService SubscriptionService =>
-        App.AppViewModel.AppServiceProvider.GetRequiredService<IWorkSubscriptionService>();
+        App.Services!.GetRequiredService<IWorkSubscriptionService>();
 
     private static IReadOnlyList<SymbolComboBoxItem> BookmarkWorkKinds { get; } =
         [.. SymbolComboBoxItem.GetValues<WorkSubscriptionWorkKind>().Where(t => t.Value is WorkSubscriptionWorkKind.Illustration or WorkSubscriptionWorkKind.Novel)];
@@ -80,10 +78,10 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         Subscriptions.Clear();
         try
         {
-            foreach (var entry in App.AppViewModel.StorageEngine.GetAllSubscriptions())
+            foreach (var entry in App.Services!.GetRequiredService<StorageEngine>().GetAllSubscriptions())
             {
                 token.ThrowIfCancellationRequested();
-                Subscriptions.Add(new(entry));
+                Subscriptions.Add(entry);
             }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -91,12 +89,15 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         }
         catch (Exception e)
         {
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+            App.Services!.GetRequiredService<FileLogger>()
                 .LogError(nameof(ReloadAsync), e);
         }
     }
 
-    private async void AddButton_OnClicked(object? sender, RoutedEventArgs e)
+    private void AddButton_OnClicked(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => AddButton_OnClickedAsync(sender, e));
+
+    private async Task AddButton_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
         if (!_isLoaded || IsAdding)
             return;
@@ -127,40 +128,18 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         IsAdding = true;
         try
         {
-            bool added;
-            if (subscriptionType is WorkSubscriptionType.Series)
-            {
-                var simpleWorkType = workKind is WorkSubscriptionWorkKind.Novel
-                    ? SimpleWorkType.Novel
-                    : SimpleWorkType.Illustration;
-                var (detail, first, engine) = await client.GetWorkSeriesAsync(simpleWorkType, targetId, token);
-                if (!IsCurrent())
-                    return;
-                added = detail.Id == targetId && WorkSubscriptionHelper.TryAddOrUpdateSeries(targetId, workKind, detail, first, engine);
-            }
-            else
-            {
-                var user = (await client.GetUserFromIdAsync(targetId, token)).UserEntity;
-                if (!IsCurrent())
-                    return;
-                added = user.Id == targetId && WorkSubscriptionHelper.TryAddOrUpdateUser(user, subscriptionType, workKind);
-            }
-
-            if (!added)
-            {
-                ShowError(I18NManager.GetResource(WorkSubscriptionsSettingsExpanderResources.AddFailed));
-                return;
-            }
-            if (TargetIdTextBox.Text == input
-                && SubscriptionTypeComboBox.GetSelectedValue<WorkSubscriptionType>() == subscriptionType
-                && WorkKindComboBox.SelectedValue is WorkSubscriptionWorkKind currentKind && currentKind == workKind)
-                TargetIdTextBox.Text = "";
-            await ReloadAsync();
+            var simpleWorkType = workKind is WorkSubscriptionWorkKind.Novel
+                ? SimpleWorkType.Novel
+                : SimpleWorkType.Illustration;
+            var storage = App.Services!.GetRequiredService<StorageEngine>();
+            var (detail, first, engine) = await App.Services!.GetRequiredService<MakoClient>().GetWorkSeriesAsync(simpleWorkType, targetId);
+            _ = WorkSubscriptionHelper.TryAddOrUpdateSeries(targetId, workKind, storage, SubscriptionService, detail, first, engine);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
-            var user = (await App.AppViewModel.MakoClient.GetUserFromIdAsync(targetId)).User;
-            _ = WorkSubscriptionHelper.TryAddOrUpdateUser(user, subscriptionType, workKind);
+            var storage = App.Services!.GetRequiredService<StorageEngine>();
+            var user = (await App.Services!.GetRequiredService<MakoClient>().GetUserFromIdAsync(targetId)).User;
+            _ = WorkSubscriptionHelper.TryAddOrUpdateUser(user, subscriptionType, workKind, storage, SubscriptionService);
         }
 
         bool IsCurrent() => _isLoaded && !token.IsCancellationRequested
@@ -199,25 +178,27 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         Grid.SetColumnSpan(AddProgress, compact ? 2 : 4);
     }
 
-    private async void DeleteButton_OnClicked(object? sender, RoutedEventArgs e)
+    private void DeleteButton_OnClicked(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => DeleteButton_OnClickedAsync(sender, e));
+
+    private async Task DeleteButton_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: WorkSubscriptionItemViewModel item })
+        if (sender is not Button { Tag: WorkSubscriptionRecord item })
             return;
 
-        _ = await SubscriptionService.TryRemoveAsync(item.Entry.HistoryEntryId);
-        if (_isLoaded)
-            await ReloadAsync();
+        _ = await SubscriptionService.TryRemoveAsync(item.HistoryEntryId);
+        await ReloadAsync();
     }
 
     private void SyncAllButton_OnClicked(object? sender, RoutedEventArgs e)
     {
-        App.AppViewModel.QueueWorkSubscriptionSyncAll();
+        SubscriptionService.QueueSyncAll();
     }
 
     private void SyncSubscriptionButton_OnClicked(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: WorkSubscriptionItemViewModel item })
-            App.AppViewModel.QueueWorkSubscriptionSync(item.Entry);
+        if (sender is Button { Tag: WorkSubscriptionRecord item })
+            SubscriptionService.QueueSyncSubscription(item);
     }
 
     private void SubscriptionServiceOnSubscriptionUpdated(object? sender, WorkSubscriptionRecord subscription)
@@ -238,10 +219,17 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         });
     }
 
-    private void ApplySubscriptionUpdate(WorkSubscriptionRecord subscription) =>
-        Subscriptions.FirstOrDefault(item =>
-                item.Entry.HistoryEntryId == subscription.HistoryEntryId)
-            ?.UpdateSubscription(subscription);
+    private void ApplySubscriptionUpdate(WorkSubscriptionRecord subscription)
+    {
+        for (var i = 0; i < Subscriptions.Count; i++)
+        {
+            if (Subscriptions[i].HistoryEntryId != subscription.HistoryEntryId)
+                continue;
+
+            Subscriptions[i] = subscription;
+            return;
+        }
+    }
 
     private void SubscriptionTypeComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
     {

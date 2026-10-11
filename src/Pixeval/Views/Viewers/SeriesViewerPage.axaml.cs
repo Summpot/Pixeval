@@ -6,26 +6,34 @@ using System.ComponentModel;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Pixeval.Models.Pixiv;
+using Pixeval.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
-using Pixeval.Views.Entry;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Views.Viewers;
 
 public partial class SeriesViewerPage : IconContentPage, IDisposable
 {
-    private SeriesViewerPageViewModel? _viewModel;
-    private bool _isDisposed;
+    private readonly MakoClient _client;
+    private readonly IWorkSubscriptionService _subscriptions;
+    private readonly StorageEngine _storage;
 
-    public SeriesViewerPage() : this(null)
+    public SeriesViewerPage(MakoClient client, IWorkSubscriptionService subscriptions, StorageEngine storage)
+        : this(null, client, subscriptions, storage)
     {
     }
 
-    public SeriesViewerPage(SeriesViewerPageViewModel? viewModel)
+    public SeriesViewerPage(
+        SeriesViewerPageViewModel? viewModel,
+        MakoClient client,
+        IWorkSubscriptionService subscriptions,
+        StorageEngine storage)
     {
-        DataContext = _viewModel = viewModel;
+        _client = client;
+        _subscriptions = subscriptions;
+        _storage = storage;
+        DataContext = viewModel;
         InitializeComponent();
         if (viewModel is null)
             return;
@@ -39,7 +47,10 @@ public partial class SeriesViewerPage : IconContentPage, IDisposable
                 viewModel.Id,
                 worksViewModel,
                 seriesDetail,
-                firstWork);
+                firstWork,
+                _client,
+                _subscriptions,
+                _storage);
         }
         else
         {
@@ -61,7 +72,7 @@ public partial class SeriesViewerPage : IconContentPage, IDisposable
         DisposeWorksContent();
         SeriesContainerHost.Content = engine is not null
                                       && viewModel is { SeriesDetail: { } seriesDetail, FirstWork: { } firstWork }
-            ? new SeriesContainer(viewModel.WorkType, viewModel.Id, engine, seriesDetail, firstWork)
+            ? new SeriesContainer(viewModel.WorkType, viewModel.Id, engine, seriesDetail, firstWork, _client, _subscriptions, _storage)
             : null;
     }
 

@@ -1,0 +1,57 @@
+﻿<ResourceDictionary
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
+    xmlns:markup="using:FluentIcons.Avalonia.Markup"
+    xmlns:work="using:Pixeval.Views.Works">
+    <Design.PreviewWith>
+        <StackPanel
+            Width="250"
+            Background="{DynamicResource SystemRegionBrush}"
+            Spacing="10">
+            <work:AddNewBookmarkTagItem Height="50" />
+        </StackPanel>
+    </Design.PreviewWith>
+
+    <ControlTheme x:Key="{x:Type work:AddNewBookmarkTagItem}" TargetType="{x:Type work:AddNewBookmarkTagItem}">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel>
+                    <m3:IconButton
+                        Name="PART_AddButton"
+                        VerticalAlignment="Center"
+                        AutomationProperties.Name="{I18N {x:Static pixeval:TagSelectorResources.AddTag}}"
+                        IsVisible="{TemplateBinding IsExpanded,
+                                                    Converter={x:Static BoolConverters.Not}}"
+                        Symbol="Add"
+                        Theme="{StaticResource MaterialTonalIconButtonTheme}"
+                        ToolTip.Tip="{I18N {x:Static pixeval:TagSelectorResources.AddTag}}" />
+                    <Grid
+                        VerticalAlignment="Center"
+                        ColumnDefinitions="*,Auto,Auto"
+                        ColumnSpacing="4"
+                        IsVisible="{TemplateBinding IsExpanded}">
+                        <TextBox
+                            Name="PART_TextBox"
+                            MinWidth="120"
+                            AutomationProperties.Name="{I18N {x:Static pixeval:TagSelectorResources.TagName}}"
+                            PlaceholderText="{I18N {x:Static pixeval:TagSelectorResources.TagName}}" />
+                        <m3:IconButton
+                            Name="PART_ConfirmButton"
+                            Grid.Column="1"
+                            AutomationProperties.Name="{I18N {x:Static pixeval:ContentDialogResources.OkButtonContent}}"
+                            Symbol="Check"
+                            Theme="{StaticResource MaterialTonalIconButtonTheme}"
+                            ToolTip.Tip="{I18N {x:Static pixeval:ContentDialogResources.OkButtonContent}}" />
+                        <m3:IconButton
+                            Name="PART_CancelButton"
+                            Grid.Column="2"
+                            AutomationProperties.Name="{I18N {x:Static pixeval:ContentDialogResources.CancelButtonContent}}"
+                            Symbol="Close"
+                            ToolTip.Tip="{I18N {x:Static pixeval:ContentDialogResources.CancelButtonContent}}" />
+                    </Grid>
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+</ResourceDictionary>

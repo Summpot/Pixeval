@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Filters;
-using Pixeval.Models.Filters;
-using Pixeval.Native.Filters;
 
 namespace Pixeval.Tests;
 
@@ -12,12 +10,7 @@ namespace Pixeval.Tests;
 [DoNotParallelize]
 public sealed class WorkFilterNodeTest
 {
-    [ClassInitialize]
-    public static void Initialize(TestContext _)
-    {
-        I18NManager.CandidatePaths.Add(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval")));
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
-    }
+    private static readonly FilterCompletionEngine _Language = WorkFilterLanguage.Instance;
 
     [TestMethod]
     public void WorkFilterNodesShouldSupportAllPredicatesAndGroups()

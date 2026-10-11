@@ -1,11 +1,11 @@
-using System;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
-using Pixeval.I18N;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Search;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Views.Search;
 
@@ -19,7 +19,10 @@ public partial class SauceNaoSearchPage : ContentPage
         InitializeComponent();
     }
 
-    private async void OpenFileButton_OnClick(object? sender, RoutedEventArgs e)
+    private void OpenFileButton_OnClick(object? sender, RoutedEventArgs e) =>
+        this.RunInteraction(() => OpenFileButton_OnClickAsync(sender, e));
+
+    private async Task OpenFileButton_OnClickAsync(object? sender, RoutedEventArgs e)
     {
         if (_isPicking || !SauceNaoSearchPageViewModel.IsApiKeyExisted
             || DataContext is not SauceNaoSearchPageViewModel viewModel
@@ -54,11 +57,11 @@ public partial class SauceNaoSearchPage : ContentPage
 
     private void SearchButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (!SauceNaoSearchPageViewModel.IsApiKeyExisted
-            || DataContext is not SauceNaoSearchPageViewModel { CanSearch: true } viewModel
-            || TopLevel.GetTopLevel(this) is not { ViewContainer: { } viewContainer })
+        if (DataContext is not SauceNaoSearchPageViewModel viewModel)
             return;
-        viewContainer.NavigateTo(new ArtworkSauceNaoSearchResultPage(SauceNaoSearchPageViewModel.ApiKey, viewModel.File));
+
+        var nav = this.GetUiService<INavigationService>() ?? new NavigationService();
+        nav.NavigateTo<ArtworkSauceNaoSearchResultPage>((SauceNaoSearchPageViewModel.ApiKey, viewModel.File), sourceControl: this);
     }
 
     #region Disposal

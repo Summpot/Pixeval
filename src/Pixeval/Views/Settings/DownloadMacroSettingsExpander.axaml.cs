@@ -4,14 +4,12 @@
 using System;
 using AutoSettingsPage.Avalonia;
 using CommunityToolkit.Avalonia.Controls;
-using Misaki;
-using Pixeval.Controls.Settings;
 using Pixeval.I18N;
-using Pixeval.Native.Download;
-using Pixeval.Models.Download;
-using Pixeval.Models.Settings.Entries;
+using Pixeval.Download;
+using Pixeval.Config;
+using Pixeval.Mako;
 using Pixeval.Utilities;
-using Pixeval.Utilities.IO;
+using Pixeval.Common.IO;
 
 namespace Pixeval.Views.Settings;
 
@@ -21,13 +19,10 @@ public partial class DownloadMacroSettingsExpander : SettingsExpander, IEntryCon
     private DownloadMacroSettingsEntry? _entry;
     private bool _isSynchronizingText;
 
-    private static readonly ISingleImage _SingleImage = DesignHelper.DownloadParserSampleWork(ImageType.SingleImage);
-
-    private static readonly ISingleImage _SingleAnimatedImage =
-        DesignHelper.DownloadParserSampleWork(ImageType.SingleAnimatedImage);
-
-    private static readonly ISingleImage _ImageSet = DesignHelper.DownloadParserSampleWork(ImageType.ImageSet);
-    private static readonly ISingleImage _Novel = DesignHelper.DownloadParserSampleWork(ImageType.Other);
+    private static readonly Illustration _SingleImage = DesignHelper.DownloadParserSampleSingleIllustration;
+    private static readonly Illustration _SingleAnimatedImage = DesignHelper.DownloadParserSampleAnimatedIllustration;
+    private static readonly Illustration _ImageSet = DesignHelper.DownloadParserSampleImageSetIllustration;
+    private static readonly Mako.Novel _Novel = DesignHelper.DownloadParserSampleNovel;
 
     public DownloadMacroSettingsEntry Entry
     {
@@ -120,7 +115,7 @@ public partial class DownloadMacroSettingsExpander : SettingsExpander, IEntryCon
         NovelPathBlock.Text = GetPath(_Novel);
         return;
 
-        string GetPath(IArtworkInfo info) =>
+        string GetPath(object info) =>
             IoHelper.ChangeExtension(
                 IoHelper.NormalizePath(DownloadPathMacroParser.Reduce(text, new ParserContext(info))),
                 ".png");

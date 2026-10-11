@@ -345,7 +345,11 @@ public class VirtualizingAdaptiveGrid : VirtualizingPanel, INavigableContainer, 
     {
         var itemSpacing = ItemSpacing;
         var lineSpacing = LineSpacing;
-        var availableMinor = this.Minor(availableSize);
+        var scale = LayoutQuantizationHelper.GetRenderScaling(this);
+        var rawMinor = this.Minor(availableSize);
+        var availableMinor = double.IsFinite(rawMinor)
+            ? LayoutQuantizationHelper.QuantizeToDevicePixels(rawMinor, scale)
+            : rawMinor;
         var availableMajor = this.Major(availableSize);
         var viewportMajor = this.Major(_viewport.Size);
         var baseMinor = !double.IsNaN(ItemSize) && ItemSize > 0 ? ItemSize : 1;
@@ -428,6 +432,8 @@ public class VirtualizingAdaptiveGrid : VirtualizingPanel, INavigableContainer, 
         var viewportStart = this.MajorStart(_viewport);
         if (!double.IsFinite(viewportStart))
             viewportStart = 0;
+        else
+            viewportStart = LayoutQuantizationHelper.QuantizeToDevicePixels(viewportStart, LayoutQuantizationHelper.GetRenderScaling(this));
 
         var viewportLength = this.MajorSize(_viewport);
         if (!double.IsFinite(viewportLength) || viewportLength <= 0)

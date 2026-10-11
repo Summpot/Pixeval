@@ -6,7 +6,7 @@ using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
-using Pixeval.Models.Navigation;
+using Pixeval.Config;
 
 namespace Pixeval.Views.Settings;
 

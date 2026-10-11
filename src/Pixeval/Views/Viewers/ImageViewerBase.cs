@@ -122,6 +122,16 @@ public abstract partial class ImageViewerBase : UserControl
     [RelayCommand(CanExecute = nameof(CanSaveCurrentImage))]
     private Task SaveAsync() => CurrentPageViewModel?.SaveImageCommand.ExecuteAsync(this) ?? Task.CompletedTask;
 
-    [RelayCommand(CanExecute = nameof(CanSaveAsCurrentImage))]
-    private Task SaveAsAsync() => CurrentPageViewModel?.SaveAsCommand.ExecuteAsync(this) ?? Task.CompletedTask;
+    [RelayCommand(CanExecute = nameof(CanCopyCurrentImage))]
+    private async Task SaveAsAsync() => await CopyCurrentImageToClipboardAsync();
+
+    private async Task CopyCurrentImageToClipboardAsync()
+    {
+        if (CurrentPageViewModel?.DisplaySource?.Frames is not [var singleFrame])
+            return;
+        var clipboard = this.ClipboardService;
+        await clipboard.SetBitmapAsync(singleFrame);
+        await clipboard.FlushAsync();
+        this.Notifications.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+    }
 }
