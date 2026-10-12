@@ -18,6 +18,13 @@ public partial record BrowseHistoryRecord
     public static bool TryCreateWorkKey(object entry, out string key)
     {
         key = "";
+        if (entry is Mako.WorkEntry we)
+            entry = we.AsWorkEntry;
+        else if (entry is Mako.WorkEntry.Illust illust)
+            entry = illust.Illustration;
+        else if (entry is Mako.WorkEntry.NovelWork novel)
+            entry = novel.Novel;
+
         if (entry is not IArtworkSerializable serializable)
             return false;
 

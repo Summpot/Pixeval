@@ -34,30 +34,67 @@ public static class WorkCommands
 
     public static IRelayCommand<IWorkEntry> OpenSeriesPageCommand { get; } = new RelayCommand<IWorkEntry>(work =>
     {
-        var series = work?.Series;
+        var targetWork = work is WorkEntry we ? we.AsWorkEntry : work;
+        var series = targetWork?.Series;
         if (series is not { Id: > 0 })
             return;
-        var workType = work is Mako.Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
+        var workType = targetWork is Mako.Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
         NavigationService.NavigateToSeries(workType, series.Id);
     });
 
-    public static IAsyncRelayCommand<IWorkEntry> BookmarkCommand => ActionService.BookmarkCommand;
+    public static IAsyncRelayCommand<IWorkEntry> BookmarkCommand { get; } = new AsyncRelayCommand<IWorkEntry>(async work =>
+    {
+        if (work is not null)
+            await ActionService.ToggleBookmarkAsync(work);
+    });
 
-    public static IAsyncRelayCommand<BookmarkRequest> AddToBookmarkCommand => ActionService.AddToBookmarkCommand;
+    public static IAsyncRelayCommand<BookmarkRequest> AddToBookmarkCommand { get; } = new AsyncRelayCommand<BookmarkRequest>(async req =>
+    {
+        if (req.Work is not null)
+            await ActionService.AddToBookmarkAsync(req.Work, req.IsPrivate, req.Tags);
+    });
 
-    public static IRelayCommand<object> AddToWatchLaterCommand => ActionService.AddToWatchLaterCommand;
+    public static IRelayCommand<object> AddToWatchLaterCommand { get; } = new RelayCommand<object>(work =>
+    {
+        if (work is not null)
+            ActionService.ToggleWatchLater(work);
+    });
 
-    public static IAsyncRelayCommand<Illustration> SaveIllustrationCommand => ActionService.SaveIllustrationCommand;
+    public static IAsyncRelayCommand<Illustration> SaveIllustrationCommand { get; } = new AsyncRelayCommand<Illustration>(async illust =>
+    {
+        if (illust is not null)
+            await ActionService.SaveIllustrationAsync(illust);
+    });
 
-    public static IAsyncRelayCommand<Mako.Novel> SaveNovelCommand => ActionService.SaveNovelCommand;
+    public static IAsyncRelayCommand<Mako.Novel> SaveNovelCommand { get; } = new AsyncRelayCommand<Mako.Novel>(async novel =>
+    {
+        if (novel is not null)
+            await ActionService.SaveNovelAsync(novel);
+    });
 
-    public static IAsyncRelayCommand<object> SaveCommand => ActionService.SaveCommand;
+    public static IAsyncRelayCommand<object> SaveCommand { get; } = new AsyncRelayCommand<object>(async work =>
+    {
+        if (work is not null)
+            await ActionService.SaveWorkAsync(work);
+    });
 
-    public static IAsyncRelayCommand<Image> CopyCommand => ActionService.CopyCommand;
+    public static IAsyncRelayCommand<Image> CopyCommand { get; } = new AsyncRelayCommand<Image>(async img =>
+    {
+        if (img is not null)
+            await ActionService.CopyImageAsync(img);
+    });
 
-    public static IAsyncRelayCommand<User> FollowUserCommand => ActionService.FollowUserCommand;
+    public static IAsyncRelayCommand<User> FollowUserCommand { get; } = new AsyncRelayCommand<User>(async user =>
+    {
+        if (user is not null)
+            await ActionService.ToggleFollowUserAsync(user);
+    });
 
-    public static IRelayCommand<User> BlockUserCommand => ActionService.BlockUserCommand;
+    public static IRelayCommand<User> BlockUserCommand { get; } = new RelayCommand<User>(user =>
+    {
+        if (user is not null)
+            ActionService.BlockUser(user);
+    });
 
     public static Task<bool> ToggleBookmarkAsync(IWorkEntry work) =>
         ActionService.ToggleBookmarkAsync(work);
@@ -79,6 +116,8 @@ public static class WorkCommands
 
     public static Task SaveImageAsync(object entry, object? parameter, int setIndex)
     {
+        if (entry is WorkEntry we)
+            entry = we.AsWorkEntry;
         if (entry is Illustration illustration)
             return SaveIllustrationAsync(illustration, setIndex);
         return Task.CompletedTask;

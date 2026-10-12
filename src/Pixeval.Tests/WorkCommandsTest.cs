@@ -125,15 +125,36 @@ public sealed class WorkCommandsTest
     }
 
     [TestMethod]
-    public void ButtonWithAddToBookmarkCommandAcceptsBookmarkRequestParameter()
+    public void WorkCommands_AcceptsWorkEntryDirectly()
     {
         var illust = DesignHelper.DesignIllustration;
-        var request = new BookmarkRequest(illust, true, null);
-        var button = new Button
-        {
-            Command = WorkCommands.AddToBookmarkCommand,
-            CommandParameter = request
-        };
-        Assert.IsTrue(button.Command.CanExecute(button.CommandParameter));
+        WorkEntry workEntry = new WorkEntry(new WorkEntry.Illust(illust));
+
+        Assert.IsTrue(WorkCommands.BookmarkCommand.CanExecute(workEntry));
+        Assert.IsTrue(WorkCommands.AddToWatchLaterCommand.CanExecute(workEntry));
+        Assert.IsTrue(WorkCommands.SaveCommand.CanExecute(workEntry));
+
+        var request = new BookmarkRequest(workEntry, false, ["tag"]);
+        Assert.IsTrue(WorkCommands.AddToBookmarkCommand.CanExecute(request));
+    }
+
+    [TestMethod]
+    public void StorageRecords_TryCreateWorkKey_SupportsWorkEntry()
+    {
+        var illust = DesignHelper.DesignIllustration;
+        WorkEntry workEntry = new WorkEntry(new WorkEntry.Illust(illust));
+        var variant = new WorkEntry.Illust(illust);
+
+        Assert.IsTrue(Pixeval.Storage.WatchLaterRecord.TryCreateWorkKey(illust, out var key1));
+        Assert.IsTrue(Pixeval.Storage.WatchLaterRecord.TryCreateWorkKey(workEntry, out var key2));
+        Assert.IsTrue(Pixeval.Storage.WatchLaterRecord.TryCreateWorkKey(variant, out var key3));
+        Assert.AreEqual(key1, key2);
+        Assert.AreEqual(key1, key3);
+
+        Assert.IsTrue(Pixeval.Storage.BrowseHistoryRecord.TryCreateWorkKey(illust, out var hkey1));
+        Assert.IsTrue(Pixeval.Storage.BrowseHistoryRecord.TryCreateWorkKey(workEntry, out var hkey2));
+        Assert.IsTrue(Pixeval.Storage.BrowseHistoryRecord.TryCreateWorkKey(variant, out var hkey3));
+        Assert.AreEqual(hkey1, hkey2);
+        Assert.AreEqual(hkey1, hkey3);
     }
 }

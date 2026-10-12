@@ -12,6 +12,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Pixiv;
 using Pixeval.Services.Media;
 using Pixeval.Utilities;
@@ -80,6 +81,9 @@ public static class Source
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static IImageProviderService? GetImageProvider(Control element) => element.GetValue(ImageProviderProperty);
 
+    public static IImageProviderService? ResolveImageProvider(Control element) =>
+        GetImageProvider(element) ?? App.Services?.GetService<IImageProviderService>();
+
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static void SetImageProvider(Control element, IImageProviderService? value) => element.SetValue(ImageProviderProperty, value);
 
@@ -140,7 +144,7 @@ public static class Source
         ClearImageSource(element);
         SetLoaded(element, false);
 
-        if (GetImageProvider(element) is not { } images)
+        if (ResolveImageProvider(element) is not { } images)
             return;
 
         LoadCacheCore(element, value, images);
@@ -199,7 +203,7 @@ public static class Source
         element.ClearValue(backgroundProperty);
         SetLoaded(element, false);
 
-        if (GetImageProvider(element) is not { } images)
+        if (ResolveImageProvider(element) is not { } images)
             return;
 
         LoadBackgroundCacheCore(element, value, images);

@@ -19,7 +19,7 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
     public ImageViewerViewModel(object thumbnailViewModel)
     {
         ThumbnailViewModel = thumbnailViewModel;
-        var entry = thumbnailViewModel;
+        var entry = thumbnailViewModel is WorkEntry we ? we.AsWorkEntry : thumbnailViewModel;
         var platform = entry switch
         {
             Illustration => PlatformConstants.Pixiv,

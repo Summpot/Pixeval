@@ -199,8 +199,8 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         object? saveTarget = null)
     {
         _platform = platform;
-        _entry = entry;
-        _saveTarget = saveTarget ?? entry;
+        _entry = entry is WorkEntry we ? we.AsWorkEntry : entry;
+        _saveTarget = saveTarget ?? _entry;
         Index = index;
         DisplaySource.Changed += DisplaySourceOnChanged;
         TransformerExtensionItems = [.. TransformerExtensions.Select(extension => new ImageTransformerExtensionCommandItem(this, extension))];
@@ -602,10 +602,11 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     private Task SaveImageAsync(Control? control)
     {
         _ = control;
-        return _saveTarget switch
+        var target = _saveTarget is WorkEntry we ? we.AsWorkEntry : _saveTarget;
+        return target switch
         {
             Illustration illustration => ArtworkActions.SaveIllustrationAsync(illustration, Index),
-            _ => ArtworkActions.SaveWorkAsync(_saveTarget)
+            _ => ArtworkActions.SaveWorkAsync(target)
         };
     }
 

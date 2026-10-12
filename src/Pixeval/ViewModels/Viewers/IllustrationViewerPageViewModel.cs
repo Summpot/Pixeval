@@ -140,6 +140,12 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
     #region Current相关
 
+    private static object? UnwrapEntry(object? entry) => entry switch
+    {
+        WorkEntry we => we.AsWorkEntry,
+        _ => entry
+    };
+
     /// <summary>
     /// 当前插画
     /// </summary>
@@ -148,20 +154,21 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         get
         {
             if (_refreshedIllustrations.TryGetValue(CurrentWorkIndex, out var value))
-                return value;
+                return UnwrapEntry(value);
 
             if (field is not null)
-                return field;
+                return UnwrapEntry(field);
 
             return CurrentWorkIndex < 0 || CurrentWorkIndex >= WorkCount
                 ? null
-                : _illustrations?[CurrentWorkIndex];
+                : UnwrapEntry(_illustrations?[CurrentWorkIndex]);
         }
         private set
         {
-            if (Equals(value, field))
+            var unwrapped = UnwrapEntry(value);
+            if (Equals(unwrapped, field))
                 return;
-            field = value;
+            field = unwrapped;
             NotifyCurrentIllustrationChanged();
         }
     }
@@ -252,6 +259,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
             {
                 Illustration ill => (PlatformConstants.Pixiv, ill.Id.ToString()),
                 BooruPost bp => (bp.PlatformName, bp.Id),
+                WorkEntry we when we.AsWorkEntry is Illustration ill => (PlatformConstants.Pixiv, ill.Id.ToString()),
                 _ => (null, null)
             };
 

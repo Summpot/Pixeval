@@ -125,34 +125,35 @@ public sealed class ArtworkActionService : IArtworkActionService
 
     public async Task<bool> ToggleBookmarkAsync(IWorkEntry work)
     {
-        if (BlockedContentHelper.IsBlockedPlaceholder(work))
+        var targetWork = work is WorkEntry we ? we.AsWorkEntry : work;
+        if (BlockedContentHelper.IsBlockedPlaceholder(targetWork))
             return false;
 
-        var state = ArtworkUiStateStore.GetOrCreate(work);
+        var state = ArtworkUiStateStore.GetOrCreate(targetWork);
         if ((state.BookmarkState & HeartButtonState.Pending) is not 0)
             return false;
 
         var currentIsFavorite = (state.BookmarkState & HeartButtonState.Checked) is not 0;
         var target = !currentIsFavorite;
 
-        ArtworkUiStateStore.SetBookmarkPending(work);
+        ArtworkUiStateStore.SetBookmarkPending(targetWork);
         try
         {
-            var result = await _makoClient.SetWorkBookmarkAsync(work, target);
+            var result = await _makoClient.SetWorkBookmarkAsync(targetWork, target);
             if (result)
             {
-                ArtworkUiStateStore.SetBookmarkState(work, target);
+                ArtworkUiStateStore.SetBookmarkState(targetWork, target);
                 return true;
             }
             else
             {
-                ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
+                ArtworkUiStateStore.RevertBookmarkPending(targetWork, currentIsFavorite);
                 return false;
             }
         }
         catch (Exception ex)
         {
-            ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
+            ArtworkUiStateStore.RevertBookmarkPending(targetWork, currentIsFavorite);
             _logger.LogError(nameof(ToggleBookmarkAsync), ex);
             throw;
         }
@@ -160,33 +161,34 @@ public sealed class ArtworkActionService : IArtworkActionService
 
     public async Task<bool> AddToBookmarkAsync(IWorkEntry work, bool isPrivate, IReadOnlyList<string>? tags = null)
     {
-        if (BlockedContentHelper.IsBlockedPlaceholder(work))
+        var targetWork = work is WorkEntry we ? we.AsWorkEntry : work;
+        if (BlockedContentHelper.IsBlockedPlaceholder(targetWork))
             return false;
 
-        var state = ArtworkUiStateStore.GetOrCreate(work);
+        var state = ArtworkUiStateStore.GetOrCreate(targetWork);
         if ((state.BookmarkState & HeartButtonState.Pending) is not 0)
             return false;
 
         var currentIsFavorite = (state.BookmarkState & HeartButtonState.Checked) is not 0;
 
-        ArtworkUiStateStore.SetBookmarkPending(work);
+        ArtworkUiStateStore.SetBookmarkPending(targetWork);
         try
         {
-            var result = await _makoClient.SetWorkBookmarkAsync(work, true, isPrivate, tags);
+            var result = await _makoClient.SetWorkBookmarkAsync(targetWork, true, isPrivate, tags);
             if (result)
             {
-                ArtworkUiStateStore.SetBookmarkState(work, true);
+                ArtworkUiStateStore.SetBookmarkState(targetWork, true);
                 return true;
             }
             else
             {
-                ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
+                ArtworkUiStateStore.RevertBookmarkPending(targetWork, currentIsFavorite);
                 return false;
             }
         }
         catch (Exception ex)
         {
-            ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
+            ArtworkUiStateStore.RevertBookmarkPending(targetWork, currentIsFavorite);
             _logger.LogError(nameof(AddToBookmarkAsync), ex);
             throw;
         }
@@ -194,22 +196,23 @@ public sealed class ArtworkActionService : IArtworkActionService
 
     public bool ToggleWatchLater(object work)
     {
-        if (!WatchLaterRecord.TryCreateWorkKey(work, out _))
+        var targetWork = work is WorkEntry we ? we.AsWorkEntry : work;
+        if (!WatchLaterRecord.TryCreateWorkKey(targetWork, out _))
             return false;
 
-        var state = ArtworkUiStateStore.GetOrCreate(work);
+        var state = ArtworkUiStateStore.GetOrCreate(targetWork);
         var target = !state.IsInWatchLater;
         if (target)
         {
-            if (!_storageEngine.WatchLaterRepository.AddWatchLater(work))
+            if (!_storageEngine.WatchLaterRepository.AddWatchLater(targetWork))
                 return false;
         }
-        else if (!_storageEngine.WatchLaterRepository.RemoveWatchLater(work))
+        else if (!_storageEngine.WatchLaterRepository.RemoveWatchLater(targetWork))
         {
             return false;
         }
 
-        ArtworkUiStateStore.SetWatchLater(work, target);
+        ArtworkUiStateStore.SetWatchLater(targetWork, target);
         _notifications.ShowSuccess(
             I18NManager.GetResource(target ? MiscResources.AddedToWatchLater : MiscResources.RemovedFromWatchLater));
         return true;
@@ -253,7 +256,8 @@ public sealed class ArtworkActionService : IArtworkActionService
 
     public async Task SaveWorkAsync(object work)
     {
-        switch (work)
+        var targetWork = work is WorkEntry we ? we.AsWorkEntry : work;
+        switch (targetWork)
         {
             case Illustration illustration:
                 await SaveIllustrationAsync(illustration);

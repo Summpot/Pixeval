@@ -518,7 +518,7 @@ public class MarkdownBox : MarkdownScrollViewer
             if (Uri.TryCreate(relativeOrAbsolutePath, UriKind.Absolute, out var uri)
                 && uri.Scheme is "http" or "https")
             {
-                if (Pixeval.Controls.Source.GetImageProvider(owner) is { } images)
+                if (Pixeval.Controls.Source.ResolveImageProvider(owner) is { } images)
                 {
                     return await images
                         .GetImageStreamAsync(ResolvePlatform(uri), uri.OriginalString)

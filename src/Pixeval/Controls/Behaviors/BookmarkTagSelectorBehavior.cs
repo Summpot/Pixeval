@@ -52,7 +52,9 @@ public static class BookmarkTagSelectorBehavior
 
         e.Handled = true;
 
-        var workType = work is Mako.Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
+        var workType = (work is Mako.Novel || (work is WorkEntry we && we.AsWorkEntry is Mako.Novel))
+            ? SimpleWorkType.Novel
+            : SimpleWorkType.Illustration;
         _ = BookmarkTagSelectorFlyoutHelper.ShowAsync(
             control,
             workType,
