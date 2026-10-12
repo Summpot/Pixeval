@@ -68,5 +68,9 @@
             Click="OpenWebView_OnClick"
             Content="{I18N {x:Static pixeval:LoginPageResources+WebViewButton.Content}}"
             IsEnabled="{Binding !IsLoginInProgress}" />
+        <ProgressBar
+            HorizontalAlignment="Stretch"
+            IsIndeterminate="True"
+            IsVisible="{Binding IsLoginInProgress}" />
     </StackPanel>
 </views:IconContentPage>
