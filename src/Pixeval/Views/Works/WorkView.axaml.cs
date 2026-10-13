@@ -37,6 +37,7 @@ public sealed partial class WorkView : UserControl, IDisposable
         this.AppNavigation ?? new NavigationService();
 
     private bool _isDisposed;
+    private ISimpleViewViewModel? _ownedViewModel;
 
     public static FuncValueConverter<bool, SelectionMode> SelectionModeConverter { get; } =
         new(b => b ? SelectionMode.Multiple : SelectionMode.Single);
@@ -130,12 +131,12 @@ public sealed partial class WorkView : UserControl, IDisposable
     }
 
     /// <summary>
-    /// 在调用<see cref="ResetEngine"/>前<see cref="Control.DataContext"/>为<see langword="null"/>
+    /// Resets the source of the model owned by this view, creating it if necessary.
     /// </summary>
     public void ResetEngine(IAsyncEnumerable<object> newEngine)
     {
         var isNovelEngine = newEngine is IAsyncEnumerable<Mako.Novel>;
-        var viewModel = DataContext as IWorkViewViewModel;
+        var viewModel = _ownedViewModel as IWorkViewViewModel;
         switch (viewModel)
         {
             case NovelViewViewModel when isNovelEngine:
@@ -169,9 +170,11 @@ public sealed partial class WorkView : UserControl, IDisposable
 
     private void SetOwnedViewModel(ISimpleViewViewModel viewModel)
     {
-        var oldViewModel = DataContext as IDisposable;
+        var oldViewModel = _ownedViewModel;
+        _ownedViewModel = viewModel;
         DataContext = viewModel;
-        oldViewModel?.Dispose();
+        if (!ReferenceEquals(oldViewModel, viewModel))
+            (oldViewModel as IDisposable)?.Dispose();
     }
 
     private void ListBox_OnContainerPrepared(object? sender, ContainerPreparedEventArgs e)
@@ -208,10 +211,10 @@ public sealed partial class WorkView : UserControl, IDisposable
 
         _isDisposed = true;
         WorkListBox.ItemsSource = null;
-        var d = DataContext;
+        var viewModel = _ownedViewModel;
+        _ownedViewModel = null;
         DataContext = null!;
-        if (d is IDisposable viewModel)
-            viewModel.Dispose();
+        (viewModel as IDisposable)?.Dispose();
     }
 
     #endregion
