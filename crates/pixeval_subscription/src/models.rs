@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+#[boltffi::data]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, uniffi::Enum)]
 pub enum SubscriptionStatus {
     Idle,
@@ -10,6 +11,7 @@ pub enum SubscriptionStatus {
     Cancelled,
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct SubscriptionFetchState {
     pub subscription_id: i64,
@@ -18,6 +20,7 @@ pub struct SubscriptionFetchState {
     pub status: SubscriptionStatus,
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct SubscriptionDownloadItem {
     pub artwork_id: String,
@@ -28,6 +31,7 @@ pub struct SubscriptionDownloadItem {
     pub is_novel: bool,
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct SubscriptionSyncConfig {
     pub download_path_macro: String,
@@ -37,12 +41,14 @@ pub struct SubscriptionSyncConfig {
     pub my_user_id: Option<i64>,
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Enum)]
 pub enum SyncRequestKind {
     All,
     Single { subscription_id: i64 },
 }
 
+#[boltffi::data]
 #[derive(Clone, Copy, Debug, PartialEq, uniffi::Record)]
 pub struct FolderTaskItemState {
     pub state: u32,
@@ -52,6 +58,7 @@ pub struct FolderTaskItemState {
     pub error_count: u32,
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct SubscriptionFolderSnapshot {
     pub subscription_id: i64,

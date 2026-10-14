@@ -189,9 +189,9 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty] public partial IAnimatedBitmap? Avatar { get; private set; }
 
-    public string? IdText => User?.Id;
+    public string? IdText => User is { } u ? u.Id : null;
 
-    public Uri? Url => User is not null ? new Uri($"https://www.pixiv.net/users/{User.Id}") : null;
+    public Uri? Url => User is { } u ? new Uri($"https://www.pixiv.net/users/{u.Id}") : null;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ToggleRestrictedModeCommand))]

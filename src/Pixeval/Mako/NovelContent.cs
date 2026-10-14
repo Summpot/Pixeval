@@ -1,4 +1,4 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System;
@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Pixeval.Mako;
 
-public partial record NovelContent
+public partial record struct NovelContent
 {
     public static NovelContent CreateDefault() => new(
         0,
@@ -52,13 +52,13 @@ public partial record NovelContent
     }
 }
 
-public partial record NovelImage
+public partial record struct NovelImage
 {
     public string ThumbnailUrl => Urls.X1200;
     public string OriginalUrl => Urls.Original;
 }
 
-public partial record NovelIllustration
+public partial record struct NovelIllustration
 {
     public string ThumbnailUrl => Illust.Images.Medium;
     public Uri WebsiteUri => new($"https://www.pixiv.net/artworks/{Id}");

@@ -28,6 +28,7 @@ static DOWNLOAD_RUNTIME: LazyLock<tokio::runtime::Runtime> = LazyLock::new(|| {
         .expect("Failed to build Tokio runtime for download manager")
 });
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Default)]
 pub struct DownloadNetworkOptions {
     pub proxy_url: Option<String>,

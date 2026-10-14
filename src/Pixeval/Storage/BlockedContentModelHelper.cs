@@ -35,9 +35,12 @@ public static class BlockedContentModelHelper
     };
 
     internal static bool IsBlockedPlaceholder(object entry) =>
+        (entry is Illustration i && i.MetaSinglePage.OriginalImageUrl == AppInfo.BlockedContentPath) ||
+        (entry is Mako.Novel n && n.ImageUrls.Medium == AppInfo.BlockedContentPath) ||
         _BlockedArtworkMarkers.TryGetValue(entry, out _);
 
-    internal static T Replace<T>(T entry, BlockedContentSnapshot snapshot) where T : class
+
+    internal static T Replace<T>(T entry, BlockedContentSnapshot snapshot) where T : notnull
     {
         return BlockedContentHelper.IsBlocked(entry, snapshot)
             ? entry switch
@@ -106,10 +109,12 @@ public static class BlockedContentModelHelper
         };
 
     private static T MarkBlocked<T>(T entry)
-        where T : class
     {
-        if (!_BlockedArtworkMarkers.TryGetValue(entry, out _))
-            _BlockedArtworkMarkers.Add(entry, _BlockedArtworkMarker);
+        if (typeof(T).IsClass && entry is object obj)
+        {
+            if (!_BlockedArtworkMarkers.TryGetValue(obj, out _))
+                _BlockedArtworkMarkers.Add(obj, _BlockedArtworkMarker);
+        }
         return entry;
     }
 }

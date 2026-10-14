@@ -21,7 +21,7 @@ public sealed partial class HomePage
         ViewModel.SetAddingConfiguredCard(true);
         try
         {
-            if (!ViewModel.TryCreateCardFromSourceParameters(out var draft) || draft is null)
+            if (!ViewModel.TryCreateCardFromSourceParameters(out var draftNullable) || draftNullable is not { } draft)
             {
                 ShowInvalidParameterWarning();
                 return;
@@ -38,17 +38,17 @@ public sealed partial class HomePage
                 return;
             }
 
-            draft = draft with
+            var card = draft with
             {
                 Column = column,
                 Row = row,
                 ColumnSpan = width,
                 RowSpan = height
             };
-            _cards.Add(draft);
-            SelectCard(draft);
+            _cards.Add(card);
+            SelectCard(card);
             SaveLayout();
-            AddCardControl(draft);
+            AddCardControl(card);
             RefreshSelectionVisuals();
         }
         finally
@@ -92,7 +92,7 @@ public sealed partial class HomePage
 
     private void ApplySelectedCardLayoutFromViewModel()
     {
-        if (_selectedCard is null)
+        if (_selectedCard is not { } selectedCard)
             return;
 
         var newColumn = DecimalToZeroBasedInt(ViewModel.SelectedColumnValue);
@@ -106,7 +106,7 @@ public sealed partial class HomePage
             newRowSpan = RowCount - newRow;
 
         if (newColumnSpan < 1 || newRowSpan < 1
-                              || !CanPlace(_selectedCard, newColumn, newRow, newColumnSpan, newRowSpan))
+                              || !CanPlace(selectedCard, newColumn, newRow, newColumnSpan, newRowSpan))
         {
             UpdateSelectedCardControls();
             this.Notifications.ShowWarning(
@@ -115,15 +115,15 @@ public sealed partial class HomePage
             return;
         }
 
-        var index = _cards.IndexOf(_selectedCard);
-        var updated = _selectedCard with
+        var index = _cards.IndexOf(selectedCard);
+        var updated = selectedCard with
         {
             Column = newColumn,
             Row = newRow,
             ColumnSpan = newColumnSpan,
             RowSpan = newRowSpan
         };
-        if (TryGetCardControl(_selectedCard, out var control))
+        if (TryGetCardControl(selectedCard, out var control))
         {
             control.UpdateCard(updated);
             ApplyCardLayout(control);
@@ -139,16 +139,16 @@ public sealed partial class HomePage
 
     private void ApplySelectedCardBackgroundFromViewModel()
     {
-        if (_selectedCard is null)
+        if (_selectedCard is not { } selectedCard)
             return;
 
         var color = ViewModel.SelectedBackgroundColor.ToUInt32();
-        if (_selectedCard.BackgroundColor == color)
+        if (selectedCard.BackgroundColor == color)
             return;
 
-        var index = _cards.IndexOf(_selectedCard);
-        var updated = _selectedCard with { BackgroundColor = color };
-        if (TryGetCardControl(_selectedCard, out var control))
+        var index = _cards.IndexOf(selectedCard);
+        var updated = selectedCard with { BackgroundColor = color };
+        if (TryGetCardControl(selectedCard, out var control))
         {
             control.UpdateCard(updated);
             control.UpdateBackground();

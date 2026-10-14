@@ -31,15 +31,15 @@ public static class NavigationYamlParser
         var document = rawResult.Settings;
         NavigationConfiguration? configuration = null;
 
-        if (document is not null && diagnostics.Count is 0)
+        if (document is { } doc && diagnostics.Count is 0)
         {
-            var newTab = string.IsNullOrWhiteSpace(document.NewTab) ? null : document.NewTab.Trim();
+            var newTab = string.IsNullOrWhiteSpace(doc.NewTab) ? null : doc.NewTab.Trim();
             NavigationPageDefinition? newTabDefinition = null;
             if (newTab is not null)
                 NavigationPageRegistry.TryGetPage(newTab, out newTabDefinition);
 
-            var header = BuildItems(document.Header);
-            var footer = BuildItems(document.Footer);
+            var header = BuildItems(doc.Header);
+            var footer = BuildItems(doc.Footer);
 
             configuration = new NavigationConfiguration(newTab, newTabDefinition, header, footer);
         }

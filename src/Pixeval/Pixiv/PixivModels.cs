@@ -152,4 +152,24 @@ public static class FetchEngineExtensions
             return existing;
         return new AsyncFetchEngine<T>(source, onCancel ?? (source is IFetchEngine<T> e ? e.EngineHandle.Cancel : null));
     }
+
+    public static IAsyncEnumerable<IWorkEntry> AsWorkEntries<T>(this IAsyncEnumerable<T> source) where T : IWorkEntry
+    {
+        return System.Linq.AsyncEnumerable.Select(source, static x => (IWorkEntry)x);
+    }
+
+    public static IAsyncEnumerable<object> AsObjects<T>(this IAsyncEnumerable<T> source)
+    {
+        return System.Linq.AsyncEnumerable.Select(source, static x => (object)x!);
+    }
+
+    public static IFetchEngine<IWorkEntry> AsWorkEntries<T>(this IFetchEngine<T> source) where T : IWorkEntry
+    {
+        return new AsyncFetchEngine<IWorkEntry>(System.Linq.AsyncEnumerable.Select(source, static x => (IWorkEntry)x), () => source.EngineHandle.Cancel());
+    }
+
+    public static IFetchEngine<object> AsObjects<T>(this IFetchEngine<T> source)
+    {
+        return new AsyncFetchEngine<object>(System.Linq.AsyncEnumerable.Select(source, static x => (object)x!), () => source.EngineHandle.Cancel());
+    }
 }

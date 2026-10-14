@@ -32,8 +32,8 @@ public sealed record WorkSeriesInfoViewModel(
             $"{response.Context.ContentOrder}/{response.Detail.PublishedContentCount ?? 0}");
 
         static WorkSeriesNavigationViewModel? CreateNavigation(Illustration? work) =>
-            work is { Id: > 0, Visible: true }
-                ? new(work.Id, work.Title, work)
+            work is { Id: > 0, Visible: true } w
+                ? new(w.Id, w.Title, w)
                 : null;
     }
 
@@ -54,10 +54,11 @@ public sealed record WorkSeriesInfoViewModel(
             CreateNavigation(content.SeriesNavigation?.NextNovel));
 
         static WorkSeriesNavigationViewModel? CreateNavigation(NovelNavigation? work) =>
-            work is { Id: > 0, Viewable: true }
-                ? new(work.Id, work.Title)
+            work is { Id: > 0, Viewable: true } w
+                ? new(w.Id, w.Title)
                 : null;
     }
+
 }
 
 public sealed record WorkSeriesNavigationViewModel(

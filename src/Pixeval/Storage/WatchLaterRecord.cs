@@ -1,9 +1,9 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 namespace Pixeval.Storage;
 
-public partial record WatchLaterRecord
+public partial record struct WatchLaterRecord
 {
     private object? _entry;
 

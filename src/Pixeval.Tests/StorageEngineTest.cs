@@ -25,7 +25,7 @@ public sealed class StorageEngineTest
 
         var found = storage.GetSearchHistoryByValue("genshin");
         Assert.IsNotNull(found);
-        Assert.AreEqual("原神", found.TranslatedName);
+        Assert.AreEqual("原神", found.Value.TranslatedName);
 
         var upserted = storage.UpsertSearchHistory("genshin", "原神冲击", "2026-10-06T01:00:00Z");
         Assert.AreEqual("原神冲击", upserted.TranslatedName);
@@ -56,7 +56,7 @@ public sealed class StorageEngineTest
 
         var found = storage.GetBrowseHistoryByWorkKey("Illustration:12345");
         Assert.IsNotNull(found);
-        Assert.AreEqual("{\"title\":\"Test Artwork\"}", found.PayloadJson);
+        Assert.AreEqual("{\"title\":\"Test Artwork\"}", found.Value.PayloadJson);
 
         // Replacing should update payload and preserve single entry count
         var rec2 = storage.AddOrReplaceBrowseHistory(
@@ -94,7 +94,7 @@ public sealed class StorageEngineTest
 
         var fetched = storage.GetWatchLaterByWorkKey("Illustration:999");
         Assert.IsNotNull(fetched);
-        Assert.AreEqual("{\"title\":\"Later Artwork\"}", fetched.PayloadJson);
+        Assert.AreEqual("{\"title\":\"Later Artwork\"}", fetched.Value.PayloadJson);
 
         var list = storage.StreamWatchLater(0, 5);
         Assert.AreEqual(1, list.Count);
@@ -214,9 +214,9 @@ public sealed class StorageEngineTest
 
         var fetched = storage.GetSubscriptionByKey(123456, 1, 0);
         Assert.IsNotNull(fetched);
-        Assert.AreEqual("Artist Alpha", fetched.Title);
-        Assert.AreEqual("Alpha", fetched.Author);
-        Assert.AreEqual("avatar.png", fetched.Avatar);
+        Assert.AreEqual("Artist Alpha", fetched.Value.Title);
+        Assert.AreEqual("Alpha", fetched.Value.Author);
+        Assert.AreEqual("avatar.png", fetched.Value.Avatar);
 
         var updated = storage.UpsertSubscription(
             123456,
@@ -289,10 +289,10 @@ public sealed class StorageEngineTest
 
         var fetched = storage.GetLoginUserByKey(upserted.HistoryEntryId);
         Assert.IsNotNull(fetched);
-        Assert.AreEqual(88888, fetched.UserId);
-        Assert.AreEqual("PixevalUser", fetched.Name);
-        Assert.AreEqual("token_xyz_123", fetched.RefreshToken);
-        Assert.IsTrue(fetched.IsPremium);
+        Assert.AreEqual(88888, fetched.Value.UserId);
+        Assert.AreEqual("PixevalUser", fetched.Value.Name);
+        Assert.AreEqual("token_xyz_123", fetched.Value.RefreshToken);
+        Assert.IsTrue(fetched.Value.IsPremium);
 
         var all = storage.GetAllLoginUsers();
         Assert.AreEqual(1, all.Count);

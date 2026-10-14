@@ -3,6 +3,7 @@
 
 use thiserror::Error;
 
+#[boltffi::error]
 #[derive(Debug, Error, uniffi::Error)]
 pub enum SubscriptionError {
     #[error("Subscription not found: {id}")]

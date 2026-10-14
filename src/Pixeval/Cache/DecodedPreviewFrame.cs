@@ -1,4 +1,4 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System;
@@ -19,7 +19,7 @@ public readonly record struct PreviewPixel(byte Blue, byte Green, byte Red, byte
     public static bool operator !=(SkiaSharp.SKColor c, PreviewPixel p) => !(p == c);
 }
 
-public partial record DecodedPreviewFrame
+public partial record struct DecodedPreviewFrame
 {
     public byte[] Bytes => BgraData;
 

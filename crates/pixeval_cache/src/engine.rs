@@ -20,6 +20,7 @@ use crate::planar::{
     decode_planar_lz4_to_bgra, decode_planar_lz4_to_bgra_vec, encode_planar_lz4, is_planar_lz4,
 };
 
+#[boltffi::data]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
 pub struct CacheStats {
     pub entry_count: u32,
@@ -27,6 +28,7 @@ pub struct CacheStats {
     pub total_used_bytes: u64,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct PlanarImageResult {
     pub width: u32,
@@ -34,6 +36,7 @@ pub struct PlanarImageResult {
     pub bgra_data: Vec<u8>,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
 pub struct PlanarImageInfo {
     pub width: u32,

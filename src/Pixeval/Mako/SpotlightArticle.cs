@@ -1,4 +1,4 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System;
@@ -7,7 +7,7 @@ using Pixeval.Pixiv;
 
 namespace Pixeval.Mako;
 
-public partial record SpotlightArticle
+public partial record struct SpotlightArticle
 {
     [JsonIgnore]
     public string? ThumbnailUrl => Thumbnail;

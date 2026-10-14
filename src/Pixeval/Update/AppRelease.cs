@@ -5,7 +5,7 @@ using System;
 
 namespace Pixeval.Update;
 
-public partial record AppRelease : IComparable<AppRelease>
+public partial record struct AppRelease : IComparable<AppRelease>
 {
     public Version? ParsedVersion => System.Version.TryParse(Version, out var v) ? v : null;
 
@@ -15,13 +15,8 @@ public partial record AppRelease : IComparable<AppRelease>
 
     public Uri? ReleaseUri => Uri.TryCreate(HtmlUrl, UriKind.Absolute, out var uri) ? uri : null;
 
-    public int CompareTo(AppRelease? other)
+    public int CompareTo(AppRelease other)
     {
-        if (ReferenceEquals(this, other))
-            return 0;
-        if (other is null)
-            return 1;
-
         if (ParsedVersion is { } v1 && other.ParsedVersion is { } v2)
             return v1.CompareTo(v2);
 

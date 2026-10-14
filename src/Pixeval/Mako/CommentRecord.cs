@@ -1,4 +1,4 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System;
@@ -7,7 +7,7 @@ using System.Globalization;
 
 namespace Pixeval.Mako;
 
-public partial record CommentRecord
+public partial record struct CommentRecord
 {
     public DateTimeOffset PostedAt =>
         DateTimeOffset.TryParse(Date, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var postedAt)

@@ -18,6 +18,7 @@ pub use locator::*;
 pub use state_machine::*;
 pub use stream::*;
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn split_client_hello(packet: Vec<u8>) -> Vec<Vec<u8>> {
     fragmentation::split_client_hello(&packet)
@@ -26,6 +27,7 @@ pub fn split_client_hello(packet: Vec<u8>) -> Vec<Vec<u8>> {
         .collect()
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn locate_server_name(packet: Vec<u8>) -> Option<String> {
     let mut locator = locator::ServerNameLocator::new(&packet);
@@ -39,11 +41,13 @@ pub fn locate_server_name(packet: Vec<u8>) -> Option<String> {
 }
 
 #[uniffi::export]
+#[boltffi::export]
 pub fn is_pixiv_host(host: String) -> bool {
     let h = host.to_ascii_lowercase();
     h == "pixiv.net" || h.ends_with(".pixiv.net") || h == "pximg.net" || h.ends_with(".pximg.net")
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, PartialEq, Eq)]
 pub struct MahoProcessResult {
     pub is_handshake: bool,

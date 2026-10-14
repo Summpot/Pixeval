@@ -1,11 +1,11 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using Pixeval.Config;
 
 namespace Pixeval.Storage;
 
-public partial record WorkSubscriptionRecord
+public partial record struct WorkSubscriptionRecord
 {
     public WorkSubscriptionType Type => (WorkSubscriptionType)SubscriptionType;
 

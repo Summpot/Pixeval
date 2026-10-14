@@ -1,4 +1,4 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System;
@@ -9,7 +9,7 @@ using Pixeval.Config;
 
 namespace Pixeval.Download;
 
-public partial record DownloadItemSnapshot
+public partial record struct DownloadItemSnapshot
 {
     public string AuthorsText => Author;
 

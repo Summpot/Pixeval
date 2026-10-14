@@ -145,8 +145,8 @@ public class WorkRecommendedPage : WorkTypeWorksPage
     {
         return workType switch
         {
-            WorkType.Novel => makoClient.NovelRecommended(true, true),
-            _ => makoClient.WorkRecommended(true, true)
+            WorkType.Novel => makoClient.NovelRecommended(true, true).AsWorkEntries(),
+            _ => makoClient.WorkRecommended(true, true).AsWorkEntries()
         };
     }
 }
@@ -172,9 +172,10 @@ public class WorkNewPage : WorkTypeWorksPage
     protected override IAsyncEnumerable<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType)
     {
         return workType is WorkType.Novel
-            ? makoClient.NovelNew(null)
-            : makoClient.WorkNew(workType is WorkType.Manga ? "manga" : "illust", null);
+            ? makoClient.NovelNew(null).AsWorkEntries()
+            : makoClient.WorkNew(workType is WorkType.Manga ? "manga" : "illust", null).AsWorkEntries();
     }
+
 }
 
 public class WorkPostsPage : WorkTypeWorksPage
@@ -258,10 +259,11 @@ public class WorkPostsPage : WorkTypeWorksPage
 
         return workType switch
         {
-            WorkType.Novel => makoClient.NovelPosted(_user.Id),
-            WorkType.Manga => makoClient.WorkPosted(_user.Id, "manga"),
-            _ => makoClient.WorkPosted(_user.Id, "illust")
+            WorkType.Novel => makoClient.NovelPosted(_user.Id).AsWorkEntries(),
+            WorkType.Manga => makoClient.WorkPosted(_user.Id, "manga").AsWorkEntries(),
+            _ => makoClient.WorkPosted(_user.Id, "illust").AsWorkEntries()
         };
+
     }
 
     protected override void OnSourceChanged(IAsyncEnumerable<IWorkEntry> engine, WorkType workType)

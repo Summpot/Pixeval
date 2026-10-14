@@ -1,11 +1,11 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System;
 
 namespace Pixeval.Subscription;
 
-public partial record SubscriptionFetchState
+public partial record struct SubscriptionFetchState
 {
     public int WorkSubscriptionId => (int)SubscriptionId;
 

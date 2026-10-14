@@ -155,8 +155,8 @@ public partial class MakoClient
                 works.Add(item);
                 if (works.Count >= 1) break;
             }
-            var first = works.Count > 0 ? works[0] : null!;
-            return (seriesDetail.Detail, first, NovelSeries(seriesId).ToFetchEngine());
+            IWorkEntry? first = works.Count > 0 ? works[0] : null;
+            return (seriesDetail.Detail, first, NovelSeries(seriesId).AsWorkEntries().ToFetchEngine());
         }
         else
         {
@@ -167,8 +167,8 @@ public partial class MakoClient
                 works.Add(item);
                 if (works.Count >= 1) break;
             }
-            var first = works.Count > 0 ? works[0] : null!;
-            return (seriesDetail.Detail, first, WorkSeries(seriesId).ToFetchEngine());
+            IWorkEntry? first = works.Count > 0 ? works[0] : null;
+            return (seriesDetail.Detail, first, WorkSeries(seriesId).AsWorkEntries().ToFetchEngine());
         }
     }
 
@@ -176,33 +176,33 @@ public partial class MakoClient
     {
         var privacyStr = privacy is PrivacyPolicy.Private ? "private" : "public";
         return (type is SimpleWorkType.Novel
-            ? (IAsyncEnumerable<IWorkEntry>) NovelBookmarks(id, privacyStr, tag)
-            : WorkBookmarks(id, privacyStr, tag)).ToFetchEngine();
+            ? NovelBookmarks(id, privacyStr, tag).AsWorkEntries()
+            : WorkBookmarks(id, privacyStr, tag).AsWorkEntries()).ToFetchEngine();
     }
 
     public IFetchEngine<IWorkEntry> WorkPosted(WorkType type, long id)
     {
         return (type is WorkType.Novel
-            ? (IAsyncEnumerable<IWorkEntry>) NovelPosted(id)
-            : WorkPosted(id, type is WorkType.Manga ? "manga" : "illust")).ToFetchEngine();
+            ? NovelPosted(id).AsWorkEntries()
+            : WorkPosted(id, type is WorkType.Manga ? "manga" : "illust").AsWorkEntries()).ToFetchEngine();
     }
 
     public IFetchEngine<IWorkEntry> WorkSeries(SimpleWorkType type, long seriesId)
     {
         return (type is SimpleWorkType.Novel
-            ? (IAsyncEnumerable<IWorkEntry>) NovelSeries(seriesId)
-            : WorkSeries(seriesId)).ToFetchEngine();
+            ? NovelSeries(seriesId).AsWorkEntries()
+            : WorkSeries(seriesId).AsWorkEntries()).ToFetchEngine();
     }
 
     public IFetchEngine<object> WorkRecommended(WorkType type) =>
         (type is WorkType.Novel
-            ? (IAsyncEnumerable<object>) NovelRecommended(true, true)
-            : WorkRecommended(true, true)).ToFetchEngine();
+            ? NovelRecommended(true, true).AsObjects()
+            : WorkRecommended(true, true).AsObjects()).ToFetchEngine();
 
     public IFetchEngine<object> WorkNew(WorkType type) =>
         (type is WorkType.Novel
-            ? (IAsyncEnumerable<object>) NovelNew(null)
-            : WorkNew(type is WorkType.Manga ? "manga" : "illust", null)).ToFetchEngine();
+            ? NovelNew(null).AsObjects()
+            : WorkNew(type is WorkType.Manga ? "manga" : "illust", null).AsObjects()).ToFetchEngine();
 
     public IFetchEngine<object> WorkRanking(SimpleWorkType type, RankOption rankOption, DateTimeOffset date)
     {
@@ -231,27 +231,27 @@ public partial class MakoClient
         };
         var dateStr = date.ToString("yyyy-MM-dd");
         return (type is SimpleWorkType.Novel
-            ? (IAsyncEnumerable<object>) NovelRanking(mode, dateStr)
-            : WorkRanking(mode, dateStr)).ToFetchEngine();
+            ? NovelRanking(mode, dateStr).AsObjects()
+            : WorkRanking(mode, dateStr).AsObjects()).ToFetchEngine();
     }
 
     public IFetchEngine<object> WorkFollowing(SimpleWorkType type, PrivacyPolicy privacy)
     {
         var restrict = privacy is PrivacyPolicy.Private ? "private" : "public";
         return (type is SimpleWorkType.Novel
-            ? (IAsyncEnumerable<object>) NovelFollowing(restrict)
-            : WorkFollowing(restrict)).ToFetchEngine();
+            ? NovelFollowing(restrict).AsObjects()
+            : WorkFollowing(restrict).AsObjects()).ToFetchEngine();
     }
 
     public IFetchEngine<object> WorkMyPixiv(SimpleWorkType type) =>
         (type is SimpleWorkType.Novel
-            ? (IAsyncEnumerable<object>) NovelMypixiv()
-            : WorkMypixiv()).ToFetchEngine();
+            ? NovelMypixiv().AsObjects()
+            : WorkMypixiv().AsObjects()).ToFetchEngine();
 
     public IFetchEngine<object> WorkRelated(long id, SimpleWorkType type) =>
         (type is SimpleWorkType.Novel
-            ? (IAsyncEnumerable<object>) NovelRelated(id)
-            : WorkRelated(id)).ToFetchEngine();
+            ? NovelRelated(id).AsObjects()
+            : WorkRelated(id).AsObjects()).ToFetchEngine();
 
     public IFetchEngine<User> UserFollowing(long userId, PrivacyPolicy privacy)
     {
@@ -376,12 +376,12 @@ public partial class MakoClient
     {
         var restrict = policy is PrivacyPolicy.Private ? "private" : "public";
         return (type is SimpleWorkType.Novel
-            ? (IAsyncEnumerable<object>) SearchBookmarkNovel(restrict, bookmarkTag, workTag, bookmarkPeriod, order)
-            : SearchBookmarkIllust(restrict, bookmarkTag, workTag, bookmarkPeriod, order)).ToFetchEngine();
+            ? SearchBookmarkNovel(restrict, bookmarkTag, workTag, bookmarkPeriod, order).AsObjects()
+            : SearchBookmarkIllust(restrict, bookmarkTag, workTag, bookmarkPeriod, order).AsObjects()).ToFetchEngine();
     }
 
     public IFetchEngine<object> WorkBrowsingHistory(SimpleWorkType type) =>
         (type is SimpleWorkType.Novel
-            ? (IAsyncEnumerable<object>) BrowsingHistoryNovels()
-            : BrowsingHistoryIllusts()).ToFetchEngine();
+            ? BrowsingHistoryNovels().AsObjects()
+            : BrowsingHistoryIllusts().AsObjects()).ToFetchEngine();
 }

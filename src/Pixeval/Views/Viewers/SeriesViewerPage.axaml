@@ -52,7 +52,7 @@
                                 Spacing="4">
                                 <TextBlock
                                     MaxLines="1"
-                                    Text="{Binding SeriesDetail?.Title}"
+                                    Text="{Binding SeriesDetail.Value.Title}"
                                     TextTrimming="CharacterEllipsis"
                                     Theme="{StaticResource CaptionStrongTextBlockStyle}" />
                                 <TextBlock
@@ -84,7 +84,7 @@
                             VerticalAlignment="Center"
                             Spacing="8">
                             <TextBlock
-                                Text="{Binding SeriesDetail?.Title}"
+                                Text="{Binding SeriesDetail.Value.Title}"
                                 TextWrapping="Wrap"
                                 Theme="{StaticResource TitleTextBlockStyle}" />
                             <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding AuthorName}" />

@@ -145,8 +145,7 @@ public class Versioning
             if (NewestAppReleaseModel is not { } release || release.Assets.Count == 0)
                 return false;
 
-            var asset = PickMatchingAsset(release.Assets);
-            if (asset is null)
+            if (PickMatchingAsset(release.Assets) is not { } asset)
                 return false;
 
             var updatesDir = Path.Combine(AppInfo.CacheFolder, "Updates");
@@ -164,27 +163,38 @@ public class Versioning
 
     private static ReleaseAsset? PickMatchingAsset(IReadOnlyList<ReleaseAsset> assets)
     {
+        if (assets.Count == 0) return null;
         if (OperatingSystem.IsWindows())
         {
-            return assets.FirstOrDefault(static a => a.Name.Contains("win-x64", StringComparison.OrdinalIgnoreCase))
-                ?? assets.FirstOrDefault(static a => a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                ?? assets.FirstOrDefault(static a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-                ?? assets.FirstOrDefault();
+            return Find(assets, static a => a.Name.Contains("win-x64", StringComparison.OrdinalIgnoreCase))
+                ?? Find(assets, static a => a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                ?? Find(assets, static a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                ?? assets[0];
         }
         if (OperatingSystem.IsLinux())
         {
-            return assets.FirstOrDefault(static a => a.Name.Contains("linux-x64", StringComparison.OrdinalIgnoreCase))
-                ?? assets.FirstOrDefault(static a => a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
-                ?? assets.FirstOrDefault();
+            return Find(assets, static a => a.Name.Contains("linux-x64", StringComparison.OrdinalIgnoreCase))
+                ?? Find(assets, static a => a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
+                ?? assets[0];
         }
         if (OperatingSystem.IsMacOS())
         {
-            return assets.FirstOrDefault(static a => a.Name.Contains("osx", StringComparison.OrdinalIgnoreCase) || a.Name.Contains("mac", StringComparison.OrdinalIgnoreCase))
-                ?? assets.FirstOrDefault(static a => a.Name.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase))
-                ?? assets.FirstOrDefault();
+            return Find(assets, static a => a.Name.Contains("osx", StringComparison.OrdinalIgnoreCase) || a.Name.Contains("mac", StringComparison.OrdinalIgnoreCase))
+                ?? Find(assets, static a => a.Name.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase))
+                ?? assets[0];
         }
-        return assets.FirstOrDefault();
+        return assets[0];
+
+        static ReleaseAsset? Find(IReadOnlyList<ReleaseAsset> list, Func<ReleaseAsset, bool> predicate)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (predicate(list[i])) return list[i];
+            }
+            return null;
+        }
     }
+
 
     public void ApplyUpdateAndRestart()
     {
@@ -263,7 +273,7 @@ public class Versioning
                 HtmlUrl: string.Empty,
                 IsPrerelease: false,
                 Assets: []);
-            AppReleaseModels = [_velopackUpdateReleaseModel];
+            AppReleaseModels = [_velopackUpdateReleaseModel.Value];
             UpdateState = UpdateEngine.CompareVersions(CurrentVersionShortText, versionStr);
         }
 

@@ -16,6 +16,7 @@ pub use render::epub::*;
 pub use render::html::*;
 pub use render::markdown::*;
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Default)]
 pub struct NovelImageRenderDto {
     pub image_id: i64,
@@ -23,6 +24,7 @@ pub struct NovelImageRenderDto {
     pub filename: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Default)]
 pub struct NovelIllustRenderDto {
     pub illust_id: i64,
@@ -33,6 +35,7 @@ pub struct NovelIllustRenderDto {
     pub filename: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Default)]
 pub struct NovelEpubMetadataDto {
     pub id: i64,
@@ -43,6 +46,7 @@ pub struct NovelEpubMetadataDto {
     pub cover_filename: Option<String>,
 }
 
+#[boltffi::error]
 #[derive(uniffi::Error, thiserror::Error, Debug)]
 pub enum NovelError {
     #[error("Render error: {message}")]

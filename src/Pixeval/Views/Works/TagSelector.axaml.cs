@@ -24,17 +24,17 @@ public partial class TagSelector : UserControl
 
     public long WorkId { get; init; }
 
-    public static readonly DirectProperty<TagSelector, AvaloniaList<BookmarkTag>> TagsSourceProperty =
-        AvaloniaProperty.RegisterDirect<TagSelector, AvaloniaList<BookmarkTag>>(nameof(TagsSource), t => t.TagsSource,
+    public static readonly DirectProperty<TagSelector, AvaloniaList<IBookmarkTag>> TagsSourceProperty =
+        AvaloniaProperty.RegisterDirect<TagSelector, AvaloniaList<IBookmarkTag>>(nameof(TagsSource), t => t.TagsSource,
             (t, v) => t.TagsSource = v);
 
-    public AvaloniaList<BookmarkTag> TagsSource
+    public AvaloniaList<IBookmarkTag> TagsSource
     {
         get;
         set => SetAndRaise(TagsSourceProperty, ref field, value);
     } = [];
 
-    public AvaloniaList<BookmarkTag> SelectedTags { get; } = new()
+    public AvaloniaList<IBookmarkTag> SelectedTags { get; } = new()
     {
         Validate = t =>
         {
@@ -94,8 +94,8 @@ public partial class TagSelector : UserControl
                 var publicTagsTask = GetTagsAsync(PrivacyPolicy.Public);
                 var privateTagsTask = GetTagsAsync(PrivacyPolicy.Private);
                 await Task.WhenAll(publicTagsTask, privateTagsTask);
-                var tagSource = publicTagsTask.Result;
-                tagSource.AddRange(privateTagsTask.Result);
+                var tagSource = new AvaloniaList<IBookmarkTag>(publicTagsTask.Result.Cast<IBookmarkTag>());
+                tagSource.AddRange(privateTagsTask.Result.Cast<IBookmarkTag>());
                 tagSource.Add(GetAddTag());
                 TagsSource = tagSource;
             }
@@ -105,8 +105,8 @@ public partial class TagSelector : UserControl
                 var bookmarkDetail = await makoClient.GetWorkBookmarkDetailAsync(WorkType, WorkId);
                 IsPrivate = bookmarkDetail.Restrict.Equals("private", StringComparison.OrdinalIgnoreCase);
                 var tags = bookmarkDetail.Tags.Select(BookmarkDetailBookmarkTag.Create).ToArray();
-                TagsSource = [.. tags, GetAddTag()];
-                SelectedTags.AddRange(tags.Where(t => t.IsRegistered));
+                TagsSource = [.. tags.Cast<IBookmarkTag>(), GetAddTag()];
+                SelectedTags.AddRange(tags.Where(t => t.IsRegistered).Cast<IBookmarkTag>());
             }
         }
         finally

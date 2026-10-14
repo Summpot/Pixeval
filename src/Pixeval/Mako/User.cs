@@ -7,7 +7,7 @@ using Pixeval.Pixiv;
 
 namespace Pixeval.Mako;
 
-public partial record User
+public partial record struct User
 {
     public User(long id, string name, string account, ProfileImageUrls profileImageUrls, bool isFollowed, string? comment)
         : this(id, name, account, profileImageUrls, isFollowed, comment, [])
@@ -33,9 +33,9 @@ public partial record User
     public string Platform => PlatformConstants.Pixiv;
 
     [JsonIgnore]
-    public string AvatarUrl => ProfileImageUrls?.Medium
-        ?? ProfileImageUrls?.Px170x170
-        ?? ProfileImageUrls?.Px50x50
+    public string AvatarUrl => ProfileImageUrls.Medium
+        ?? ProfileImageUrls.Px170x170
+        ?? ProfileImageUrls.Px50x50
         ?? "";
 
     [JsonIgnore]
@@ -48,7 +48,7 @@ public partial record User
     public Uri AppUri => new($"pixeval://user/{Id}");
 }
 
-public partial record TokenUser
+public partial record struct TokenUser
 {
     [JsonIgnore]
     public long RawId => long.TryParse(Id, out var id) ? id : 0;
@@ -57,9 +57,9 @@ public partial record TokenUser
     public string Platform => PlatformConstants.Pixiv;
 
     [JsonIgnore]
-    public string AvatarUrl => ProfileImageUrls?.Medium
-        ?? ProfileImageUrls?.Px170x170
-        ?? ProfileImageUrls?.Px50x50
+    public string AvatarUrl => ProfileImageUrls.Medium
+        ?? ProfileImageUrls.Px170x170
+        ?? ProfileImageUrls.Px50x50
         ?? "";
 
     [JsonIgnore]

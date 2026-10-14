@@ -1,4 +1,4 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System;
@@ -7,7 +7,7 @@ using Pixeval.Pixiv;
 
 namespace Pixeval.Mako;
 
-public partial record Series
+public partial record struct Series
 {
     [JsonIgnore]
     public SimpleWorkType WorkType { get; init; } = SimpleWorkType.Illustration;

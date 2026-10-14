@@ -210,7 +210,7 @@ public partial class WorkBookmarksPage : IconContentPage
 
             _suppressChangeSource = true;
             TagComboBox.ItemsSource = tags;
-            TagComboBox.SelectedItem = tags.FirstOrDefault(tag => tag.Name == _initialTag) ?? AllBookmarkTag.Instance;
+            TagComboBox.SelectedItem = tags.Cast<BookmarkTag?>().FirstOrDefault(tag => tag!.Value.Name == _initialTag) ?? AllBookmarkTag.Instance;
             _suppressChangeSource = false;
         }
         catch (Exception ex)
@@ -227,18 +227,19 @@ public partial class WorkBookmarksPage : IconContentPage
     {
         if (_user.Id <= 0)
         {
-            WorkContainer.ResetEngine(AsyncEnumerable.Empty<IWorkEntry>().ToFetchEngine());
+            WorkContainer.ResetEngine(AsyncEnumerable.Empty<object>());
             UpdateSubscriptionButtons();
             return;
         }
 
-        var tag = (TagComboBox.SelectedItem as BookmarkTag)?.Name;
+        var tag = (TagComboBox.SelectedItem as IBookmarkTag)?.Name;
         var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
         var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>() is PrivacyPolicy.Private ? "private" : "public";
-        var engine = (workType is SimpleWorkType.Novel
-            ? (IAsyncEnumerable<IWorkEntry>) _client!.NovelBookmarks(_user.Id, privacy, tag)
-            : _client!.WorkBookmarks(_user.Id, privacy, tag)).ToFetchEngine();
-        WorkContainer.ResetEngine(engine);
+        var workEntries = workType is SimpleWorkType.Novel
+            ? _client!.NovelBookmarks(_user.Id, privacy, tag).AsWorkEntries()
+            : _client!.WorkBookmarks(_user.Id, privacy, tag).AsWorkEntries();
+        var engine = workEntries.ToFetchEngine();
+        WorkContainer.ResetEngine(engine.AsObjects());
         _subscriptions!.QueueSyncCurrentSource(
             _user.Id,
             WorkSubscriptionType.Bookmarks,

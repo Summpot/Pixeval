@@ -69,10 +69,10 @@ public static class BlockedContentHelper
     public static bool IsBlockedPlaceholder(object entry) =>
         BlockedContentModelHelper.IsBlockedPlaceholder(entry);
 
-    public static T Replace<T>(T entry) where T : class =>
+    public static T Replace<T>(T entry) where T : notnull =>
         BlockedContentModelHelper.Replace(entry, CaptureSnapshot());
 
-    public static T ReplaceEntry<T>(T entry, BlockedContentSnapshot snapshot) where T : class =>
+    public static T ReplaceEntry<T>(T entry, BlockedContentSnapshot snapshot) where T : notnull =>
         BlockedContentModelHelper.Replace(entry, snapshot);
 
     public static bool TryAddOrUpdateBlockedUser(User user)

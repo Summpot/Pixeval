@@ -134,7 +134,7 @@ public sealed class StorageRepositoryTest
 
         var retrieved = repo.GetDownloadHistoryByDestination("dest/1.jpg");
         Assert.IsNotNull(retrieved);
-        Assert.AreEqual(3u, retrieved.State);
+        Assert.AreEqual(3u, retrieved.Value.State);
 
         var deleted = repo.TryDeleteDownloadHistoryByDestination("dest/1.jpg");
         Assert.IsTrue(deleted);

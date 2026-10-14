@@ -17,8 +17,8 @@ namespace Pixeval.ViewModels.Works;
 
 public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<string>? blockedTags)
     : EntryViewViewModel<T, TViewModel>, IWorkViewViewModel
-    where T : class
-    where TViewModel : class
+    where T : notnull
+    where TViewModel : notnull
 {
     public FrozenSet<string> CachedBlockedTags { get; private set; } = blockedTags ?? App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.BlockedTags.ToFrozenSet();
 
@@ -58,9 +58,10 @@ public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<str
         }
     }
 
-    IReadOnlyCollection<object> IOperableViewViewModel.View => View;
+    IReadOnlyCollection<object> IOperableViewViewModel.View => ((ISimpleViewViewModel) this).View;
 
-    IReadOnlyCollection<object> IOperableViewViewModel.Source => Source;
+    IReadOnlyCollection<object> IOperableViewViewModel.Source => ((ISimpleViewViewModel) this).Source;
+
 
     public abstract bool RequireAdaptiveGrid { get; }
 

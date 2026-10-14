@@ -61,17 +61,17 @@
                                 Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
                                 Icon="{markup:SymbolIcon Link}"
                                 Label="{I18N {x:Static pixeval:EntryItemResources.GenerateLink}}"
-                                Tag="{Binding UserDetail.UserEntity.AppUri, FallbackValue={x:Null}}" />
+                                Tag="{Binding UserDetail.Value.UserEntity.AppUri, FallbackValue={x:Null}}" />
                             <CommandBarButton
                                 Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
                                 Icon="{markup:SymbolIcon LinkMultiple}"
                                 Label="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
-                                Tag="{Binding UserDetail.UserEntity.WebsiteUri, FallbackValue={x:Null}}" />
+                                Tag="{Binding UserDetail.Value.UserEntity.WebsiteUri, FallbackValue={x:Null}}" />
                             <CommandBarButton
                                 Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                                 Icon="{markup:SymbolIcon GlobeArrowUp}"
                                 Label="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
-                                Tag="{Binding UserDetail.UserEntity.WebsiteUri, FallbackValue={x:Null}}" />
+                                Tag="{Binding UserDetail.Value.UserEntity.WebsiteUri, FallbackValue={x:Null}}" />
                             <CommandBar.SecondaryCommands>
                                 <CommandBarButton
                                     Command="{Binding BlockUserCommand}"
@@ -100,7 +100,7 @@
                                 Spacing="6">
                                 <TextBlock
                                     MaxLines="1"
-                                    Text="{Binding UserDetail.UserEntity.Name, FallbackValue={x:Null}}"
+                                    Text="{Binding UserDetail.Value.UserEntity.Name, FallbackValue={x:Null}}"
                                     TextWrapping="Wrap"
                                     Theme="{StaticResource CaptionStrongTextBlockStyle}" />
                                 <TextBlock
@@ -111,23 +111,23 @@
                             <controls:IconText
                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 Symbol="PersonHeart"
-                                Text="{Binding UserDetail.UserProfile.TotalFollowUsers, FallbackValue={x:Null}}" />
+                                Text="{Binding UserDetail.Value.UserProfile.TotalFollowUsers, FallbackValue={x:Null}}" />
                             <controls:IconText
                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 Symbol="People"
-                                Text="{Binding UserDetail.UserProfile.TotalMyPixivUsers, FallbackValue={x:Null}}" />
+                                Text="{Binding UserDetail.Value.UserProfile.TotalMyPixivUsers, FallbackValue={x:Null}}" />
                             <controls:IconText
                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 Symbol="Image"
-                                Text="{Binding UserDetail.UserProfile.TotalIllustrations, FallbackValue={x:Null}}" />
+                                Text="{Binding UserDetail.Value.UserProfile.TotalIllustrations, FallbackValue={x:Null}}" />
                             <controls:IconText
                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 Symbol="ImageMultiple"
-                                Text="{Binding UserDetail.UserProfile.TotalManga, FallbackValue={x:Null}}" />
+                                Text="{Binding UserDetail.Value.UserProfile.TotalManga, FallbackValue={x:Null}}" />
                             <controls:IconText
                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 Symbol="BookOpen"
-                                Text="{Binding UserDetail.UserProfile.TotalNovelSeries, FallbackValue={x:Null}}" />
+                                Text="{Binding UserDetail.Value.UserProfile.TotalNovelSeries, FallbackValue={x:Null}}" />
                         </StackPanel>
                     </DockPanel>
                 </Expander.Header>
@@ -151,8 +151,8 @@
                             VerticalAlignment="Center"
                             Spacing="6">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="{Binding UserDetail.UserEntity.Name, FallbackValue={x:Null}}" Theme="{StaticResource TitleTextBlockStyle}" />
-                                <controls:PixevalBadge IsVisible="{Binding UserDetail.UserProfile.IsPremium, FallbackValue={x:Null}}" Mode="Premium" />
+                                <TextBlock Text="{Binding UserDetail.Value.UserEntity.Name, FallbackValue={x:Null}}" Theme="{StaticResource TitleTextBlockStyle}" />
+                                <controls:PixevalBadge IsVisible="{Binding UserDetail.Value.UserProfile.IsPremium, FallbackValue={x:Null}}" Mode="Premium" />
                             </StackPanel>
                             <TextBlock
                                 FontSize="13"
@@ -162,15 +162,15 @@
                                 MaxHeight="60"
                                 controls:TranslatableTextBlockBehavior.IsEnabled="True"
                                 controls:TranslatableTextBlockBehavior.TextType="UserComment"
-                                Text="{Binding UserDetail.UserEntity.Description, FallbackValue={x:Null}}"
+                                Text="{Binding UserDetail.Value.UserEntity.Description, FallbackValue={x:Null}}"
                                 TextWrapping="Wrap" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
             </Expander>
             <TabbedPage>
-                <capability:WorkPostsPage User="{Binding UserDetail.User}" />
-                <capability:WorkBookmarksPage User="{Binding UserDetail.User}" />
+                <capability:WorkPostsPage User="{Binding UserDetail.Value.User}" />
+                <capability:WorkBookmarksPage User="{Binding UserDetail.Value.User}" />
                 <capability:UserFollowingPage UserId="{Binding Id}" />
                 <capability:UserMyPixivPage UserId="{Binding Id}" />
                 <capability:RelatedUsersPage UserId="{Binding Id}" />

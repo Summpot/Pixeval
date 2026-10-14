@@ -15,6 +15,7 @@ pub use error::UpdateError;
 pub use models::{AppRelease, ReleaseAsset, UpdateCheckResult, UpdateNetworkOptions};
 pub use version::UpdateState;
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn update_ping() -> String {
     "update_pong".to_string()

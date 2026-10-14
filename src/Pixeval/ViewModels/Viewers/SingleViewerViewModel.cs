@@ -372,9 +372,9 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         {
             case Illustration ill:
                 if (!string.IsNullOrEmpty(ill.OriginalUrl)) yield return (ill.OriginalUrl, (int) ill.Width, (int) ill.Height);
-                if (!string.IsNullOrEmpty(ill.ImageUrls?.Large)) yield return (ill.ImageUrls.Large, (int) ill.Width, (int) ill.Height);
-                if (!string.IsNullOrEmpty(ill.ImageUrls?.Medium)) yield return (ill.ImageUrls.Medium, (int) ill.Width, (int) ill.Height);
-                if (!string.IsNullOrEmpty(ill.ImageUrls?.SquareMedium)) yield return (ill.ImageUrls.SquareMedium, (int) ill.Width, (int) ill.Height);
+                if (!string.IsNullOrEmpty(ill.ImageUrls.Large)) yield return (ill.ImageUrls.Large, (int) ill.Width, (int) ill.Height);
+                if (!string.IsNullOrEmpty(ill.ImageUrls.Medium)) yield return (ill.ImageUrls.Medium, (int) ill.Width, (int) ill.Height);
+                if (!string.IsNullOrEmpty(ill.ImageUrls.SquareMedium)) yield return (ill.ImageUrls.SquareMedium, (int) ill.Width, (int) ill.Height);
                 break;
             case BooruPost bp:
                 if (!string.IsNullOrEmpty(bp.OriginalUrl)) yield return (bp.OriginalUrl, (int) bp.Width, (int) bp.Height);
@@ -430,8 +430,8 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
             case Illustration ill:
             {
                 var url = isOriginal
-                    ? (ill.OriginalUrl ?? ill.ImageUrls?.Large ?? ill.ImageUrls?.Medium)
-                    : (ill.ImageUrls?.Large ?? ill.ImageUrls?.Medium ?? ill.OriginalUrl);
+                    ? (ill.OriginalUrl ?? ill.ImageUrls.Large ?? ill.ImageUrls.Medium)
+                    : (ill.ImageUrls.Large ?? ill.ImageUrls.Medium ?? ill.OriginalUrl);
                 if (string.IsNullOrEmpty(url))
                     return null;
                 return await Images.GetSingleImageAsync(

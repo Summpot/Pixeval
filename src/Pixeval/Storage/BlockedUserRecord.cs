@@ -1,9 +1,9 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 namespace Pixeval.Storage;
 
-public partial record BlockedUserRecord
+public partial record struct BlockedUserRecord
 {
     public string Name => UserName;
 

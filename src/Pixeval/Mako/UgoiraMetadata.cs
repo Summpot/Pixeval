@@ -1,4 +1,4 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System;
@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Pixeval.Mako;
 
-public partial record UgoiraMetadata
+public partial record struct UgoiraMetadata
 {
     public IReadOnlyList<int> Delays => [.. Frames.Select(t => t.Delay)];
 

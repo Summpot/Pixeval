@@ -12,7 +12,7 @@ using Pixeval.Storage;
 
 namespace Pixeval.Mako;
 
-public partial record Illustration : IWorkEntry, IArtworkSerializable
+public partial record struct Illustration : IWorkEntry, IArtworkSerializable
 {
     [JsonIgnore]
     public bool IsBookmarkSupported => !BlockedContentHelper.IsBlockedPlaceholder(this) && Platform is PlatformConstants.Pixiv;
@@ -27,7 +27,7 @@ public partial record Illustration : IWorkEntry, IArtworkSerializable
     public string? SizeText => Width > 0 && Height > 0 ? $"{Width} x {Height}" : null;
 
     [JsonIgnore]
-    public string? ThumbnailUrl => ImageUrls?.Medium ?? ImageUrls?.SquareMedium ?? ImageUrls?.Large;
+    public string? ThumbnailUrl => ImageUrls.Medium ?? ImageUrls.SquareMedium ?? ImageUrls.Large;
 
     [JsonIgnore]
     public string Tooltip
@@ -61,7 +61,7 @@ public partial record Illustration : IWorkEntry, IArtworkSerializable
     public int SetIndex { get; init; } = -1;
 
     [JsonIgnore]
-    public string? OriginalUrl => MetaSinglePage?.OriginalImageUrl ?? ImageUrls?.Original ?? ImageUrls?.Large ?? ImageUrls?.Medium;
+    public string? OriginalUrl => MetaSinglePage.OriginalImageUrl ?? ImageUrls.Original ?? ImageUrls.Large ?? ImageUrls.Medium;
 
     [JsonIgnore]
     public bool IsPicGif => string.Equals(IllustType, "ugoira", StringComparison.OrdinalIgnoreCase);
@@ -112,14 +112,20 @@ public partial record Illustration : IWorkEntry, IArtworkSerializable
     public UgoiraMetadata? UgoiraMetadata { get; init; }
 
     [JsonIgnore]
-    public IReadOnlyList<Illustration> Pages => PageCount <= 1
-        ? [this]
-        : [.. MetaPages.Select((m, i) => this with
+    public IReadOnlyList<Illustration> Pages
+    {
+        get
         {
-            SetIndex = i,
-            ImageUrls = m.ImageUrls,
-            MetaSinglePage = new MetaSinglePage(m.ImageUrls.Original)
-        })];
+            if (PageCount <= 1) return [this];
+            var self = this;
+            return [.. MetaPages.Select((m, i) => self with
+            {
+                SetIndex = i,
+                ImageUrls = m.ImageUrls,
+                MetaSinglePage = new MetaSinglePage(m.ImageUrls.Original)
+            })];
+        }
+    }
 
     public const string LegacyIllustrationToken = "Mako.Model.Illustration";
 

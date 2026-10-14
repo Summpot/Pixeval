@@ -1,5 +1,6 @@
 use crate::values::FilterValueKind;
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct FilterSyntaxPattern {
     pub prefix: String,
@@ -109,6 +110,7 @@ impl FilterSyntaxPattern {
     }
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct FilterSyntaxDefinition {
     pub key: String,

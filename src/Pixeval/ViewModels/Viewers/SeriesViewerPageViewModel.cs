@@ -71,9 +71,10 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
 
     public string Header => SeriesDetail?.Title ?? Id.ToString();
 
-    public long AuthorId => SeriesDetail?.User?.Id ?? FirstWork?.User?.Id ?? 0;
+    public long AuthorId => SeriesDetail is { User: { } su } ? su.Id : (FirstWork is { } w ? w.User.Id : 0);
 
-    public string? AuthorName => SeriesDetail?.User?.Name ?? FirstWork?.User?.Name;
+    public string? AuthorName => SeriesDetail is { User: { } su } ? su.Name : (FirstWork is { } w ? w.User.Name : null);
+
 
     public string? Caption => SeriesDetail?.Caption;
 
@@ -139,8 +140,8 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
         if (!await _makoClient.PostWorkSeriesWatchlistAsync(WorkType, Id))
             return;
 
-        if (SeriesDetail is not null)
-            SeriesDetail = SeriesDetail with { WatchlistAdded = true };
+        if (SeriesDetail is { } s1)
+            SeriesDetail = s1 with { WatchlistAdded = true };
         IsWatchlistAdded = true;
     }
 
@@ -150,8 +151,8 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
         if (!await _makoClient.RemoveWorkSeriesWatchlistAsync(WorkType, Id))
             return;
 
-        if (SeriesDetail is not null)
-            SeriesDetail = SeriesDetail with { WatchlistAdded = false };
+        if (SeriesDetail is { } s2)
+            SeriesDetail = s2 with { WatchlistAdded = false };
         IsWatchlistAdded = false;
     }
 

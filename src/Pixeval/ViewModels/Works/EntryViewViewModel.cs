@@ -12,8 +12,8 @@ namespace Pixeval.ViewModels.Works;
 
 public abstract class EntryViewViewModel<T, TViewModel>
     : ViewModelBase, ISimpleViewViewModel, IDisposable
-    where T : class
-    where TViewModel : class
+    where T : notnull
+    where TViewModel : notnull
 {
     private bool _isDisposed;
     private IncrementalLoadingCollection<TViewModel>? _source;
@@ -65,8 +65,20 @@ public abstract class EntryViewViewModel<T, TViewModel>
     }
 
     /// <inheritdoc />
-    IReadOnlyCollection<object> ISimpleViewViewModel.View => View;
+    IReadOnlyCollection<object> ISimpleViewViewModel.View => View as IReadOnlyCollection<object> ?? new BoxedReadOnlyCollectionAdapter(View);
 
     /// <inheritdoc />
-    IReadOnlyCollection<object> ISimpleViewViewModel.Source => Source;
+    IReadOnlyCollection<object> ISimpleViewViewModel.Source => Source as IReadOnlyCollection<object> ?? new BoxedReadOnlyCollectionAdapter(Source);
+
+    private sealed class BoxedReadOnlyCollectionAdapter(IReadOnlyCollection<TViewModel> inner) : IReadOnlyCollection<object>
+    {
+        public int Count => inner.Count;
+        public IEnumerator<object> GetEnumerator()
+        {
+            foreach (var item in inner)
+                yield return item;
+        }
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
 }
+

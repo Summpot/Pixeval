@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace Pixeval.Common.Collections;
 
 public class FilteredIncrementalCollection<T> : ObservableCollection<T>, IIncrementalLoading, IDisposable
-    where T : class
+    where T : notnull
 {
     private readonly IncrementalLoadingCollection<T> _source;
     private Predicate<object>? _filter;

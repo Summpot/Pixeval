@@ -43,7 +43,7 @@ public sealed class HomeCardDefinitions
                 card => [GetDescription(card.WorkType)]),
             new(
                 HomePageCardSourceKind.WorkBookmarks,
-                CreateWorkPreviewSourceFactory(card => _makoClient.WorkBookmarks(card.SimpleWorkType, card.UserId, card.PrivacyPolicy, card.Tag)),
+                CreateWorkPreviewSourceFactory(card => _makoClient.WorkBookmarks(card.SimpleWorkType, card.UserId, card.PrivacyPolicy, card.Tag).AsObjects()),
                 OpenWorkBookmarksPage,
                 card =>
                 [
@@ -91,7 +91,7 @@ public sealed class HomeCardDefinitions
                 card => [card.SeriesId.ToString(CultureInfo.InvariantCulture), GetDescription(card.SimpleWorkType)]),
             new(
                 HomePageCardSourceKind.WorkPosts,
-                CreateWorkPreviewSourceFactory(card => _makoClient.WorkPosted(card.WorkType, card.UserId)),
+                CreateWorkPreviewSourceFactory(card => _makoClient.WorkPosted(card.WorkType, card.UserId).AsObjects()),
                 OpenWorkPostsPage,
                 card => [$"@{card.UserId}", GetDescription(card.WorkType)]),
             new(
@@ -99,10 +99,10 @@ public sealed class HomeCardDefinitions
                 CreateWorkPreviewSourceFactory(card => card.SimpleWorkType is SimpleWorkType.Novel
                     ? string.IsNullOrWhiteSpace(card.SearchText)
                         ? _makoClient.Computed(AsyncEnumerable.Empty<object>())
-                        : _makoClient.NovelSearch(new NovelSearchArguments(card.SearchText)).ToFetchEngine()
+                        : _makoClient.NovelSearch(new NovelSearchArguments(card.SearchText)).AsObjects().ToFetchEngine()
                     : string.IsNullOrWhiteSpace(card.SearchText)
                         ? _makoClient.Computed(AsyncEnumerable.Empty<object>())
-                        : _makoClient.IllustrationSearch(new IllustrationSearchArguments(card.SearchText)).ToFetchEngine()),
+                        : _makoClient.IllustrationSearch(new IllustrationSearchArguments(card.SearchText)).AsObjects().ToFetchEngine()),
                 OpenWorkSearchPage,
                 card => [GetDescription(card.SimpleWorkType), card.SearchText ?? ""]),
             new(
@@ -188,8 +188,8 @@ public sealed class HomeCardDefinitions
     }
 
     private static Func<HomePageCardLayout, Task<HomeCardPreviewSource>> CreateWorkPreviewSourceFactory(
-        Func<HomePageCardLayout, IFetchEngine<object>> engineFactory) =>
-        card => Task.FromResult(CreateWorkPreviewSource(engineFactory(card)));
+        Func<HomePageCardLayout, IAsyncEnumerable<object>> engineFactory) =>
+        card => Task.FromResult(CreateWorkPreviewSource(card, engineFactory(card)));
 
     private static Func<HomePageCardLayout, Task<HomeCardPreviewSource>> CreateUserPreviewSourceFactory(
         Func<HomePageCardLayout, IFetchEngine<User>> engineFactory) =>
@@ -207,20 +207,24 @@ public sealed class HomeCardDefinitions
         IWorkViewViewModel viewModel = card.SimpleWorkType is SimpleWorkType.Novel
             ? new NovelViewViewModel()
             : new IllustrationViewViewModel();
-        viewModel.ResetEngine(engine);
+        viewModel.ResetEngine(engine.AsObjects());
         return new(viewModel, new SingleSeriesOpeningContext(detail, firstWork));
     }
 
     private async Task<HomeCardPreviewSource> CreateSingleImageViewModelAsync(HomePageCardLayout card)
     {
         var engine = _makoClient.Computed(Single(await _makoClient.GetIllustrationFromIdAsync(card.EntryId)));
-        return new(CreateIllustrationViewModel(engine));
+        var viewModel = new IllustrationViewViewModel();
+        viewModel.ResetEngine(engine.AsObjects());
+        return new(viewModel);
     }
 
     private async Task<HomeCardPreviewSource> CreateSingleNovelViewModelAsync(HomePageCardLayout card)
     {
         var engine = _makoClient.Computed(Single(await _makoClient.GetNovelFromIdAsync(card.EntryId)));
-        return new(CreateNovelViewModel(engine));
+        var viewModel = new NovelViewViewModel();
+        viewModel.ResetEngine(engine);
+        return new(viewModel);
     }
 
     private async Task<HomeCardPreviewSource> CreateSingleUserViewModelAsync(HomePageCardLayout card)
@@ -230,27 +234,17 @@ public sealed class HomeCardDefinitions
         return new(CreateUserViewModel(engine), new SingleUserOpeningContext(userDetail));
     }
 
-    private static HomeCardPreviewSource CreateWorkPreviewSource(IFetchEngine<object> engine) =>
-        new(engine is IFetchEngine<Mako.Novel> novelEngine
-            ? CreateNovelViewModel(novelEngine)
-            : CreateIllustrationViewModel(engine));
+    private static HomeCardPreviewSource CreateWorkPreviewSource(HomePageCardLayout card, IAsyncEnumerable<object> engine)
+    {
+        IWorkViewViewModel viewModel = card.SimpleWorkType is SimpleWorkType.Novel || card.WorkType is WorkType.Novel
+            ? new NovelViewViewModel()
+            : new IllustrationViewViewModel();
+        viewModel.ResetEngine(engine);
+        return new(viewModel);
+    }
 
     private static HomeCardPreviewSource CreateUserPreviewSource(IFetchEngine<User> engine) =>
         new(CreateUserViewModel(engine));
-
-    private static IllustrationViewViewModel CreateIllustrationViewModel(IFetchEngine<object> engine)
-    {
-        var viewModel = new IllustrationViewViewModel();
-        viewModel.ResetEngine(engine);
-        return viewModel;
-    }
-
-    private static NovelViewViewModel CreateNovelViewModel(IFetchEngine<Mako.Novel> engine)
-    {
-        var viewModel = new NovelViewViewModel();
-        viewModel.ResetEngine(engine);
-        return viewModel;
-    }
 
     private static UserViewViewModel CreateUserViewModel(IFetchEngine<User> engine)
     {

@@ -120,14 +120,14 @@ public partial class CacheEngine
     {
         try
         {
-            var dims = GetPlanarDimensions(key);
-            if (dims is null)
+            if (GetPlanarDimensions(key) is not { } dims)
                 return null;
 
             var width = (int)dims.Width;
             var height = (int)dims.Height;
             if (width <= 0 || height <= 0)
                 return null;
+
 
             var wb = new WriteableBitmap(
                 new PixelSize(width, height),

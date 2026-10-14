@@ -49,10 +49,10 @@ public static class HomeCardLayoutEngine
     {
         var boundsList = cards.Select(HomeCardBounds.From).ToList();
         var pos = Engine.LayoutTryFindFreePosition(boundsList, columnSpan, rowSpan, rowCount, columnCount);
-        if (pos is not null)
+        if (pos is { } p)
         {
-            column = pos.Column;
-            row = pos.Row;
+            column = p.Column;
+            row = p.Row;
             return true;
         }
 

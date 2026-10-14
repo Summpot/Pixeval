@@ -1,4 +1,4 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System;
@@ -10,7 +10,7 @@ using Pixeval.Storage;
 
 namespace Pixeval.SauceNao;
 
-public partial record SauceNaoItem : IArtworkSerializable
+public partial record struct SauceNaoItem : IArtworkSerializable
 {
     [JsonIgnore]
     public int SetIndex => -1;

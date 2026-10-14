@@ -125,14 +125,14 @@ public sealed class SubscriptionEngineTest
         engine.SetFetchState(400, 1, 10, SubscriptionStatus.Fetching);
         var runningState = engine.GetFetchState(400);
         Assert.IsNotNull(runningState);
-        Assert.AreEqual(SubscriptionStatus.Fetching, runningState.Status);
-        Assert.AreEqual(1u, runningState.Page);
-        Assert.AreEqual(10u, runningState.TotalFetched);
+        Assert.AreEqual(SubscriptionStatus.Fetching, runningState.Value.Status);
+        Assert.AreEqual(1u, runningState.Value.Page);
+        Assert.AreEqual(10u, runningState.Value.TotalFetched);
 
         engine.SetFetchState(400, 2, 20, SubscriptionStatus.Completed);
         var completedState = engine.GetFetchState(400);
         Assert.IsNotNull(completedState);
-        Assert.AreEqual(SubscriptionStatus.Completed, completedState.Status);
+        Assert.AreEqual(SubscriptionStatus.Completed, completedState.Value.Status);
 
         Assert.AreEqual(2, callback.StateChanges.Count);
         Assert.AreEqual(SubscriptionStatus.Fetching, callback.StateChanges[0].Status);

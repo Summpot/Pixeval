@@ -1,11 +1,11 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using Pixeval.Download;
 
 namespace Pixeval.Storage;
 
-public partial record DownloadHistoryRecord : IDownloadHistoryEntry
+public partial record struct DownloadHistoryRecord : IDownloadHistoryEntry
 {
     private object? _entry;
     private DownloadState? _currentState;

@@ -7,6 +7,7 @@ use std::sync::RwLock;
 
 use std::sync::Arc;
 
+#[boltffi::error]
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum DnsError {
     #[error("DNS resolution error: {message}")]

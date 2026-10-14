@@ -61,6 +61,7 @@ fn apply_request_headers(
     req
 }
 
+#[boltffi::error]
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum MakoError {
     #[error("Network error: {message}")]

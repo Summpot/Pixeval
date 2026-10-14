@@ -87,6 +87,7 @@ impl FilterPredicateNode {
     }
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug)]
 pub struct FilterAstNode {
     pub is_group: bool,

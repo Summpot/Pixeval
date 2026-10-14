@@ -392,13 +392,13 @@ public partial class SearchPageViewModel : ViewModelBase
     [RelayCommand]
     public void AddPinnedTag(SearchHistoryRecord? entry)
     {
-        if (entry is null)
+        if (entry is not { } record)
             return;
 
         var pinnedTags = _appSettings.BrowsingExperienceSettings.PinnedTags;
-        if (!pinnedTags.Contains(entry.Value))
-            pinnedTags.Add(entry.Value);
-        _ = _searchHistory.Entries.Remove(entry);
+        if (!pinnedTags.Contains(record.Value))
+            pinnedTags.Add(record.Value);
+        _ = _searchHistory.Entries.Remove(record);
     }
 
     [RelayCommand]
@@ -414,28 +414,28 @@ public partial class SearchPageViewModel : ViewModelBase
     [RelayCommand]
     public void DeleteHistory(SearchHistoryRecord? entry)
     {
-        if (entry is null)
+        if (entry is not { } record)
             return;
 
-        _ = _searchHistory.Entries.Remove(entry);
+        _ = _searchHistory.Entries.Remove(record);
     }
 
     [RelayCommand]
     public void OpenTrendingTag(TrendingTag? tag)
     {
-        if (tag is null)
+        if (tag is not { } t)
             return;
 
-        _navigationService.NavigateToWorkSearch(tag.Tag, SelectedTrendingTagsType);
+        _navigationService.NavigateToWorkSearch(t.Tag, SelectedTrendingTagsType);
     }
 
     [RelayCommand]
     public void OpenHistory(SearchHistoryRecord? entry)
     {
-        if (entry is null)
+        if (entry is not { } record)
             return;
 
-        SearchText = entry.Value;
+        SearchText = record.Value;
         Search(false);
     }
 

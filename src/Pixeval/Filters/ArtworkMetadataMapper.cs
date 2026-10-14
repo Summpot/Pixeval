@@ -20,8 +20,8 @@ public static class ArtworkMetadataMapper
             Illustration illust => new ArtworkMetadata(
                 illust.Id.ToString(),
                 illust.Title ?? string.Empty,
-                illust.User?.Name ?? string.Empty,
-                illust.User?.Account ?? string.Empty,
+                illust.User.Name ?? string.Empty,
+                illust.User.Account ?? string.Empty,
                 illust.Tags.Select(t => new ArtworkTag(t.Name, t.TranslatedName ?? string.Empty)).ToList(),
                 illust.TotalBookmarks,
                 illust.CreateDateOffset.ToUnixTimeSeconds(),
@@ -34,9 +34,10 @@ public static class ArtworkMetadataMapper
             Mako.Novel novel => new ArtworkMetadata(
                 novel.Id.ToString(),
                 novel.Title ?? string.Empty,
-                novel.User?.Name ?? string.Empty,
-                novel.User?.Account ?? string.Empty,
+                novel.User.Name ?? string.Empty,
+                novel.User.Account ?? string.Empty,
                 novel.Tags.Select(t => new ArtworkTag(t.Name, t.TranslatedName ?? string.Empty)).ToList(),
+
                 novel.TotalBookmarks,
                 novel.CreateDateOffset.ToUnixTimeSeconds(),
                 0,

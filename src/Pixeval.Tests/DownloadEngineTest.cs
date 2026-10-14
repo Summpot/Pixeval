@@ -17,7 +17,7 @@ public sealed class DownloadEngineTest
     {
         public TaskCompletionSource<DownloadState>? StateChangedSource { get; set; }
         public Action<DownloadState, string?>? StateChangedCallback { get; set; }
-        public DownloadTaskKey ExpectedKey { get; set; } = null!;
+        public DownloadTaskKey ExpectedKey { get; set; }
 
         public void OnProgress(DownloadTaskKey key, double progressPercentage, ulong downloadedBytes, ulong totalBytes)
         {
@@ -58,12 +58,12 @@ public sealed class DownloadEngineTest
         Assert.IsTrue(manager.HasTask(key));
         var info = manager.GetTaskInfo(key);
         Assert.IsNotNull(info);
-        Assert.AreEqual(key, info.Key);
+        Assert.AreEqual(key, info.Value.Key);
 
         Assert.IsTrue(manager.CancelTask(key));
         var cancelledInfo = manager.GetTaskInfo(key);
         Assert.IsNotNull(cancelledInfo);
-        Assert.AreEqual(DownloadState.Cancelled, cancelledInfo.State);
+        Assert.AreEqual(DownloadState.Cancelled, cancelledInfo.Value.State);
 
         Assert.IsTrue(manager.RemoveTask(key));
         Assert.IsFalse(manager.HasTask(key));

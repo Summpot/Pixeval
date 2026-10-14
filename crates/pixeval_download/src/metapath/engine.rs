@@ -7,6 +7,7 @@ use crate::metapath::context::MacroContext;
 use crate::metapath::eval::{analyze, reduce};
 use crate::metapath::syntax::MacroAnalysisResult;
 
+#[boltffi::error]
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum MetaPathError {
     #[error("MetaPath evaluation error: {message}")]

@@ -36,10 +36,10 @@ public static class WorkCommands
     {
         var targetWork = work is WorkEntry we ? we.AsWorkEntry : work;
         var series = targetWork?.Series;
-        if (series is not { Id: > 0 })
+        if (series is not { Id: > 0 } s)
             return;
         var workType = targetWork is Mako.Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
-        NavigationService.NavigateToSeries(workType, series.Id);
+        NavigationService.NavigateToSeries(workType, s.Id);
     });
 
     public static IAsyncRelayCommand<IWorkEntry> BookmarkCommand { get; } = new AsyncRelayCommand<IWorkEntry>(async work =>
@@ -62,14 +62,12 @@ public static class WorkCommands
 
     public static IAsyncRelayCommand<Illustration> SaveIllustrationCommand { get; } = new AsyncRelayCommand<Illustration>(async illust =>
     {
-        if (illust is not null)
-            await ActionService.SaveIllustrationAsync(illust);
+        await ActionService.SaveIllustrationAsync(illust);
     });
 
     public static IAsyncRelayCommand<Mako.Novel> SaveNovelCommand { get; } = new AsyncRelayCommand<Mako.Novel>(async novel =>
     {
-        if (novel is not null)
-            await ActionService.SaveNovelAsync(novel);
+        await ActionService.SaveNovelAsync(novel);
     });
 
     public static IAsyncRelayCommand<object> SaveCommand { get; } = new AsyncRelayCommand<object>(async work =>
@@ -86,15 +84,14 @@ public static class WorkCommands
 
     public static IAsyncRelayCommand<User> FollowUserCommand { get; } = new AsyncRelayCommand<User>(async user =>
     {
-        if (user is not null)
-            await ActionService.ToggleFollowUserAsync(user);
+        await ActionService.ToggleFollowUserAsync(user);
     });
 
     public static IRelayCommand<User> BlockUserCommand { get; } = new RelayCommand<User>(user =>
     {
-        if (user is not null)
-            ActionService.BlockUser(user);
+        ActionService.BlockUser(user);
     });
+
 
     public static Task<bool> ToggleBookmarkAsync(IWorkEntry work) =>
         ActionService.ToggleBookmarkAsync(work);

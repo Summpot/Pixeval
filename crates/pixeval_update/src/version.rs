@@ -3,6 +3,7 @@
 
 use crate::error::UpdateError;
 
+#[boltffi::data]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
 pub enum UpdateState {
     /// 当前版本已是最新

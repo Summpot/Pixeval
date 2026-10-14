@@ -202,12 +202,12 @@ public sealed partial class HomePage
             RowCount,
             ColumnCount);
 
-        if (placement is not null)
+        if (placement is { } p)
         {
-            columnSpan = placement.ColumnSpan;
-            rowSpan = placement.RowSpan;
-            column = placement.Column;
-            row = placement.Row;
+            columnSpan = p.ColumnSpan;
+            rowSpan = p.RowSpan;
+            column = p.Column;
+            row = p.Row;
             return true;
         }
 

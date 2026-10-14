@@ -180,15 +180,15 @@ public sealed class MakoClientTest
 
         var retrievedUser = client.GetUser();
         Assert.IsNotNull(retrievedUser);
-        Assert.AreEqual("123456", retrievedUser.Id);
-        Assert.AreEqual("Test User", retrievedUser.Name);
+        Assert.AreEqual("123456", retrievedUser.Value.Id);
+        Assert.AreEqual("Test User", retrievedUser.Value.Name);
         Assert.AreEqual("test_refresh_token", client.GetRefreshToken());
 
         var tokenResp = client.GetTokenResponse();
         Assert.IsNotNull(tokenResp);
-        Assert.AreEqual("test_refresh_token", tokenResp.RefreshToken);
-        Assert.IsNotNull(tokenResp.User);
-        Assert.AreEqual("Test User", tokenResp.User.Name);
+        Assert.AreEqual("test_refresh_token", tokenResp.Value.RefreshToken);
+        Assert.IsNotNull(tokenResp.Value.User);
+        Assert.AreEqual("Test User", tokenResp.Value.User.Value.Name);
 
         client.ClearToken();
         Assert.IsNull(client.GetUser());

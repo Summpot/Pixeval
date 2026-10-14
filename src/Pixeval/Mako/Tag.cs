@@ -1,9 +1,9 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 namespace Pixeval.Mako;
 
-public partial record Tag
+public partial record struct Tag
 {
     public string Description => ToolTip;
 

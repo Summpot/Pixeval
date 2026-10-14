@@ -154,10 +154,11 @@ public sealed partial class WorkView : UserControl, IDisposable
     public void SetSource(IReadOnlyCollection<object> source, SimpleWorkType workType, bool needRefreshOnOpen = false)
     {
         IOperableViewViewModel viewModel = workType is SimpleWorkType.Novel
-            ? new SimpleOperableViewViewModel<Mako.Novel>(source.OfType<Mako.Novel>().ToList(), needRefreshOnOpen)
+            ? new SimpleOperableViewViewModel<Mako.Novel>(source.Where(static s => s is Mako.Novel).ToList(), needRefreshOnOpen)
             : new SimpleOperableViewViewModel<object>(source, needRefreshOnOpen);
         SetOwnedViewModel(viewModel);
     }
+
 
     /// <summary>
     /// Takes ownership of <paramref name="viewModel"/> and disposes it when it is replaced or this view is disposed.

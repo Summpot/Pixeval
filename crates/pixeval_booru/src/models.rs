@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
+#[boltffi::data]
 #[derive(uniffi::Enum, Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BooruPlatform {
     #[default]
@@ -36,12 +37,14 @@ impl BooruPlatform {
     }
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BooruTag {
     pub tag_type: String,
     pub name: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct BooruPost {
     pub id: String,
@@ -68,6 +71,7 @@ pub struct BooruPost {
     pub ugoira_frame_delays: Option<Vec<i32>>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct BooruPostPreview {
     pub id: String,
@@ -77,6 +81,7 @@ pub struct BooruPostPreview {
     pub is_deleted: bool,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct BooruSearchResult {
     pub results: Vec<BooruPostPreview>,
@@ -84,7 +89,8 @@ pub struct BooruSearchResult {
     pub page_number: u32,
 }
 
-#[derive(uniffi::Record, Clone, Debug, Default, Serialize, Deserialize)]
+#[boltffi::data]
+#[derive(uniffi::Record, Clone, Debug, Default, Serialize, Deserialize, Copy)]
 pub struct BooruFavoriteResult {
     pub success: bool,
 }

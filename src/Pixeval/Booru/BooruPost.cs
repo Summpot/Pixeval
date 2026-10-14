@@ -1,4 +1,4 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System;
@@ -13,7 +13,7 @@ using Pixeval.ViewModels;
 
 namespace Pixeval.Booru;
 
-public partial record BooruPost : IArtworkSerializable
+public partial record struct BooruPost : IArtworkSerializable
 {
     [JsonIgnore]
     public bool IsBookmarkSupported => false;

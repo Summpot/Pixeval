@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct WorkMetadata {
     pub id: String,
@@ -29,6 +30,7 @@ pub trait StorageObserver: Send + Sync {
     fn on_search_history_changed(&self);
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct SearchHistoryRecord {
     pub history_entry_id: i64,
@@ -37,6 +39,7 @@ pub struct SearchHistoryRecord {
     pub time: String,
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct BrowseHistoryRecord {
     pub history_entry_id: i64,
@@ -46,6 +49,7 @@ pub struct BrowseHistoryRecord {
     pub payload_json: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct WatchLaterRecord {
     pub history_entry_id: i64,
@@ -55,6 +59,7 @@ pub struct WatchLaterRecord {
     pub payload_json: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct DownloadHistoryRecord {
     pub history_entry_id: i64,
@@ -67,6 +72,7 @@ pub struct DownloadHistoryRecord {
     pub payload_json: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct SubscriptionDownloadHistoryRecord {
     pub history_entry_id: i64,
@@ -81,6 +87,7 @@ pub struct SubscriptionDownloadHistoryRecord {
     pub payload_json: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct WorkSubscriptionRecord {
     pub history_entry_id: i64,
@@ -94,6 +101,7 @@ pub struct WorkSubscriptionRecord {
     pub last_work_id: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct BlockedUserRecord {
     pub history_entry_id: i64,
@@ -103,6 +111,7 @@ pub struct BlockedUserRecord {
     pub account: String,
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct LoginUserRecord {
     pub history_entry_id: i64,

@@ -61,7 +61,7 @@ public sealed class McpServerTest
         Assert.IsTrue(engine.SetPluginActive("test-plugin-id", false));
         var updated = engine.GetPlugin("test-plugin-id");
         Assert.IsNotNull(updated);
-        Assert.IsFalse(updated.IsActive);
+        Assert.IsFalse(updated.Value.IsActive);
 
         Assert.IsTrue(engine.UnloadPlugin("test-plugin-id"));
         Assert.AreEqual(0, engine.GetLoadedPlugins().Count);

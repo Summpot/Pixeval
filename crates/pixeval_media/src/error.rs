@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+#[boltffi::error]
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum MediaError {
     #[error("I/O error: {message}")]

@@ -70,14 +70,12 @@ public sealed class ArtworkActionService : IArtworkActionService
 
         SaveIllustrationCommand = new AsyncRelayCommand<Illustration>(async illust =>
         {
-            if (illust is not null)
-                await SaveIllustrationAsync(illust);
+            await SaveIllustrationAsync(illust);
         });
 
         SaveNovelCommand = new AsyncRelayCommand<Mako.Novel>(async novel =>
         {
-            if (novel is not null)
-                await SaveNovelAsync(novel);
+            await SaveNovelAsync(novel);
         });
 
         SaveCommand = new AsyncRelayCommand<object>(async work =>
@@ -94,14 +92,12 @@ public sealed class ArtworkActionService : IArtworkActionService
 
         FollowUserCommand = new AsyncRelayCommand<User>(async user =>
         {
-            if (user is not null)
-                await ToggleFollowUserAsync(user);
+            await ToggleFollowUserAsync(user);
         });
 
         BlockUserCommand = new RelayCommand<User>(user =>
         {
-            if (user is not null)
-                BlockUser(user);
+            BlockUser(user);
         });
     }
 

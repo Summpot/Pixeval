@@ -1,5 +1,6 @@
 use crate::text::FilterTextSpan;
 
+#[boltffi::data]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, uniffi::Enum)]
 pub enum FilterDiagnosticKind {
     UnexpectedToken,
@@ -35,6 +36,7 @@ pub enum FilterDiagnosticKind {
     InternalExpectedDateValue,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct FilterDiagnostic {
     pub kind: FilterDiagnosticKind,

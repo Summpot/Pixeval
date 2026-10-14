@@ -7,6 +7,7 @@ use serde::Deserialize;
 use crate::version::UpdateState;
 
 /// 单个发布工件资产
+#[boltffi::data]
 #[derive(Debug, Clone, uniffi::Record)]
 pub struct ReleaseAsset {
     pub name: String,
@@ -17,6 +18,7 @@ pub struct ReleaseAsset {
 }
 
 /// 客户端发布版本信息
+#[boltffi::data]
 #[derive(Debug, Clone, uniffi::Record)]
 pub struct AppRelease {
     pub version: String,
@@ -30,6 +32,7 @@ pub struct AppRelease {
 }
 
 /// 检查更新的结果
+#[boltffi::data]
 #[derive(Debug, Clone, uniffi::Record)]
 pub struct UpdateCheckResult {
     pub current_version: String,
@@ -39,6 +42,7 @@ pub struct UpdateCheckResult {
 }
 
 /// 更新网络配置选项
+#[boltffi::data]
 #[derive(Debug, Clone, uniffi::Record)]
 pub struct UpdateNetworkOptions {
     pub enable_domain_fronting: bool,

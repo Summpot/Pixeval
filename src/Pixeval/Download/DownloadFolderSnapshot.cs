@@ -1,4 +1,4 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System;
@@ -8,7 +8,7 @@ using Pixeval.Config;
 
 namespace Pixeval.Download;
 
-public partial record DownloadFolderSnapshot
+public partial record struct DownloadFolderSnapshot
 {
     public string Title =>
         $"{DisplayName} · {SymbolComboBoxItem.GetResource((WorkSubscriptionType)SubscriptionType)} · {SymbolComboBoxItem.GetResource((WorkSubscriptionWorkKind)WorkKind)}";

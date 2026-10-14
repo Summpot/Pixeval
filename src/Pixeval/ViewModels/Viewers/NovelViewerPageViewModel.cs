@@ -112,7 +112,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
     public ArtworkUiState? CurrentUiState => CurrentNovel is { } nov ? ArtworkUiStateStore.GetOrCreate(nov) : null;
 
-    public long NovelId => CurrentNovel?.Id ?? 0;
+    public long NovelId => CurrentNovel is { Id: var id } ? id : 0;
 
     public override int CurrentWorkIndex
     {
@@ -260,18 +260,19 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             if (currentNovel is null || index != CurrentWorkIndex || _disposed)
                 return;
 
-            if (BlockedContentHelper.IsBlockedPlaceholder(currentNovel))
+            var novel = currentNovel.Value;
+            if (BlockedContentHelper.IsBlockedPlaceholder(novel))
                 _pageMarkdowns = [I18NManager.GetResource(BlockedContentResources.Work)];
             else
             {
-                SeriesInfo = WorkSeriesInfoViewModel.Create(currentNovel, SimpleWorkType.Novel);
-                var content = await _makoClient.GetNovelContentStructuredAsync(currentNovel.Id);
+                SeriesInfo = WorkSeriesInfoViewModel.Create(novel, SimpleWorkType.Novel);
+                var content = await _makoClient.GetNovelContentStructuredAsync(novel.Id);
                 token.ThrowIfCancellationRequested();
                 if (index != CurrentWorkIndex || _disposed)
                     return;
 
-                SeriesInfo = WorkSeriesInfoViewModel.Create(content, currentNovel.Series);
-                _storageEngine.HistoryRepository.AddBrowseHistory(currentNovel);
+                SeriesInfo = WorkSeriesInfoViewModel.Create(content, novel.Series);
+                _storageEngine.HistoryRepository.AddBrowseHistory(novel);
                 var markdowns = await Task.Run(() => BuildPageMarkdowns(content), token);
                 token.ThrowIfCancellationRequested();
                 if (index != CurrentWorkIndex || _disposed)
@@ -291,12 +292,12 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
                         try
                         {
                             var markers = await _makoClient.GetNovelMarkersAsync();
-                            var match = markers.MarkedNovels.FirstOrDefault(x => x.Novel.Id == currentNovel.Id);
+                            var match = markers.MarkedNovels.FirstOrDefault(x => x.Novel.Id == novel.Id);
                             if (match is { NovelMarker: { Page: > 0 and var page } } && page <= _pageMarkdowns.Count)
                             {
                                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
                                 {
-                                    if (!_disposed && CurrentNovel?.Id == currentNovel.Id && CurrentPageIndex == 0)
+                                    if (!_disposed && CurrentNovel is { Id: var curId } && curId == novel.Id && CurrentPageIndex == 0)
                                     {
                                         _suppressMarkerSync = true;
                                         CurrentPageIndex = page - 1;

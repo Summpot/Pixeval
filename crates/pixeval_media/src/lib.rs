@@ -15,6 +15,7 @@ pub use manga::MangaArchiveFormat;
 pub use transcode::{ImageCodecFormat, TranscodeOptions};
 pub use ugoira::{UgoiraFormat, is_mp4_supported};
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn media_ping() -> String {
     "media_pong".to_string()

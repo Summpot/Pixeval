@@ -86,11 +86,12 @@ public partial class WorkRankingPage : IconContentPage
         var date = (RankDateTimeCalendarDatePicker.SelectedDate ?? MaxDate).ToString("yyyy-MM-dd");
         if (workType is SimpleWorkType.Novel)
         {
-            WorkContainer.ResetEngine(_client.NovelRanking(mode, date));
+            WorkContainer.ResetEngine(_client.NovelRanking(mode, date).AsObjects());
         }
         else
         {
-            WorkContainer.ResetEngine(_client.WorkRanking(mode, date));
+            WorkContainer.ResetEngine(_client.WorkRanking(mode, date).AsObjects());
         }
+
     }
 }

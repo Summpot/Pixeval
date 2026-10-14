@@ -14,7 +14,8 @@ using Pixeval.Mako;
 namespace Pixeval.ViewModels.Works;
 
 public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelBase, IOperableViewViewModel, IDisposable
-    where TViewModel : class
+    where TViewModel : notnull
+
 {
     private bool _isDisposed;
     private LocalSortOption _sortOption = LocalSortOption.DoNotSort;

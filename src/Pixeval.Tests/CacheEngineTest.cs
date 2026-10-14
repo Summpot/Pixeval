@@ -151,8 +151,8 @@ public sealed class CacheEngineTest
 
             var dims = cache.GetPlanarDimensions("img_test");
             Assert.IsNotNull(dims);
-            Assert.AreEqual(width, dims.Width);
-            Assert.AreEqual(height, dims.Height);
+            Assert.AreEqual(width, dims.Value.Width);
+            Assert.AreEqual(height, dims.Value.Height);
 
             // Allocate unmanaged buffer to simulate Avalonia WriteableBitmap framebuffer
             var bgraBuffer = new byte[width * height * 4];

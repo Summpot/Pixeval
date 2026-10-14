@@ -125,12 +125,12 @@ public partial class WorkSearchResultPage : IconContentPage
         IAsyncEnumerable<object> engine = (_illustrationArguments, _novelArguments) switch
         {
             (null, null) => this.GetRequiredUiService<MakoClient>().Computed(AsyncEnumerable.Empty<object>()),
-            (_, null) => this.GetRequiredUiService<MakoClient>().IllustrationSearch(_illustrationArguments!),
-            (null, _) => this.GetRequiredUiService<MakoClient>().NovelSearch(_novelArguments!),
+            (_, null) => this.GetRequiredUiService<MakoClient>().IllustrationSearch(_illustrationArguments!).AsObjects(),
+            (null, _) => this.GetRequiredUiService<MakoClient>().NovelSearch(_novelArguments!).AsObjects(),
             _ => SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>() switch
             {
-                SimpleWorkType.Novel => this.GetRequiredUiService<MakoClient>().NovelSearch(_novelArguments!),
-                _ => this.GetRequiredUiService<MakoClient>().IllustrationSearch(_illustrationArguments!),
+                SimpleWorkType.Novel => this.GetRequiredUiService<MakoClient>().NovelSearch(_novelArguments!).AsObjects(),
+                _ => this.GetRequiredUiService<MakoClient>().IllustrationSearch(_illustrationArguments!).AsObjects(),
             }
         };
 

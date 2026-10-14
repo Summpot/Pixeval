@@ -8,7 +8,7 @@ using Pixeval.Storage;
 
 namespace Pixeval.Mako;
 
-public partial record Novel : IWorkEntry, IArtworkSerializable
+public partial record struct Novel : IWorkEntry, IArtworkSerializable
 {
     [JsonIgnore]
     public bool IsBookmarkSupported => !BlockedContentHelper.IsBlockedPlaceholder(this) && Platform is PlatformConstants.Pixiv;
@@ -20,7 +20,7 @@ public partial record Novel : IWorkEntry, IArtworkSerializable
     public double AspectRatio => 1;
 
     [JsonIgnore]
-    public string? ThumbnailUrl => ImageUrls?.SquareMedium ?? ImageUrls?.Medium ?? ImageUrls?.Large ?? "";
+    public string? ThumbnailUrl => ImageUrls.SquareMedium ?? ImageUrls.Medium ?? ImageUrls.Large ?? "";
 
     [JsonIgnore]
     public string Tooltip => Title;
@@ -85,7 +85,7 @@ public partial record Novel : IWorkEntry, IArtworkSerializable
         try
         {
             var res = System.Text.Json.JsonSerializer.Deserialize<Novel>(data, s_snakeCaseOptions);
-            if (res != null && (res.Id != 0 || res.ImageUrls != null))
+            if (res.Id != 0)
                 return res;
         }
         catch
@@ -96,7 +96,7 @@ public partial record Novel : IWorkEntry, IArtworkSerializable
         try
         {
             var res = System.Text.Json.JsonSerializer.Deserialize<Novel>(data, s_caseInsensitiveOptions);
-            if (res != null)
+            if (res.Id != 0)
                 return res;
         }
         catch
@@ -104,6 +104,7 @@ public partial record Novel : IWorkEntry, IArtworkSerializable
             // fallback
         }
 
-        return System.Text.Json.JsonSerializer.Deserialize<Novel>(data)!;
+        return System.Text.Json.JsonSerializer.Deserialize<Novel>(data);
+
     }
 }

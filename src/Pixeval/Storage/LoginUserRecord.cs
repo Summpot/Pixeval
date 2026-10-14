@@ -6,7 +6,7 @@ using Pixeval.Mako;
 
 namespace Pixeval.Storage;
 
-public partial record LoginUserRecord
+public partial record struct LoginUserRecord
 {
     public long Id => UserId;
 
@@ -37,9 +37,9 @@ public partial record LoginUserRecord
             0,
             true,
             false,
-            user.ProfileImageUrls?.Px16x16 ?? AppInfo.ImageNotAvailablePath,
-            user.ProfileImageUrls?.Px50x50 ?? AppInfo.ImageNotAvailablePath,
-            user.ProfileImageUrls?.Px170x170 ?? AppInfo.ImageNotAvailablePath,
+            user.ProfileImageUrls.Px16x16 ?? AppInfo.ImageNotAvailablePath,
+            user.ProfileImageUrls.Px50x50 ?? AppInfo.ImageNotAvailablePath,
+            user.ProfileImageUrls.Px170x170 ?? AppInfo.ImageNotAvailablePath,
             refreshToken);
     }
 }

@@ -1,4 +1,4 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System;
@@ -8,7 +8,7 @@ using Pixeval.Mako;
 
 namespace Pixeval.Config;
 
-public partial record HomePageCardLayout
+public partial record struct HomePageCardLayout
 {
     public HomePageCardLayout()
         : this(HomePageCardSourceKind.WorkRecommended, 0, 0, 1, 1)

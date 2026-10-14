@@ -1,5 +1,6 @@
 use crate::text::FilterTextSpan;
 
+#[boltffi::data]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
 pub enum FilterCompletionKind {
     Keyword,
@@ -10,6 +11,7 @@ pub enum FilterCompletionKind {
     Hint,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct FilterCompletionItem {
     pub display_text: String,
@@ -43,6 +45,7 @@ impl FilterCompletionItem {
     }
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct TagCandidate {
     pub name: String,
@@ -58,6 +61,7 @@ impl TagCandidate {
     }
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct AuthorCandidate {
     pub name: String,
@@ -79,6 +83,7 @@ pub trait FilterStorageProvider: Send + Sync {
     fn query_subscription_authors(&self, pattern: String, limit: u32) -> Vec<AuthorCandidate>;
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, Default, uniffi::Record)]
 pub struct FilterLocalization {
     pub and_description: Option<String>,
@@ -103,6 +108,7 @@ pub struct FilterLocalization {
     pub exclude_gif_description: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct FilterCompletionDefinition {
     pub key: String,
@@ -127,6 +133,7 @@ impl FilterCompletionDefinition {
     }
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct FilterFullCompletionDefinition {
     pub key: String,
@@ -156,6 +163,7 @@ impl FilterFullCompletionDefinition {
 
 use crate::values::FilterValueKind;
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct FilterValueCompletionContext {
     pub match_syntax_key: String,
@@ -192,6 +200,7 @@ impl<'a> FilterValueCompletionCallback for CallbackAdapter<'a> {
     }
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, PartialEq, Eq)]
 pub struct FilterValueHintGroup {
     pub kind: FilterValueKind,

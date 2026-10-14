@@ -1,11 +1,11 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System.Collections.Generic;
 
 namespace Pixeval.Filters;
 
-public partial record FilterSyntaxPattern
+public partial record struct FilterSyntaxPattern
 {
     public FilterSyntaxPattern(
         string Prefix,

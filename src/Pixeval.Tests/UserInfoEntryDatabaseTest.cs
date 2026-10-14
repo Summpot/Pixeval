@@ -33,7 +33,7 @@ public sealed class UserInfoEntryDatabaseTest
 
         var sub = storage.GetSubscriptionByKey(12345, (uint)WorkSubscriptionType.Posts, (uint)WorkSubscriptionWorkKind.Illustration);
         Assert.IsNotNull(sub);
-        Assert.AreEqual("Artist 1", sub.Title);
+        Assert.AreEqual("Artist 1", sub.Value.Title);
 
         var blockedUsers = storage.GetAllBlockedUsers();
         Assert.AreEqual(1, blockedUsers.Count);

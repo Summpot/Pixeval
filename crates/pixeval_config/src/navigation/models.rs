@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+#[boltffi::data]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, uniffi::Enum)]
 pub enum NavigationDiagnosticKind {
     YamlSyntaxError,
@@ -18,6 +19,7 @@ pub enum NavigationDiagnosticKind {
     UnknownPage,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct NavigationDiagnostic {
     pub kind: NavigationDiagnosticKind,
@@ -29,6 +31,7 @@ pub struct NavigationDiagnostic {
     pub arguments: Vec<String>,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, uniffi::Record)]
 #[serde(rename_all = "camelCase")]
 pub struct NavigationYamlSettings {
@@ -40,6 +43,7 @@ pub struct NavigationYamlSettings {
     pub footer: Option<Vec<NavigationYamlItem>>,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, uniffi::Record)]
 #[serde(rename_all = "camelCase")]
 pub struct NavigationYamlItem {
@@ -55,6 +59,7 @@ pub struct NavigationYamlItem {
     pub children: Option<Vec<NavigationYamlItem>>,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct NavigationParseResult {
     pub settings: Option<NavigationYamlSettings>,

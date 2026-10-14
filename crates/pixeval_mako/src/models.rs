@@ -4,6 +4,7 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct ImageUrls {
     #[serde(default)]
@@ -16,6 +17,7 @@ pub struct ImageUrls {
     pub original: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct ProfileImageUrls {
     #[serde(default)]
@@ -28,6 +30,7 @@ pub struct ProfileImageUrls {
     pub medium: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct Tag {
     pub name: String,
@@ -35,6 +38,7 @@ pub struct Tag {
     pub translated_name: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct Series {
     pub id: i64,
@@ -53,17 +57,20 @@ pub struct Series {
     pub last_published_content_datetime: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct MetaSinglePage {
     #[serde(default)]
     pub original_image_url: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct MetaPage {
     pub image_urls: ImageUrls,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct User {
     pub id: i64,
@@ -79,6 +86,7 @@ pub struct User {
     pub sample_work_thumbnails: Vec<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct UserProfile {
     #[serde(default, rename = "webpage")]
@@ -127,6 +135,7 @@ pub struct UserProfile {
     pub is_premium: bool,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct UserDetail {
     pub user: User,
@@ -134,6 +143,7 @@ pub struct UserDetail {
     pub profile: UserProfile,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct Illustration {
     pub id: i64,
@@ -187,6 +197,7 @@ pub struct Illustration {
     pub restriction_attributes: Option<Vec<String>>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct Novel {
     pub id: i64,
@@ -224,6 +235,7 @@ pub struct Novel {
     pub novel_ai_type: i32,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct BookmarkTag {
     pub name: String,
@@ -233,6 +245,7 @@ pub struct BookmarkTag {
     pub is_registered: bool,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct BookmarkDetail {
     #[serde(default)]
@@ -243,6 +256,7 @@ pub struct BookmarkDetail {
     pub restrict: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct TrendingTag {
     pub tag: String,
@@ -251,6 +265,7 @@ pub struct TrendingTag {
     pub illust: Illustration,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct TokenUser {
     pub id: String,
@@ -264,6 +279,7 @@ pub struct TokenUser {
     pub profile_image_urls: ProfileImageUrls,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct TokenResponse {
     pub access_token: String,
@@ -277,6 +293,7 @@ pub struct TokenResponse {
     pub user: Option<TokenUser>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct SingleUserResponse {
     pub user: User,
@@ -284,17 +301,20 @@ pub struct SingleUserResponse {
     pub profile: UserProfile,
 }
 
-#[derive(uniffi::Record, Clone, Debug, PartialEq, Eq)]
+#[boltffi::data]
+#[derive(uniffi::Record, Clone, Debug, PartialEq, Eq, Copy)]
 pub struct BoolResult {
     pub success: bool,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Enum, Clone, Debug, PartialEq)]
 pub enum WorkEntry {
     Illust { illustration: Illustration },
     NovelWork { novel: Novel },
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug)]
 pub struct MakoConfigurationDto {
     pub domain_fronting_enabled: bool,
@@ -390,27 +410,32 @@ pub struct UserResponse {
     pub next_url: Option<String>,
 }
 
-#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[boltffi::data]
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Copy)]
 pub struct AiShowSettingsResponse {
     pub show_ai: bool,
 }
 
-#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[boltffi::data]
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Copy)]
 pub struct RestrictedModeSettingsResponse {
     pub is_restricted_mode_enabled: bool,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct UgoiraFrame {
     pub file: String,
     pub delay: i32,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct UgoiraZipUrls {
     pub medium: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct UgoiraMetadata {
     pub zip_urls: UgoiraZipUrls,
@@ -430,6 +455,7 @@ pub struct SeriesResponse {
     pub next_url: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct SpotlightArticle {
     pub id: i64,
@@ -456,6 +482,7 @@ pub struct SpotlightResponse {
     pub next_url: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct StampInfo {
     pub stamp_id: i64,
@@ -463,6 +490,7 @@ pub struct StampInfo {
     pub stamp_url: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct CommentRecord {
     pub id: i64,
@@ -475,6 +503,7 @@ pub struct CommentRecord {
     pub stamp: Option<StampInfo>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct CommentsResponse {
     pub comments: Vec<CommentRecord>,
@@ -487,6 +516,7 @@ pub struct AddCommentResponse {
     pub comment: Option<CommentRecord>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct MangaSeriesContextInfo {
     pub content_order: i32,
@@ -494,6 +524,7 @@ pub struct MangaSeriesContextInfo {
     pub next_illust: Option<Illustration>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct MangaSeriesContextResult {
     pub series: Option<Series>,
@@ -705,7 +736,8 @@ where
 // Novel Content & Webview Models
 // -----------------------------------------------------------------------------
 
-#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[boltffi::data]
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq, Copy)]
 pub struct NovelRating {
     #[serde(default)]
     pub like: i32,
@@ -715,6 +747,7 @@ pub struct NovelRating {
     pub view: i32,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct NovelNavigation {
     #[serde(default, deserialize_with = "deserialize_flexible_i64")]
@@ -731,6 +764,7 @@ pub struct NovelNavigation {
     pub viewable_message: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct SeriesNavigation {
     #[serde(default, rename = "nextNovel")]
@@ -739,6 +773,7 @@ pub struct SeriesNavigation {
     pub prev_novel: Option<NovelNavigation>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct NovelImageUrls {
     #[serde(default, rename = "240mw")]
@@ -753,6 +788,7 @@ pub struct NovelImageUrls {
     pub original: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct NovelImage {
     #[serde(default, deserialize_with = "deserialize_flexible_i64", rename = "novelImageId")]
@@ -763,6 +799,7 @@ pub struct NovelImage {
     pub urls: NovelImageUrls,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct NovelIllustrationUrls {
     #[serde(default)]
@@ -773,6 +810,7 @@ pub struct NovelIllustrationUrls {
     pub original: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct NovelTagInfo {
     #[serde(default)]
@@ -781,6 +819,7 @@ pub struct NovelTagInfo {
     pub user_id: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct NovelIllustrationInfo {
     #[serde(default)]
@@ -799,6 +838,7 @@ pub struct NovelIllustrationInfo {
     pub images: NovelIllustrationUrls,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct NovelUserRef {
     #[serde(default, deserialize_with = "deserialize_flexible_i64")]
@@ -809,6 +849,7 @@ pub struct NovelUserRef {
     pub image: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct NovelIllustration {
     #[serde(default)]
@@ -825,12 +866,14 @@ pub struct NovelIllustration {
     pub page: i32,
 }
 
-#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[boltffi::data]
+#[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq, Copy)]
 pub struct NovelMarker {
     #[serde(default)]
     pub page: i32,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct NovelContent {
     #[serde(default, deserialize_with = "deserialize_flexible_i64")]
@@ -877,6 +920,7 @@ pub struct NovelContent {
 // Search Options Models
 // -----------------------------------------------------------------------------
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct BookmarkRange {
     #[serde(default)]
@@ -885,6 +929,7 @@ pub struct BookmarkRange {
     pub bookmark_num_max: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct SearchOptionsLanguage {
     #[serde(default)]
@@ -893,6 +938,7 @@ pub struct SearchOptionsLanguage {
     pub name: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct SearchOptionsGenre {
     #[serde(default)]
@@ -901,6 +947,7 @@ pub struct SearchOptionsGenre {
     pub label: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct IllustrationSearchOptions {
     #[serde(default)]
@@ -913,6 +960,7 @@ pub struct IllustrationSearchOptions {
     pub tools: Vec<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct NovelSearchOptions {
     #[serde(default)]
@@ -927,6 +975,7 @@ pub struct NovelSearchOptions {
     pub word_count_supported_languages: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct SearchOptions {
     pub illust: IllustrationSearchOptions,
@@ -977,6 +1026,7 @@ pub(crate) struct SearchOptionsRaw {
 // Advanced Search Parameter DTOs
 // -----------------------------------------------------------------------------
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Default)]
 pub struct IllustrationSearchParams {
     pub word: String,
@@ -997,6 +1047,7 @@ pub struct IllustrationSearchParams {
     pub tool: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Default)]
 pub struct NovelSearchParams {
     pub word: String,
@@ -1017,24 +1068,28 @@ pub struct NovelSearchParams {
     pub end_date: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
 pub struct SearchPopularPreviewIllustsResponse {
     #[serde(default)]
     pub illusts: Vec<Illustration>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
 pub struct SearchPopularPreviewNovelsResponse {
     #[serde(default)]
     pub novels: Vec<Novel>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
 pub struct MarkedNovel {
     pub novel: Novel,
     pub novel_marker: NovelMarker,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
 pub struct MarkedNovelsResponse {
     #[serde(default)]
@@ -1042,6 +1097,7 @@ pub struct MarkedNovelsResponse {
     pub next_url: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct LikedWorkUsersResponse {
     #[serde(default)]
@@ -1049,6 +1105,7 @@ pub struct LikedWorkUsersResponse {
     pub next_url: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct MutedTagItem {
     pub tag: Tag,
@@ -1056,11 +1113,13 @@ pub struct MutedTagItem {
     pub is_premium_slot: bool,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct MutedUserItem {
     pub user: User,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct MuteListResponse {
     #[serde(default)]
@@ -1071,18 +1130,21 @@ pub struct MuteListResponse {
     pub mute_limit_count: i32,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct StampItem {
     pub stamp_id: i32,
     pub stamp_url: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct StampListResponse {
     #[serde(default)]
     pub stamps: Vec<StampItem>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct EmojiItem {
     pub id: i32,
@@ -1090,12 +1152,14 @@ pub struct EmojiItem {
     pub image_url_medium: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct EmojiResponse {
     #[serde(default)]
     pub emoji_definitions: Vec<EmojiItem>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
 pub struct IllustBrowsingHistoryResponse {
     #[serde(default)]
@@ -1103,6 +1167,7 @@ pub struct IllustBrowsingHistoryResponse {
     pub next_url: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
 pub struct NovelBrowsingHistoryResponse {
     #[serde(default)]
@@ -1110,17 +1175,20 @@ pub struct NovelBrowsingHistoryResponse {
     pub next_url: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct FollowDetail {
     pub is_followed: bool,
     pub restrict: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct FollowUserDetailResponse {
     pub follow_detail: FollowDetail,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct WorkSeriesDetailResult {
     pub detail: Series,

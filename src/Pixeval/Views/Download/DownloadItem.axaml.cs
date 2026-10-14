@@ -22,7 +22,7 @@ public partial class DownloadItem : UserControl
 
     public DownloadItem() => InitializeComponent();
 
-    private DownloadItemSnapshot? Item => DataContext as DownloadItemSnapshot;
+    private DownloadItemSnapshot? Item => DataContext as DownloadItemSnapshot?;
 
     private DownloadPageViewModel? Page =>
         this.FindAncestorOfType<DownloadItemView>()?.DataContext is DownloadItemPageViewModel itemPage

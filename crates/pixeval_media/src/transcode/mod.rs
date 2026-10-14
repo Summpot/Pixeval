@@ -11,6 +11,7 @@ use image::{ExtendedColorType, ImageFormat};
 
 use crate::error::MediaError;
 
+#[boltffi::data]
 #[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ImageCodecFormat {
     Jpeg,
@@ -19,6 +20,7 @@ pub enum ImageCodecFormat {
     Avif,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Default)]
 pub struct TranscodeOptions {
     pub quality: Option<u8>,

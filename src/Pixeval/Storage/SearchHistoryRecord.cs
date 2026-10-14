@@ -1,11 +1,11 @@
-// Copyright (c) Pixeval.
+﻿// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System;
 
 namespace Pixeval.Storage;
 
-public partial record SearchHistoryRecord
+public partial record struct SearchHistoryRecord
 {
     public DateTime ParsedTime
     {
