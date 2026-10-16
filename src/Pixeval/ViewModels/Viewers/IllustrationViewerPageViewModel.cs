@@ -7,7 +7,6 @@ using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
 using Pixeval.Pixiv;
 using Pixeval.Config;
@@ -23,7 +22,14 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 {
     private readonly MakoClient _makoClient;
     private readonly AppSettings _appSettings;
+    private readonly StorageEngine _storageEngine;
+    private readonly IImageProviderService _images;
+    private readonly IArtworkActionService _artworkActions;
+    private readonly INotificationService _notifications;
+    private readonly ExtensionService _extensions;
+    private readonly IBlockedContentService? _blockedContent;
     private readonly FileLogger? _logger;
+    private readonly BooruClient? _booruClient;
     private readonly Dictionary<int, object> _refreshedIllustrations = [];
 
     private readonly bool _needRefresh;
@@ -76,13 +82,27 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     public IllustrationViewerPageViewModel(
         object illustrationViewModel,
         bool needRefresh,
-        MakoClient? makoClient = null,
-        AppSettings? appSettings = null,
-        FileLogger? logger = null)
+        MakoClient makoClient,
+        AppSettings appSettings,
+        StorageEngine storageEngine,
+        IImageProviderService images,
+        IArtworkActionService artworkActions,
+        INotificationService notifications,
+        ExtensionService extensions,
+        IBlockedContentService? blockedContent = null,
+        FileLogger? logger = null,
+        BooruClient? booruClient = null)
     {
-        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
-        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
-        _logger = logger ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<FileLogger>(App.Services!);
+        _makoClient = makoClient;
+        _appSettings = appSettings;
+        _storageEngine = storageEngine;
+        _images = images;
+        _artworkActions = artworkActions;
+        _notifications = notifications;
+        _extensions = extensions;
+        _blockedContent = blockedContent;
+        _logger = logger;
+        _booruClient = booruClient;
         _needRefresh = needRefresh;
         CurrentIllustration = illustrationViewModel;
         CurrentWorkIndex = 0;
@@ -91,13 +111,27 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     public IllustrationViewerPageViewModel(
         string id,
         string platform,
-        MakoClient? makoClient = null,
-        AppSettings? appSettings = null,
-        FileLogger? logger = null)
+        MakoClient makoClient,
+        AppSettings appSettings,
+        StorageEngine storageEngine,
+        IImageProviderService images,
+        IArtworkActionService artworkActions,
+        INotificationService notifications,
+        ExtensionService extensions,
+        IBlockedContentService? blockedContent = null,
+        FileLogger? logger = null,
+        BooruClient? booruClient = null)
     {
-        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
-        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
-        _logger = logger ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<FileLogger>(App.Services!);
+        _makoClient = makoClient;
+        _appSettings = appSettings;
+        _storageEngine = storageEngine;
+        _images = images;
+        _artworkActions = artworkActions;
+        _notifications = notifications;
+        _extensions = extensions;
+        _blockedContent = blockedContent;
+        _logger = logger;
+        _booruClient = booruClient;
         _ = LoadSingleIllustrationAsync(id, platform, _loadingCts.Token);
     }
 
@@ -126,13 +160,27 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         IReadOnlyList<object> illustrations,
         int currentIllustrationIndex,
         bool needRefresh,
-        MakoClient? makoClient = null,
-        AppSettings? appSettings = null,
-        FileLogger? logger = null)
+        MakoClient makoClient,
+        AppSettings appSettings,
+        StorageEngine storageEngine,
+        IImageProviderService images,
+        IArtworkActionService artworkActions,
+        INotificationService notifications,
+        ExtensionService extensions,
+        IBlockedContentService? blockedContent = null,
+        FileLogger? logger = null,
+        BooruClient? booruClient = null)
     {
-        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
-        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
-        _logger = logger ?? Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<FileLogger>(App.Services!);
+        _makoClient = makoClient;
+        _appSettings = appSettings;
+        _storageEngine = storageEngine;
+        _images = images;
+        _artworkActions = artworkActions;
+        _notifications = notifications;
+        _extensions = extensions;
+        _blockedContent = blockedContent;
+        _logger = logger;
+        _booruClient = booruClient;
         _needRefresh = needRefresh;
         _illustrations = illustrations;
         CurrentWorkIndex = currentIllustrationIndex;
@@ -234,7 +282,14 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
             && !_disposed
             && index == CurrentWorkIndex)
         {
-            CurrentImage = new ImageViewerViewModel(currentIllustration);
+            CurrentImage = new ImageViewerViewModel(
+                currentIllustration,
+                _storageEngine,
+                _makoClient,
+                _images,
+                _artworkActions,
+                _notifications,
+                _extensions);
             await LoadSeriesInfoAsync(currentIllustration, index, token);
         }
 
@@ -320,7 +375,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         LoadErrorMessage = null;
         try
         {
-            var entry = await ViewerHelper.TryGetArtworkAsync(platform, id);
+            var entry = await ViewerHelper.TryGetArtworkAsync(platform, id, _makoClient, _booruClient, _logger);
             token.ThrowIfCancellationRequested();
             if (entry is null)
             {
@@ -328,7 +383,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
                 return null;
             }
 
-            var item = BlockedContentHelper.Replace(entry);
+            var item = _blockedContent?.Replace(entry) ?? entry;
             onLoaded(item);
             return item;
         }

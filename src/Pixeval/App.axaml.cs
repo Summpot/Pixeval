@@ -129,7 +129,11 @@ public class App : Application
                 desktop.ShutdownMode = ShutdownMode.OnLastWindowClose;
                 desktop.Exit += async static (o, e) =>
                 {
-                    AppInfo.SaveContext();
+                    AppInfo.SaveContext(
+                        AppViewModel.LoginContext,
+                        AppViewModel.AppSettings,
+                        AppViewModel.HomePageCards,
+                        AppViewModel.NavigationMenuYamlText);
                     AppInfo.AppVersion.ApplyPendingUpdateOnExit();
                     await AppViewModel.DisposeAsync();
                 };

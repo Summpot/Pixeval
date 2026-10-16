@@ -3,7 +3,6 @@
 
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.I18N;
 using Pixeval.Utilities;

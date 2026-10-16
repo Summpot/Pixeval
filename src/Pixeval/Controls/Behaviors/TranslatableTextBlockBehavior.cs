@@ -16,7 +16,6 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Extensions.Common.Commands.Transformers;
 using Pixeval.Services.Background;
 
@@ -297,7 +296,7 @@ public static class TranslatableTextBlockBehavior
         }
 
         if (string.IsNullOrWhiteSpace(state.OriginalText) ||
-            ExtensionService.ActiveTextTransformerCommands.FirstOrDefault() is not { } translator)
+            textBlock.GetUiService<ExtensionService>()?.ActiveTextTransformerCommands.FirstOrDefault() is not { } translator)
         {
             UpdateCanTranslate(textBlock, state);
             UpdateFlyoutButton(textBlock, state);
@@ -436,12 +435,10 @@ public static class TranslatableTextBlockBehavior
         var canTranslate =
             !string.IsNullOrWhiteSpace(GetEffectiveTranslatedText(textBlock, state)) ||
             (!string.IsNullOrWhiteSpace(state.OriginalText) &&
-             ExtensionService.ActiveTextTransformerCommands.Any());
+             textBlock.GetUiService<ExtensionService>()?.ActiveTextTransformerCommands.Any() is true);
 
         SetCanTranslate(textBlock, canTranslate);
     }
-
-    private static ExtensionService ExtensionService => App.Services!.GetRequiredService<ExtensionService>();
 
     private sealed class TranslationState
     {

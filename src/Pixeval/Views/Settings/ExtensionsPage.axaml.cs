@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
 using Pixeval.Services.Background;
 using Pixeval.Utilities;
@@ -17,8 +16,7 @@ namespace Pixeval.Views.Settings;
 
 public partial class ExtensionsPage : IconContentPage
 {
-    private ExtensionService ExtensionService { get; } =
-        App.Services!.GetRequiredService<ExtensionService>();
+    private ExtensionService ExtensionService => this.GetRequiredUiService<ExtensionService>();
 
     private bool _firstTime = true;
 
@@ -157,13 +155,13 @@ public partial class ExtensionsPage : IconContentPage
 
     private void OpenExtensionsOnClick(object? sender, RoutedEventArgs e)
     {
-        _ = TopLevel.GetTopLevel(this)?.Launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(AppInfo.ExtensionsFolder));
+        _ = this.LauncherService.LaunchDirectoryInfoAsync(new DirectoryInfo(AppInfo.ExtensionsFolder));
     }
 
     private void ExtensionsHelpOnClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Control { Tag: Uri uri })
-            _ = TopLevel.GetTopLevel(this)?.Launcher.LaunchUriAsync(uri);
+            _ = this.LauncherService.LaunchUriAsync(uri);
     }
 
     private void ExtensionsPriorityUpOnClick(object? sender, RoutedEventArgs e)

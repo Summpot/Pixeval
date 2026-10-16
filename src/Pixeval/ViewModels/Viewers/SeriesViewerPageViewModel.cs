@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
 using Pixeval.Utilities;
 
@@ -41,11 +40,12 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
     [ObservableProperty]
     public partial bool IsWatchlistAdded { get; private set; }
 
-    private readonly MakoClient _makoClient = App.Services!.GetRequiredService<MakoClient>();
+    private readonly MakoClient _makoClient;
     private IWorkViewViewModel? _worksViewModel;
 
-    public SeriesViewerPageViewModel(SimpleWorkType workType, long seriesId)
+    public SeriesViewerPageViewModel(SimpleWorkType workType, long seriesId, MakoClient makoClient)
     {
+        _makoClient = makoClient;
         WorkType = workType;
         Id = seriesId;
         _ = LoadSeriesAsync();
@@ -56,8 +56,10 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
         long seriesId,
         Series seriesDetail,
         IWorkEntry? firstWork,
-        IWorkViewViewModel worksViewModel)
+        IWorkViewViewModel worksViewModel,
+        MakoClient makoClient)
     {
+        _makoClient = makoClient;
         WorkType = workType;
         Id = seriesId;
         FirstWork = firstWork;

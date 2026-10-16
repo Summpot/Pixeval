@@ -10,6 +10,7 @@
     xmlns:booru="using:Pixeval.Booru"
     xmlns:pixeval="using:Pixeval"
     xmlns:utilities="using:Pixeval.Common"
+    xmlns:di="using:Pixeval.Common.Markup"
     xmlns:viewModels="using:Pixeval.ViewModels.Works"
     xmlns:work="using:Pixeval.Views.Works"
     x:DataType="{x:Type booru:BooruPost}"
@@ -23,13 +24,13 @@
         <ContentControl.ContextMenu>
             <ContextMenu>
                 <MenuItem
-                    Command="{x:Static viewModels:WorkCommands.CopyCommand}"
+                    Command="{Binding CopyCommand, Source={di:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding #ThumbnailImage, Mode=OneTime}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.Copy}}"
                     Icon="{markup:SymbolIcon Copy}"
                     IsEnabled="{Binding #ThumbnailImage.(controls:Source.Loaded)}" />
                 <MenuItem
-                    Command="{x:Static viewModels:WorkCommands.SaveCommand}"
+                    Command="{Binding SaveCommand, Source={di:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.Save}}"
                     Icon="{markup:SymbolIcon Save}" />

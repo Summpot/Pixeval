@@ -11,7 +11,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
 using FluentIcons.Common;
 using Pixeval.I18N;
 using Pixeval.Config;

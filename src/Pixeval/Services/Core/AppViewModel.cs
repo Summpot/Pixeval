@@ -106,7 +106,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         MakoClient = new MakoClient(makoConfig);
         MakoClient.SetSessionCallback(new MakoSessionCallbackHandler(this, logger));
         MahoClient = new MahoClient(CreateMahoClientOptions());
-        DownloadManager = new DownloadManager(null, AppSettings.DownloadSettings.MaxDownloadTaskConcurrencyLevel);
+        DownloadManager = new DownloadManager(null, AppSettings.DownloadSettings.MaxDownloadTaskConcurrencyLevel, AppSettings);
         DownloadManager.BindStorage(StorageEngine);
         DownloadManager.BindMako(MakoClient);
         DownloadManager.SetDownloadPolicy(CreateDownloadPolicy(AppSettings));
@@ -159,11 +159,19 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             .AddSingleton<INavigationService, NavigationService>()
             .AddSingleton<IAppUpdateNotificationCoordinator, AppUpdateNotificationCoordinator>()
             .AddSingleton<HomeCardDefinitions>()
+            .AddSingleton<WorkCommands>()
+            .AddSingleton(provider =>
+                FilterCompletionEngine.CreateWithStorage(provider.GetRequiredService<StorageEngine>()))
+            .AddSingleton<IBlockedContentService, BlockedContentService>()
             .AddSingleton<WorkSubscriptionDownloadService>()
             .AddSingleton<IWorkSubscriptionService>(provider =>
                 provider.GetRequiredService<WorkSubscriptionDownloadService>())
             .AddSingleton(extensionService)
             .AddTransient<Pixeval.ViewModels.Settings.SettingsPageViewModel>()
+            .AddTransient<HomePageViewModel>()
+            .AddTransient<LoginPageViewModel>()
+            .AddTransient<TabViewContainerViewModel>()
+            .AddTransient<SauceNaoSearchPageViewModel>()
             .AddSingleton<Pixeval.ViewModels.Search.SearchPageViewModel>()
 #if PIXEVAL_MCP
             .AddSingleton<IPixevalMcpService>(t =>

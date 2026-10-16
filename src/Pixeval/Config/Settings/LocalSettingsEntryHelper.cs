@@ -404,16 +404,19 @@ public static class LocalSettingsEntryHelper
     extension(ISettingsGroupBuilder<DownloadFormatsSettings> builder)
     {
         public ISettingsGroupBuilder<DownloadFormatsSettings> IllustrationDownloadFormat(
+            ExtensionService extensions,
             Action<IllustrationDownloadFormatSettingsEntry>? config = null) =>
-            builder.Add(new IllustrationDownloadFormatSettingsEntry(builder.Settings), config);
+            builder.Add(new IllustrationDownloadFormatSettingsEntry(builder.Settings, extensions), config);
 
         public ISettingsGroupBuilder<DownloadFormatsSettings> UgoiraDownloadFormat(
+            ExtensionService extensions,
             Action<UgoiraDownloadFormatSettingsEntry>? config = null) =>
-            builder.Add(new UgoiraDownloadFormatSettingsEntry(builder.Settings), config);
+            builder.Add(new UgoiraDownloadFormatSettingsEntry(builder.Settings, extensions), config);
 
         public ISettingsGroupBuilder<DownloadFormatsSettings> NovelDownloadFormat(
+            ExtensionService extensions,
             Action<NovelDownloadFormatSettingsEntry>? config = null) =>
-            builder.Add(new NovelDownloadFormatSettingsEntry(builder.Settings), config);
+            builder.Add(new NovelDownloadFormatSettingsEntry(builder.Settings, extensions), config);
 
     }
 

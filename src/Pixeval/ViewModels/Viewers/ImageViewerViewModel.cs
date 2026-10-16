@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Pixiv;
 using Pixeval.Booru;
 using Pixeval.Mako;
@@ -16,7 +15,14 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
 {
     private bool _isDisposed;
 
-    public ImageViewerViewModel(object thumbnailViewModel)
+    public ImageViewerViewModel(
+        object thumbnailViewModel,
+        StorageEngine storageEngine,
+        MakoClient makoClient,
+        IImageProviderService images,
+        IArtworkActionService artworkActions,
+        INotificationService notifications,
+        ExtensionService extensions)
     {
         ThumbnailViewModel = thumbnailViewModel;
         var entry = thumbnailViewModel is WorkEntry we ? we.AsWorkEntry : thumbnailViewModel;
@@ -29,13 +35,16 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
 
         Images = entry switch
         {
-            Illustration { Pages.Count: > 1 } ill => ill.Pages.Select((page, index) => new SingleViewerViewModel(platform, page, index, ill)).ToArray(),
-            _ => [new(platform, entry, 0)]
+            Illustration { Pages.Count: > 1 } ill => ill.Pages
+                .Select((page, index) => new SingleViewerViewModel(
+                    platform, page, index, images, artworkActions, notifications, makoClient, extensions, ill))
+                .ToArray(),
+            _ => [new SingleViewerViewModel(platform, entry, 0, images, artworkActions, notifications, makoClient, extensions)]
         };
 
         PageCount = Images.Count;
 
-        App.Services!.GetRequiredService<StorageEngine>().HistoryRepository.AddBrowseHistory(thumbnailViewModel);
+        storageEngine.HistoryRepository.AddBrowseHistory(thumbnailViewModel);
     }
 
     public object ThumbnailViewModel { get; set; }

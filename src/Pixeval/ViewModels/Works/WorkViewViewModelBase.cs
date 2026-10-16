@@ -8,19 +8,18 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.Common.Collections;
 using Pixeval.Mako;
 
 namespace Pixeval.ViewModels.Works;
 
-public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<string>? blockedTags)
-    : EntryViewViewModel<T, TViewModel>, IWorkViewViewModel
+public abstract partial class WorkViewViewModelBase<T, TViewModel>(AppSettings appSettings, IBlockedContentService? blockedContent = null)
+    : EntryViewViewModel<T, TViewModel>(blockedContent), IWorkViewViewModel
     where T : notnull
     where TViewModel : notnull
 {
-    public FrozenSet<string> CachedBlockedTags { get; private set; } = blockedTags ?? App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.BlockedTags.ToFrozenSet();
+    public FrozenSet<string> CachedBlockedTags { get; private set; } = appSettings.BrowsingExperienceSettings.BlockedTags.ToFrozenSet();
 
     [ObservableProperty]
     public partial bool IsSelecting { get; set; }
@@ -75,7 +74,7 @@ public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<str
 
     public void ResetEngine(IAsyncEnumerable<object>? newEngine, int itemsPerPage = 20, int itemLimit = -1)
     {
-        CachedBlockedTags = [.. App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.BlockedTags.ToFrozenSet()];
+        CachedBlockedTags = [.. appSettings.BrowsingExperienceSettings.BlockedTags.ToFrozenSet()];
         var typedEngine = newEngine as IAsyncEnumerable<T> ?? (newEngine is not null ? CastEngine(newEngine) : null);
         ResetEngine(typedEngine, static (info, _) => (TViewModel) (object) info, itemsPerPage, itemLimit);
 

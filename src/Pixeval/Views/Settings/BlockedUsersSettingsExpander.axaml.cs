@@ -10,7 +10,6 @@ using AutoSettingsPage.Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using CommunityToolkit.Avalonia.Controls;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
 using Pixeval.Config;
 using Pixeval.Storage;

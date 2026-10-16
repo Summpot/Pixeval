@@ -68,6 +68,11 @@ public partial class CommentsPage : IconNavigationPage
             && existing.ParentType == ParentType)
             return;
 
-        _container.DataContext = new CommentsViewViewModel(ParentType, ParentId);
+        _container.DataContext = new CommentsViewViewModel(
+            ParentType,
+            ParentId,
+            this.GetRequiredUiService<MakoClient>(),
+            this.GetUiService<IUserSessionService>(),
+            this.GetUiService<IBlockedContentService>());
     }
 }

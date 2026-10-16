@@ -206,7 +206,8 @@ public class Versioning
         if (manager is null || target is null)
             return;
 
-        AppInfo.SaveContext();
+        if (_settings is { } settings)
+            AppInfo.SaveSettings(settings);
         _updateApplyRequested = true;
         try
         {
@@ -230,7 +231,8 @@ public class Versioning
             if (manager?.UpdatePendingRestart is not { } target)
                 return;
 
-            AppInfo.SaveContext();
+            if (_settings is { } settings)
+                AppInfo.SaveSettings(settings);
             _updateApplyRequested = true;
             manager.WaitExitThenApplyUpdates(target, silent: true, restart: false);
         }

@@ -4,14 +4,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Pixeval.Booru;
 using Pixeval.Filters;
 using Pixeval.I18N;
+using Pixeval.Mako;
+using Pixeval.SauceNao;
 using Pixeval.ViewModels;
 using Pixeval.Views.Shell;
 
 namespace Pixeval.Views.Works;
 
-public class WorkContainerFilterCoordinator
+public class WorkContainerFilterCoordinator(FilterCompletionEngine completionEngine)
 {
     private const string FilterDiagnosticResourcePrefix = "Filter.Diagnostics.";
 
@@ -23,7 +26,7 @@ public class WorkContainerFilterCoordinator
         if (viewModel is { Source.Count: > 0 })
             EnsureFilterValueCompletions(viewModel.Source);
 
-        return WorkFilterLanguage.CompletionEngine.Analyze(text ?? string.Empty, caret);
+        return completionEngine.Analyze(text ?? string.Empty, caret);
     }
 
     public void PerformSearch(
@@ -60,7 +63,7 @@ public class WorkContainerFilterCoordinator
         }
 
         viewModel.UserFilter = query.HasPredicates()
-            ? o => query.MatchesArtwork(o.ToArtworkMetadata())
+            ? o => query.MatchesArtwork(ToArtworkMetadata(o))
             : null;
         suggestBox.ClearSelection();
     }
@@ -72,14 +75,14 @@ public class WorkContainerFilterCoordinator
 
         _filterCompletionSource = source;
         _filterCompletionSourceCount = source.Count;
-        WorkFilterLanguage.CompletionEngine.SetSessionArtworks(source.Select(w => w.ToArtworkMetadata()).ToList());
+        completionEngine.SetSessionArtworks(source.Select(ToArtworkMetadata).ToList());
     }
 
     public void ResetFilterValueCompletions()
     {
         _filterCompletionSource = null;
         _filterCompletionSourceCount = -1;
-        WorkFilterLanguage.CompletionEngine.ClearSessionCandidates();
+        completionEngine.ClearSessionCandidates();
     }
 
     public static string FormatDiagnosticMessage(FilterAnalysisResult analysis)
@@ -107,4 +110,26 @@ public class WorkContainerFilterCoordinator
 
     public static string GetFilterDiagnosticResourceKey(FilterDiagnosticKind kind) =>
         FilterDiagnosticResourcePrefix + kind;
+
+    private static ArtworkMetadata ToArtworkMetadata(object info) => info switch
+    {
+        Illustration illust => illust.ToArtworkMetadata(),
+        Mako.Novel novel => novel.ToArtworkMetadata(),
+        BooruPost booru => booru.ToArtworkMetadata(),
+        SauceNaoItem sauce => sauce.ToArtworkMetadata(),
+        WorkEntry we => we.ToArtworkMetadata(),
+        _ => new ArtworkMetadata(
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            [],
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0)
+    };
 }

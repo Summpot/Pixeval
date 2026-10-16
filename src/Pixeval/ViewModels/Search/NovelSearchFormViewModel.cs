@@ -9,6 +9,10 @@ namespace Pixeval.ViewModels.Search;
 
 public partial class NovelSearchFormViewModel : SearchArgumentsFormViewModelBase
 {
+    public NovelSearchFormViewModel(IUserSessionService? userSession = null) : base(userSession)
+    {
+    }
+
     [ObservableProperty]
     public partial SearchNovelTagMatchOption MatchOption { get; set; }
 

@@ -4,7 +4,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using Avalonia.Controls;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.ViewModels.Home;
 
@@ -25,12 +24,12 @@ public sealed partial class HomePage : DrawerPage
 
     public HomePageViewModel ViewModel { get; }
 
-    public HomePage()
+    public HomePage(HomePageViewModel viewModel, HomePageCardSession session)
     {
-        DataContext = ViewModel = new HomePageViewModel();
+        DataContext = ViewModel = viewModel;
         InitializeComponent();
 
-        _cards = App.Services!.GetRequiredService<HomePageCardSession>().Cards;
+        _cards = session.Cards;
         ViewModel.PropertyChanged += ViewModel_OnPropertyChanged;
         UpdateGridSizeControls();
 

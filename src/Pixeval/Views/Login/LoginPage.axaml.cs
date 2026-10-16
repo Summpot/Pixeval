@@ -10,7 +10,6 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.I18N;
 using Pixeval.Services.Background;
@@ -26,8 +25,9 @@ public partial class LoginPage : IconContentPage
 {
     private CancellationTokenSource? _loadUsersCancellationTokenSource;
 
-    public LoginPage()
+    public LoginPage(LoginPageViewModel viewModel)
     {
+        DataContext = viewModel;
         InitializeComponent();
     }
 
@@ -166,7 +166,7 @@ public partial class LoginPage : IconContentPage
 
     public void LoginNavigate()
     {
-        var nav = this.GetUiService<INavigationService>() ?? new NavigationService();
+        var nav = this.GetRequiredUiService<INavigationService>();
         nav.NavigateToHome(removeCurrentPage: true, sourceControl: this);
         this.GetRequiredUiService<IWorkSubscriptionService>().QueueSyncAll();
     }

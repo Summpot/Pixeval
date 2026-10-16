@@ -6,7 +6,6 @@ using System.Linq;
 using AutoSettingsPage;
 using AutoSettingsPage.Models;
 using FluentIcons.Common;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.Controls;
 using Pixeval.Extensions.Common;
@@ -17,7 +16,7 @@ using Pixeval.Services.Background;
 
 namespace Pixeval.Config;
 
-public class NovelDownloadFormatSettingsEntry(DownloadFormatsSettings settings)
+public class NovelDownloadFormatSettingsEntry(DownloadFormatsSettings settings, ExtensionService extensions)
     : SingleValueSettingsEntry<DownloadFormatsSettings, object>(
         settings,
         nameof(DownloadFormatsSettings.NovelDownloadFormat),
@@ -29,18 +28,18 @@ public class NovelDownloadFormatSettingsEntry(DownloadFormatsSettings settings)
         static (settings, value) => settings.NovelDownloadFormat = ((NovelDownloadFormatToken) value).Value),
         IEnumSettingsEntry<object>
 {
-    public IReadOnlyList<IReadOnlyStringPair<object>> EnumItems { get; } = CreateEnumItems();
+    public IReadOnlyList<IReadOnlyStringPair<object>> EnumItems { get; } = CreateEnumItems(extensions);
 
-    private static IReadOnlyList<IReadOnlyStringPair<object>> CreateEnumItems()
+    private static IReadOnlyList<IReadOnlyStringPair<object>> CreateEnumItems(ExtensionService extensionService)
     {
         var builtIns = SymbolComboBoxItem.GetValues<NovelDownloadFormat>()
             .Select(t => t with { Value = NovelDownloadFormatToken.BuiltIn((NovelDownloadFormat) t.Value) });
 
-        var extensions = App.Services!.GetRequiredService<ExtensionService>()
+        var extensionItems = extensionService
             .ActiveNovelFormatProviders
             .Select(t => new SymbolComboBoxItem(NovelDownloadFormatToken.Extension(t), t.FormatDescription, t is IEntryExtension entry ? entry.Icon : Symbol.Document));
 
-        return [.. builtIns.Concat(extensions)];
+        return [.. builtIns.Concat(extensionItems)];
     }
 
     public override object Value

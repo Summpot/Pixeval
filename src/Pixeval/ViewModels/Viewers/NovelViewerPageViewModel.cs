@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.I18N;
 using Pixeval.Pixiv;
@@ -24,6 +23,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
     private readonly MakoClient _makoClient;
     private readonly AppSettings _appSettings;
     private readonly StorageEngine _storageEngine;
+    private readonly IBlockedContentService? _blockedContent;
 
     private readonly Dictionary<int, Mako.Novel> _refreshedNovels = [];
 
@@ -43,13 +43,15 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
     public NovelViewerPageViewModel(
         Mako.Novel novelViewModel,
         bool needRefresh,
-        MakoClient? makoClient = null,
-        AppSettings? appSettings = null,
-        StorageEngine? storageEngine = null)
+        MakoClient makoClient,
+        AppSettings appSettings,
+        StorageEngine storageEngine,
+        IBlockedContentService? blockedContent = null)
     {
-        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
-        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
-        _storageEngine = storageEngine ?? App.Services!.GetRequiredService<StorageEngine>();
+        _makoClient = makoClient;
+        _appSettings = appSettings;
+        _storageEngine = storageEngine;
+        _blockedContent = blockedContent;
         _needRefresh = needRefresh;
         CurrentNovel = novelViewModel;
         CurrentWorkIndex = 0;
@@ -57,13 +59,15 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
     public NovelViewerPageViewModel(
         long id,
-        MakoClient? makoClient = null,
-        AppSettings? appSettings = null,
-        StorageEngine? storageEngine = null)
+        MakoClient makoClient,
+        AppSettings appSettings,
+        StorageEngine storageEngine,
+        IBlockedContentService? blockedContent = null)
     {
-        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
-        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
-        _storageEngine = storageEngine ?? App.Services!.GetRequiredService<StorageEngine>();
+        _makoClient = makoClient;
+        _appSettings = appSettings;
+        _storageEngine = storageEngine;
+        _blockedContent = blockedContent;
         _ = LoadSingleNovelAsync(id, _loadingCts.Token);
     }
 
@@ -71,13 +75,15 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         IReadOnlyList<Mako.Novel> novels,
         int currentNovelIndex,
         bool needRefresh,
-        MakoClient? makoClient = null,
-        AppSettings? appSettings = null,
-        StorageEngine? storageEngine = null)
+        MakoClient makoClient,
+        AppSettings appSettings,
+        StorageEngine storageEngine,
+        IBlockedContentService? blockedContent = null)
     {
-        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
-        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
-        _storageEngine = storageEngine ?? App.Services!.GetRequiredService<StorageEngine>();
+        _makoClient = makoClient;
+        _appSettings = appSettings;
+        _storageEngine = storageEngine;
+        _blockedContent = blockedContent;
         _needRefresh = needRefresh;
         _novels = novels;
         CurrentWorkIndex = currentNovelIndex;
@@ -195,6 +201,8 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
     public string CurrentMarkdown => PageCount is 0 ? "" : _pageMarkdowns[CurrentPageIndex];
 
     #region Settings
+
+    internal AppSettings AppSettings => _appSettings;
 
     private AppSettings Settings => _appSettings;
 
@@ -383,8 +391,8 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         LoadErrorMessage = null;
         try
         {
-            var novel = BlockedContentHelper.Replace(
-                await _makoClient.GetNovelFromIdAsync(id, token));
+            var loaded = await _makoClient.GetNovelFromIdAsync(id, token);
+            var novel = _blockedContent?.Replace(loaded) ?? loaded;
             token.ThrowIfCancellationRequested();
             onLoaded(novel);
             return novel;

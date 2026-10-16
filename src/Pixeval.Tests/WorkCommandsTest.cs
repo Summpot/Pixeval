@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using Avalonia.Controls;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
 using Pixeval.Pixiv;
@@ -20,6 +21,10 @@ namespace Pixeval.Tests;
 [DoNotParallelize]
 public sealed class WorkCommandsTest
 {
+    private static readonly WorkCommands Commands = new(
+        NullArtworkActionService.Instance,
+        new NavigationService(new ServiceCollection().BuildServiceProvider()));
+
     [TestMethod]
     public void BookmarkRequestStructPropertiesHoldExpectedValues()
     {
@@ -27,7 +32,7 @@ public sealed class WorkCommandsTest
         var tags = new List<string> { "tag1", "tag2" };
         var request = new BookmarkRequest(illust, true, tags);
 
-        Assert.AreSame(illust, request.Work);
+        Assert.AreEqual(illust, request.Work);
         Assert.IsTrue(request.IsPrivate);
         Assert.AreSame(tags, request.Tags);
     }
@@ -70,10 +75,10 @@ public sealed class WorkCommandsTest
     public void BookmarkCommandAcceptsWorkDirectlyWithoutThrowing()
     {
         var illust = DesignHelper.DesignIllustration;
-        Assert.IsTrue(WorkCommands.BookmarkCommand.CanExecute(illust));
+        Assert.IsTrue(Commands.BookmarkCommand.CanExecute(illust));
 
         var novel = DesignHelper.DesignNovel;
-        Assert.IsTrue(WorkCommands.BookmarkCommand.CanExecute(novel));
+        Assert.IsTrue(Commands.BookmarkCommand.CanExecute(novel));
     }
 
     [TestMethod]
@@ -81,35 +86,35 @@ public sealed class WorkCommandsTest
     {
         var illust = DesignHelper.DesignIllustration;
         var request = new BookmarkRequest(illust, false, ["pixiv"]);
-        Assert.IsTrue(WorkCommands.AddToBookmarkCommand.CanExecute(request));
+        Assert.IsTrue(Commands.AddToBookmarkCommand.CanExecute(request));
     }
 
     [TestMethod]
     public void AddToWatchLaterCommandAcceptsWorkDirectly()
     {
         var illust = DesignHelper.DesignIllustration;
-        Assert.IsTrue(WorkCommands.AddToWatchLaterCommand.CanExecute(illust));
+        Assert.IsTrue(Commands.AddToWatchLaterCommand.CanExecute(illust));
 
         var novel = DesignHelper.DesignNovel;
-        Assert.IsTrue(WorkCommands.AddToWatchLaterCommand.CanExecute(novel));
+        Assert.IsTrue(Commands.AddToWatchLaterCommand.CanExecute(novel));
     }
 
     [TestMethod]
     public void SaveCommandAcceptsWorkDirectly()
     {
         var illust = DesignHelper.DesignIllustration;
-        Assert.IsTrue(WorkCommands.SaveCommand.CanExecute(illust));
+        Assert.IsTrue(Commands.SaveCommand.CanExecute(illust));
 
         var novel = DesignHelper.DesignNovel;
-        Assert.IsTrue(WorkCommands.SaveCommand.CanExecute(novel));
+        Assert.IsTrue(Commands.SaveCommand.CanExecute(novel));
     }
 
     [TestMethod]
     public void UserCommandsAcceptUserDirectly()
     {
         var user = DesignHelper.DesignUser;
-        Assert.IsTrue(WorkCommands.FollowUserCommand.CanExecute(user));
-        Assert.IsTrue(WorkCommands.BlockUserCommand.CanExecute(user));
+        Assert.IsTrue(Commands.FollowUserCommand.CanExecute(user));
+        Assert.IsTrue(Commands.BlockUserCommand.CanExecute(user));
     }
 
     [TestMethod]
@@ -118,7 +123,7 @@ public sealed class WorkCommandsTest
         var illust = DesignHelper.DesignIllustration;
         var button = new Button
         {
-            Command = WorkCommands.BookmarkCommand,
+            Command = Commands.BookmarkCommand,
             CommandParameter = illust
         };
         Assert.IsTrue(button.Command.CanExecute(button.CommandParameter));
@@ -130,12 +135,12 @@ public sealed class WorkCommandsTest
         var illust = DesignHelper.DesignIllustration;
         WorkEntry workEntry = new WorkEntry(new WorkEntry.Illust(illust));
 
-        Assert.IsTrue(WorkCommands.BookmarkCommand.CanExecute(workEntry));
-        Assert.IsTrue(WorkCommands.AddToWatchLaterCommand.CanExecute(workEntry));
-        Assert.IsTrue(WorkCommands.SaveCommand.CanExecute(workEntry));
+        Assert.IsTrue(Commands.BookmarkCommand.CanExecute(workEntry));
+        Assert.IsTrue(Commands.AddToWatchLaterCommand.CanExecute(workEntry));
+        Assert.IsTrue(Commands.SaveCommand.CanExecute(workEntry));
 
         var request = new BookmarkRequest(workEntry, false, ["tag"]);
-        Assert.IsTrue(WorkCommands.AddToBookmarkCommand.CanExecute(request));
+        Assert.IsTrue(Commands.AddToBookmarkCommand.CanExecute(request));
     }
 
     [TestMethod]

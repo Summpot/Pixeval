@@ -12,7 +12,7 @@ namespace Pixeval.Common;
 
 public static class DesignHelper
 {
-    public static UserViewerPageViewModel DesignUserViewerPageViewModel => field ??= new(123456);
+    public static UserViewerPageViewModel DesignUserViewerPageViewModel => field ??= new(DesignSingleUserResponse);
 
     public static User DesignUserViewModel => DesignUser;
 

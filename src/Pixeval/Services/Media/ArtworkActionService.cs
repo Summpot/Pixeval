@@ -361,7 +361,7 @@ public sealed class ArtworkActionService : IArtworkActionService
         }
     }
 
-    public bool BlockUser(User user) => BlockedContentHelper.TryAddOrUpdateBlockedUser(user);
+    public bool BlockUser(User user) => BlockedContentHelper.TryAddOrUpdateBlockedUser(user, _storageEngine);
 
     public async Task CopyImageAsync(Image? image)
     {

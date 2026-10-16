@@ -59,7 +59,8 @@ public sealed class ImageViewerLoadingTest
             {
                 using var pageModel = new IllustrationViewerPageViewModel(
                     new object[] { new WorkEntry(new WorkEntry.Illust(DesignHelper.DesignIllustration with { Series = null })) },
-                    0, false, mako, settings);
+                    0, false, mako, settings, storage, images,
+                    NullArtworkActionService.Instance, NullNotificationService.Instance, extensions);
                 Assert.IsNotNull(pageModel.CurrentImage);
                 var model = pageModel.CurrentImage;
                 var page = new IllustrationViewerPage(pageModel);

@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Diagnostics;
 using System.Net;
 using System.Text.RegularExpressions;
@@ -12,7 +13,6 @@ using Avalonia.Data.Converters;
 using Avalonia.Media;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.Pixiv;
 using Pixeval.Config;
@@ -97,8 +97,11 @@ public static partial class PixevalConverters
 
     public static readonly FuncValueConverter<string, FontFamily?> FontFamilyConverter = new(static font => FontFamilyHelper.Create(font));
 
-    public static readonly FuncValueConverter<long, bool> IsCurrentUserId = new(static id =>
-        App.Services?.GetService<IUserSessionService>() is { CurrentUserId: > 0 and var current } && id == current);
+    public static readonly IMultiValueConverter LongEquals = new FuncMultiValueConverter<long, bool>(static values =>
+    {
+        var list = values as IReadOnlyList<long> ?? [.. values];
+        return list.Count >= 2 && list[1] > 0 && list[0] == list[1];
+    });
 
     public static readonly FuncValueConverter<WorkSubscriptionType, string> WorkSubscriptionTypeText =
         new(static value => SymbolComboBoxItem.GetResource(value));

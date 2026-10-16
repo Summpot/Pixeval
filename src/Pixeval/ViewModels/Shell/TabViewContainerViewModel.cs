@@ -9,7 +9,6 @@ using AnimatedControls.Avalonia;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Pixiv;
 using Pixeval.Config;
 using Pixeval.Mako;
@@ -33,15 +32,6 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     public partial bool CanCreateNewTab { get; private set; }
-
-    public TabViewContainerViewModel() : this(
-        App.Services!.GetRequiredService<IUserSessionService>(),
-        App.Services!.GetRequiredService<MakoClient>(),
-        App.Services!.GetRequiredService<INavigationService>(),
-        App.Services!.GetRequiredService<NavigationMenuDocument>(),
-        App.Services!.GetRequiredService<IImageProviderService>())
-    {
-    }
 
     public TabViewContainerViewModel(
         IUserSessionService sessionService,

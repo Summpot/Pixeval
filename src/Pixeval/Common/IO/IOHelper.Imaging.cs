@@ -6,7 +6,6 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Download;
 using Pixeval.Services.Background;
 using Pixeval.Config;
@@ -20,8 +19,6 @@ public static partial class IoHelper
     public const string PixevalTempExtension = ".pixevaldownloading";
 
     private const string FileExtensionTokenPrefix = "<ext";
-
-    private static IDownloadFormatService? DownloadFormatService => App.Services?.GetService<IDownloadFormatService>();
 
     extension(Stream stream)
     {
@@ -48,11 +45,7 @@ public static partial class IoHelper
 
     public static UgoiraDownloadFormatToken GetAvailableUgoiraDownloadFormatToken(string? ugoiraDownloadFormat = null)
     {
-        if (DownloadFormatService is { } service)
-            return service.GetAvailableUgoiraDownloadFormatToken(ugoiraDownloadFormat);
-
-        ugoiraDownloadFormat ??= App.Services?.GetService<AppSettings>()?.DownloadSettings?.DownloadFormats?.UgoiraDownloadFormat ?? string.Empty;
-        var token = new UgoiraDownloadFormatToken(ugoiraDownloadFormat);
+        var token = new UgoiraDownloadFormatToken(ugoiraDownloadFormat ?? string.Empty);
         if (token.BuiltInFormat is not null)
         {
             if (token.BuiltInFormat == UgoiraDownloadFormat.Mp4 && !MediaEngine.IsMp4Available)
@@ -60,45 +53,25 @@ public static partial class IoHelper
             return token;
         }
 
-        if (token.ExtensionFormatExtension is { } extension
-            && App.Services?.GetService<ExtensionService>()?.GetAnimatedImageFormatProvider(extension) is not null)
-            return token;
-
-        return UgoiraDownloadFormatToken.Default;
+        return token.ExtensionFormatExtension is not null ? token : UgoiraDownloadFormatToken.Default;
     }
 
     public static IllustrationDownloadFormatToken GetAvailableIllustrationDownloadFormatToken(string? illustrationDownloadFormat = null)
     {
-        if (DownloadFormatService is { } service)
-            return service.GetAvailableIllustrationDownloadFormatToken(illustrationDownloadFormat);
-
-        illustrationDownloadFormat ??= App.Services?.GetService<AppSettings>()?.DownloadSettings?.DownloadFormats?.IllustrationDownloadFormat ?? string.Empty;
-        var token = new IllustrationDownloadFormatToken(illustrationDownloadFormat);
+        var token = new IllustrationDownloadFormatToken(illustrationDownloadFormat ?? string.Empty);
         if (token.BuiltInFormat is IllustrationDownloadFormat.Original)
             return token;
 
-        if (token.ExtensionFormatExtension is { } extension
-            && App.Services?.GetService<ExtensionService>()?.GetStaticImageFormatProvider(extension) is not null)
-            return token;
-
-        return IllustrationDownloadFormatToken.Default;
+        return token.ExtensionFormatExtension is not null ? token : IllustrationDownloadFormatToken.Default;
     }
 
     public static NovelDownloadFormatToken GetAvailableNovelDownloadFormatToken(string? novelDownloadFormat = null)
     {
-        if (DownloadFormatService is { } service)
-            return service.GetAvailableNovelDownloadFormatToken(novelDownloadFormat);
-
-        novelDownloadFormat ??= App.Services?.GetService<AppSettings>()?.DownloadSettings?.DownloadFormats?.NovelDownloadFormat ?? string.Empty;
-        var token = new NovelDownloadFormatToken(novelDownloadFormat);
+        var token = new NovelDownloadFormatToken(novelDownloadFormat ?? string.Empty);
         if (token.BuiltInFormat is not null)
             return token;
 
-        if (token.ExtensionFormatExtension is { } extension
-            && App.Services?.GetService<ExtensionService>()?.GetNovelFormatProvider(extension) is not null)
-            return token;
-
-        return NovelDownloadFormatToken.Default;
+        return token.ExtensionFormatExtension is not null ? token : NovelDownloadFormatToken.Default;
     }
 
     /// <summary>
@@ -107,9 +80,6 @@ public static partial class IoHelper
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     public static string? GetUgoiraExtension(string? ugoiraDownloadFormat = null)
     {
-        if (DownloadFormatService is { } service)
-            return service.GetUgoiraExtension(ugoiraDownloadFormat);
-
         var token = GetAvailableUgoiraDownloadFormatToken(ugoiraDownloadFormat);
         if (token.ExtensionFormatExtension is { } extension)
             return extension;
@@ -131,9 +101,6 @@ public static partial class IoHelper
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     public static string? GetIllustrationExtension(string? illustrationDownloadFormat = null)
     {
-        if (DownloadFormatService is { } service)
-            return service.GetIllustrationExtension(illustrationDownloadFormat);
-
         var token = GetAvailableIllustrationDownloadFormatToken(illustrationDownloadFormat);
         if (token.ExtensionFormatExtension is { } extension)
             return extension;
@@ -146,13 +113,10 @@ public static partial class IoHelper
     }
 
     public static string GetNovelExtension(string? novelDownloadFormat = null) =>
-        DownloadFormatService?.GetNovelExtension(novelDownloadFormat) ?? GetNovelExtension(GetAvailableNovelDownloadFormatToken(novelDownloadFormat));
+        GetNovelExtension(GetAvailableNovelDownloadFormatToken(novelDownloadFormat));
 
     public static string GetNovelExtension(NovelDownloadFormatToken token)
     {
-        if (DownloadFormatService is { } service)
-            return service.GetNovelExtension(token);
-
         if (token.ExtensionFormatExtension is { } extension)
             return extension;
 

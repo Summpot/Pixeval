@@ -6,7 +6,6 @@ using System.Text;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
 using Pixeval.Config;
 using Pixeval.Utilities;
@@ -18,12 +17,12 @@ public sealed partial class NavigationSettingsPage : ContentPage
     private readonly NavigationYamlEditorColorizer _colorizer = new();
     private bool _isSynchronizingText;
 
-    public NavigationSettingsPage()
+    public NavigationSettingsPage(NavigationMenuDocument document)
     {
         InitializeComponent();
         DataContext = this;
         YamlEditor.TextArea.TextView.LineTransformers.Add(_colorizer);
-        SetEditorText(App.Services!.GetRequiredService<NavigationMenuDocument>().Text);
+        SetEditorText(document.Text);
         ValidateCurrentText();
     }
 

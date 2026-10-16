@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using Avalonia;
 using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -19,6 +20,12 @@ namespace Pixeval.Views.Works;
 
 public class WorkItem : EntryItem, IWorkAnimatable
 {
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        Recycle();
+        base.OnUnloaded(e);
+    }
+
     internal virtual void Recycle()
     {
         foreach (var descendant in this.GetLogicalDescendants())
@@ -31,7 +38,7 @@ public class WorkItem : EntryItem, IWorkAnimatable
             visual.Opacity = 1;
         }
 
-        DataContext = null;
+        ClearValue(DataContextProperty);
     }
 
     public void StartAnimation()

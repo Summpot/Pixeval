@@ -12,7 +12,6 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using CommunityToolkit.Avalonia.Controls;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.Pixiv;
 using Pixeval.I18N;
@@ -46,8 +45,8 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         UpdateWorkKindItems();
     }
 
-    private static IWorkSubscriptionService SubscriptionService =>
-        App.Services!.GetRequiredService<IWorkSubscriptionService>();
+    private IWorkSubscriptionService SubscriptionService =>
+        this.GetRequiredUiService<IWorkSubscriptionService>();
 
     private static IReadOnlyList<SymbolComboBoxItem> BookmarkWorkKinds { get; } =
         [.. SymbolComboBoxItem.GetValues<WorkSubscriptionWorkKind>().Where(t => t.Value is WorkSubscriptionWorkKind.Illustration or WorkSubscriptionWorkKind.Novel)];
@@ -66,7 +65,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         Subscriptions.Clear();
         try
         {
-            foreach (var entry in App.Services!.GetRequiredService<StorageEngine>().GetAllSubscriptions())
+            foreach (var entry in this.GetRequiredUiService<StorageEngine>().GetAllSubscriptions())
             {
                 token.ThrowIfCancellationRequested();
                 Subscriptions.Add(entry);
@@ -77,7 +76,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         }
         catch (Exception e)
         {
-            App.Services!.GetRequiredService<FileLogger>()
+            this.GetRequiredUiService<FileLogger>()
                 .LogError(nameof(ReloadAsync), e);
         }
     }
@@ -109,14 +108,14 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
             var simpleWorkType = workKind is WorkSubscriptionWorkKind.Novel
                 ? SimpleWorkType.Novel
                 : SimpleWorkType.Illustration;
-            var storage = App.Services!.GetRequiredService<StorageEngine>();
-            var (detail, first, engine) = await App.Services!.GetRequiredService<MakoClient>().GetWorkSeriesAsync(simpleWorkType, targetId);
+            var storage = this.GetRequiredUiService<StorageEngine>();
+            var (detail, first, engine) = await this.GetRequiredUiService<MakoClient>().GetWorkSeriesAsync(simpleWorkType, targetId);
             _ = WorkSubscriptionHelper.TryAddOrUpdateSeries(targetId, workKind, storage, SubscriptionService, detail, first, engine);
         }
         else
         {
-            var storage = App.Services!.GetRequiredService<StorageEngine>();
-            var user = (await App.Services!.GetRequiredService<MakoClient>().GetUserFromIdAsync(targetId)).User;
+            var storage = this.GetRequiredUiService<StorageEngine>();
+            var user = (await this.GetRequiredUiService<MakoClient>().GetUserFromIdAsync(targetId)).User;
             _ = WorkSubscriptionHelper.TryAddOrUpdateUser(user, subscriptionType, workKind, storage, SubscriptionService);
         }
 

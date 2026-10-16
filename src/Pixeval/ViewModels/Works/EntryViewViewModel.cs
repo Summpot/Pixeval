@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
@@ -15,8 +16,14 @@ public abstract class EntryViewViewModel<T, TViewModel>
     where T : notnull
     where TViewModel : notnull
 {
+    private readonly IBlockedContentService? _blockedContent;
     private bool _isDisposed;
     private IncrementalLoadingCollection<TViewModel>? _source;
+
+    protected EntryViewViewModel(IBlockedContentService? blockedContent = null)
+    {
+        _blockedContent = blockedContent;
+    }
 
     public virtual ObservableCollection<TViewModel> View => Source;
 
@@ -40,7 +47,8 @@ public abstract class EntryViewViewModel<T, TViewModel>
         ObjectDisposedException.ThrowIf(_isDisposed, this);
         _source?.Dispose();
 
-        var snapshot = BlockedContentHelper.CaptureSnapshot();
+        var snapshot = _blockedContent?.CaptureSnapshot()
+                       ?? new BlockedContentSnapshot(FrozenSet<string>.Empty, FrozenSet<long>.Empty);
         var effectiveFactory = (T entry, int index) =>
         {
             var replaced = BlockedContentHelper.ReplaceEntry(entry, snapshot);

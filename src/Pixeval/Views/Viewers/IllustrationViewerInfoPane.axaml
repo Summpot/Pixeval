@@ -104,7 +104,7 @@
                     DefaultLabelPosition="Collapsed"
                     IsDynamicOverflowEnabled="False">
                     <CommandBarButton
-                        Command="{x:Static viewModels:WorkCommands.BookmarkCommand}"
+                        Command="{Binding BookmarkCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                         CommandParameter="{Binding CurrentIllustration}"
                         ContextRequested="AddToBookmarkButton_OnRightClick"
                         Icon="{markup1:SymbolIconEx Heart,
@@ -113,13 +113,13 @@
                         IsVisible="{Binding IsBookmarkSupported, FallbackValue={x:False}}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}" />
                     <CommandBarButton
-                        Command="{x:Static viewModels:WorkCommands.SaveCommand}"
+                        Command="{Binding SaveCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                         CommandParameter="{Binding CurrentIllustration}"
                         Icon="{markup:SymbolIcon SaveMultiple}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.Save}}" />
                     <CommandBarSeparator />
                     <CommandBarButton
-                        Command="{x:Static viewModels:WorkCommands.AddToWatchLaterCommand}"
+                        Command="{Binding AddToWatchLaterCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                         CommandParameter="{Binding CurrentIllustration}"
                         Icon="{markup1:SymbolIconEx Clock,
                                                     IconVariant={Binding CurrentUiState.IsInWatchLater,

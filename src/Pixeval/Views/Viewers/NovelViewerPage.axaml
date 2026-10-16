@@ -61,7 +61,7 @@
                     DockPanel.Dock="Top"
                     IsDynamicOverflowEnabled="True">
                     <CommandBarButton
-                        Command="{x:Static novel:WorkCommands.BookmarkCommand}"
+                        Command="{Binding BookmarkCommand, Source={di:Service Type={x:Type novel:WorkCommands}}, DataType={x:Type novel:WorkCommands}}"
                         CommandParameter="{Binding CurrentNovel}"
                         ContextRequested="AddToBookmarkButton_OnClick"
                         Icon="{markup1:SymbolIconEx Heart,
@@ -71,13 +71,13 @@
                         Label="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}" />
                     <CommandBarSeparator />
                     <CommandBarButton
-                        Command="{x:Static novel:WorkCommands.SaveCommand}"
+                        Command="{Binding SaveCommand, Source={di:Service Type={x:Type novel:WorkCommands}}, DataType={x:Type novel:WorkCommands}}"
                         CommandParameter="{Binding CurrentNovel}"
                         Icon="{markup:SymbolIcon Save}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.Save}}" />
                     <CommandBarSeparator />
                     <CommandBarButton
-                        Command="{x:Static novel:WorkCommands.AddToWatchLaterCommand}"
+                        Command="{Binding AddToWatchLaterCommand, Source={di:Service Type={x:Type novel:WorkCommands}}, DataType={x:Type novel:WorkCommands}}"
                         CommandParameter="{Binding CurrentNovel}"
                         Icon="{markup1:SymbolIconEx Clock,
                                                     IconVariant={Binding CurrentUiState.IsInWatchLater,

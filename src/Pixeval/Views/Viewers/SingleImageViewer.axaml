@@ -95,18 +95,18 @@
                 CommandParameter="{Binding $self}"
                 Header="{I18N {x:Static pixeval:EntryViewerPageResources.ViewOriginal}}"
                 Icon="{markup:SymbolIcon ImageGlobe}" />
-            <Separator IsVisible="{x:Static vm:SingleViewerViewModel.HasTransformerExtensions}" />
+            <Separator IsVisible="{Binding HasTransformerExtensions}" />
             <MenuItem
                 Command="{Binding PrimaryTransformerExtensionItem.Command, FallbackValue={x:Null}}"
                 CommandParameter="{Binding $self}"
                 Header="{Binding PrimaryTransformerExtensionItem.Label, FallbackValue={x:Null}}"
                 Icon="{markup1:SymbolIconEx Symbol={Binding PrimaryTransformerExtensionItem.Symbol}}"
-                IsVisible="{x:Static vm:SingleViewerViewModel.HasTransformerExtensions}"
+                IsVisible="{Binding HasTransformerExtensions}"
                 ToolTip.Tip="{Binding PrimaryTransformerExtensionItem.Description, FallbackValue={x:Null}}" />
             <MenuItem
                 Header="{I18N {x:Static pixeval:EntryViewerPageResources.OtherImageTransformerExtensions}}"
                 Icon="{markup:SymbolIcon ImageMultiple}"
-                IsVisible="{x:Static vm:SingleViewerViewModel.HasTransformerExtensions}"
+                IsVisible="{Binding HasTransformerExtensions}"
                 ItemsSource="{Binding TransformerExtensionItems}">
                 <MenuItem.ItemContainerTheme>
                     <ControlTheme

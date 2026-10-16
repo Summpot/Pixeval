@@ -12,7 +12,6 @@ using Avalonia.Platform;
 using Pixeval.Config;
 using Pixeval.Utilities;
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Pixeval.Services.Core;
 
@@ -106,9 +105,8 @@ public static class AppInfo
         return await reader.ReadToEndAsync();
     }
 
-    public static void SaveWindowContext(Window window, AppSettings? settings = null)
+    public static void SaveWindowContext(Window window, AppSettings? settings)
     {
-        settings ??= App.Services?.GetService<AppSettings>();
         if (settings is null)
             return;
         var applicationSettings = settings.ApplicationSettings;
@@ -122,12 +120,11 @@ public static class AppInfo
     }
 
     public static void SaveContext(
-        LoginContext? loginContext = null,
-        AppSettings? appSettings = null,
-        ObservableCollection<HomePageCardLayout>? cards = null,
-        string? navYaml = null)
+        LoginContext loginContext,
+        AppSettings appSettings,
+        ObservableCollection<HomePageCardLayout>? cards,
+        string? navYaml)
     {
-        loginContext ??= App.Services?.GetService<LoginContext>();
         SaveLoginContext(loginContext);
         SaveSettings(appSettings, cards, navYaml);
     }
@@ -181,14 +178,10 @@ public static class AppInfo
     }
 
     public static void SaveSettings(
-        AppSettings? appSettings = null,
+        AppSettings? appSettings,
         ObservableCollection<HomePageCardLayout>? cards = null,
         string? navYaml = null)
     {
-        appSettings ??= App.Services?.GetService<AppSettings>();
-        cards ??= App.Services?.GetService<Pixeval.Services.Core.HomePageCardSession>()?.Cards;
-        navYaml ??= App.Services?.GetService<Pixeval.Services.Core.NavigationMenuDocument>()?.Text;
-
         SaveAppSettings(appSettings);
         if (cards is not null)
             SaveHomePageCards(cards);

@@ -74,7 +74,7 @@ public partial class IllustrationViewerInfoPane : UserControl
         if (ViewModel?.CurrentIllustration is not IWorkEntry current)
             return;
 
-        await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
+        await this.GetRequiredUiService<WorkCommands>().AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
         this.Notifications.ShowSuccess(
             I18NManager.GetResource(MiscResources.AddedToBookmark));
     }

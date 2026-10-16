@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.I18N;
 using Pixeval.Storage;
 
@@ -29,26 +28,14 @@ public sealed class StorageFilterProvider(StorageEngine storage) : IFilterStorag
 
 public partial class FilterCompletionEngine
 {
-    private static FilterCompletionEngine? _default;
-
-    public static FilterCompletionEngine Default => _default ??= CreateDefault();
-
     public static FilterCompletionEngine CreateWithStorage(StorageEngine storage)
     {
         var provider = new StorageFilterProvider(storage);
         return WithProvider(provider, CreateLocalization());
     }
 
-    public static FilterCompletionEngine CreateDefault()
-    {
-        var storage = App.Services?.GetService<StorageEngine>();
-        if (storage is not null)
-        {
-            return CreateWithStorage(storage);
-        }
-
-        return WithProvider(null, CreateLocalization());
-    }
+    public static FilterCompletionEngine CreateDefault() =>
+        WithProvider(null, CreateLocalization());
 
     public FilterAnalysisResult Analyze(string text) => Analyze(text, -1);
 

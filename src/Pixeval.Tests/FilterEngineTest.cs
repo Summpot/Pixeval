@@ -93,9 +93,9 @@ public sealed class FilterEngineTest
     }
 
     [TestMethod]
-    public void WorkFilterLanguageWrapperShouldAnalyzeAndReconstructAst()
+    public void FilterCompletionEngineShouldAnalyzeQueries()
     {
-        var language = WorkFilterLanguage.Instance;
+        var language = FilterCompletionEngine.CreateDefault();
         var result = language.Analyze("#sky @Alice +ai");
         Assert.IsTrue(result.IsSuccess);
         Assert.IsNotNull(result.Query);

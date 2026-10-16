@@ -7,7 +7,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net.Http;
 using Avalonia;
-using Microsoft.Extensions.DependencyInjection;
 using Avalonia.Threading;
 using Pixeval.Services.Network;
 
@@ -34,11 +33,14 @@ public partial class DownloadManager
         }
     }
 
-    public DownloadManager(HttpClient? httpClient, int concurrencyDegree)
-        : this((uint)Math.Max(1, concurrencyDegree), null, GetEffectiveNetworkOptions())
+    private AppSettings? _appSettings;
+
+    public DownloadManager(HttpClient? httpClient, int concurrencyDegree, AppSettings? appSettings = null)
+        : this((uint)Math.Max(1, concurrencyDegree), null, GetEffectiveNetworkOptions(appSettings?.NetworkSettings))
     {
         _ = httpClient;
         _concurrencyDegree = Math.Max(1, concurrencyDegree);
+        _appSettings = appSettings;
     }
 
     public void AttachPageSnapshotCallback() =>
@@ -46,12 +48,11 @@ public partial class DownloadManager
 
     public void UpdateNetworkOptions()
     {
-        UpdateNetworkOptions(GetEffectiveNetworkOptions());
+        UpdateNetworkOptions(GetEffectiveNetworkOptions(_appSettings?.NetworkSettings));
     }
 
-    public static DownloadNetworkOptions GetEffectiveNetworkOptions()
+    public static DownloadNetworkOptions GetEffectiveNetworkOptions(NetworkSettingsGroup? networkSettings)
     {
-        var networkSettings = App.Services?.GetService<AppSettings>()?.NetworkSettings;
         var proxyUrl = ProxyHelper.GetEffectiveProxyUrl(networkSettings);
 
         var staticDomainIps = new Dictionary<string, List<string>>();

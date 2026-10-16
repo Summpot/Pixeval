@@ -75,7 +75,7 @@ public partial class NovelViewerPage : IconContentPage
     {
         if (ViewModel.CurrentNovel is { } current)
         {
-            await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
+            await this.GetRequiredUiService<WorkCommands>().AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
             this.Notifications.ShowSuccess(
                 I18NManager.GetResource(MiscResources.AddedToBookmark));
         }

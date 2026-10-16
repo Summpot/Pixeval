@@ -28,37 +28,37 @@
                 <MenuItem
                     controls:ArtworkStateBehavior.TrackBookmark="True"
                     controls:BookmarkTagSelectorBehavior.IsEnabled="True"
-                    Command="{x:Static viewModels:WorkCommands.BookmarkCommand}"
+                    Command="{Binding BookmarkCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
                     Icon="{markup1:SymbolIconEx Heart}"
                     IsVisible="{Binding IsBookmarkSupported}" />
                 <MenuItem
                     controls:ArtworkStateBehavior.TrackWatchLater="True"
-                    Command="{x:Static viewModels:WorkCommands.AddToWatchLaterCommand}"
+                    Command="{Binding AddToWatchLaterCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}"
                     Icon="{markup1:SymbolIconEx Clock}" />
                 <MenuItem
-                    Command="{x:Static viewModels:WorkCommands.OpenUserInfoPageCommand}"
+                    Command="{Binding OpenUserInfoPageCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.OpenUserInfoPage}}"
                     Icon="{markup:SymbolIcon Person}" />
                 <MenuItem
-                    Command="{x:Static viewModels:WorkCommands.OpenSeriesPageCommand}"
+                    Command="{Binding OpenSeriesPageCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.OpenSeries}}"
                     Icon="{markup:SymbolIcon SquareMultiple}"
                     IsVisible="{Binding HasSeries}" />
                 <Separator />
                 <MenuItem
-                    Command="{x:Static viewModels:WorkCommands.CopyCommand}"
+                    Command="{Binding CopyCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding #ThumbnailImage, Mode=OneTime}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.Copy}}"
                     Icon="{markup:SymbolIcon Copy}"
                     IsEnabled="{Binding #ThumbnailImage.(controls:Source.Loaded)}" />
                 <MenuItem
-                    Command="{x:Static viewModels:WorkCommands.SaveCommand}"
+                    Command="{Binding SaveCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.Save}}"
                     Icon="{markup:SymbolIcon Save}" />
@@ -95,7 +95,7 @@
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
                     controls:ArtworkStateBehavior.TrackBookmark="True"
-                    Command="{x:Static viewModels:WorkCommands.BookmarkCommand}"
+                    Command="{Binding BookmarkCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding}"
                     IsVisible="{Binding IsBookmarkSupported}">
                     

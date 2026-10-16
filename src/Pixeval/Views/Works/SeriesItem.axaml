@@ -11,6 +11,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
     xmlns:utilities="using:Pixeval.Common"
+    xmlns:di="using:Pixeval.Common.Markup"
     xmlns:viewModels="using:Pixeval.ViewModels.Works"
     x:DataType="{x:Type mako:Series}"
     HorizontalContentAlignment="Stretch"
@@ -29,7 +30,7 @@
                     Header="{I18N {x:Static pixeval:SeriesPageResources.ViewLatestContent}}"
                     Icon="{markup:SymbolIcon ArrowRight}" />
                 <MenuItem
-                    Command="{x:Static viewModels:WorkCommands.OpenUserInfoPageCommand}"
+                    Command="{Binding OpenUserInfoPageCommand, Source={di:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding}"
                     Header="{I18N {x:Static pixeval:EntryItemResources.OpenUserInfoPage}}"
                     Icon="{markup:SymbolIcon Person}" />
@@ -73,7 +74,7 @@
                     Text="{Binding LastPublishedContentDatetime, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}"
                     TextTrimming="CharacterEllipsis"
                     Theme="{StaticResource CaptionTextBlockStyle}" />
-                <Button Padding="2" Command="{x:Static viewModels:WorkCommands.OpenUserInfoPageCommand}" CommandParameter="{Binding}">
+                <Button Padding="2" Command="{Binding OpenUserInfoPageCommand, Source={di:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}" CommandParameter="{Binding}">
                     <TextBlock
                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                         MaxLines="2"

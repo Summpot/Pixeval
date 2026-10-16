@@ -46,7 +46,12 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage
             foreach (var result in sauceNaoResults)
             {
                 if (!string.IsNullOrEmpty(result.ArtworkId)
-                    && await ViewerHelper.TryGetArtworkAsync(result.Platform, result.ArtworkId) is { } artwork)
+                    && await ViewerHelper.TryGetArtworkAsync(
+                        result.Platform,
+                        result.ArtworkId,
+                        this.GetRequiredUiService<MakoClient>(),
+                        this.GetRequiredUiService<BooruClient>(),
+                        this.GetUiService<FileLogger>()) is { } artwork)
                 {
                     yield return artwork;
                 }

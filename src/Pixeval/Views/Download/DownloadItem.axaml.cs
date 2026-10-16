@@ -108,22 +108,21 @@ public partial class DownloadItem : UserControl
 
     private async Task OpenPathAsync(string path)
     {
-        if (TopLevel.GetTopLevel(this) is not { Launcher: { } launcher })
-            return;
+        var launcher = this.LauncherService;
 
         try
         {
             var info = new DirectoryInfo(path);
             if (info.Exists)
             {
-                _ = await launcher.LaunchDirectoryInfoAsync(info);
+                await launcher.LaunchDirectoryInfoAsync(info);
                 return;
             }
 
             var file = new FileInfo(path);
             if (file.Exists)
             {
-                _ = await launcher.LaunchFileInfoAsync(file);
+                await launcher.LaunchFileInfoAsync(file);
                 return;
             }
 

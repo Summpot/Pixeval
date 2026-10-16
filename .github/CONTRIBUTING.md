@@ -25,30 +25,51 @@ git clone --recurse-submodules https://github.com/Pixeval/Pixeval.git
 
 ## 项目结构
 
+领域逻辑在 Rust crate 中，通过 `pixeval_native` 用 UniFFI 导出；C# 侧在 crate 对齐的命名空间里扩展生成的 `partial` 类型，不再另包一层 DTO。
+
+### crates目录
+
+本目录是 Rust workspace，由 `pixeval_native` 统一导出给 C#：
+
+1. *pixeval_native* UniFFI 导出伞（cdylib + staticlib）
+2. *pixeval_mako* Pixiv API
+3. *pixeval_maho* TLS / SNI / domain-fronting 传输
+4. *pixeval_filters* 过滤语句解析与补全
+5. *pixeval_download* 下载编排与路径宏
+6. *pixeval_cache* 文件缓存
+7. *pixeval_storage* SQLite 存储
+8. *pixeval_subscription* 订阅
+9. *pixeval_config* 配置、导航菜单、首页卡片布局
+10. *pixeval_booru* Booru 系列 API
+11. *pixeval_saucenao* SauceNAO
+12. *pixeval_media* 动图 / 漫画转码
+13. *pixeval_novel* 小说解析与渲染
+14. *pixeval_plugin* 插件
+15. *pixeval_mcp* MCP 服务
+16. *pixeval_update* 应用更新
+
 ### src目录
 
-本目录包含和 *Pixeval* 强相关的项目，但耦合度较低的模块被拆分出独立的项目
+本目录是 Avalonia / .NET 呈现层与平台宿主：
 
-1. *Pixeval* 项目包含了项目本身的逻辑及布局代码
-2. *Pixeval.Desktop* 是桌面平台的打包项目，包括Windows/MacOS/Linux等平台的打包配置
-3. *Pixeval.Android* 是Android平台的打包项目
-4. *Pixeval.iOS* 是iOS平台的打包项目
-5. *Pixeval.I18N* 是项目多语言字符串的功能模块，但不包含字符串资源（字符串资源在*Pixeval*中）
-6. *Pixeval.Utilities* 是公用的工具类库
-7. *Pixeval.SourceGen* 是 *Pixeval* 的源生成器项目
-8. *Pixeval.Filters* 是Pixeval的过滤语句解析器模块
-9. *Pixeval.Download* 是Pixeval的下载功能模块
-10. *Pixeval.Caching* 是Pixeval的文件缓存模块
+1. *Pixeval* 共享应用：UI、ViewModel，以及 UniFFI 生成类型的 `partial` 扩展（命名空间与 crate 对齐，例如 `Pixeval.Mako`、`Pixeval.Filters`）
+2. *Pixeval.Desktop* 桌面宿主，包括 Windows / macOS / Linux 打包
+3. *Pixeval.Android* Android 宿主
+4. *Pixeval.iOS* iOS 宿主
+5. *Pixeval.Browser* 实验性 Browser WASM 宿主
+6. *Pixeval.I18N* 多语言基础设施（字符串资源在 *Pixeval* 中）
+7. *Pixeval.Utilities* 公用工具类库
+8. *Pixeval.SourceGen* *Pixeval* 的源生成器
+9. *Pixeval.Tests* 测试项目
 
 ### lib目录
 
-本目录大多是控件库或功能库，为了方便随时修改以子模块或直接粘贴形式保存。**一定不会引用src目录的项目**
+本目录是控件库，为了方便随时修改以子模块或直接粘贴形式保存。**一定不会引用 src 目录的项目**
 
-1. *Mako*/*Mako.SourceGen* Pixeval使用的PixivAPI库
-2. *Imouto.BooruParser* Pixeval使用booru系列API库
-3. *Tabalonia* 参考 *[Tabalonia](https://github.com/egorozh/Tabalonia)* 修改而成的标签页控件库
-4. *AutoSettingsPage*/*AutoSettingsPage.Avalonia* 自动生成设置页的控件库
-5. *AnimatedControls.Avalonia* Avalonia的动图控件库
+1. *FluentAvalonia* Fluent 主题
+2. *AutoSettingsPage* / *AutoSettingsPage.Avalonia* / *SettingsControls.Avalonia* 自动生成设置页的控件库
+3. *AnimatedControls.Avalonia* Avalonia 动图控件库
+4. *SmoothScroll.Avalonia* 平滑滚动控件库
 
 ## 项目版本控制
 

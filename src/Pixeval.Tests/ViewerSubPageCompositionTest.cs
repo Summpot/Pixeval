@@ -17,6 +17,7 @@ using Pixeval.Controls;
 using Pixeval.I18N;
 using Pixeval.Config;
 using Pixeval.Services.Core;
+using Pixeval.Services.Update;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Settings;
@@ -38,11 +39,12 @@ public sealed class ViewerSubPageCompositionTest
             var previousServices = App.Services;
             var services = new ServiceCollection()
                 .AddSingleton(new NavigationMenuDocument(NavigationMenuYaml.DefaultYaml))
+                .AddSingleton(new GitHubHttpClientProvider(new NetworkSettingsGroup()))
                 .BuildServiceProvider();
             App.Services = services;
             try
             {
-                var service = new NavigationService();
+                var service = new NavigationService(services);
                 var group = new EmptySettingsGroup();
 
                 Assert.IsInstanceOfType<AboutPage>(service.CreatePage(typeof(AboutPage)));

@@ -17,7 +17,7 @@ public static class NavigationPageRegistry
 {
     static NavigationPageRegistry()
     {
-        AvaloniaHelper.Init();
+        _ = AvaloniaHelper.PageTypeToHeaderMap;
     }
 
     public static List<NavigationPageDefinition> Pages { get; } = [];

@@ -11,7 +11,6 @@ using Avalonia.Controls.Selection;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.Pixiv;
 using Pixeval.Utilities;
@@ -33,8 +32,7 @@ public sealed partial class WorkView : UserControl, IDisposable
         set => SetValue(LayoutTypeProperty, value);
     }
 
-    private INavigationService NavigationService =>
-        this.AppNavigation ?? new NavigationService();
+    private INavigationService NavigationService => this.GetRequiredUiService<INavigationService>();
 
     private bool _isDisposed;
     private ISimpleViewViewModel? _ownedViewModel;
@@ -144,7 +142,11 @@ public sealed partial class WorkView : UserControl, IDisposable
                 viewModel.ResetEngine(newEngine);
                 break;
             default:
-                IWorkViewViewModel newViewModel = isNovelEngine ? new NovelViewViewModel() : new IllustrationViewViewModel();
+                var settings = this.GetRequiredUiService<AppSettings>();
+                var blocked = this.GetUiService<IBlockedContentService>();
+                IWorkViewViewModel newViewModel = isNovelEngine
+                    ? new NovelViewViewModel(settings, blocked)
+                    : new IllustrationViewViewModel(settings, blocked);
                 newViewModel.ResetEngine(newEngine);
                 SetOwnedViewModel(newViewModel);
                 break;
@@ -153,9 +155,10 @@ public sealed partial class WorkView : UserControl, IDisposable
 
     public void SetSource(IReadOnlyCollection<object> source, SimpleWorkType workType, bool needRefreshOnOpen = false)
     {
+        var blocked = this.GetUiService<IBlockedContentService>();
         IOperableViewViewModel viewModel = workType is SimpleWorkType.Novel
-            ? new SimpleOperableViewViewModel<Mako.Novel>(source.Where(static s => s is Mako.Novel).ToList(), needRefreshOnOpen)
-            : new SimpleOperableViewViewModel<object>(source, needRefreshOnOpen);
+            ? new SimpleOperableViewViewModel<Mako.Novel>(source.Where(static s => s is Mako.Novel).ToList(), blocked, needRefreshOnOpen)
+            : new SimpleOperableViewViewModel<object>(source, blocked, needRefreshOnOpen);
         SetOwnedViewModel(viewModel);
     }
 

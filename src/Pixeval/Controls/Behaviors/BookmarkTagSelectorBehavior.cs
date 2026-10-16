@@ -61,7 +61,7 @@ public static class BookmarkTagSelectorBehavior
             work.Id,
             async result =>
             {
-                await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(work, result.IsPrivate, result.Tags));
+                await control.GetRequiredUiService<WorkCommands>().AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(work, result.IsPrivate, result.Tags));
             },
             PlacementMode.Bottom);
     }

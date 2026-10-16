@@ -66,6 +66,7 @@ public partial class TabViewContainer : ViewContainerBase
         _navigation = navigation;
         Host = uiHost;
         Navigation = navigation;
+        DataContext = ActivatorUtilities.CreateInstance<TabViewContainerViewModel>(services);
         InitializeComponent();
 
         AddHandler(ViewModelDisposal.ViewModelDisposalEvent, OnViewModelDisposal, RoutingStrategies.Bubble, handledEventsToo: true);

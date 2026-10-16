@@ -8,7 +8,6 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.Config;
 using Pixeval.Pixiv;
@@ -27,13 +26,17 @@ public sealed class HomeCardDefinitions
     private readonly MakoClient _makoClient;
     private readonly INavigationService _navigation;
     private readonly IUserSessionService _session;
+    private readonly AppSettings _appSettings;
+    private readonly IBlockedContentService _blockedContent;
     private readonly FrozenDictionary<HomePageCardSourceKind, HomeCardDefinition> _bySourceKind;
 
-    public HomeCardDefinitions(MakoClient makoClient, INavigationService navigation, IUserSessionService session)
+    public HomeCardDefinitions(MakoClient makoClient, INavigationService navigation, IUserSessionService session, AppSettings appSettings, IBlockedContentService blockedContent)
     {
         _makoClient = makoClient;
         _navigation = navigation;
+        _appSettings = appSettings;
         _session = session;
+        _blockedContent = blockedContent;
         All =
         [
             new(
@@ -187,11 +190,11 @@ public sealed class HomeCardDefinitions
         }
     }
 
-    private static Func<HomePageCardLayout, Task<HomeCardPreviewSource>> CreateWorkPreviewSourceFactory(
+    private Func<HomePageCardLayout, Task<HomeCardPreviewSource>> CreateWorkPreviewSourceFactory(
         Func<HomePageCardLayout, IAsyncEnumerable<object>> engineFactory) =>
         card => Task.FromResult(CreateWorkPreviewSource(card, engineFactory(card)));
 
-    private static Func<HomePageCardLayout, Task<HomeCardPreviewSource>> CreateUserPreviewSourceFactory(
+    private Func<HomePageCardLayout, Task<HomeCardPreviewSource>> CreateUserPreviewSourceFactory(
         Func<HomePageCardLayout, IFetchEngine<User>> engineFactory) =>
         card => Task.FromResult(CreateUserPreviewSource(engineFactory(card)));
 
@@ -205,8 +208,8 @@ public sealed class HomeCardDefinitions
     {
         var (detail, firstWork, engine) = await _makoClient.GetWorkSeriesAsync(card.SimpleWorkType, card.SeriesId);
         IWorkViewViewModel viewModel = card.SimpleWorkType is SimpleWorkType.Novel
-            ? new NovelViewViewModel()
-            : new IllustrationViewViewModel();
+            ? new NovelViewViewModel(_appSettings, _blockedContent)
+            : new IllustrationViewViewModel(_appSettings, _blockedContent);
         viewModel.ResetEngine(engine.AsObjects());
         return new(viewModel, new SingleSeriesOpeningContext(detail, firstWork));
     }
@@ -214,7 +217,7 @@ public sealed class HomeCardDefinitions
     private async Task<HomeCardPreviewSource> CreateSingleImageViewModelAsync(HomePageCardLayout card)
     {
         var engine = _makoClient.Computed(Single(await _makoClient.GetIllustrationFromIdAsync(card.EntryId)));
-        var viewModel = new IllustrationViewViewModel();
+        var viewModel = new IllustrationViewViewModel(_appSettings, _blockedContent);
         viewModel.ResetEngine(engine.AsObjects());
         return new(viewModel);
     }
@@ -222,7 +225,7 @@ public sealed class HomeCardDefinitions
     private async Task<HomeCardPreviewSource> CreateSingleNovelViewModelAsync(HomePageCardLayout card)
     {
         var engine = _makoClient.Computed(Single(await _makoClient.GetNovelFromIdAsync(card.EntryId)));
-        var viewModel = new NovelViewViewModel();
+        var viewModel = new NovelViewViewModel(_appSettings, _blockedContent);
         viewModel.ResetEngine(engine);
         return new(viewModel);
     }
@@ -234,28 +237,28 @@ public sealed class HomeCardDefinitions
         return new(CreateUserViewModel(engine), new SingleUserOpeningContext(userDetail));
     }
 
-    private static HomeCardPreviewSource CreateWorkPreviewSource(HomePageCardLayout card, IAsyncEnumerable<object> engine)
+    private HomeCardPreviewSource CreateWorkPreviewSource(HomePageCardLayout card, IAsyncEnumerable<object> engine)
     {
         IWorkViewViewModel viewModel = card.SimpleWorkType is SimpleWorkType.Novel || card.WorkType is WorkType.Novel
-            ? new NovelViewViewModel()
-            : new IllustrationViewViewModel();
+            ? new NovelViewViewModel(_appSettings, _blockedContent)
+            : new IllustrationViewViewModel(_appSettings, _blockedContent);
         viewModel.ResetEngine(engine);
         return new(viewModel);
     }
 
-    private static HomeCardPreviewSource CreateUserPreviewSource(IFetchEngine<User> engine) =>
+    private HomeCardPreviewSource CreateUserPreviewSource(IFetchEngine<User> engine) =>
         new(CreateUserViewModel(engine));
 
-    private static UserViewViewModel CreateUserViewModel(IFetchEngine<User> engine)
+    private UserViewViewModel CreateUserViewModel(IFetchEngine<User> engine)
     {
-        var viewModel = new UserViewViewModel();
+        var viewModel = new UserViewViewModel(_blockedContent);
         viewModel.ResetEngine(engine);
         return viewModel;
     }
 
-    private static SpotlightViewViewModel CreateSpotlightViewModel(IFetchEngine<SpotlightArticle> engine)
+    private SpotlightViewViewModel CreateSpotlightViewModel(IFetchEngine<SpotlightArticle> engine)
     {
-        var viewModel = new SpotlightViewViewModel();
+        var viewModel = new SpotlightViewViewModel(_blockedContent);
         viewModel.ResetEngine(engine);
         return viewModel;
     }

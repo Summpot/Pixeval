@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
+using Pixeval.Filters;
 using Pixeval.I18N;
 using Pixeval.Pixiv;
 using Pixeval.Storage;
@@ -126,6 +127,20 @@ public partial record struct Illustration : IWorkEntry, IArtworkSerializable
             })];
         }
     }
+
+    public ArtworkMetadata ToArtworkMetadata() => new(
+        Id.ToString(),
+        Title ?? string.Empty,
+        User.Name ?? string.Empty,
+        User.Account ?? string.Empty,
+        Tags.Select(t => new ArtworkTag(t.Name, t.TranslatedName ?? string.Empty)).ToList(),
+        TotalBookmarks,
+        CreateDateOffset.ToUnixTimeSeconds(),
+        Width,
+        Height,
+        XRestrict,
+        IsAiGenerated ? 1 : 0,
+        Type == IllustrationType.Ugoira ? 2 : Type == IllustrationType.Manga ? 1 : 0);
 
     public const string LegacyIllustrationToken = "Mako.Model.Illustration";
 

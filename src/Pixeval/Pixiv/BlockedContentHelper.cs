@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Frozen;
 using System.Linq;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.Pixiv;
 using Pixeval.Booru;
@@ -18,13 +17,35 @@ public readonly record struct BlockedContentSnapshot(
     FrozenSet<string> BlockedTags,
     FrozenSet<long> BlockedUsers);
 
+public interface IBlockedContentService
+{
+    BlockedContentSnapshot CaptureSnapshot();
+    bool IsBlocked(object entry);
+    bool IsBlocked(User user);
+    T Replace<T>(T entry) where T : notnull;
+    bool TryAddOrUpdateBlockedUser(User user);
+}
+
+public sealed class BlockedContentService(AppSettings settings, StorageEngine storageEngine) : IBlockedContentService
+{
+    public BlockedContentSnapshot CaptureSnapshot() =>
+        BlockedContentHelper.CaptureSnapshot(settings, storageEngine);
+
+    public bool IsBlocked(object entry) =>
+        BlockedContentHelper.IsBlocked(entry, CaptureSnapshot());
+
+    public bool IsBlocked(User user) =>
+        BlockedContentHelper.IsBlocked(user, CaptureSnapshot());
+
+    public T Replace<T>(T entry) where T : notnull =>
+        BlockedContentHelper.ReplaceEntry(entry, CaptureSnapshot());
+
+    public bool TryAddOrUpdateBlockedUser(User user) =>
+        BlockedContentHelper.TryAddOrUpdateBlockedUser(user, storageEngine);
+}
+
 public static class BlockedContentHelper
 {
-    public static BlockedContentSnapshot CaptureSnapshot() =>
-        CaptureSnapshot(
-            App.Services!.GetRequiredService<AppSettings>(),
-            App.Services!.GetRequiredService<StorageEngine>());
-
     public static BlockedContentSnapshot CaptureSnapshot(AppSettings settings, StorageEngine storageEngine)
     {
         var blockedTags = settings.BrowsingExperienceSettings.BlockedTags
@@ -34,8 +55,6 @@ public static class BlockedContentHelper
             .ToFrozenSet();
         return new(blockedTags, blockedUsers);
     }
-
-    public static bool IsBlocked(object entry) => IsBlocked(entry, CaptureSnapshot());
 
     public static bool IsBlocked(object entry, BlockedContentSnapshot snapshot)
     {
@@ -56,12 +75,8 @@ public static class BlockedContentHelper
     public static bool IsBlocked(long userId, BlockedContentSnapshot snapshot) =>
         snapshot.BlockedUsers.Contains(userId);
 
-    public static bool IsBlocked(User user) => IsBlocked(user, CaptureSnapshot());
-
     public static bool IsBlocked(User user, BlockedContentSnapshot snapshot) =>
         user.Id > 0 && snapshot.BlockedUsers.Contains(user.Id);
-
-    public static bool IsBlocked(CommentRecord comment) => IsBlocked(comment, CaptureSnapshot());
 
     public static bool IsBlocked(CommentRecord comment, BlockedContentSnapshot snapshot) =>
         comment.User.Id > 0 && snapshot.BlockedUsers.Contains(comment.User.Id);
@@ -69,18 +84,15 @@ public static class BlockedContentHelper
     public static bool IsBlockedPlaceholder(object entry) =>
         BlockedContentModelHelper.IsBlockedPlaceholder(entry);
 
-    public static T Replace<T>(T entry) where T : notnull =>
-        BlockedContentModelHelper.Replace(entry, CaptureSnapshot());
-
     public static T ReplaceEntry<T>(T entry, BlockedContentSnapshot snapshot) where T : notnull =>
         BlockedContentModelHelper.Replace(entry, snapshot);
 
-    public static bool TryAddOrUpdateBlockedUser(User user)
+    public static bool TryAddOrUpdateBlockedUser(User user, StorageEngine storageEngine)
     {
         try
         {
             var record = BlockedContentModelHelper.CreateBlockedUserRecord(user);
-            App.Services!.GetRequiredService<StorageEngine>().AddOrUpdateBlockedUser(record.Id, record.UserName, record.AvatarUrl, record.Account);
+            storageEngine.AddOrUpdateBlockedUser(record.Id, record.UserName, record.AvatarUrl, record.Account);
             return true;
         }
         catch

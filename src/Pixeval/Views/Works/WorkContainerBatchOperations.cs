@@ -64,7 +64,7 @@ public static class WorkContainerBatchOperations
 
         if (target is IWorkEntry workTarget)
         {
-            await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(workTarget, options.IsPrivate, options.Tags));
+            await sourceControl.GetRequiredUiService<WorkCommands>().AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(workTarget, options.IsPrivate, options.Tags));
             notifications.ShowSuccess(I18NManager.GetResource(MiscResources.AddedToBookmark));
             return;
         }
@@ -81,7 +81,7 @@ public static class WorkContainerBatchOperations
         foreach (var i in viewModel.SelectedEntries)
         {
             if (i is IWorkEntry work)
-                await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(work, options.IsPrivate, options.Tags));
+                await sourceControl.GetRequiredUiService<WorkCommands>().AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(work, options.IsPrivate, options.Tags));
         }
 
         if (viewModel.SelectedEntries.Count is var c and > 0)
@@ -100,7 +100,7 @@ public static class WorkContainerBatchOperations
             return;
 
         foreach (var i in viewModel.SelectedEntries)
-            WorkCommands.SaveCommand.Execute(i);
+            sourceControl.GetRequiredUiService<WorkCommands>().SaveCommand.Execute(i);
 
         sourceControl.Notifications.ShowInformation(
             I18NManager.GetResource(WorkContainerResources.DownloadItemsQueuedFormatted, viewModel.SelectedEntries.Count));

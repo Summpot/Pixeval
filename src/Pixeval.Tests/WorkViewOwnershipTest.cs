@@ -11,6 +11,7 @@ using Pixeval.Config;
 using Pixeval.I18N;
 using Pixeval.Pixiv;
 using Pixeval.Storage;
+using Pixeval.Services.Core;
 using Pixeval.ViewModels.Works;
 using Pixeval.Views.Works;
 
@@ -30,6 +31,7 @@ public sealed class WorkViewOwnershipTest
             using var parentModel = new DisposableContext();
             using var view = new WorkView();
             var parent = new Border { DataContext = parentModel, Child = view };
+            UiServices.SetProvider(parent, App.Services);
             Assert.AreSame(parentModel, view.DataContext);
 
             if (incremental)
@@ -50,12 +52,13 @@ public sealed class WorkViewOwnershipTest
         await RunAsync(() =>
         {
             using var view = new WorkView();
-            var first = new IllustrationViewViewModel();
+            var settings = new AppSettings();
+            var first = new IllustrationViewViewModel(settings);
             view.SetViewModel(first);
             view.SetViewModel(first);
             first.ResetEngine(AsyncEnumerable.Empty<object>());
 
-            var second = new IllustrationViewViewModel();
+            var second = new IllustrationViewViewModel(settings);
             view.SetViewModel(second);
             Assert.ThrowsExactly<ObjectDisposedException>(() => first.ResetEngine(AsyncEnumerable.Empty<object>()));
             second.ResetEngine(AsyncEnumerable.Empty<object>());

@@ -9,13 +9,11 @@
     xmlns:pixeval="using:Pixeval"
     xmlns:viewModels="using:Pixeval.ViewModels.Search"
     x:DataType="{x:Type viewModels:SauceNaoSearchPageViewModel}"
+    DataContext="{markup:Service Type={x:Type viewModels:SauceNaoSearchPageViewModel}}"
     Header="{I18N {x:Static pixeval:SearchResources+AdvancedOptions.SauceNaoTab}}"
     mc:Ignorable="d"
     d:DesignHeight="450"
     d:DesignWidth="800">
-    <ContentPage.DataContext>
-        <viewModels:SauceNaoSearchPageViewModel />
-    </ContentPage.DataContext>
     <DockPanel
         Margin="12"
         IsEnabled="{Binding IsApiKeyExisted}"

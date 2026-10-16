@@ -3,7 +3,6 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 
@@ -39,26 +38,30 @@ public class CommentsViewViewModel : EntryViewViewModel<CommentRecord, CommentRe
 
     private readonly MakoClient _makoClient;
     private readonly IUserSessionService? _userSessionService;
+    private readonly IBlockedContentService? _blockedContent;
 
     public CommentsViewViewModel(
         SimpleWorkType parentType,
         long parentId,
-        MakoClient? makoClient = null,
+        MakoClient makoClient,
         IUserSessionService? userSessionService = null,
+        IBlockedContentService? blockedContent = null,
         long? replyToCommentId = null)
+        : base(blockedContent)
     {
         ParentType = parentType;
         ParentId = parentId;
         ReplyToCommentId = replyToCommentId;
-        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
-        _userSessionService = userSessionService ?? App.Services?.GetService<IUserSessionService>();
+        _makoClient = makoClient;
+        _userSessionService = userSessionService;
+        _blockedContent = blockedContent;
     }
 
     public bool IsOwnComment(CommentRecord comment) =>
         _userSessionService is { CurrentUserId: > 0 } && comment.User.Id == _userSessionService.CurrentUserId;
 
     public CommentsViewViewModel OpenReplies(long commentId) =>
-        new(ParentType, ParentId, _makoClient, _userSessionService, commentId);
+        new(ParentType, ParentId, _makoClient, _userSessionService, _blockedContent, commentId);
 
     public async Task<CommentRecord> AddCommentAsync(string content)
     {
@@ -79,7 +82,7 @@ public class CommentsViewViewModel : EntryViewViewModel<CommentRecord, CommentRe
         if (comment.Id is 0)
             return;
 
-        Source.Insert(0, BlockedContentHelper.Replace(comment));
+        Source.Insert(0, _blockedContent is { } blocked ? blocked.Replace(comment) : comment);
     }
 
     public async Task<bool> DeleteCommentAsync(CommentRecord comment)

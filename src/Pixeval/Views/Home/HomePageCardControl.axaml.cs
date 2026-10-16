@@ -9,7 +9,6 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.Input;
 using FluentIcons.Common;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Home;
@@ -24,7 +23,6 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
     public static readonly StyledProperty<bool> IsSelectedProperty =
         AvaloniaProperty.Register<HomePageCardControl, bool>(nameof(IsSelected));
 
-    private readonly HomeCardDefinitions _definitions = App.Services!.GetRequiredService<HomeCardDefinitions>();
     private readonly bool _loadPreview;
     private PointerEditState? _pointerEditState;
     private bool _isDisposed;
@@ -32,7 +30,8 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
     public HomePageCardControl(
         HomePageCardLayout card,
         int rowCount,
-        int columnCount) : this(card, rowCount, columnCount, true)
+        int columnCount,
+        HomeCardDefinitions definitions) : this(card, rowCount, columnCount, definitions, true)
     {
     }
 
@@ -40,10 +39,11 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
         HomePageCardLayout card,
         int rowCount,
         int columnCount,
+        HomeCardDefinitions definitions,
         bool loadPreview)
     {
         Card = card;
-        Definition = _definitions.Get(card.SourceKind);
+        Definition = definitions.Get(card.SourceKind);
         RowCount = rowCount;
         ColumnCount = columnCount;
         PreviewViewModel = new(card, Definition.CreatePreviewSourceAsync);
@@ -52,9 +52,21 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
         UpdateBackground();
     }
 
-    public HomePageCardControl() : this(new(), 1, 1, false)
+    public HomePageCardControl()
     {
+        Card = new();
+        Definition = DesignDefinition;
+        RowCount = 1;
+        ColumnCount = 1;
+        PreviewViewModel = new(Card, Definition.CreatePreviewSourceAsync);
+        _loadPreview = false;
+        InitializeComponent();
     }
+
+    private static HomeCardDefinition DesignDefinition { get; } = new(
+        HomePageCardSourceKind.WorkRecommended,
+        static _ => Task.FromResult(new HomeCardPreviewSource(new UserViewViewModel())),
+        static (_, _) => { });
 
     public event EventHandler<HomeCardSelectedEventArgs>? CardSelected;
 

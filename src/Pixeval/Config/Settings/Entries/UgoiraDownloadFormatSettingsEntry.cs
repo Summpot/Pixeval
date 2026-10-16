@@ -6,7 +6,6 @@ using System.Linq;
 using AutoSettingsPage;
 using AutoSettingsPage.Models;
 using FluentIcons.Common;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.Controls;
 using Pixeval.Extensions.Common;
@@ -18,7 +17,7 @@ using Pixeval.Media;
 
 namespace Pixeval.Config;
 
-public class UgoiraDownloadFormatSettingsEntry(DownloadFormatsSettings settings)
+public class UgoiraDownloadFormatSettingsEntry(DownloadFormatsSettings settings, ExtensionService extensions)
     : SingleValueSettingsEntry<DownloadFormatsSettings, object>(
         settings,
         nameof(DownloadFormatsSettings.UgoiraDownloadFormat),
@@ -30,19 +29,19 @@ public class UgoiraDownloadFormatSettingsEntry(DownloadFormatsSettings settings)
         static (settings, value) => settings.UgoiraDownloadFormat = ((UgoiraDownloadFormatToken) value).Value),
         IEnumSettingsEntry<object>
 {
-    public IReadOnlyList<IReadOnlyStringPair<object>> EnumItems { get; } = CreateEnumItems();
+    public IReadOnlyList<IReadOnlyStringPair<object>> EnumItems { get; } = CreateEnumItems(extensions);
 
-    private static IReadOnlyList<IReadOnlyStringPair<object>> CreateEnumItems()
+    private static IReadOnlyList<IReadOnlyStringPair<object>> CreateEnumItems(ExtensionService extensionService)
     {
         var builtIns = SymbolComboBoxItem.GetValues<UgoiraDownloadFormat>()
             .Where(static t => (UgoiraDownloadFormat) t.Value != UgoiraDownloadFormat.Mp4 || MediaEngine.IsMp4Available)
             .Select(t => new SymbolComboBoxItem(UgoiraDownloadFormatToken.BuiltIn((UgoiraDownloadFormat) t.Value), t.Description, t.Symbol));
 
-        var extensions = App.Services!.GetRequiredService<ExtensionService>()
+        var extensionItems = extensionService
             .ActiveAnimatedImageFormatProviders
             .Select(t => new SymbolComboBoxItem(UgoiraDownloadFormatToken.Extension(t), t.FormatDescription, t is IEntryExtension entry ? entry.Icon : Symbol.Gif));
 
-        return [.. builtIns.Concat(extensions)];
+        return [.. builtIns.Concat(extensionItems)];
     }
 
     public override object Value

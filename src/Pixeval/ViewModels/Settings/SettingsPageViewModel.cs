@@ -186,9 +186,9 @@ public partial class SettingsPageViewModel : ViewModelBase
                     entry => entry.ValueChanged += t => _downloadManager.ConcurrencyDegree = t)
                 .DownloadMacro(t => t.DownloadPathMacro)
                 .MultiValues(t => t.DownloadFormats, entry =>
-                    entry.IllustrationDownloadFormat(format => format.ValueChanged += _ => PushDownloadPolicy())
-                        .UgoiraDownloadFormat(format => format.ValueChanged += _ => PushDownloadPolicy())
-                        .NovelDownloadFormat(format => format.ValueChanged += _ => PushDownloadPolicy()))
+                    entry.IllustrationDownloadFormat(_extensionService, format => format.ValueChanged += _ => PushDownloadPolicy())
+                        .UgoiraDownloadFormat(_extensionService, format => format.ValueChanged += _ => PushDownloadPolicy())
+                        .NovelDownloadFormat(_extensionService, format => format.ValueChanged += _ => PushDownloadPolicy()))
                 .Bool(t => t.EnableSubscriptionDaemon, entry => entry.ValueChanged += enabled =>
                 {
                     if (_serviceProvider.GetService<IWorkSubscriptionService>() is { } subService)
@@ -434,7 +434,10 @@ public partial class SettingsPageViewModel : ViewModelBase
             foreach (var settingsEntry in extensionGroup)
                 settingsEntry.ValueSaving(extensionGroup.Model.Values);
 
-        AppInfo.SaveSettings();
+        AppInfo.SaveSettings(
+            _appSettings,
+            _serviceProvider.GetService<HomePageCardSession>()?.Cards,
+            _serviceProvider.GetService<NavigationMenuDocument>()?.Text);
         _notifications.ShowSuccess(I18NManager.GetResource(SettingsMainViewResources.SettingsSaved));
     }
 

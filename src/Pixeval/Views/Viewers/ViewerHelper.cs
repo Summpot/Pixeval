@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Pixiv;
 using Pixeval.Booru;
 using Pixeval.Mako;
@@ -119,42 +118,31 @@ public static class ViewerHelper
         #endregion
     }
 
-    public static async Task<object?> TryGetArtworkAsync(string platform, string id)
+    public static async Task<object?> TryGetArtworkAsync(
+        string platform,
+        string id,
+        MakoClient makoClient,
+        BooruClient? booruClient,
+        FileLogger? logger = null)
     {
         try
         {
             if (string.Equals(platform, PlatformConstants.Pixiv, StringComparison.OrdinalIgnoreCase))
             {
                 if (long.TryParse(id, out var illustId))
-                    return await App.Services!.GetRequiredService<MakoClient>().GetIllustrationAsync(illustId);
+                    return await makoClient.GetIllustrationAsync(illustId);
             }
-            else
+            else if (booruClient is not null)
             {
                 var booruPlatform = BooruPlatformExtensions.FromPlatformString(platform);
-                var client = App.Services!.GetRequiredService<BooruClient>();
-                return await client.GetPostAsync(booruPlatform, id);
+                return await booruClient.GetPostAsync(booruPlatform, id);
             }
         }
         catch (Exception e)
         {
-            var logger = App.Services!.GetRequiredService<FileLogger>();
-            logger.LogError(nameof(TryGetArtworkAsync), e);
+            logger?.LogError(nameof(TryGetArtworkAsync), e);
         }
 
         return null;
-    }
-
-    private static int IndexOf<T>(IReadOnlyList<T> list, T item)
-    {
-        if (list is IList<T> iList)
-            return iList.IndexOf(item);
-
-        for (var i = 0; i < list.Count; i++)
-        {
-            if (EqualityComparer<T>.Default.Equals(list[i], item))
-                return i;
-        }
-
-        return -1;
     }
 }

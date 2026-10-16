@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Pixeval.Controls;
+using Pixeval.Filters;
 using Pixeval.Pixiv;
 using Pixeval.Storage;
 using Pixeval.ViewModels;
@@ -83,6 +84,20 @@ public partial record struct BooruPost : IArtworkSerializable
 
     [JsonIgnore]
     public Uri AppUri => new($"pixeval://{Platform.ToPlatformString()}/{Id}");
+
+    public ArtworkMetadata ToArtworkMetadata() => new(
+        Id,
+        Title,
+        UploaderName ?? string.Empty,
+        string.Empty,
+        Tags.Select(t => new ArtworkTag(t.Name, string.Empty)).ToList(),
+        Score,
+        CreateDateOffset.ToUnixTimeSeconds(),
+        (int) Width,
+        (int) Height,
+        SafeRating.IsR18G ? 2 : SafeRating.IsR18 ? 1 : 0,
+        0,
+        0);
 
     public const string LegacyPostToken = "Imouto.BooruParser.Post";
     public const string NativePostToken = "Pixeval.Booru.BooruPost";

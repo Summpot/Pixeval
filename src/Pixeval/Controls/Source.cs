@@ -12,7 +12,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
-using Microsoft.Extensions.DependencyInjection;
+using Avalonia.VisualTree;
 using Pixeval.Pixiv;
 using Pixeval.Services.Media;
 using Pixeval.Utilities;
@@ -65,9 +65,9 @@ public static class Source
             typeof(Source),
             defaultValue: PlatformConstants.Pixiv);
 
-    private static readonly AttachedProperty<bool> IsDetachedHookedProperty =
+    private static readonly AttachedProperty<bool> IsLifetimeHookedProperty =
         AvaloniaProperty.RegisterAttached<Control, bool>(
-            "IsDetachedHooked",
+            "IsLifetimeHooked",
             typeof(Source),
             defaultValue: false);
 
@@ -75,14 +75,13 @@ public static class Source
     {
         CacheProperty.Changed.AddClassHandler<Control>(OnCacheChanged);
         BackgroundCacheProperty.Changed.AddClassHandler<Control>(OnBackgroundCacheChanged);
-        ImageProviderProperty.Changed.AddClassHandler<Control>(OnImageProviderChanged);
     }
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static IImageProviderService? GetImageProvider(Control element) => element.GetValue(ImageProviderProperty);
 
     public static IImageProviderService? ResolveImageProvider(Control element) =>
-        GetImageProvider(element) ?? App.Services?.GetService<IImageProviderService>();
+        GetImageProvider(element);
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static void SetImageProvider(Control element, IImageProviderService? value) => element.SetValue(ImageProviderProperty, value);
@@ -111,28 +110,10 @@ public static class Source
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static void SetPlatform(Control element, string value) => element.SetValue(PlatformProperty, value);
 
-    private static void OnImageProviderChanged(Control element, AvaloniaPropertyChangedEventArgs e)
-    {
-        if (e.NewValue is not IImageProviderService images)
-        {
-            AbandonLoad(element, CacheLoadLifetimeProperty);
-            AbandonLoad(element, BackgroundCacheLoadLifetimeProperty);
-            return;
-        }
-
-        if (GetCache(element) is { } cacheKey && !GetLoaded(element))
-        {
-            LoadCacheCore(element, cacheKey, images);
-        }
-
-        if (GetBackgroundCache(element) is { } bgKey && !GetLoaded(element))
-        {
-            LoadBackgroundCacheCore(element, bgKey, images);
-        }
-    }
-
     private static void OnCacheChanged(Control element, AvaloniaPropertyChangedEventArgs e)
     {
+        EnsureLifetime(element);
+
         if (e.GetNewValue<string>() is not { } value)
         {
             ClearImageSource(element);
@@ -143,11 +124,7 @@ public static class Source
 
         ClearImageSource(element);
         SetLoaded(element, false);
-
-        if (ResolveImageProvider(element) is not { } images)
-            return;
-
-        LoadCacheCore(element, value, images);
+        TryLoadCache(element, value);
     }
 
     private static async void LoadCacheCore(Control element, string value, IImageProviderService images)
@@ -188,6 +165,8 @@ public static class Source
 
     private static void OnBackgroundCacheChanged(Control element, AvaloniaPropertyChangedEventArgs e)
     {
+        EnsureLifetime(element);
+
         var backgroundProperty = GetBackgroundProperty(element);
         if (backgroundProperty is null)
             return;
@@ -202,11 +181,7 @@ public static class Source
 
         element.ClearValue(backgroundProperty);
         SetLoaded(element, false);
-
-        if (ResolveImageProvider(element) is not { } images)
-            return;
-
-        LoadBackgroundCacheCore(element, value, images);
+        TryLoadBackgroundCache(element, value);
     }
 
     private static async void LoadBackgroundCacheCore(Control element, string value, IImageProviderService images)
@@ -286,6 +261,76 @@ public static class Source
             _ => null
         };
 
+    private static void EnsureLifetime(Control element)
+    {
+        if (element.GetValue(IsLifetimeHookedProperty))
+            return;
+
+        element.SetValue(IsLifetimeHookedProperty, true);
+        element.AttachedToVisualTree += OnElementAttached;
+        element.DetachedFromVisualTree += OnElementDetached;
+        element.GetObservable(ImageProviderProperty).Subscribe(new ImageProviderObserver(element));
+    }
+
+    private sealed class ImageProviderObserver(Control element) : IObserver<IImageProviderService?>
+    {
+        private bool _hasValue;
+
+        public void OnNext(IImageProviderService? _)
+        {
+            if (!_hasValue)
+            {
+                _hasValue = true;
+                return;
+            }
+
+            TryStartLoads(element);
+        }
+
+        public void OnCompleted()
+        {
+        }
+
+        public void OnError(Exception error)
+        {
+        }
+    }
+
+    private static void TryStartLoads(Control element)
+    {
+        if (ResolveImageProvider(element) is null)
+        {
+            AbandonLoad(element, CacheLoadLifetimeProperty);
+            AbandonLoad(element, BackgroundCacheLoadLifetimeProperty);
+            return;
+        }
+
+        if (GetCache(element) is { } cacheKey)
+            TryLoadCache(element, cacheKey);
+        if (GetBackgroundCache(element) is { } bgKey)
+            TryLoadBackgroundCache(element, bgKey);
+    }
+
+    private static void TryLoadCache(Control element, string value)
+    {
+        if (GetLoaded(element) || !element.IsAttachedToVisualTree())
+            return;
+        if (ResolveImageProvider(element) is not { } images)
+            return;
+
+        LoadCacheCore(element, value, images);
+    }
+
+    private static void TryLoadBackgroundCache(Control element, string value)
+    {
+        if (GetLoaded(element) || !element.IsAttachedToVisualTree())
+            return;
+        if (ResolveImageProvider(element) is not { } images)
+            return;
+
+        LoadBackgroundCacheCore(element, value, images);
+    }
+
     private static SourceLoadOperation BeginLoad(
         Control element,
         AttachedProperty<SourceLoadLifetime?> lifetimeProperty)
@@ -296,12 +341,7 @@ public static class Source
             element.SetValue(lifetimeProperty, lifetime);
         }
 
-        if (!element.GetValue(IsDetachedHookedProperty))
-        {
-            element.SetValue(IsDetachedHookedProperty, true);
-            element.DetachedFromVisualTree += OnElementDetached;
-        }
-
+        EnsureLifetime(element);
         return lifetime.BeginLoad();
     }
 
@@ -310,6 +350,12 @@ public static class Source
         AttachedProperty<SourceLoadLifetime?> lifetimeProperty)
     {
         element.GetValue(lifetimeProperty)?.AbandonCurrent();
+    }
+
+    private static void OnElementAttached(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        if (sender is Control element)
+            TryStartLoads(element);
     }
 
     private static void OnElementDetached(object? sender, VisualTreeAttachmentEventArgs e)

@@ -10,7 +10,6 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Utilities;
 using Pixeval.Services.Update;
 using Pixeval.Common.IO;
@@ -94,13 +93,13 @@ public partial class Supporter : ViewModelBase
     ];
     // ReSharper restore StringLiteralTypo
 
-    public static async Task GetSupportersAsync()
+    public static async Task GetSupportersAsync(GitHubHttpClientProvider github)
     {
         try
         {
             _ = Directory.CreateDirectory(BasePath);
 
-            var httpClient = App.Services!.GetRequiredService<GitHubHttpClientProvider>().GetApiClient();
+            var httpClient = github.GetApiClient();
 
             var path = Path.Combine(BasePath, "github-supporters.json");
             var exists = File.Exists(path);

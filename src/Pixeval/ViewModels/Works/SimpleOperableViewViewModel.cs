@@ -21,10 +21,15 @@ public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelB
     private LocalSortOption _sortOption = LocalSortOption.DoNotSort;
     private Predicate<object>? _userFilter;
 
-    public SimpleOperableViewViewModel(IReadOnlyCollection<object> source, bool needRefreshOnOpen = false)
+    public SimpleOperableViewViewModel(
+        IReadOnlyCollection<object> source,
+        IBlockedContentService? blockedContent = null,
+        bool needRefreshOnOpen = false)
     {
         NeedRefreshOnOpen = needRefreshOnOpen;
-        Source = [.. source.Select(static entry => BlockedContentHelper.Replace(entry))];
+        Source = blockedContent is null
+            ? [.. source]
+            : [.. source.Select(entry => blockedContent.Replace(entry))];
         RefreshView();
     }
 

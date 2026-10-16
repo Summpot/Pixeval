@@ -4,7 +4,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Mako;
 using Pixeval.ViewModels;
 
@@ -26,7 +25,7 @@ public partial class NovelItem : WorkItem
         if (sender is not Control { DataContext: Tag tag })
             return;
         this.GetRequiredUiService<SearchHistorySession>().Add(tag.Name, tag.TranslatedName);
-        var nav = this.GetUiService<INavigationService>() ?? new NavigationService();
+        var nav = this.GetRequiredUiService<INavigationService>();
         nav.NavigateToWorkSearch(tag.Name, SimpleWorkType.Novel, this);
     }
 

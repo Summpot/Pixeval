@@ -7,7 +7,6 @@ using System.Linq;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.Controls;
 using Pixeval.I18N;
@@ -23,12 +22,13 @@ public partial class HomePageViewModel : ViewModelBase
     private readonly HomeCardDefinitions _definitions;
     private readonly IUserSessionService _session;
 
-    public HomePageViewModel()
-        : this(
-            App.Services!.GetRequiredService<AppSettings>(),
-            App.Services!.GetRequiredService<HomeCardDefinitions>(),
-            App.Services!.GetRequiredService<IUserSessionService>())
+    public HomeCardDefinitions Definitions => _definitions;
+
+    public HomePageViewModel(AppSettings settings, HomeCardDefinitions definitions, IUserSessionService session)
     {
+        _settings = settings;
+        _definitions = definitions;
+        _session = session;
         _sourceParameterEditors =
         [
             _sourceWorkTypeEditor,
@@ -46,13 +46,6 @@ public partial class HomePageViewModel : ViewModelBase
         UpdateRankOptionEditor();
         SyncGridEditorValues();
         SyncSelectedCardEditorValues();
-    }
-
-    public HomePageViewModel(AppSettings settings, HomeCardDefinitions definitions, IUserSessionService session)
-    {
-        _settings = settings;
-        _definitions = definitions;
-        _session = session;
     }
 
     private readonly IReadOnlyList<HomeCardParameterEditorViewModel> _sourceParameterEditors;

@@ -14,9 +14,6 @@
     mc:Ignorable="d"
     d:DesignHeight="450"
     d:DesignWidth="800">
-    <views:IconContentPage.DataContext>
-        <viewModels:LoginPageViewModel />
-    </views:IconContentPage.DataContext>
     <views:IconContentPage.Resources>
         <DataTemplate x:DataType="{x:Type storage:LoginUserRecord}" x:Key="LoginUserTemplate">
             <controls:UserBasicInfoPresenter Margin="20,5" User="{Binding TokenUser}" />

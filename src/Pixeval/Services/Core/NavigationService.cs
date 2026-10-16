@@ -24,10 +24,10 @@ namespace Pixeval.Services.Core;
 
 public class NavigationService : INavigationService
 {
-    private readonly IServiceProvider? _serviceProvider;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IUiHost? _uiHost;
 
-    public NavigationService(IServiceProvider? serviceProvider = null, IUiHost? uiHost = null)
+    public NavigationService(IServiceProvider serviceProvider, IUiHost? uiHost = null)
     {
         _serviceProvider = serviceProvider;
         _uiHost = uiHost;
@@ -124,9 +124,9 @@ public class NavigationService : INavigationService
             if (parameter is UserViewerPageViewModel userVm)
                 return new UserViewerPage(userVm);
             if (parameter is long userId)
-                return new UserViewerPage(new UserViewerPageViewModel(userId));
+                return new UserViewerPage(CreateViewModel<UserViewerPageViewModel>(userId));
             if (parameter is SingleUserResponse userDetail)
-                return new UserViewerPage(new UserViewerPageViewModel(userDetail));
+                return new UserViewerPage(CreateViewModel<UserViewerPageViewModel>(userDetail));
         }
 
         if (pageType == typeof(SeriesViewerPage))
@@ -191,14 +191,13 @@ public class NavigationService : INavigationService
 
     private Page CreateServicePage(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type pageType,
-        params object[] arguments)
-    {
-        var provider = _serviceProvider ?? App.Services;
-        if (provider is not null)
-            return (Page) ActivatorUtilities.CreateInstance(provider, pageType, arguments);
+        params object[] arguments) =>
+        (Page) ActivatorUtilities.CreateInstance(_serviceProvider, pageType, arguments);
 
-        return (Page) Activator.CreateInstance(pageType, arguments)!;
-    }
+    private TViewModel CreateViewModel<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TViewModel>(
+        params object[] arguments)
+        where TViewModel : class =>
+        ActivatorUtilities.CreateInstance<TViewModel>(_serviceProvider, arguments);
 
     private TPage CreateServicePage<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TPage>(params object[] arguments)
         where TPage : Page =>
@@ -217,14 +216,14 @@ public class NavigationService : INavigationService
 
     private User CurrentOrFallbackUser()
     {
-        var session = (_serviceProvider ?? App.Services)?.GetService<IUserSessionService>();
+        var session = _serviceProvider.GetService<IUserSessionService>();
         return session?.CurrentUserEntity
             ?? new User(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []);
     }
 
     private long CurrentUserId()
     {
-        var session = (_serviceProvider ?? App.Services)?.GetService<IUserSessionService>();
+        var session = _serviceProvider.GetService<IUserSessionService>();
         return session is { CurrentUserId: > 0 } ? session.CurrentUserId : 0;
     }
 
@@ -233,44 +232,44 @@ public class NavigationService : INavigationService
     public void NavigateToIllustration(object illustration, IReadOnlyList<object>? source = null, bool needRefresh = false, Control? sourceControl = null)
     {
         var vm = source is not null
-            ? new IllustrationViewerPageViewModel(source, IndexOf(source, illustration), needRefresh)
-            : new IllustrationViewerPageViewModel(illustration, needRefresh);
+            ? CreateViewModel<IllustrationViewerPageViewModel>(source, IndexOf(source, illustration), needRefresh)
+            : CreateViewModel<IllustrationViewerPageViewModel>(illustration, needRefresh);
 
         NavigateTo<IllustrationViewerPage>(vm, removeCurrentPage: false, sourceControl);
     }
 
     public void NavigateToIllustration(string id, string platform = PlatformConstants.Pixiv, Control? sourceControl = null)
     {
-        NavigateTo<IllustrationViewerPage>(new IllustrationViewerPageViewModel(id, platform), removeCurrentPage: false, sourceControl);
+        NavigateTo<IllustrationViewerPage>(CreateViewModel<IllustrationViewerPageViewModel>(id, platform), removeCurrentPage: false, sourceControl);
     }
 
     public void NavigateToNovel(Mako.Novel novel, IReadOnlyList<Mako.Novel>? source = null, bool needRefresh = false, Control? sourceControl = null)
     {
         var vm = source is not null
-            ? new NovelViewerPageViewModel(source, IndexOf(source, novel), needRefresh)
-            : new NovelViewerPageViewModel(novel, needRefresh);
+            ? CreateViewModel<NovelViewerPageViewModel>(source, IndexOf(source, novel), needRefresh)
+            : CreateViewModel<NovelViewerPageViewModel>(novel, needRefresh);
 
         NavigateTo<NovelViewerPage>(vm, removeCurrentPage: false, sourceControl);
     }
 
     public void NavigateToNovel(long novelId, Control? sourceControl = null)
     {
-        NavigateTo<NovelViewerPage>(new NovelViewerPageViewModel(novelId), removeCurrentPage: false, sourceControl);
+        NavigateTo<NovelViewerPage>(CreateViewModel<NovelViewerPageViewModel>(novelId), removeCurrentPage: false, sourceControl);
     }
 
     public void NavigateToUser(long userId, Control? sourceControl = null)
     {
-        NavigateTo<UserViewerPage>(new UserViewerPageViewModel(userId), removeCurrentPage: false, sourceControl);
+        NavigateTo<UserViewerPage>(CreateViewModel<UserViewerPageViewModel>(userId), removeCurrentPage: false, sourceControl);
     }
 
     public void NavigateToUser(SingleUserResponse userDetail, Control? sourceControl = null)
     {
-        NavigateTo<UserViewerPage>(new UserViewerPageViewModel(userDetail), removeCurrentPage: false, sourceControl);
+        NavigateTo<UserViewerPage>(CreateViewModel<UserViewerPageViewModel>(userDetail), removeCurrentPage: false, sourceControl);
     }
 
     public void NavigateToSeries(SimpleWorkType workType, long seriesId, Control? sourceControl = null)
     {
-        NavigateTo<SeriesViewerPage>(new SeriesViewerPageViewModel(workType, seriesId), removeCurrentPage: false, sourceControl);
+        NavigateTo<SeriesViewerPage>(CreateViewModel<SeriesViewerPageViewModel>(workType, seriesId), removeCurrentPage: false, sourceControl);
     }
 
     public void NavigateToSeries(
@@ -282,7 +281,7 @@ public class NavigationService : INavigationService
         Control? sourceControl = null)
     {
         NavigateTo<SeriesViewerPage>(
-            new SeriesViewerPageViewModel(workType, seriesId, seriesDetail, firstWork, worksViewModel),
+            CreateViewModel<SeriesViewerPageViewModel>(workType, seriesId, seriesDetail, firstWork, worksViewModel),
             removeCurrentPage: false,
             sourceControl);
     }

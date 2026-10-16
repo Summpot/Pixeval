@@ -1,117 +1,137 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 
 namespace Pixeval.ViewModels.Works;
 
-public static class WorkCommands
+public sealed class WorkCommands
 {
-    private static IArtworkActionService ActionService =>
-        App.Services?.GetService<IArtworkActionService>()
-        ?? NullArtworkActionService.Instance;
+    private readonly IArtworkActionService _actionService;
+    private readonly INavigationService _navigationService;
 
-    private static INavigationService NavigationService =>
-        App.Services?.GetService<INavigationService>()
-        ?? new NavigationService();
-
-    public static IRelayCommand<object> OpenUserInfoPageCommand { get; } = new RelayCommand<object>(param =>
+    public WorkCommands(IArtworkActionService actionService, INavigationService navigationService)
     {
-        if (param is IWorkEntry { User.Id: var id } && id > 0)
-            NavigationService.NavigateToUser(id);
-        else if (param is Series { User.Id: var seriesUserId } && seriesUserId > 0)
-            NavigationService.NavigateToUser(seriesUserId);
-        else if (param is User { Id: var userId } && userId > 0)
-            NavigationService.NavigateToUser(userId);
-    });
+        _actionService = actionService;
+        _navigationService = navigationService;
 
-    public static IRelayCommand<IWorkEntry> OpenSeriesPageCommand { get; } = new RelayCommand<IWorkEntry>(work =>
-    {
-        var targetWork = work is WorkEntry we ? we.AsWorkEntry : work;
-        var series = targetWork?.Series;
-        if (series is not { Id: > 0 } s)
-            return;
-        var workType = targetWork is Mako.Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
-        NavigationService.NavigateToSeries(workType, s.Id);
-    });
+        OpenUserInfoPageCommand = new RelayCommand<object>(param =>
+        {
+            if (param is IWorkEntry { User.Id: var id } && id > 0)
+                _navigationService.NavigateToUser(id);
+            else if (param is Series { User.Id: var seriesUserId } && seriesUserId > 0)
+                _navigationService.NavigateToUser(seriesUserId);
+            else if (param is User { Id: var userId } && userId > 0)
+                _navigationService.NavigateToUser(userId);
+        });
 
-    public static IAsyncRelayCommand<IWorkEntry> BookmarkCommand { get; } = new AsyncRelayCommand<IWorkEntry>(async work =>
-    {
-        if (work is not null)
-            await ActionService.ToggleBookmarkAsync(work);
-    });
+        OpenSeriesPageCommand = new RelayCommand<IWorkEntry>(work =>
+        {
+            var targetWork = work is WorkEntry we ? we.AsWorkEntry : work;
+            var series = targetWork?.Series;
+            if (series is not { Id: > 0 } s)
+                return;
+            var workType = targetWork is Mako.Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
+            _navigationService.NavigateToSeries(workType, s.Id);
+        });
 
-    public static IAsyncRelayCommand<BookmarkRequest> AddToBookmarkCommand { get; } = new AsyncRelayCommand<BookmarkRequest>(async req =>
-    {
-        if (req.Work is not null)
-            await ActionService.AddToBookmarkAsync(req.Work, req.IsPrivate, req.Tags);
-    });
+        BookmarkCommand = new AsyncRelayCommand<IWorkEntry>(async work =>
+        {
+            if (work is not null)
+                await _actionService.ToggleBookmarkAsync(work);
+        });
 
-    public static IRelayCommand<object> AddToWatchLaterCommand { get; } = new RelayCommand<object>(work =>
-    {
-        if (work is not null)
-            ActionService.ToggleWatchLater(work);
-    });
+        AddToBookmarkCommand = new AsyncRelayCommand<BookmarkRequest>(async req =>
+        {
+            if (req.Work is not null)
+                await _actionService.AddToBookmarkAsync(req.Work, req.IsPrivate, req.Tags);
+        });
 
-    public static IAsyncRelayCommand<Illustration> SaveIllustrationCommand { get; } = new AsyncRelayCommand<Illustration>(async illust =>
-    {
-        await ActionService.SaveIllustrationAsync(illust);
-    });
+        AddToWatchLaterCommand = new RelayCommand<object>(work =>
+        {
+            if (work is not null)
+                _actionService.ToggleWatchLater(work);
+        });
 
-    public static IAsyncRelayCommand<Mako.Novel> SaveNovelCommand { get; } = new AsyncRelayCommand<Mako.Novel>(async novel =>
-    {
-        await ActionService.SaveNovelAsync(novel);
-    });
+        SaveIllustrationCommand = new AsyncRelayCommand<Illustration>(async illust =>
+        {
+            await _actionService.SaveIllustrationAsync(illust);
+        });
 
-    public static IAsyncRelayCommand<object> SaveCommand { get; } = new AsyncRelayCommand<object>(async work =>
-    {
-        if (work is not null)
-            await ActionService.SaveWorkAsync(work);
-    });
+        SaveNovelCommand = new AsyncRelayCommand<Mako.Novel>(async novel =>
+        {
+            await _actionService.SaveNovelAsync(novel);
+        });
 
-    public static IAsyncRelayCommand<Image> CopyCommand { get; } = new AsyncRelayCommand<Image>(async img =>
-    {
-        if (img is not null)
-            await ActionService.CopyImageAsync(img);
-    });
+        SaveCommand = new AsyncRelayCommand<object>(async work =>
+        {
+            if (work is not null)
+                await _actionService.SaveWorkAsync(work);
+        });
 
-    public static IAsyncRelayCommand<User> FollowUserCommand { get; } = new AsyncRelayCommand<User>(async user =>
-    {
-        await ActionService.ToggleFollowUserAsync(user);
-    });
+        CopyCommand = new AsyncRelayCommand<Image>(async img =>
+        {
+            if (img is not null)
+                await _actionService.CopyImageAsync(img);
+        });
 
-    public static IRelayCommand<User> BlockUserCommand { get; } = new RelayCommand<User>(user =>
-    {
-        ActionService.BlockUser(user);
-    });
+        FollowUserCommand = new AsyncRelayCommand<User>(async user =>
+        {
+            await _actionService.ToggleFollowUserAsync(user);
+        });
 
+        BlockUserCommand = new RelayCommand<User>(user =>
+        {
+            _actionService.BlockUser(user);
+        });
+    }
 
-    public static Task<bool> ToggleBookmarkAsync(IWorkEntry work) =>
-        ActionService.ToggleBookmarkAsync(work);
+    public IRelayCommand<object> OpenUserInfoPageCommand { get; }
 
-    public static Task<bool> AddToBookmarkAsync(IWorkEntry work, bool isPrivate, IReadOnlyList<string>? tags = null) =>
-        ActionService.AddToBookmarkAsync(work, isPrivate, tags);
+    public IRelayCommand<IWorkEntry> OpenSeriesPageCommand { get; }
 
-    public static bool ToggleWatchLater(object work) =>
-        ActionService.ToggleWatchLater(work);
+    public IAsyncRelayCommand<IWorkEntry> BookmarkCommand { get; }
 
-    public static Task SaveIllustrationAsync(Illustration entry, int setIndex) =>
-        ActionService.SaveIllustrationAsync(entry, setIndex);
+    public IAsyncRelayCommand<BookmarkRequest> AddToBookmarkCommand { get; }
 
-    public static Task SaveNovelAsync(Mako.Novel entry) =>
-        ActionService.SaveNovelAsync(entry);
+    public IRelayCommand<object> AddToWatchLaterCommand { get; }
 
-    public static Task SaveWorkAsync(object work) =>
-        ActionService.SaveWorkAsync(work);
+    public IAsyncRelayCommand<Illustration> SaveIllustrationCommand { get; }
 
-    public static Task SaveImageAsync(object entry, object? parameter, int setIndex)
+    public IAsyncRelayCommand<Mako.Novel> SaveNovelCommand { get; }
+
+    public IAsyncRelayCommand<object> SaveCommand { get; }
+
+    public IAsyncRelayCommand<Image> CopyCommand { get; }
+
+    public IAsyncRelayCommand<User> FollowUserCommand { get; }
+
+    public IRelayCommand<User> BlockUserCommand { get; }
+
+    public Task<bool> ToggleBookmarkAsync(IWorkEntry work) =>
+        _actionService.ToggleBookmarkAsync(work);
+
+    public Task<bool> AddToBookmarkAsync(IWorkEntry work, bool isPrivate, IReadOnlyList<string>? tags = null) =>
+        _actionService.AddToBookmarkAsync(work, isPrivate, tags);
+
+    public bool ToggleWatchLater(object work) =>
+        _actionService.ToggleWatchLater(work);
+
+    public Task SaveIllustrationAsync(Illustration entry, int setIndex) =>
+        _actionService.SaveIllustrationAsync(entry, setIndex);
+
+    public Task SaveNovelAsync(Mako.Novel entry) =>
+        _actionService.SaveNovelAsync(entry);
+
+    public Task SaveWorkAsync(object work) =>
+        _actionService.SaveWorkAsync(work);
+
+    public Task SaveImageAsync(object entry, object? parameter, int setIndex)
     {
         if (entry is WorkEntry we)
             entry = we.AsWorkEntry;
@@ -120,12 +140,12 @@ public static class WorkCommands
         return Task.CompletedTask;
     }
 
-    public static Task<bool> ToggleFollowUserAsync(User user) =>
-        ActionService.ToggleFollowUserAsync(user);
+    public Task<bool> ToggleFollowUserAsync(User user) =>
+        _actionService.ToggleFollowUserAsync(user);
 
-    public static bool BlockUser(User user) =>
-        ActionService.BlockUser(user);
+    public bool BlockUser(User user) =>
+        _actionService.BlockUser(user);
 
-    public static Task CopyImageAsync(Image? image) =>
-        ActionService.CopyImageAsync(image);
+    public Task CopyImageAsync(Image? image) =>
+        _actionService.CopyImageAsync(image);
 }

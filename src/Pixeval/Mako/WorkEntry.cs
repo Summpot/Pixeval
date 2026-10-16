@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using Pixeval.Filters;
 using Pixeval.Pixiv;
 using Pixeval.Storage;
 
@@ -13,6 +14,13 @@ public partial union WorkEntry : IWorkEntry, IArtworkSerializable
     {
         Illust i => i.Illustration,
         NovelWork n => n.Novel,
+        _ => throw new InvalidOperationException("Unsupported work entry type")
+    };
+
+    public ArtworkMetadata ToArtworkMetadata() => AsWorkEntry switch
+    {
+        Illustration i => i.ToArtworkMetadata(),
+        Novel n => n.ToArtworkMetadata(),
         _ => throw new InvalidOperationException("Unsupported work entry type")
     };
 

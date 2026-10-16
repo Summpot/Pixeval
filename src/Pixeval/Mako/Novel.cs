@@ -2,7 +2,9 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Linq;
 using System.Text.Json.Serialization;
+using Pixeval.Filters;
 using Pixeval.Pixiv;
 using Pixeval.Storage;
 
@@ -61,6 +63,20 @@ public partial record struct Novel : IWorkEntry, IArtworkSerializable
 
     [JsonIgnore]
     public bool IsAiGenerated => NovelAiType == 2;
+
+    public ArtworkMetadata ToArtworkMetadata() => new(
+        Id.ToString(),
+        Title ?? string.Empty,
+        User.Name ?? string.Empty,
+        User.Account ?? string.Empty,
+        Tags.Select(t => new ArtworkTag(t.Name, t.TranslatedName ?? string.Empty)).ToList(),
+        TotalBookmarks,
+        CreateDateOffset.ToUnixTimeSeconds(),
+        0,
+        0,
+        XRestrict,
+        IsAiGenerated ? 1 : 0,
+        0);
 
     public const string LegacyNovelToken = "Mako.Model.Novel";
 

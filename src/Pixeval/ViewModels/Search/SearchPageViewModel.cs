@@ -43,7 +43,8 @@ public partial class SearchPageViewModel : ViewModelBase
         AppSettings appSettings,
         INotificationService notificationService,
         IClipboardService clipboardService,
-        INavigationService navigationService)
+        INavigationService navigationService,
+        IUserSessionService userSession)
     {
         _makoClient = makoClient;
         _searchHistory = searchHistory;
@@ -51,6 +52,8 @@ public partial class SearchPageViewModel : ViewModelBase
         _notificationService = notificationService;
         _clipboardService = clipboardService;
         _navigationService = navigationService;
+        IllustrationForm = new IllustrationSearchFormViewModel(userSession);
+        NovelForm = new NovelSearchFormViewModel(userSession);
 
         SelectedTrendingTagsType = appSettings.SearchSettings.DefaultSimpleWorkType;
         SelectedAdvancedOptionsType = appSettings.SearchSettings.DefaultSimpleWorkType;
@@ -108,9 +111,9 @@ public partial class SearchPageViewModel : ViewModelBase
     [ObservableProperty]
     public partial SearchCompletionItem? SelectedSearchCompletion { get; set; }
 
-    public IllustrationSearchFormViewModel IllustrationForm { get; } = new();
+    public IllustrationSearchFormViewModel IllustrationForm { get; }
 
-    public NovelSearchFormViewModel NovelForm { get; } = new();
+    public NovelSearchFormViewModel NovelForm { get; }
 
     private ObservableCollection<SearchHistoryRecord> SearchHistories => _searchHistory.Entries;
 
