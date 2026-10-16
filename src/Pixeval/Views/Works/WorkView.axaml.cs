@@ -36,6 +36,7 @@ public sealed partial class WorkView : UserControl, IDisposable
 
     private bool _isDisposed;
     private ISimpleViewViewModel? _ownedViewModel;
+    private IAsyncEnumerable<object>? _pendingEngine;
 
     public static FuncValueConverter<bool, SelectionMode> SelectionModeConverter { get; } =
         new(b => b ? SelectionMode.Multiple : SelectionMode.Single);
@@ -50,6 +51,14 @@ public sealed partial class WorkView : UserControl, IDisposable
     public WorkView()
     {
         InitializeComponent();
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (!_isDisposed && change.Property == UiServices.ProviderProperty && _pendingEngine is { } engine
+            && this.GetUiService<AppSettings>() is not null)
+            ResetEngine(engine);
     }
 
     private void UpdateLayoutPseudoClasses()
@@ -133,6 +142,16 @@ public sealed partial class WorkView : UserControl, IDisposable
     /// </summary>
     public void ResetEngine(IAsyncEnumerable<object> newEngine)
     {
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
+        // Pages configure their source in their constructors, before inheriting UI services
+        // from the shell. Create the owned model once those services reach this control.
+        if (this.GetUiService<AppSettings>() is null)
+        {
+            _pendingEngine = newEngine;
+            return;
+        }
+
+        _pendingEngine = null;
         var isNovelEngine = newEngine is IAsyncEnumerable<Mako.Novel>;
         var viewModel = _ownedViewModel as IWorkViewViewModel;
         switch (viewModel)
@@ -174,6 +193,7 @@ public sealed partial class WorkView : UserControl, IDisposable
 
     private void SetOwnedViewModel(ISimpleViewViewModel viewModel)
     {
+        _pendingEngine = null;
         var oldViewModel = _ownedViewModel;
         _ownedViewModel = viewModel;
         DataContext = viewModel;
@@ -214,6 +234,7 @@ public sealed partial class WorkView : UserControl, IDisposable
             return;
 
         _isDisposed = true;
+        _pendingEngine = null;
         WorkListBox.ItemsSource = null;
         var viewModel = _ownedViewModel;
         _ownedViewModel = null;

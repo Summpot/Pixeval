@@ -5,6 +5,9 @@ using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 using Pixeval.Common.Collections;
 using Pixeval.Pixiv;
@@ -19,6 +22,8 @@ public abstract class EntryViewViewModel<T, TViewModel>
     private readonly IBlockedContentService? _blockedContent;
     private bool _isDisposed;
     private IncrementalLoadingCollection<TViewModel>? _source;
+    private BoxedReadOnlyCollectionAdapter? _boxedView;
+    private BoxedReadOnlyCollectionAdapter? _boxedSource;
 
     protected EntryViewViewModel(IBlockedContentService? blockedContent = null)
     {
@@ -73,14 +78,48 @@ public abstract class EntryViewViewModel<T, TViewModel>
     }
 
     /// <inheritdoc />
-    IReadOnlyCollection<object> ISimpleViewViewModel.View => View as IReadOnlyCollection<object> ?? new BoxedReadOnlyCollectionAdapter(View);
+    IReadOnlyCollection<object> ISimpleViewViewModel.View => AsObjects(View, ref _boxedView);
 
     /// <inheritdoc />
-    IReadOnlyCollection<object> ISimpleViewViewModel.Source => Source as IReadOnlyCollection<object> ?? new BoxedReadOnlyCollectionAdapter(Source);
+    IReadOnlyCollection<object> ISimpleViewViewModel.Source => AsObjects(Source, ref _boxedSource);
 
-    private sealed class BoxedReadOnlyCollectionAdapter(IReadOnlyCollection<TViewModel> inner) : IReadOnlyCollection<object>
+    private static IReadOnlyCollection<object> AsObjects(ObservableCollection<TViewModel> collection, ref BoxedReadOnlyCollectionAdapter? adapter)
     {
+        if (collection is IReadOnlyCollection<object> objects)
+            return objects;
+
+        // Value-type entries cannot use collection covariance. Keep the adapter stable so
+        // bindings and incremental loaders can observe the same collection throughout a load.
+        if (adapter is null || !ReferenceEquals(adapter.Inner, collection))
+            adapter = new(collection);
+        return adapter;
+    }
+
+    private sealed class BoxedReadOnlyCollectionAdapter(ObservableCollection<TViewModel> inner)
+        : IReadOnlyCollection<object>, IIncrementalLoading, INotifyCollectionChanged, INotifyPropertyChanged
+    {
+        public ObservableCollection<TViewModel> Inner => inner;
         public int Count => inner.Count;
+        public bool HasMoreItems => inner is IIncrementalLoading { HasMoreItems: true };
+        public bool IsInterrupted => inner is IIncrementalLoading { IsInterrupted: true };
+
+        public Task<int> LoadMoreItemsAsync(int count, CancellationToken token = default) =>
+            inner is IIncrementalLoading incremental
+                ? incremental.LoadMoreItemsAsync(count, token)
+                : Task.FromResult(0);
+
+        public event NotifyCollectionChangedEventHandler? CollectionChanged
+        {
+            add => inner.CollectionChanged += value;
+            remove => inner.CollectionChanged -= value;
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged
+        {
+            add => ((INotifyPropertyChanged) inner).PropertyChanged += value;
+            remove => ((INotifyPropertyChanged) inner).PropertyChanged -= value;
+        }
+
         public IEnumerator<object> GetEnumerator()
         {
             foreach (var item in inner)

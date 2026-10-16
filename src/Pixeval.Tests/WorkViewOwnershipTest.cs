@@ -22,6 +22,36 @@ namespace Pixeval.Tests;
 public sealed class WorkViewOwnershipTest
 {
     [TestMethod]
+    public async Task SourceInitializationWaitsForInheritedServices()
+    {
+        await RunAsync(() =>
+        {
+            using var view = new WorkView();
+            view.ResetEngine(AsyncEnumerable.Empty<object>());
+            Assert.IsNull(view.DataContext);
+
+            var parent = new Border { Child = view };
+            UiServices.SetProvider(parent, App.Services);
+            Assert.IsInstanceOfType<IllustrationViewViewModel>(view.DataContext);
+        });
+    }
+
+    [TestMethod]
+    public async Task ExplicitModelReplacesPendingSource()
+    {
+        await RunAsync(() =>
+        {
+            using var view = new WorkView();
+            view.ResetEngine(AsyncEnumerable.Empty<object>());
+            var model = new IllustrationViewViewModel(new AppSettings());
+            view.SetViewModel(model);
+            var parent = new Border { Child = view };
+            UiServices.SetProvider(parent, App.Services);
+            Assert.AreSame(model, view.DataContext);
+        });
+    }
+
+    [TestMethod]
     [DataRow(false)]
     [DataRow(true)]
     public async Task InitializingSourceDoesNotDisposeInheritedDataContext(bool incremental)
