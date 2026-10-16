@@ -1,4 +1,4 @@
-// Generated from scripts/i18n/mapping.json; preserves persisted navigation keys.
+// Preserves persisted navigation keys from before the ZeroI18n migration.
 namespace Pixeval.Localization;
 
 public static class MessageKeys

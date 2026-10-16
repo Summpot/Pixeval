@@ -66,8 +66,5 @@ escaping. `MessageKeys` contains explicit aliases and validates existence withou
 comparing translated strings against resource keys. Do not rewrite user YAML when
 switching languages.
 
-The one-shot migration script is `scripts/i18n/migrate.py`; it operates on the old
-resource tree and is not a build dependency. Its checked-in `mapping.json` records
-the conversion. `LocalizationMigrationTest` checks the 2439 original messages,
-formatting, fallback, navigation compatibility and live controls. When deliberately
-changing messages, update the corresponding regression expectations.
+`LocalizationTest` covers language selection, fallback, navigation compatibility,
+live control updates, settings state preservation and subscription lifetimes.

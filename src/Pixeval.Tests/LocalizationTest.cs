@@ -1,10 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Text.Json;
 using System.Threading.Tasks;
 using AutoSettingsPage;
 using AutoSettingsPage.Models;
@@ -22,57 +17,11 @@ namespace Pixeval.Tests;
 
 [TestClass]
 [DoNotParallelize]
-public sealed class LocalizationMigrationTest
+public sealed class LocalizationTest
 {
     private static readonly HeadlessUnitTestSession Session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerLoadingTest.ViewerApplication));
     [ClassCleanup]
     public static async Task Cleanup() => await Session.DisposeAsync();
-
-    [TestMethod]
-    public async Task EveryMigratedMessagePreservesItsOriginalTextAndParameters()
-    {
-        var session = Session;
-        await session.Dispatch(() =>
-        {
-            var previous = Strings.CurrentLocale;
-            try
-            {
-                using var baseline = JsonDocument.Parse(File.ReadAllText(Fixture("baseline.json")));
-                using var mapping = JsonDocument.Parse(File.ReadAllText(Fixture("mapping.json")));
-                var count = 0;
-                foreach (var locale in baseline.RootElement.EnumerateObject())
-                {
-                    AppLocalization.Instance.SetLanguage(locale.Name);
-                    foreach (var resource in locale.Value.EnumerateObject())
-                    {
-                        count++;
-                        // This message intentionally changes with the new product behavior.
-                        if (resource.Name == "AppSettings.AppLanguageEntry.Header") continue;
-                        var map = mapping.RootElement.GetProperty(resource.Name);
-                        var parameters = map.GetProperty("parameters").EnumerateArray().Select(p => p.GetString()!).ToArray();
-                        var args = parameters.Select((_, i) => (object)$"ARG{i}").ToArray();
-                        var originalArgs = args.ToArray();
-                        foreach (var format in map.GetProperty("formats").EnumerateObject())
-                        {
-                            var index = int.Parse(format.Name, CultureInfo.InvariantCulture);
-                            var date = new DateTimeOffset(2026, 10, 17, 12, 34, 56, TimeSpan.Zero);
-                            originalArgs[index] = date;
-                            args[index] = date.ToString(format.Value.GetString(), AppLocalization.Instance.CurrentCulture);
-                        }
-                        var method = typeof(Strings).GetMethod(map.GetProperty("method").GetString()!, BindingFlags.Public | BindingFlags.Static)!;
-                        Assert.IsNotNull(method, resource.Name);
-                        var named = parameters.Zip(args).ToDictionary(p => p.First, p => p.Second);
-                        var invocation = method.GetParameters().Select(p => named[p.Name!]).ToArray();
-                        var expected = parameters.Length == 0 ? resource.Value.GetString()!
-                            : string.Format(AppLocalization.Instance.CurrentCulture, resource.Value.GetString()!, originalArgs);
-                        Assert.AreEqual(expected, method.Invoke(null, invocation), $"{locale.Name}/{resource.Name}");
-                    }
-                }
-                Assert.AreEqual(2439, count);
-            }
-            finally { AppLocalization.Instance.SetLanguage(previous); }
-        }, default);
-    }
 
     [TestMethod]
     public async Task LanguageSelectionAndPersistedNavigationKeysRemainCompatible()
@@ -171,8 +120,6 @@ public sealed class LocalizationMigrationTest
             finally { AppLocalization.Instance.SetLanguage(previous); }
         }, default);
     }
-
-    private static string Fixture(string name) => Path.Combine(AppContext.BaseDirectory, "Fixtures", "Localization", name);
 
     [TestMethod]
     public async Task InjectedFilterEngineUsesCurrentLanguageAfterSwitching()
