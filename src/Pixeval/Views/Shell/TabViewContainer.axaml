@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Shell.TabViewContainer"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -29,13 +30,13 @@
             Spacing="10">
             <TextBlock
                 HorizontalAlignment="Center"
-                Text="{I18N {x:Static pixeval:MainPageResources+LoggingIn.Header}}"
+                Text="{CompiledBinding [MainPage-LoggingIn-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                 Theme="{StaticResource SubtitleTextBlockStyle}" />
             <TextBlock
                 x:Name="LoggingInDescriptionTextBlock"
                 MaxWidth="400"
                 IsVisible="False"
-                Text="{I18N {x:Static pixeval:MainPageResources+LoggingIn.Description}}"
+                Text="{CompiledBinding [MainPage-LoggingIn-Description], Source={x:Static loc:LocalizationManager.Instance}}"
                 TextWrapping="Wrap" />
         </StackPanel>
         <tabView:TabsView
@@ -79,12 +80,12 @@
                                 Tag="{Binding IdText}" />
                             <MenuItem
                                 Command="{Binding OpenMyPageCommand}"
-                                Header="{I18N {x:Static pixeval:MainPageResources+OpenMyPageItem.Text}}"
+                                Header="{CompiledBinding [MainPage-OpenMyPageItem-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Icon="{markup:SymbolIcon Open}"
                                 IsEnabled="{Binding IsLoggedIn, Source={di:Service Type={x:Type services:IUserSessionService}}, DataType={x:Type services:IUserSessionService}}" />
                             <MenuItem
                                 Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                                Header="{I18N {x:Static pixeval:MainPageResources+OpenMyPageInBrowserItem.Text}}"
+                                Header="{CompiledBinding [MainPage-OpenMyPageInBrowserItem-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Icon="{markup:SymbolIcon GlobeArrowUp}"
                                 IsEnabled="{Binding IsLoggedIn, Source={di:Service Type={x:Type services:IUserSessionService}}, DataType={x:Type services:IUserSessionService}}"
                                 Tag="{Binding Url}" />
@@ -92,7 +93,7 @@
                             <!--  该项不显示  -->
                             <MenuItem
                                 Command="{Binding ToggleRestrictedModeCommand, Mode=OneTime}"
-                                Header="{I18N {x:Static pixeval:MainPageResources+RestrictedModeItem.Text}}"
+                                Header="{CompiledBinding [MainPage-RestrictedModeItem-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Icon="{markup:SymbolIcon PersonProhibited}"
                                 IsChecked="{Binding RestrictedCache}"
                                 IsEnabled="{Binding IsLoggedIn, Source={di:Service Type={x:Type services:IUserSessionService}}, DataType={x:Type services:IUserSessionService}}"
@@ -100,21 +101,21 @@
                                 ToggleType="CheckBox" />
                             <MenuItem
                                 Command="{Binding ToggleAiShowCommand, Mode=OneTime}"
-                                Header="{I18N {x:Static pixeval:MainPageResources+AiShowItem.Text}}"
+                                Header="{CompiledBinding [MainPage-AiShowItem-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Icon="{markup:SymbolIcon Bot}"
                                 IsChecked="{Binding AiShowCache}"
                                 IsEnabled="{Binding IsLoggedIn, Source={di:Service Type={x:Type services:IUserSessionService}}, DataType={x:Type services:IUserSessionService}}"
                                 ToggleType="CheckBox" />
                             <MenuItem
                                 Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                                Header="{I18N {x:Static pixeval:MainPageResources+MoreViewingSettingsItem.Text}}"
+                                Header="{CompiledBinding [MainPage-MoreViewingSettingsItem-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Icon="{markup:SymbolIcon MoreHorizontal}"
                                 IsEnabled="{Binding IsLoggedIn, Source={di:Service Type={x:Type services:IUserSessionService}}, DataType={x:Type services:IUserSessionService}}"
                                 Tag="https://www.pixiv.net/settings/viewing" />
                             <Separator />
                             <MenuItem
                                 Command="{Binding SwitchAccountCommand}"
-                                Header="{I18N {x:Static pixeval:MainPageResources+SwitchAccountItem.Text}}"
+                                Header="{CompiledBinding [MainPage-SwitchAccountItem-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Icon="{markup:SymbolIcon PersonSwap}" />
                         </MenuFlyout>
                     </Button.Flyout>

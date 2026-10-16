@@ -1,15 +1,15 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 
 namespace Pixeval.Mako;
 
 public partial record struct BookmarkTag : IBookmarkTag
 {
-    private static readonly string _TagNameAll = I18NManager.GetResource(MiscResources.TagName.All);
-    private static readonly string _TagNameUncategorized = I18NManager.GetResource(MiscResources.TagName.Uncategorized);
+    private static string _TagNameAll => Strings.MiscTagNameAll();
+    private static string _TagNameUncategorized => Strings.MiscTagNameUncategorized();
 
     public override string ToString()
     {

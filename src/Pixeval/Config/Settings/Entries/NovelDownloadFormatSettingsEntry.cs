@@ -10,7 +10,7 @@ using Pixeval.Config;
 using Pixeval.Controls;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.FormatProviders;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Download;
 using Pixeval.Services.Background;
 
@@ -20,10 +20,7 @@ public class NovelDownloadFormatSettingsEntry(DownloadFormatsSettings settings, 
     : SingleValueSettingsEntry<DownloadFormatsSettings, object>(
         settings,
         nameof(DownloadFormatsSettings.NovelDownloadFormat),
-        I18NManager.GetResource(EnumResources.WorkTypeEnum.Novel),
-        "",
-        Symbol.BookOpen,
-        null,
+        new SettingsEntryAttribute(Symbol.Document, nameof(Strings.EnumWorkTypeEnumNovel), null),
         static settings => new NovelDownloadFormatToken(settings.NovelDownloadFormat),
         static (settings, value) => settings.NovelDownloadFormat = ((NovelDownloadFormatToken) value).Value),
         IEnumSettingsEntry<object>
@@ -33,13 +30,15 @@ public class NovelDownloadFormatSettingsEntry(DownloadFormatsSettings settings, 
     private static IReadOnlyList<IReadOnlyStringPair<object>> CreateEnumItems(ExtensionService extensionService)
     {
         var builtIns = SymbolComboBoxItem.GetValues<NovelDownloadFormat>()
-            .Select(t => t with { Value = NovelDownloadFormatToken.BuiltIn((NovelDownloadFormat) t.Value) });
+            .Select(t => new SymbolComboBoxItem(NovelDownloadFormatToken.BuiltIn((NovelDownloadFormat) t.Value), "", t.Symbol) { ResourceKey = t.ResourceKey });
 
         var extensionItems = extensionService
             .ActiveNovelFormatProviders
             .Select(t => new SymbolComboBoxItem(NovelDownloadFormatToken.Extension(t), t.FormatDescription, t is IEntryExtension entry ? entry.Icon : Symbol.Document));
 
-        return [.. builtIns.Concat(extensionItems)];
+        var items = builtIns.Concat(extensionItems).ToArray();
+        foreach (var item in items) item.EnableLocalization();
+        return items;
     }
 
     public override object Value

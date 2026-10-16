@@ -1,0 +1,3 @@
+EmojiButtonFlyoutEmojiSectionNavigationViewItem-Content = Emoji
+
+EmojiButtonFlyoutStickersSectionNavigationViewItem-Content = Sticker

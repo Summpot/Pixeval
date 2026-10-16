@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Works.IllustrationItem"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -30,52 +31,52 @@
                     controls:BookmarkTagSelectorBehavior.IsEnabled="True"
                     Command="{Binding BookmarkCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
+                    Header="{CompiledBinding [EntryItem-AddToBookmark], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup1:SymbolIconEx Heart}"
                     IsVisible="{Binding IsBookmarkSupported}" />
                 <MenuItem
                     controls:ArtworkStateBehavior.TrackWatchLater="True"
                     Command="{Binding AddToWatchLaterCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}"
+                    Header="{CompiledBinding [EntryItem-AddToWatchLater], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup1:SymbolIconEx Clock}" />
                 <MenuItem
                     Command="{Binding OpenUserInfoPageCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.OpenUserInfoPage}}"
+                    Header="{CompiledBinding [EntryItem-OpenUserInfoPage], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup:SymbolIcon Person}" />
                 <MenuItem
                     Command="{Binding OpenSeriesPageCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.OpenSeries}}"
+                    Header="{CompiledBinding [EntryItem-OpenSeries], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup:SymbolIcon SquareMultiple}"
                     IsVisible="{Binding HasSeries}" />
                 <Separator />
                 <MenuItem
                     Command="{Binding CopyCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding #ThumbnailImage, Mode=OneTime}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.Copy}}"
+                    Header="{CompiledBinding [EntryItem-Copy], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup:SymbolIcon Copy}"
                     IsEnabled="{Binding #ThumbnailImage.(controls:Source.Loaded)}" />
                 <MenuItem
                     Command="{Binding SaveCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.Save}}"
+                    Header="{CompiledBinding [EntryItem-Save], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup:SymbolIcon Save}" />
                 <Separator />
                 <MenuItem
                     Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
+                    Header="{CompiledBinding [EntryItem-OpenInWebBrowser], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup:SymbolIcon GlobeArrowUp}"
                     Tag="{Binding WebsiteUri}" />
                 <MenuItem
                     Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
+                    Header="{CompiledBinding [EntryItem-GenerateWebLink], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup:SymbolIcon LinkMultiple}"
                     Tag="{Binding WebsiteUri}" />
                 <MenuItem
                     Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.GenerateLink}}"
+                    Header="{CompiledBinding [EntryItem-GenerateLink], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup:SymbolIcon Link}"
                     Tag="{Binding AppUri}" />
             </ContextMenu>

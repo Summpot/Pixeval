@@ -11,7 +11,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Pixeval.Config;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Mako;
 using Pixeval.Pixiv;
 using Pixeval.Services.Core;
@@ -178,21 +178,21 @@ public partial class SearchPageViewModel : ViewModelBase
         {
             suggestions.Add(new(
                 SearchCompletionKind.OpenIllustration,
-                I18NManager.GetResource(SearchResources.OpenId.Illustration),
+                Strings.SearchOpenIdIllustration(),
                 normalized));
             suggestions.Add(new(
                 SearchCompletionKind.OpenNovel,
-                I18NManager.GetResource(SearchResources.OpenId.Novel),
+                Strings.SearchOpenIdNovel(),
                 normalized));
             suggestions.Add(new(
                 SearchCompletionKind.OpenUser,
-                I18NManager.GetResource(SearchResources.OpenId.User),
+                Strings.SearchOpenIdUser(),
                 normalized));
         }
 
         suggestions.Add(new(
             SearchCompletionKind.SearchUser,
-            I18NManager.GetResource(SearchResources.SearchUser),
+            Strings.SearchSearchUser(),
             normalized));
 
         return suggestions;
@@ -331,8 +331,8 @@ public partial class SearchPageViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(searchText))
         {
             _notificationService.ShowWarning(
-                I18NManager.GetResource(MainPageResources.SearchKeywordCannotBeBlank.Title),
-                I18NManager.GetResource(MainPageResources.SearchKeywordCannotBeBlank.Content));
+                Strings.MainPageSearchKeywordCannotBeBlankTitle(),
+                Strings.MainPageSearchKeywordCannotBeBlankContent());
             return;
         }
 
@@ -372,7 +372,7 @@ public partial class SearchPageViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _notificationService.ShowError(I18NManager.GetResource(SearchResources.Validation.SearchFailed.Title), ex.Message);
+            _notificationService.ShowError(Strings.SearchValidationSearchFailedTitle(), ex.Message);
         }
     }
 
@@ -389,7 +389,7 @@ public partial class SearchPageViewModel : ViewModelBase
             return;
 
         await _clipboardService.SetTextAsync(value);
-        _notificationService.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+        _notificationService.ShowSuccess(Strings.MiscCopied());
     }
 
     [RelayCommand]

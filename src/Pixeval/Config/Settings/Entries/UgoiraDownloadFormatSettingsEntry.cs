@@ -10,7 +10,7 @@ using Pixeval.Config;
 using Pixeval.Controls;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.FormatProviders;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Download;
 using Pixeval.Services.Background;
 using Pixeval.Media;
@@ -21,10 +21,7 @@ public class UgoiraDownloadFormatSettingsEntry(DownloadFormatsSettings settings,
     : SingleValueSettingsEntry<DownloadFormatsSettings, object>(
         settings,
         nameof(DownloadFormatsSettings.UgoiraDownloadFormat),
-        I18NManager.GetResource(EnumResources.WorkTypeEnum.Ugoira),
-        "",
-        Symbol.Gif,
-        null,
+        new SettingsEntryAttribute(Symbol.Gif, nameof(Strings.EnumWorkTypeEnumUgoira), null),
         static settings => new UgoiraDownloadFormatToken(settings.UgoiraDownloadFormat),
         static (settings, value) => settings.UgoiraDownloadFormat = ((UgoiraDownloadFormatToken) value).Value),
         IEnumSettingsEntry<object>
@@ -35,13 +32,15 @@ public class UgoiraDownloadFormatSettingsEntry(DownloadFormatsSettings settings,
     {
         var builtIns = SymbolComboBoxItem.GetValues<UgoiraDownloadFormat>()
             .Where(static t => (UgoiraDownloadFormat) t.Value != UgoiraDownloadFormat.Mp4 || MediaEngine.IsMp4Available)
-            .Select(t => new SymbolComboBoxItem(UgoiraDownloadFormatToken.BuiltIn((UgoiraDownloadFormat) t.Value), t.Description, t.Symbol));
+            .Select(t => new SymbolComboBoxItem(UgoiraDownloadFormatToken.BuiltIn((UgoiraDownloadFormat) t.Value), "", t.Symbol) { ResourceKey = t.ResourceKey });
 
         var extensionItems = extensionService
             .ActiveAnimatedImageFormatProviders
             .Select(t => new SymbolComboBoxItem(UgoiraDownloadFormatToken.Extension(t), t.FormatDescription, t is IEntryExtension entry ? entry.Icon : Symbol.Gif));
 
-        return [.. builtIns.Concat(extensionItems)];
+        var items = builtIns.Concat(extensionItems).ToArray();
+        foreach (var item in items) item.EnableLocalization();
+        return items;
     }
 
     public override object Value

@@ -6,7 +6,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Interactivity;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 
 namespace Pixeval.Views.Comments;
@@ -56,9 +56,8 @@ public partial class PixivReplyBar : UserControl
         if (string.IsNullOrEmpty(content) || content.Length > 140)
         {
             _ = this.Dialogs.CreateAcknowledgementAsync(
-                I18NManager.GetResource(PixivReplyBarResources.CommentIsTooShortOrTooLongToastTitle),
-                I18NManager.GetResource(PixivReplyBarResources.CommentIsTooShortOrTooLongToastContentFormatted,
-                    content?.Length ?? 0));
+                Strings.PixivReplyBarCommentIsTooShortOrTooLongToastTitle(),
+                Strings.PixivReplyBarCommentIsTooShortOrTooLongToastContentFormatted(count: content?.Length ?? 0));
             return;
         }
 

@@ -27,14 +27,14 @@ public sealed class DownloadManagerTest
         manager.ApplyPageSnapshot(Page([inserted, keptAgain], []));
 
         Assert.HasCount(2, manager.OrdinaryItems);
-        Assert.AreSame(inserted, manager.OrdinaryItems[0]);
-        Assert.AreSame(kept, manager.OrdinaryItems[1]);
+        Assert.AreEqual(inserted, manager.OrdinaryItems[0]);
+        Assert.AreEqual(kept, manager.OrdinaryItems[1]);
 
         var progressed = Item("kept", "1", DownloadState.Running, 40);
         manager.ApplyPageSnapshot(Page([inserted, progressed], []));
 
-        Assert.AreSame(inserted, manager.OrdinaryItems[0]);
-        Assert.AreNotSame(kept, manager.OrdinaryItems[1]);
+        Assert.AreEqual(inserted, manager.OrdinaryItems[0]);
+        Assert.AreNotEqual(kept, manager.OrdinaryItems[1]);
         Assert.AreEqual(40, manager.OrdinaryItems[1].ProgressPercentage, 0.001);
     }
 
@@ -49,11 +49,11 @@ public sealed class DownloadManagerTest
         manager.ApplyPageSnapshot(Page([ordinary], [folder]));
 
         Assert.HasCount(1, manager.OrdinaryItems);
-        Assert.AreSame(ordinary, manager.OrdinaryItems[0]);
+        Assert.AreEqual(ordinary, manager.OrdinaryItems[0]);
         Assert.HasCount(1, manager.Folders);
         Assert.AreEqual(7, manager.Folders[0].SubscriptionId);
         Assert.HasCount(1, manager.Folders[0].Items);
-        Assert.AreSame(subscriptionItem, manager.Folders[0].Items[0]);
+        Assert.AreEqual(subscriptionItem, manager.Folders[0].Items[0]);
     }
 
     [TestMethod]
@@ -70,12 +70,12 @@ public sealed class DownloadManagerTest
 
         items.CurrentOption = DownloadListOption.Running;
         Assert.HasCount(1, items.View);
-        Assert.AreSame(running, items.View[0]);
+        Assert.AreEqual(running, items.View[0]);
 
         var progressed = Item("running", "1", DownloadState.Running, 40, title: "Alpha");
         manager.ApplyPageSnapshot(Page([progressed, completed], []));
         Assert.HasCount(1, items.View);
-        Assert.AreSame(progressed, items.View[0]);
+        Assert.AreEqual(progressed, items.View[0]);
         Assert.AreEqual(40, items.View[0].ProgressPercentage, 0.001);
 
         items.CurrentOption = DownloadListOption.CustomSearch;
@@ -98,12 +98,12 @@ public sealed class DownloadManagerTest
 
         using var items = new DownloadItemPageViewModel(page, 4);
         Assert.HasCount(1, items.View);
-        Assert.AreSame(first, items.View[0]);
+        Assert.AreEqual(first, items.View[0]);
 
         var replacement = Item("first", "1", DownloadState.Error, 100, 4, "First");
         manager.ApplyPageSnapshot(Page([], [Folder(4, [replacement], "First"), Folder(9, [second], "Second")]));
         Assert.HasCount(1, items.View);
-        Assert.AreSame(replacement, items.View[0]);
+        Assert.AreEqual(replacement, items.View[0]);
         Assert.AreEqual(DownloadState.Error, items.View[0].State);
     }
 

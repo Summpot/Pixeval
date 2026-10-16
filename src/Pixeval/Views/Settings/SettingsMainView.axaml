@@ -3,6 +3,7 @@
     x:Name="Root"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:appManagement="using:Pixeval.Services.Core"
     xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -18,7 +19,7 @@
     xmlns:utilities="using:Pixeval.Common"
     xmlns:viewModels="using:Pixeval.ViewModels.Settings"
     x:DataType="{x:Type viewModels:SettingsPageViewModel}"
-    Header="{I18N {x:Static pixeval:MainPageResources+Tab.Settings}}"
+    Header="{CompiledBinding [MainPage-Tab-Settings], Source={x:Static loc:LocalizationManager.Instance}}"
     mc:Ignorable="d"
     d:DesignHeight="800"
     d:DesignWidth="800">
@@ -34,20 +35,20 @@
                 <controls:SettingsExpander.Description>
                     <StackPanel Spacing="3">
                         <TextBlock>
-                            <Run Text="{I18N {x:Static pixeval:SettingsMainViewResources.LastCheckedPrefix}}" />
+                            <Run Text="{CompiledBinding [SettingsMainView-LastCheckedPrefix], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <Run Text="{Binding LastCheckedUpdate}" />
                         </TextBlock>
                     </StackPanel>
                 </controls:SettingsExpander.Description>
                 <controls:SettingsExpander.Content>
-                    <Button Command="{Binding CheckForUpdateCommand}" Content="{I18N {x:Static pixeval:SettingsMainViewResources+CheckForUpdatesButton.Content}}" />
+                    <Button Command="{Binding CheckForUpdateCommand}" Content="{CompiledBinding [SettingsMainView-CheckForUpdatesButton-Content], Source={x:Static loc:LocalizationManager.Instance}}" />
                 </controls:SettingsExpander.Content>
                 <controls:SettingsExpander.Items>
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                        Description="{I18N {x:Static pixeval:SettingsMainViewResources+OpenTempEntry.Description}}"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+OpenTempEntry.Header}}"
+                        Description="{CompiledBinding [SettingsMainView-OpenTempEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Header="{CompiledBinding [SettingsMainView-OpenTempEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon FolderLightning}"
                         IsClickEnabled="True"
                         Tag="{x:Static appManagement:AppInfo.TempFolder}" />
@@ -55,7 +56,7 @@
                         ActionIcon="{markup:SymbolIcon ChevronRight}"
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                         Description="ms-windows-store://pdp/?ProductId=9P1RZL9Z8454"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+MsStoreCheckForUpdatesEntry.Header}}"
+                        Header="{CompiledBinding [SettingsMainView-MsStoreCheckForUpdatesEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon StoreMicrosoft}"
                         IsClickEnabled="True"
                         Tag="ms-windows-store://pdp/?ProductId=9P1RZL9Z8454" />
@@ -63,7 +64,7 @@
                         ActionIcon="{markup:SymbolIcon ChevronRight}"
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                         Description="https://github.com/Pixeval/Pixeval/releases"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+GitHubCheckForUpdatesEntry.Header}}"
+                        Header="{CompiledBinding [SettingsMainView-GitHubCheckForUpdatesEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         IsClickEnabled="True"
                         Tag="https://github.com/Pixeval/Pixeval/releases">
                         <controls:SettingsCard.HeaderIcon>
@@ -75,13 +76,13 @@
             <pixevalControls:InfoBar Mode="{Binding UpdateStatusMode}" Text="{Binding UpdateStatusText}" />
 
             <controls:SettingsExpander
-                Description="{I18N {x:Static pixeval:SettingsMainViewResources+BugReportEntry.Description}}"
-                Header="{I18N {x:Static pixeval:SettingsMainViewResources+BugReportEntry.Header}}"
+                Description="{CompiledBinding [SettingsMainView-BugReportEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                Header="{CompiledBinding [SettingsMainView-BugReportEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                 HeaderIcon="{markup:SymbolIcon Bug}">
                 <controls:SettingsExpander.Items>
                     <controls:SettingsCard
-                        Description="{I18N {x:Static pixeval:SettingsMainViewResources+BugReportChannelsEntry.Description}}"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+BugReportChannelsEntry.Header}}"
+                        Description="{CompiledBinding [SettingsMainView-BugReportChannelsEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Header="{CompiledBinding [SettingsMainView-BugReportChannelsEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon Send}">
                         <CommandBar
                             Background="Transparent"
@@ -90,7 +91,7 @@
                             <CommandBarButton
                                 Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                                 Tag="https://github.com/Pixeval/Pixeval/issues/new/choose"
-                                ToolTip.Tip="{I18N {x:Static pixeval:SettingsMainViewResources+GitHubBugReportEntry.ToolTip}}">
+                                ToolTip.Tip="{CompiledBinding [SettingsMainView-GitHubBugReportEntry-ToolTip], Source={x:Static loc:LocalizationManager.Instance}}">
                                 <CommandBarButton.Icon>
                                     <PathIcon Data="{markup1:SvgPath {x:Static pixeval:SvgResources.GitHub}}" />
                                 </CommandBarButton.Icon>
@@ -99,11 +100,11 @@
                                 Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                                 Icon="{markup:SymbolIcon Mail}"
                                 Tag="mailto:poker_sang@outlook.com"
-                                ToolTip.Tip="{I18N {x:Static pixeval:SettingsMainViewResources+EMailBugReportEntry.ToolTip}}" />
+                                ToolTip.Tip="{CompiledBinding [SettingsMainView-EMailBugReportEntry-ToolTip], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <CommandBarButton
                                 Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                                 Tag="https://jq.qq.com/?_wv=1027&amp;k=trDeCrog"
-                                ToolTip.Tip="{I18N {x:Static pixeval:SettingsMainViewResources+QQBugReportEntry.ToolTip}}">
+                                ToolTip.Tip="{CompiledBinding [SettingsMainView-QQBugReportEntry-ToolTip], Source={x:Static loc:LocalizationManager.Instance}}">
                                 <CommandBarButton.Icon>
                                     <PathIcon Data="{markup1:SvgPath {x:Static pixeval:SvgResources.QQ}}" />
                                 </CommandBarButton.Icon>
@@ -113,40 +114,40 @@
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                        Description="{I18N {x:Static pixeval:SettingsMainViewResources+OpenLogEntry.Description}}"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+OpenLogEntry.Header}}"
+                        Description="{CompiledBinding [SettingsMainView-OpenLogEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Header="{CompiledBinding [SettingsMainView-OpenLogEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon FolderList}"
                         IsClickEnabled="True"
                         Tag="{x:Static appManagement:AppInfo.LogsFolder}" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                        Description="{I18N {x:Static pixeval:SettingsMainViewResources+OpenTempEntry.Description}}"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+OpenTempEntry.Header}}"
+                        Description="{CompiledBinding [SettingsMainView-OpenTempEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Header="{CompiledBinding [SettingsMainView-OpenTempEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon FolderLightning}"
                         IsClickEnabled="True"
                         Tag="{x:Static appManagement:AppInfo.TempFolder}" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                        Description="{I18N {x:Static pixeval:SettingsMainViewResources+OpenLocalEntry.Description}}"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+OpenLocalEntry.Header}}"
+                        Description="{CompiledBinding [SettingsMainView-OpenLocalEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Header="{CompiledBinding [SettingsMainView-OpenLocalEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon FolderBriefcase}"
                         IsClickEnabled="True"
                         Tag="{x:Static appManagement:AppInfo.ApplicationFolderPath}" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                        Description="{I18N {x:Static pixeval:SettingsMainViewResources+OpenExtensionsEntry.Description}}"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+OpenExtensionsEntry.Header}}"
+                        Description="{CompiledBinding [SettingsMainView-OpenExtensionsEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Header="{CompiledBinding [SettingsMainView-OpenExtensionsEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon FolderAdd}"
                         IsClickEnabled="True"
                         Tag="{x:Static appManagement:AppInfo.ExtensionsFolder}" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                        Description="{I18N {x:Static pixeval:SettingsMainViewResources+OpenSettingsEntry.Description}}"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+OpenSettingsEntry.Header}}"
+                        Description="{CompiledBinding [SettingsMainView-OpenSettingsEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Header="{CompiledBinding [SettingsMainView-OpenSettingsEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon FolderPerson}"
                         IsClickEnabled="True"
                         Tag="{x:Static appManagement:AppInfo.SettingsFolder}" />
@@ -156,8 +157,8 @@
             <controls:SettingsCard
                 ActionIcon="{markup:SymbolIcon Open}"
                 Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                Description="{I18N {x:Static pixeval:SettingsMainViewResources+RateEntry.Description}}"
-                Header="{I18N {x:Static pixeval:SettingsMainViewResources+RateEntry.Header}}"
+                Description="{CompiledBinding [SettingsMainView-RateEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                Header="{CompiledBinding [SettingsMainView-RateEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                 HeaderIcon="{markup:SymbolIcon Star}"
                 IsClickEnabled="True"
                 Tag="ms-windows-store://pdp/?ProductId=9P1RZL9Z8454" />
@@ -165,77 +166,77 @@
             <controls:SettingsCard
                 ActionIcon="{markup:SymbolIcon ChevronRight}"
                 pixevalControls:ClickCommandBehavior.Command="{Binding SwitchAccountCommand}"
-                Description="{I18N {x:Static pixeval:SettingsMainViewResources+SwitchAccountEntry.Description}}"
-                Header="{I18N {x:Static pixeval:SettingsMainViewResources+SwitchAccountEntry.Header}}"
+                Description="{CompiledBinding [SettingsMainView-SwitchAccountEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                Header="{CompiledBinding [SettingsMainView-SwitchAccountEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                 HeaderIcon="{markup:SymbolIcon PersonSwap}"
                 IsClickEnabled="True" />
 
             <controls:SettingsCard
                 ActionIcon="{markup:SymbolIcon ArrowReset}"
                 pixevalControls:ClickCommandBehavior.Command="{Binding ResetDefaultSettingsCommand}"
-                Description="{I18N {x:Static pixeval:SettingsMainViewResources+ResetDefaultSettingsEntry.Description}}"
-                Header="{I18N {x:Static pixeval:SettingsMainViewResources+ResetDefaultSettingsEntry.Header}}"
+                Description="{CompiledBinding [SettingsMainView-ResetDefaultSettingsEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                Header="{CompiledBinding [SettingsMainView-ResetDefaultSettingsEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                 HeaderIcon="{markup:SymbolIcon Apps}"
                 IsClickEnabled="True" />
 
             <controls:SettingsExpander
-                Description="{I18N {x:Static pixeval:SettingsMainViewResources+BackupSettingsEntry.Description}}"
-                Header="{I18N {x:Static pixeval:SettingsMainViewResources+BackupSettingsEntry.Header}}"
+                Description="{CompiledBinding [SettingsMainView-BackupSettingsEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                Header="{CompiledBinding [SettingsMainView-BackupSettingsEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                 HeaderIcon="{markup:SymbolIcon ClipboardSettings}">
                 <controls:SettingsExpander.Items>
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                        Description="{I18N {x:Static pixeval:SettingsMainViewResources+OpenSettingsEntry.Description}}"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+OpenSettingsEntry.Header}}"
+                        Description="{CompiledBinding [SettingsMainView-OpenSettingsEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Header="{CompiledBinding [SettingsMainView-OpenSettingsEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon FolderPerson}"
                         IsClickEnabled="True"
                         Tag="{x:Static appManagement:AppInfo.SettingsFolder}" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
                         pixevalControls:ClickCommandBehavior.Command="{Binding ExportSettingsCommand}"
-                        Description="{I18N {x:Static pixeval:SettingsMainViewResources+ExportSettingsPlaintextEntry.Description}}"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+ExportSettingsPlaintextEntry.Header}}"
+                        Description="{CompiledBinding [SettingsMainView-ExportSettingsPlaintextEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Header="{CompiledBinding [SettingsMainView-ExportSettingsPlaintextEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon ArrowExport}"
                         IsClickEnabled="True" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
                         pixevalControls:ClickCommandBehavior.Command="{Binding ImportSettingsCommand}"
-                        Description="{I18N {x:Static pixeval:SettingsMainViewResources+ImportSettingsPlaintextEntry.Description}}"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+ImportSettingsPlaintextEntry.Header}}"
+                        Description="{CompiledBinding [SettingsMainView-ImportSettingsPlaintextEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Header="{CompiledBinding [SettingsMainView-ImportSettingsPlaintextEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon ArrowImport}"
                         IsClickEnabled="True" />
                 </controls:SettingsExpander.Items>
             </controls:SettingsExpander>
 
-            <controls:SettingsExpander Header="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteHistoriesEntry.Header}}" HeaderIcon="{markup:SymbolIcon HistoryDismiss}">
+            <controls:SettingsExpander Header="{CompiledBinding [SettingsMainView-DeleteHistoriesEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}" HeaderIcon="{markup:SymbolIcon HistoryDismiss}">
                 <controls:SettingsExpander.Items>
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon ChevronRight}"
                         pixevalControls:ClickCommandBehavior.Command="{Binding ClearDataCommand}" pixevalControls:ClickCommandBehavior.CommandParameter="{x:Static options:ClearDataKind.FileCache}"
-                        Description="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteFileCacheEntry.Description}}"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteFileCacheEntry.Header}}"
+                        Description="{CompiledBinding [SettingsMainView-DeleteFileCacheEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Header="{CompiledBinding [SettingsMainView-DeleteFileCacheEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon HistoryDismiss}"
                         IsClickEnabled="True" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon ChevronRight}"
                         pixevalControls:ClickCommandBehavior.Command="{Binding ClearDataCommand}" pixevalControls:ClickCommandBehavior.CommandParameter="{x:Static options:ClearDataKind.SearchHistory}"
-                        Description="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteSearchHistoriesEntry.Description}}"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteSearchHistoriesEntry.Header}}"
+                        Description="{CompiledBinding [SettingsMainView-DeleteSearchHistoriesEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Header="{CompiledBinding [SettingsMainView-DeleteSearchHistoriesEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon HistoryDismiss}"
                         IsClickEnabled="True" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon ChevronRight}"
                         pixevalControls:ClickCommandBehavior.Command="{Binding ClearDataCommand}" pixevalControls:ClickCommandBehavior.CommandParameter="{x:Static options:ClearDataKind.BrowseHistory}"
-                        Description="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteBrowseHistoriesEntry.Description}}"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteBrowseHistoriesEntry.Header}}"
+                        Description="{CompiledBinding [SettingsMainView-DeleteBrowseHistoriesEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Header="{CompiledBinding [SettingsMainView-DeleteBrowseHistoriesEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon HistoryDismiss}"
                         IsClickEnabled="True" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon ChevronRight}"
                         pixevalControls:ClickCommandBehavior.Command="{Binding ClearDataCommand}" pixevalControls:ClickCommandBehavior.CommandParameter="{x:Static options:ClearDataKind.DownloadHistory}"
-                        Description="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteDownloadHistoriesEntry.Description}}"
-                        Header="{I18N {x:Static pixeval:SettingsMainViewResources+DeleteDownloadHistoriesEntry.Header}}"
+                        Description="{CompiledBinding [SettingsMainView-DeleteDownloadHistoriesEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Header="{CompiledBinding [SettingsMainView-DeleteDownloadHistoriesEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon HistoryDismiss}"
                         IsClickEnabled="True" />
                 </controls:SettingsExpander.Items>
@@ -243,21 +244,21 @@
             <controls:SettingsCard
                 ActionIcon="{markup:SymbolIcon ChevronRight}"
                 pixevalControls:ClickCommandBehavior.Command="{Binding #Root.OpenAboutCommand}"
-                Header="{I18N {x:Static pixeval:MainPageResources+Tab.About}}"
+                Header="{CompiledBinding [MainPage-Tab-About], Source={x:Static loc:LocalizationManager.Instance}}"
                 HeaderIcon="{markup:SymbolIcon PersonStarburst,
                                                IconVariant=Color}"
                 IsClickEnabled="True" />
             <controls:SettingsCard
                 ActionIcon="{markup:SymbolIcon ChevronRight}"
                 pixevalControls:ClickCommandBehavior.Command="{Binding #Root.OpenHelpCommand}"
-                Header="{I18N {x:Static pixeval:MainPageResources+Tab.Help}}"
+                Header="{CompiledBinding [MainPage-Tab-Help], Source={x:Static loc:LocalizationManager.Instance}}"
                 HeaderIcon="{markup:SymbolIcon ChatBubblesQuestion,
                                                IconVariant=Color}"
                 IsClickEnabled="True" />
             <controls:SettingsCard
                 ActionIcon="{markup:SymbolIcon ChevronRight}"
                 pixevalControls:ClickCommandBehavior.Command="{Binding #Root.OpenNavigationSettingsCommand}"
-                Header="{I18N {x:Static pixeval:MainPageResources+Tab.NavigationSettings}}"
+                Header="{CompiledBinding [MainPage-Tab-NavigationSettings], Source={x:Static loc:LocalizationManager.Instance}}"
                 HeaderIcon="{markup:SymbolIcon LocationRipple,
                                                IconVariant=Color}"
                 IsClickEnabled="True" />

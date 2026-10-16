@@ -4,7 +4,7 @@
 using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 using Pixeval.Storage;
@@ -31,7 +31,7 @@ public static class BlockedContentModelHelper
         Title = entry.Title,
         UserId = entry.User.Id,
         CoverUrl = AppInfo.BlockedContentPath,
-        Text = I18NManager.GetResource(BlockedContentResources.Work)
+        Text = Strings.BlockedContentWork()
     };
 
     internal static bool IsBlockedPlaceholder(object entry) =>
@@ -55,7 +55,7 @@ public static class BlockedContentModelHelper
         static Illustration ReplaceIllustration(Illustration entry, BlockedContentSnapshot snapshot) =>
             MarkBlocked(entry with
             {
-                Title = I18NManager.GetResource(BlockedContentResources.Work),
+                Title = Strings.BlockedContentWork(),
                 ImageUrls = CreatePlaceholderImageUrls(),
                 MetaSinglePage = new(AppInfo.BlockedContentPath),
                 MetaPages = [],
@@ -67,7 +67,7 @@ public static class BlockedContentModelHelper
         static Mako.Novel ReplaceNovel(Mako.Novel entry, BlockedContentSnapshot snapshot) =>
             MarkBlocked(entry with
             {
-                Title = I18NManager.GetResource(BlockedContentResources.Work),
+                Title = Strings.BlockedContentWork(),
                 ImageUrls = CreatePlaceholderImageUrls(),
                 PageCount = 1
             });
@@ -83,7 +83,7 @@ public static class BlockedContentModelHelper
         BlockedContentHelper.IsBlocked(entry.Id, snapshot)
             ? entry with
             {
-                Name = I18NManager.GetResource(BlockedContentResources.User),
+                Name = Strings.BlockedContentUser(),
                 ProfileImageUrls = new ProfileImageUrls(
                     AppInfo.BlockedContentPath,
                     AppInfo.BlockedContentPath,
@@ -104,7 +104,7 @@ public static class BlockedContentModelHelper
     private static CommentRecord ReplaceComment(CommentRecord entry, BlockedContentSnapshot snapshot) =>
         entry with
         {
-            Comment = I18NManager.GetResource(BlockedContentResources.Comment),
+            Comment = Strings.BlockedContentComment(),
             User = Replace(entry.User, snapshot)
         };
 

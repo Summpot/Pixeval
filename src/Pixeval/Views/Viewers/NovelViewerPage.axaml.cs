@@ -8,7 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 using Pixeval.Utilities;
@@ -77,7 +77,7 @@ public partial class NovelViewerPage : IconContentPage
         {
             await this.GetRequiredUiService<WorkCommands>().AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
             this.Notifications.ShowSuccess(
-                I18NManager.GetResource(MiscResources.AddedToBookmark));
+                Strings.MiscAddedToBookmark());
         }
     }
 

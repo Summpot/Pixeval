@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Pixeval.I18N;
+using Pixeval.Localization;
 
 namespace Pixeval.ViewModels.Search;
 
@@ -44,8 +44,8 @@ public partial class IllustrationSearchFormViewModel : SearchArgumentsFormViewMo
         if (HasInvalidRange(WidthMinOption.NullableInt, WidthMaxOption.NullableInt)
             || HasInvalidRange(HeightMinOption.NullableInt, HeightMaxOption.NullableInt))
         {
-            title = I18NManager.GetResource(SearchResources.Validation.InvalidNumericRange.Title);
-            content = I18NManager.GetResource(SearchResources.Validation.InvalidNumericRange.Content);
+            title = Strings.SearchValidationInvalidNumericRangeTitle();
+            content = Strings.SearchValidationInvalidNumericRangeContent();
             return false;
         }
 

@@ -8,7 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Metadata;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 using Pixeval.Utilities;
@@ -76,7 +76,7 @@ public partial class IllustrationViewerInfoPane : UserControl
 
         await this.GetRequiredUiService<WorkCommands>().AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
         this.Notifications.ShowSuccess(
-            I18NManager.GetResource(MiscResources.AddedToBookmark));
+            Strings.MiscAddedToBookmark());
     }
     
     private void ChevronButtonClicked(object? sender, RoutedEventArgs e)

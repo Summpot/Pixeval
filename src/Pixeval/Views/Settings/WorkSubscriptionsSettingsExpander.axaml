@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Settings.WorkSubscriptionsSettingsExpander"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:avalonia="using:AutoSettingsPage.Avalonia"
     xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:controls1="using:Pixeval.Controls"
@@ -17,7 +18,7 @@
     xmlns:pixeval="using:Pixeval"
     xmlns:storage="using:Pixeval.Storage"
     x:DataType="{x:Type entries:WorkSubscriptionsSettingsEntry}"
-    Description="{Binding Converter={x:Static avalonia:SettingsEntryHelper.DescriptionConverter}}"
+    Description="{avalonia:SettingsDescription}"
     Header="{Binding Header}"
     Tag="{Binding Token}"
     mc:Ignorable="d"
@@ -30,7 +31,7 @@
         <Button
             Click="SyncAllButton_OnClicked"
             Content="{markup:SymbolIcon ArrowSync}"
-            ToolTip.Tip="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+SyncAllSubscriptionsButton.Label}}" />
+            ToolTip.Tip="{CompiledBinding [WorkSubscriptionsSettingsExpander-SyncAllSubscriptionsButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
     </controls:SettingsExpander.Content>
     <controls:SettingsExpander.Items>
         <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Left">
@@ -39,7 +40,7 @@
                 ColumnSpacing="8"
                 RowDefinitions="Auto,Auto"
                 RowSpacing="8">
-                <TextBox x:Name="TargetIdTextBox" PlaceholderText="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+TargetIdTextBox.PlaceholderText}}" />
+                <TextBox x:Name="TargetIdTextBox" PlaceholderText="{CompiledBinding [WorkSubscriptionsSettingsExpander-TargetIdTextBox-PlaceholderText], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <controls1:SymbolComboBox
                     x:Name="SubscriptionTypeComboBox"
                     Grid.Row="0"
@@ -90,7 +91,7 @@
                                 Click="SyncSubscriptionButton_OnClicked"
                                 Content="{markup:SymbolIcon ArrowSync}"
                                 Tag="{Binding}"
-                                ToolTip.Tip="{I18N {x:Static pixeval:DownloadPageResources+SyncSubscriptionButton.Label}}" />
+                                ToolTip.Tip="{CompiledBinding [DownloadPage-SyncSubscriptionButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <Button
                                 Grid.Column="4"
                                 VerticalAlignment="Center"

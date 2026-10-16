@@ -7,7 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -48,7 +48,9 @@ public partial class WorkSearchResultPage : IconContentPage
     {
         InitializeComponent();
         _searchText = searchText;
-        Header = I18NManager.GetResource(MainPageResources.SearchResultFormatted, searchText);
+        Header = Strings.MainPageSearchResultFormatted(searchText: searchText);
+        var languageSubscription = AppLocalization.Instance.Subscribe(() => Header = Strings.MainPageSearchResultFormatted(searchText: searchText));
+        Pixeval.ViewModels.ViewModelDisposal.Register(this, languageSubscription);
         SimpleWorkTypeComboBox.SelectedValue = preferredType;
         _illustrationArguments = illustrationSearchArguments;
         _novelArguments = novelSearchArguments;

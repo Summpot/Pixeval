@@ -1,0 +1,3 @@
+InvalidIPFormat = Недопустимый формат IP
+
+DuplicatesWithExistingIP = Дублирует существующий IP

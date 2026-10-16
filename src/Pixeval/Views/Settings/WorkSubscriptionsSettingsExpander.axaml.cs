@@ -14,7 +14,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Avalonia.Controls;
 using Pixeval.Controls;
 using Pixeval.Pixiv;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Config;
 using Pixeval.Services.Background;
 using Pixeval.Storage;
@@ -89,7 +89,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         ErrorTextBlock.IsVisible = false;
         if (!long.TryParse(TargetIdTextBox.Text, out var targetId) || targetId <= 0)
         {
-            ShowError(I18NManager.GetResource(WorkSubscriptionsSettingsExpanderResources.InvalidTargetId));
+            ShowError(Strings.WorkSubscriptionsSettingsExpanderInvalidTargetId());
             return;
         }
 

@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Login.LoginPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:markup1="using:Pixeval.Common.Markup"
@@ -34,7 +35,7 @@
                 Foreground="{DynamicResource PixivLogo}" />
             <TextBlock
                 VerticalAlignment="Center"
-                Text="{I18N {x:Static pixeval:LoginPageResources.LoginHeader}}"
+                Text="{CompiledBinding [LoginPage-LoginHeader], Source={x:Static loc:LocalizationManager.Instance}}"
                 Theme="{StaticResource SubtitleTextBlockStyle}" />
         </StackPanel>
         <ContentControl
@@ -51,19 +52,19 @@
             ItemTemplate="{StaticResource LoginUserTemplate}"
             ItemsSource="{Binding Users}"
             MinimumPrefixLength="0"
-            PlaceholderText="{I18N {x:Static pixeval:LoginPageResources+RefreshTokenBox.PlaceholderText}}"
+            PlaceholderText="{CompiledBinding [LoginPage-RefreshTokenBox-PlaceholderText], Source={x:Static loc:LocalizationManager.Instance}}"
             SelectedItem="{Binding SelectedUser, Mode=TwoWay}"
             Tapped="RefreshTokenBox_OnTapped"
             Text="{Binding RefreshToken, Mode=TwoWay}" />
         <Button
             HorizontalAlignment="Stretch"
             Click="LoginButton_OnClick"
-            Content="{I18N {x:Static pixeval:LoginPageResources+RefreshTokenButton.Content}}"
+            Content="{CompiledBinding [LoginPage-RefreshTokenButton-Content], Source={x:Static loc:LocalizationManager.Instance}}"
             IsEnabled="{Binding !IsLoginInProgress}" />
         <Button
             HorizontalAlignment="Stretch"
             Click="OpenWebView_OnClick"
-            Content="{I18N {x:Static pixeval:LoginPageResources+WebViewButton.Content}}"
+            Content="{CompiledBinding [LoginPage-WebViewButton-Content], Source={x:Static loc:LocalizationManager.Instance}}"
             IsEnabled="{Binding !IsLoginInProgress}" />
         <ProgressBar
             HorizontalAlignment="Stretch"

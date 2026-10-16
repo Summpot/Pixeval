@@ -20,7 +20,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Update="Fixtures\ProgressiveImages\*" CopyToOutputDirectory="PreserveNewest" />
+		<None Update="Fixtures\Localization\*" CopyToOutputDirectory="PreserveNewest" />
+      <None Include="..\..\scripts\i18n\mapping.json" Link="Fixtures\Localization\mapping.json" CopyToOutputDirectory="PreserveNewest" />
+      <None Update="Fixtures\ProgressiveImages\*" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
 </Project>

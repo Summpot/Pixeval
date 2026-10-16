@@ -1,0 +1,11 @@
+AddSubscriptionButton-Label = Add Subscription
+
+SyncAllSubscriptionsButton-Label = Sync All Subscriptions Now
+
+ExitConfirmation-Title = Subscription content is still being fetched
+
+ExitConfirmation-Content = Exiting now will discard results of this unsubmitted subscription. Are you sure you want to stop fetching and quit?
+
+TargetIdTextBox-PlaceholderText = User or Series ID
+
+InvalidTargetId = Please enter a valid user or series ID

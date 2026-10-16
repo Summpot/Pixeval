@@ -8,12 +8,12 @@ namespace Pixeval.Config;
 [LocalizationMetadata]
 public enum ProxyType
 {
-    [LocalizedResource(EnumResources.ProxyOption.System)]
+    [LocalizedResource(nameof(Strings.EnumProxyOptionSystem))]
     System,
 
-    [LocalizedResource(EnumResources.ProxyOption.None)]
+    [LocalizedResource(nameof(Strings.EnumProxyOptionNone))]
     None,
 
-    [LocalizedResource(EnumResources.ProxyOption.Custom)]
+    [LocalizedResource(nameof(Strings.EnumProxyOptionCustom))]
     Custom
 }

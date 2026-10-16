@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Works.SeriesPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:di="using:Pixeval.Common.Markup"
     xmlns:settings="using:Pixeval.Config"
     xmlns:controls="using:Pixeval.Controls"
@@ -25,7 +26,7 @@
                 <CommandBarButton
                     Click="RefreshButton_OnClick"
                     Icon="{markup:SymbolIcon ArrowClockwise}"
-                    ToolTip.Tip="{I18N {x:Static pixeval:WorkContainerResources+RefreshButton.Label}}" />
+                    ToolTip.Tip="{CompiledBinding [WorkContainer-RefreshButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
             </CommandBar>
             <StackPanel
                 VerticalAlignment="Center"

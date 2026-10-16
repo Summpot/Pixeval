@@ -1,0 +1,3 @@
+CancelButtonContent = Отмена
+
+OkButtonContent = ОК

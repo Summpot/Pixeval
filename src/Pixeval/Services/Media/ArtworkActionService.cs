@@ -9,7 +9,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
 using Pixeval.Config;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Booru;
 using Pixeval.Download;
@@ -210,7 +210,7 @@ public sealed class ArtworkActionService : IArtworkActionService
 
         ArtworkUiStateStore.SetWatchLater(targetWork, target);
         _notifications.ShowSuccess(
-            I18NManager.GetResource(target ? MiscResources.AddedToWatchLater : MiscResources.RemovedFromWatchLater));
+            Strings.GetString(target ? nameof(Strings.MiscAddedToWatchLater) : nameof(Strings.MiscRemovedFromWatchLater)));
         return true;
     }
 
@@ -228,7 +228,7 @@ public sealed class ArtworkActionService : IArtworkActionService
             0,
             "");
         if (!string.IsNullOrEmpty(destination))
-            _notifications.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
+            _notifications.ShowSuccess(Strings.EntryItemDownloadTaskCreated());
         return Task.CompletedTask;
     }
 
@@ -246,7 +246,7 @@ public sealed class ArtworkActionService : IArtworkActionService
             0,
             "");
         if (!string.IsNullOrEmpty(destination))
-            _notifications.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
+            _notifications.ShowSuccess(Strings.EntryItemDownloadTaskCreated());
         return Task.CompletedTask;
     }
 
@@ -326,7 +326,7 @@ public sealed class ArtworkActionService : IArtworkActionService
             isR18G,
             createDate));
         if (!string.IsNullOrEmpty(destination))
-            _notifications.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
+            _notifications.ShowSuccess(Strings.EntryItemDownloadTaskCreated());
     }
 
     public async Task<bool> ToggleFollowUserAsync(User user)
@@ -375,7 +375,7 @@ public sealed class ArtworkActionService : IArtworkActionService
     {
         await _clipboard.SetBitmapAsync(bitmap);
         await _clipboard.FlushAsync();
-        _notifications.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+        _notifications.ShowSuccess(Strings.MiscCopied());
     }
 
     public async Task SaveBitmapAsAsync(Bitmap bitmap, string suggestedFileName)
@@ -399,7 +399,7 @@ public sealed class ArtworkActionService : IArtworkActionService
 
         await using var stream = await file.OpenWriteAsync();
         bitmap.Save(stream, new PngBitmapEncoderOptions());
-        _notifications.ShowSuccess(I18NManager.GetResource(MiscResources.Saved), file.Path.OriginalString);
+        _notifications.ShowSuccess(Strings.MiscSaved(), file.Path.OriginalString);
     }
 }
 

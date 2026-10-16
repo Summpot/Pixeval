@@ -57,7 +57,7 @@ git clone --recurse-submodules https://github.com/Pixeval/Pixeval.git
 3. *Pixeval.Android* Android 宿主
 4. *Pixeval.iOS* iOS 宿主
 5. *Pixeval.Browser* 实验性 Browser WASM 宿主
-6. *Pixeval.I18N* 多语言基础设施（字符串资源在 *Pixeval* 中）
+6. 多语言由 ZeroI18n 编译生成，Fluent 资源位于 `src/Pixeval/messages/`，Markdown 位于 `src/Pixeval/Assets/Help/`。详见 [本地化指南](../docs/LOCALIZATION.md)。
 7. *Pixeval.Utilities* 公用工具类库
 8. *Pixeval.SourceGen* *Pixeval* 的源生成器
 9. *Pixeval.Tests* 测试项目

@@ -1,0 +1,3 @@
+CancelButtonContent = Cancel
+
+OkButtonContent = OK

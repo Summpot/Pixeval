@@ -24,6 +24,9 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
         AvaloniaProperty.Register<HomePageCardControl, bool>(nameof(IsSelected));
 
     private readonly bool _loadPreview;
+    private readonly IDisposable _languageSubscription;
+    public static readonly DirectProperty<HomePageCardControl, string> CardTitleProperty =
+        AvaloniaProperty.RegisterDirect<HomePageCardControl, string>(nameof(CardTitle), static c => c.CardTitle);
     private PointerEditState? _pointerEditState;
     private bool _isDisposed;
 
@@ -49,6 +52,7 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
         PreviewViewModel = new(card, Definition.CreatePreviewSourceAsync);
         _loadPreview = loadPreview;
         InitializeComponent();
+        _languageSubscription = AppLocalization.Instance.Subscribe(() => RaisePropertyChanged(CardTitleProperty, "", CardTitle));
         UpdateBackground();
     }
 
@@ -167,6 +171,7 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
             return;
 
         _isDisposed = true;
+        _languageSubscription.Dispose();
         CompleteEdit(false);
         CardSelected = null;
         EditPreview = null;

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Interactivity;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 using Pixeval.Utilities;
@@ -96,7 +96,9 @@ public class UserSearchResultPage : SimpleUsersPage
     public UserSearchResultPage(string? searchText, MakoClient client, IUserSessionService session, UserViewViewModel? viewModel = null)
         : base(client, session)
     {
-        Header = I18NManager.GetResource(MainPageResources.SearchResultFormatted, searchText);
+        Header = Strings.MainPageSearchResultFormatted(searchText: searchText);
+        var languageSubscription = AppLocalization.Instance.Subscribe(() => Header = Strings.MainPageSearchResultFormatted(searchText: searchText));
+        Pixeval.ViewModels.ViewModelDisposal.Register(this, languageSubscription);
         _searchText = searchText;
         InitializeSource(viewModel);
     }

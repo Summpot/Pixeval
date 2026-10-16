@@ -16,7 +16,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Cache;
 using Pixeval.Common;
 using Pixeval.Config;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Mako;
 using Pixeval.Services.Background;
 using Pixeval.Services.Core;
@@ -39,7 +39,6 @@ public sealed class ImageViewerLoadingTest
         await using var session = HeadlessUnitTestSession.StartNew(typeof(ViewerApplication));
         await session.Dispatch(async () =>
         {
-            I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
             using var storage = new StorageEngine(":memory:");
             using var extensions = new ExtensionService(null!, [], new HashSet<string>(), false);
             var images = new LocalImageProvider();
@@ -100,7 +99,6 @@ public sealed class ImageViewerLoadingTest
     {
         public override void Initialize()
         {
-            I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
             _ = AvaloniaHelper.PageTypeToHeaderMap;
             var app = (App) AvaloniaXamlLoader.Load(new Uri("avares://Pixeval/App.axaml"));
             var resources = app.Resources;

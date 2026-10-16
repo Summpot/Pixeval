@@ -14,5 +14,8 @@ public sealed record NavigationPageDefinition(
     Type PageType,
     Symbol Icon,
     string HeaderResource,
-    string Header,
-    bool NeedLogin);
+    string InitialHeader,
+    bool NeedLogin)
+{
+    public string Header => Strings.GetString(HeaderResource);
+}

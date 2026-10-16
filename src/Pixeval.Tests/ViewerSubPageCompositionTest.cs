@@ -14,7 +14,7 @@ using FluentIcons.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Config;
 using Pixeval.Services.Core;
 using Pixeval.Services.Update;
@@ -35,7 +35,6 @@ public sealed class ViewerSubPageCompositionTest
         await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerRenderingTest.ViewerTestApplication));
         await session.Dispatch(() =>
         {
-            I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
             var previousServices = App.Services;
             var services = new ServiceCollection()
                 .AddSingleton(new NavigationMenuDocument(NavigationMenuYaml.DefaultYaml))

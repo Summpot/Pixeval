@@ -12,7 +12,7 @@ using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 using Pixeval.Filters;
 using Pixeval.Config;
@@ -78,7 +78,7 @@ public partial class WorkContainer : UserControl
     public AvaloniaList<ICommandBarElement> CommandBarSubElements { get; } = [];
 
     private WorkContainerFilterCoordinator FilterCoordinator =>
-        _filterCoordinator ??= new WorkContainerFilterCoordinator(this.GetRequiredUiService<FilterCompletionEngine>());
+        _filterCoordinator ??= new WorkContainerFilterCoordinator(this.GetRequiredUiService<LocalizedFilterCompletionEngine>());
 
     public WorkContainer()
     {
@@ -174,6 +174,6 @@ public partial class WorkContainer : UserControl
         WorkView.SetSource(source, workType, needRefreshOnOpen);
 
     public static readonly FuncValueConverter<int, string> CancelSelectionButtonConverter = new(i => i > 0
-        ? I18NManager.GetResource(WorkContainerResources.CancelSelectionButtonFormatted, i)
-        : I18NManager.GetResource(WorkContainerResources.CancelSelectionButtonDefaultLabel));
+        ? Strings.WorkContainerCancelSelectionButtonFormatted(count: i)
+        : Strings.WorkContainerCancelSelectionButtonDefaultLabel());
 }

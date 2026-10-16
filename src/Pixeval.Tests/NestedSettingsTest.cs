@@ -4,7 +4,7 @@ using AutoSettingsPage;
 using AutoSettingsPage.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Config;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 using System.Text.Json;
 using Pixeval.Common;
@@ -18,11 +18,7 @@ public sealed class NestedSettingsTest
     [ClassInitialize]
     public static void Initialize(TestContext _)
     {
-        var projectPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval"));
-        if (Directory.Exists(projectPath))
-            I18NManager.CandidatePaths.Add(projectPath);
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
-        LocalSettingsEntryHelper.Initialize();
+                LocalSettingsEntryHelper.Initialize();
     }
 
     [TestMethod]

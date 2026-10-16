@@ -9,7 +9,7 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using FluentIcons.Common;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Download;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -83,7 +83,7 @@ public partial class DownloadItem : UserControl
             return;
 
         _ = await this.Dialogs.CreateAcknowledgementAsync(
-                I18NManager.GetResource(DownloadItemResources.ErrorMessageDialogTitle),
+                Strings.DownloadItemErrorMessageDialogTitle(),
                 item.ErrorMessage);
     }
 
@@ -127,13 +127,13 @@ public partial class DownloadItem : UserControl
             }
 
             this.Notifications.ShowError(
-                I18NManager.GetResource(DownloadItemResources.ActionButtonContentOpen),
+                Strings.DownloadItemActionButtonContentOpen(),
                 path);
         }
         catch
         {
             this.Notifications.ShowError(
-                I18NManager.GetResource(DownloadItemResources.ActionButtonContentOpen),
+                Strings.DownloadItemActionButtonContentOpen(),
                 path);
         }
     }

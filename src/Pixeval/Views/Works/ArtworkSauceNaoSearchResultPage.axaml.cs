@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.SauceNao;
 using Pixeval.Utilities;
 using Pixeval.Views.Viewers;
@@ -38,7 +38,7 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage
         }
         catch (Exception e)
         {
-            this.Notifications.ShowError(I18NManager.GetResource(MiscResources.ExceptionEncountered), e.Message);
+            this.Notifications.ShowError(Strings.MiscExceptionEncountered(), e.Message);
         }
 
         if (sauceNaoResults is not null)

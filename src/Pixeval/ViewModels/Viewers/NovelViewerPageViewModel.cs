@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Pixeval.Config;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 using Pixeval.Utilities;
@@ -198,7 +198,9 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
     public bool IsMultiPage => PageCount > 1;
 
-    public string CurrentMarkdown => PageCount is 0 ? "" : _pageMarkdowns[CurrentPageIndex];
+    public string CurrentMarkdown => CurrentNovel is { } novel && BlockedContentHelper.IsBlockedPlaceholder(novel)
+        ? Strings.BlockedContentWork()
+        : PageCount is 0 ? "" : _pageMarkdowns[CurrentPageIndex];
 
     #region Settings
 
@@ -270,7 +272,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
             var novel = currentNovel.Value;
             if (BlockedContentHelper.IsBlockedPlaceholder(novel))
-                _pageMarkdowns = [I18NManager.GetResource(BlockedContentResources.Work)];
+                _pageMarkdowns = [Strings.BlockedContentWork()];
             else
             {
                 SeriesInfo = WorkSeriesInfoViewModel.Create(novel, SimpleWorkType.Novel);

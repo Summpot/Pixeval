@@ -9,15 +9,15 @@ namespace Pixeval.Config;
 [LocalizationMetadata]
 public enum LocalSortOption
 {
-    [LocalizedResource(Symbol.ArrowSort, EnumResources.LocalSortOption.DoNotSort)]
+    [LocalizedResource(Symbol.ArrowSort, nameof(Strings.EnumLocalSortOptionDoNotSort))]
     DoNotSort,
 
-    [LocalizedResource(Symbol.ArrowTrendingSparkle, EnumResources.LocalSortOption.PopularityDescending)]
+    [LocalizedResource(Symbol.ArrowTrendingSparkle, nameof(Strings.EnumLocalSortOptionPopularityDescending))]
     PopularityDescending,
 
-    [LocalizedResource(Symbol.ArrowSortDownLines, EnumResources.LocalSortOption.PublishDateDescending)]
+    [LocalizedResource(Symbol.ArrowSortDownLines, nameof(Strings.EnumLocalSortOptionPublishDateDescending))]
     PublishDateDescending,
 
-    [LocalizedResource(Symbol.ArrowSortUpLines, EnumResources.LocalSortOption.PublishDateAscending)]
+    [LocalizedResource(Symbol.ArrowSortUpLines, nameof(Strings.EnumLocalSortOptionPublishDateAscending))]
     PublishDateAscending
 }

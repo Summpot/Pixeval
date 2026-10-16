@@ -1,0 +1,5 @@
+ApplyingTransformerExtensions = Применение расширений преобразования изображений...
+
+TransformerExtensionFinishedSuccessfully = Расширение преобразования успешно применено
+
+TransformerExtensionFailed = Ошибка применения расширения преобразования изображений

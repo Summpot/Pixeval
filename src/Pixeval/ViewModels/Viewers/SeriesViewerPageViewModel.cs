@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 
 namespace Pixeval.ViewModels.Viewers;
@@ -80,9 +80,7 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
 
     public string? Caption => SeriesDetail?.Caption;
 
-    public string ContentCountText => I18NManager.GetResource(
-        SeriesViewerPageResources.WorksCountFormatted,
-        SeriesDetail?.PublishedContentCount ?? 0);
+    public string ContentCountText => Strings.SeriesViewerPageWorksCountFormatted(count: SeriesDetail?.PublishedContentCount ?? 0);
 
     public string? CoverUrl => SeriesDetail?.CoverUrl ?? FirstWork?.GetThumbnailUrl();
 

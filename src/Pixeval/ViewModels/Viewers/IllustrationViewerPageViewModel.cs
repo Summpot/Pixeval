@@ -7,7 +7,7 @@ using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Config;
 using Pixeval.Booru;
@@ -20,6 +20,13 @@ namespace Pixeval.ViewModels.Viewers;
 
 public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewModel, IDisposable, IIllustrationAutoPlayTarget
 {
+    private bool _isLocalizedLoadError;
+    protected override void OnLanguageChanged()
+    {
+        if (_isLocalizedLoadError) LoadErrorMessage = Strings.EntryViewerPageLoadFailed();
+        base.OnLanguageChanged();
+    }
+
     private readonly MakoClient _makoClient;
     private readonly AppSettings _appSettings;
     private readonly StorageEngine _storageEngine;
@@ -273,6 +280,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
         var index = CurrentWorkIndex;
         var token = ResetLoadingToken();
+        _isLocalizedLoadError = false;
         LoadErrorMessage = null;
         SeriesInfo = null;
         CurrentImage = null;
@@ -372,6 +380,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     private async Task<object?> LoadIllustrationAsync(string id, string platform, Action<object> onLoaded, CancellationToken token)
     {
         IsLoading = true;
+        _isLocalizedLoadError = false;
         LoadErrorMessage = null;
         try
         {
@@ -379,7 +388,8 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
             token.ThrowIfCancellationRequested();
             if (entry is null)
             {
-                LoadErrorMessage = I18NManager.GetResource(EntryViewerPageResources.LoadFailed);
+                _isLocalizedLoadError = true;
+                LoadErrorMessage = Strings.EntryViewerPageLoadFailed();
                 return null;
             }
 
@@ -394,6 +404,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         catch (Exception e)
         {
             if (!token.IsCancellationRequested)
+                _isLocalizedLoadError = false;
                 LoadErrorMessage = e.Message;
             return null;
         }

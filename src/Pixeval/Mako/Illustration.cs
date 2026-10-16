@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using Pixeval.Filters;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Storage;
 
@@ -37,9 +37,9 @@ public partial record struct Illustration : IWorkEntry, IArtworkSerializable
         {
             var sb = new StringBuilder(Title);
             if (IsPicGif)
-                sb.AppendLine().Append(I18NManager.GetResource(EntryItemResources.TheIllustrationIsAnUgoira));
+                sb.AppendLine().Append(Strings.EntryItemTheIllustrationIsAnUgoira());
             else if (IsPicSet)
-                sb.AppendLine().Append(string.Format(I18NManager.GetResource(EntryItemResources.TheIllustrationIsAMangaFormatted), PageCount));
+                sb.AppendLine().Append(Strings.EntryItemTheIllustrationIsAMangaFormatted(count: PageCount));
             return sb.ToString();
         }
     }

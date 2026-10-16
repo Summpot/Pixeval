@@ -1,0 +1,3 @@
+EmojiButtonFlyoutEmojiSectionNavigationViewItem-Content = 绘文字
+
+EmojiButtonFlyoutStickersSectionNavigationViewItem-Content = 表情贴图

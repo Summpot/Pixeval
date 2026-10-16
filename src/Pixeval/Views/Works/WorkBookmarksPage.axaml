@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Works.WorkBookmarksPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:di="using:Pixeval.Common.Markup"
     xmlns:settings="using:Pixeval.Config"
     xmlns:capability="using:Pixeval.Views.Works"
@@ -41,14 +42,14 @@
                 VerticalAlignment="Stretch"
                 Command="{Binding $parent[work:WorkBookmarksPage].AddSubscriptionCommand}"
                 Icon="{markup:SymbolIcon Alert}"
-                Label="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+AddSubscriptionButton.Label}}" />
+                Label="{CompiledBinding [WorkSubscriptionsSettingsExpander-AddSubscriptionButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
             <CommandBarButton
                 x:Name="RemoveSubscriptionButton"
                 VerticalAlignment="Stretch"
                 Command="{Binding $parent[work:WorkBookmarksPage].RemoveSubscriptionCommand}"
                 Icon="{markup:SymbolIcon AlertOff}"
                 IsVisible="False"
-                Label="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+RemoveSubscriptionButton.Label}}" />
+                Label="{CompiledBinding [WorkSubscriptionsSettingsExpander-RemoveSubscriptionButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
         </work:WorkContainer.CommandBarSubElements>
     </work:WorkContainer>
 </views:IconContentPage>

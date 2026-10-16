@@ -11,6 +11,6 @@ public record ProxySettings
 {
     public ProxyType ProxyType { get; set; }
 
-    [SettingsEntry(Symbol.Server, AppSettingsResources.ProxyTextBoxEntry.Header, AppSettingsResources.ProxyTextBoxEntry.Description)]
+    [SettingsEntry(Symbol.Server, nameof(Strings.AppSettingsProxyTextBoxEntryHeader), nameof(Strings.AppSettingsProxyTextBoxEntryDescription))]
     public string Proxy { get; set; } = "";
 }

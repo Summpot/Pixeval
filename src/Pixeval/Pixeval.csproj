@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
+        <ZeroI18nNamespace>Pixeval.Localization</ZeroI18nNamespace>
+        <ZeroI18nClassName>Strings</ZeroI18nClassName>
+        <ZeroI18nAccessModifier>public</ZeroI18nAccessModifier>
+        <ZeroI18nDefaultLocale>zh-Hans</ZeroI18nDefaultLocale>
 		<Nullable>enable</Nullable>
 		<LangVersion>preview</LangVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -9,7 +13,7 @@
 		<EnableMcp Condition="'$(EnableMcp)' == ''">true</EnableMcp>
 		<DefineConstants Condition="'$(EnableMcp)' == 'true'">$(DefineConstants);PIXEVAL_MCP</DefineConstants>
 		<NoWarn>$(NoWarn);CS0114;CS8618;IL2026;IL3050;IL2075;CA1416;AVLN3001</NoWarn>
-		<NoWarn Condition="'$(Configuration)' != 'Release'">$(NoWarn);PE1002</NoWarn>
+		<NoWarn Condition="'$(Configuration)' != 'Release'">$(NoWarn);ZERO005</NoWarn>
 		
 		<Version>5.0.13.0</Version>
 		<AssemblyVersion>$(Version)</AssemblyVersion>
@@ -34,6 +38,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="ZeroI18n" Version="1.1.0" PrivateAssets="all" />
 		<PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
 		<PackageReference Include="Avalonia.AvaloniaEdit" Version="12.0.0" />
 		<PackageReference Include="Avalonia.Controls.WebView" Version="12.1.0" />
@@ -66,7 +71,6 @@
 		<ProjectReference Include="..\lib\AnimatedControls.Avalonia\AnimatedControls.Avalonia\AnimatedControls.Avalonia.csproj" />
 		<ProjectReference Include="..\lib\FluentAvalonia\FluentAvalonia.csproj" />
 		<ProjectReference Include="..\lib\SmoothScroll.Avalonia\src\SmoothScroll.Avalonia.Controls\SmoothScroll.Avalonia.Controls.csproj" />
-		<ProjectReference Include="..\Pixeval.I18N\Pixeval.I18N.csproj" />
 		<ProjectReference Include="..\Pixeval.Utilities\Pixeval.Utilities.csproj" />
 		<ProjectReference Include="..\Pixeval.SourceGen\Pixeval.SourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="False" />
 	</ItemGroup>
@@ -89,29 +93,7 @@
 
 
 	<ItemGroup>
-		<!-- 字符串资源相关 -->
-		<AdditionalFiles Include="i18n\**\*.json" />
-		<AdditionalFiles Include="Views\**\*.axaml" />
-		<AdditionalFiles Include="Assets\PathIcons\*.svg" />
-
-		<None Update="i18n\**\*.json">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="i18n\**\*.md">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-
-		<None Update="i18n\Language.tt">
-			<Generator>TextTemplatingFileGenerator</Generator>
-			<LastGenOutput>Language.cs</LastGenOutput>
-		</None>
-
-		<Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
-
-		<Compile Update="i18n\Language.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>Language.tt</DependentUpon>
-		</Compile>
-	</ItemGroup>
+        <AdditionalFiles Include="**\*.axaml" Exclude="obj\**;bin\**" />
+        <AdditionalFiles Include="Assets\PathIcons\*.svg" />
+    </ItemGroup>
 </Project>

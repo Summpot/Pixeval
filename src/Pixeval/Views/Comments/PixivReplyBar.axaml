@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Comments.PixivReplyBar"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:comment="using:Pixeval.Views.Comment"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Common.Converters"
@@ -26,7 +27,7 @@
             <Button.Flyout>
                 <Flyout Placement="TopEdgeAlignedLeft">
                     <TabbedPage SelectedIndex="0">
-                        <ContentPage Header="{I18N {x:Static pixeval:CommentRepliesBlockResources+EmojiButtonFlyoutEmojiSectionNavigationViewItem.Content}}">
+                        <ContentPage Header="{CompiledBinding [CommentRepliesBlock-EmojiButtonFlyoutEmojiSectionNavigationViewItem-Content], Source={x:Static loc:LocalizationManager.Instance}}">
                             <ScrollViewer
                                 Width="350"
                                 Height="150"
@@ -56,7 +57,7 @@
                                 </ItemsControl>
                             </ScrollViewer>
                         </ContentPage>
-                        <ContentPage Header="{I18N {x:Static pixeval:CommentRepliesBlockResources+EmojiButtonFlyoutStickersSectionNavigationViewItem.Content}}">
+                        <ContentPage Header="{CompiledBinding [CommentRepliesBlock-EmojiButtonFlyoutStickersSectionNavigationViewItem-Content], Source={x:Static loc:LocalizationManager.Instance}}">
                             <ScrollViewer
                                 Width="350"
                                 Height="150"
@@ -99,13 +100,13 @@
             Content="{markup:SymbolIcon Send,
                                         FontSize=16}"
             DockPanel.Dock="Right"
-            ToolTip.Tip="{I18N {x:Static pixeval:PixivReplyBarResources+SendButton.ToolTip}}" />
+            ToolTip.Tip="{CompiledBinding [PixivReplyBar-SendButton-ToolTip], Source={x:Static loc:LocalizationManager.Instance}}" />
         <TextBox
             x:Name="ReplyContentTextBox"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Center"
             MaxLength="140"
-            PlaceholderText="{I18N {x:Static pixeval:PixivReplyBarResources+ReplyContentRichEditBox.PlaceholderText}}"
+            PlaceholderText="{CompiledBinding [PixivReplyBar-ReplyContentRichEditBox-PlaceholderText], Source={x:Static loc:LocalizationManager.Instance}}"
             Text="{Binding $parent[views:PixivReplyBar].ReplyText, Mode=TwoWay}" />
     </DockPanel>
 </UserControl>

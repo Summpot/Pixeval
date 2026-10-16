@@ -16,7 +16,7 @@ using CommunityToolkit.Mvvm.Input;
 using FluentIcons.Common;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.Commands.Transformers;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Services.Background;
 using Pixeval.Booru;
 using Pixeval.Cache;
@@ -484,13 +484,13 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         IsProcessingImage = true;
         try
         {
-            _notifications.ShowInformation(I18NManager.GetResource(ImageViewerPageResources.LoadingOriginalImage));
+            _notifications.ShowInformation(Strings.ImageViewerPageLoadingOriginalImage());
             LoadingProgress = null;
             var source = await DisplaySource.UpdateAsync(
                 token => LoadWithPreviewAsync(true, token), _lifetimeCancellationTokenSource.Token);
             if (source is null)
             {
-                _notifications.ShowError(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadFailed));
+                _notifications.ShowError(Strings.ImageViewerPageOriginalImageLoadFailed());
                 return;
             }
 
@@ -501,14 +501,14 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
             }
 
             TransformedSource = source;
-            _notifications.ShowSuccess(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadedSuccessfully));
+            _notifications.ShowSuccess(Strings.ImageViewerPageOriginalImageLoadedSuccessfully());
         }
         catch (OperationCanceledException) when (_lifetimeCancellationTokenSource.IsCancellationRequested)
         {
         }
         catch
         {
-            _notifications.ShowError(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadFailed));
+            _notifications.ShowError(Strings.ImageViewerPageOriginalImageLoadFailed());
         }
         finally
         {
@@ -522,13 +522,13 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         _ = control;
         try
         {
-            _notifications.ShowInformation(I18NManager.GetResource(ImageViewerPageResources.ApplyingTransformerExtensions));
+            _notifications.ShowInformation(Strings.ImageViewerPageApplyingTransformerExtensions());
             await TransformExtensionCommand.ExecuteAsync(extension);
-            _notifications.ShowSuccess(I18NManager.GetResource(ImageViewerPageResources.TransformerExtensionFinishedSuccessfully));
+            _notifications.ShowSuccess(Strings.ImageViewerPageTransformerExtensionFinishedSuccessfully());
         }
         catch
         {
-            _notifications.ShowError(I18NManager.GetResource(ImageViewerPageResources.TransformerExtensionFailed));
+            _notifications.ShowError(Strings.ImageViewerPageTransformerExtensionFailed());
         }
     }
 

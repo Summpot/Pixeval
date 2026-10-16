@@ -21,7 +21,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Booru;
 using Pixeval.Cache;
 using Pixeval.Config;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Mako;
 using Pixeval.Utilities;
 using Pixeval.Services.Background;
@@ -50,7 +50,6 @@ public sealed class ImageViewerRenderingTest
         await using var session = HeadlessUnitTestSession.StartNew(typeof(ViewerTestApplication));
         await session.Dispatch(() =>
         {
-            I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
             // Supply only the extension registry; do not initialize the real application's network/database services.
             using var extensions = new ExtensionService(null!, [], new HashSet<string>(), false);
             using var services = new ServiceCollection().AddSingleton(extensions).BuildServiceProvider();

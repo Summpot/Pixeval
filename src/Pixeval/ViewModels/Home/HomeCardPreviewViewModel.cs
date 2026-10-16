@@ -9,14 +9,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Pixeval.Common.Collections;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Config;
 
 namespace Pixeval.ViewModels.Home;
 
 public sealed partial class HomeCardPreviewViewModel(
     HomePageCardLayout card,
-    Func<HomePageCardLayout, Task<HomeCardPreviewSource>> previewSourceFactory) : ObservableObject, IDisposable
+    Func<HomePageCardLayout, Task<HomeCardPreviewSource>> previewSourceFactory) : ViewModelBase, IDisposable
 {
     private readonly CancellationTokenSource _loadingCts = new();
     private HomeCardPreviewSource? _source;
@@ -31,8 +31,13 @@ public sealed partial class HomeCardPreviewViewModel(
 
     public IReadOnlyCollection<object> Items => ViewModel?.View ?? [];
 
-    [ObservableProperty]
-    public partial string? PlaceholderText { get; private set; } = I18NManager.GetResource(HomePageResources.CardPreview.LoadingTextBlock.Text);
+    private string? _placeholder = nameof(Strings.HomePageCardPreviewLoadingTextBlockText);
+    public string? PlaceholderText => _placeholder is null ? null : Strings.GetString(_placeholder);
+    private void SetPlaceholder(string? key)
+    {
+        _placeholder = key;
+        OnPropertyChanged(nameof(PlaceholderText));
+    }
 
     public async Task LoadAsync()
     {
@@ -57,7 +62,7 @@ public sealed partial class HomeCardPreviewViewModel(
     {
         try
         {
-            PlaceholderText = I18NManager.GetResource(HomePageResources.CardPreview.LoadingTextBlock.Text);
+            SetPlaceholder(nameof(Strings.HomePageCardPreviewLoadingTextBlockText));
             var oldSource = _source;
             var source = await previewSourceFactory(Card);
             if (_isDisposed)
@@ -86,7 +91,7 @@ public sealed partial class HomeCardPreviewViewModel(
         catch (Exception)
         {
             if (!_isDisposed)
-                PlaceholderText = I18NManager.GetResource(HomePageResources.CardPreview.FailedTextBlock.Text);
+                SetPlaceholder(nameof(Strings.HomePageCardPreviewFailedTextBlockText));
         }
     }
 
@@ -119,9 +124,7 @@ public sealed partial class HomeCardPreviewViewModel(
 
     private void UpdatePlaceholder()
     {
-        PlaceholderText = Items.Count is 0
-            ? I18NManager.GetResource(HomePageResources.CardPreview.EmptyTextBlock.Text)
-            : null;
+        SetPlaceholder(Items.Count is 0 ? nameof(Strings.HomePageCardPreviewEmptyTextBlockText) : null);
     }
 
     public void Dispose()

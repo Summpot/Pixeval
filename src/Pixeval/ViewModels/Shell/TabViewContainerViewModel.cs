@@ -17,6 +17,17 @@ namespace Pixeval.ViewModels.Shell;
 
 public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
 {
+    protected override void OnLanguageChanged()
+    {
+        if (!_isDisposed)
+        {
+            _navigationConfiguration = NavigationYamlParser.ParseOrDefault(_navigationMenu.Text);
+            foreach (var item in HeaderNavigationItems) item.RefreshLocalization();
+            foreach (var item in FooterNavigationItems) item.RefreshLocalization();
+        }
+        base.OnLanguageChanged();
+    }
+
     private readonly IUserSessionService _sessionService;
     private readonly MakoClient _makoClient;
     private readonly INavigationService _navigationService;

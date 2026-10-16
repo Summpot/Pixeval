@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Settings.HelpPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Pixeval.Controls"
@@ -15,46 +16,46 @@
     d:DesignWidth="600">
     <ScrollViewer>
         <StackPanel Margin="20" Spacing="{StaticResource SettingStackPanelSpacing}">
-            <controls:SettingsExpander Header="{I18N {x:Static pixeval:HelpPageResources+DownloadMacroHelpExpander.Header}}" HeaderIcon="{markup:SymbolIcon Rename}">
+            <controls:SettingsExpander Header="{CompiledBinding [HelpPage-DownloadMacroHelpExpander-Header], Source={x:Static loc:LocalizationManager.Instance}}" HeaderIcon="{markup:SymbolIcon Rename}">
                 <controls:SettingsExpander.Items>
                     <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Left">
-                        <local:MarkdownBox Markdown="{I18N {x:Static pixeval:MarkdownResources.DownloadMacroHelp}}" />
+                        <local:MarkdownBox Markdown="{CompiledBinding [DownloadMacroHelp], Source={x:Static loc:LocalizedHelp.Instance}}" />
                     </controls:SettingsCard>
                 </controls:SettingsExpander.Items>
             </controls:SettingsExpander>
-            <controls:SettingsExpander Header="{I18N {x:Static pixeval:HelpPageResources+QueryFilterHelpExpander.Header}}" HeaderIcon="{markup:SymbolIcon Filter}">
+            <controls:SettingsExpander Header="{CompiledBinding [HelpPage-QueryFilterHelpExpander-Header], Source={x:Static loc:LocalizationManager.Instance}}" HeaderIcon="{markup:SymbolIcon Filter}">
                 <controls:SettingsExpander.Items>
                     <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
                         <controls:SettingsCard.Header>
                             <TextBlock
                                 Margin="0,10"
-                                Text="{I18N {x:Static pixeval:HelpPageResources+QueryFilterSimpleHelpHeader.Text}}"
+                                Text="{CompiledBinding [HelpPage-QueryFilterSimpleHelpHeader-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Theme="{StaticResource SubtitleTextBlockStyle}" />
                         </controls:SettingsCard.Header>
-                        <local:MarkdownBox Markdown="{I18N {x:Static pixeval:MarkdownResources.QueryFilterSimpleHelp}}" />
+                        <local:MarkdownBox Markdown="{CompiledBinding [QueryFilterSimpleHelp], Source={x:Static loc:LocalizedHelp.Instance}}" />
                     </controls:SettingsCard>
                     <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
                         <controls:SettingsCard.Header>
                             <TextBlock
                                 Margin="0,10"
-                                Text="{I18N {x:Static pixeval:HelpPageResources+QueryFilterHelpHeader.Text}}"
+                                Text="{CompiledBinding [HelpPage-QueryFilterHelpHeader-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Theme="{StaticResource SubtitleTextBlockStyle}" />
                         </controls:SettingsCard.Header>
-                        <local:MarkdownBox Markdown="{I18N {x:Static pixeval:MarkdownResources.QueryFilterHelp}}" />
+                        <local:MarkdownBox Markdown="{CompiledBinding [QueryFilterHelp], Source={x:Static loc:LocalizedHelp.Instance}}" />
                     </controls:SettingsCard>
                 </controls:SettingsExpander.Items>
             </controls:SettingsExpander>
-            <controls:SettingsExpander Header="{I18N {x:Static pixeval:HelpPageResources+WorkSubscriptionsHelpExpander.Header}}" HeaderIcon="{markup:SymbolIcon Alert}">
+            <controls:SettingsExpander Header="{CompiledBinding [HelpPage-WorkSubscriptionsHelpExpander-Header], Source={x:Static loc:LocalizationManager.Instance}}" HeaderIcon="{markup:SymbolIcon Alert}">
                 <controls:SettingsExpander.Items>
                     <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Left">
-                        <local:MarkdownBox Markdown="{I18N {x:Static pixeval:MarkdownResources.WorkSubscriptionsHelp}}" />
+                        <local:MarkdownBox Markdown="{CompiledBinding [WorkSubscriptionsHelp], Source={x:Static loc:LocalizedHelp.Instance}}" />
                     </controls:SettingsCard>
                 </controls:SettingsExpander.Items>
             </controls:SettingsExpander>
-            <controls:SettingsExpander Header="{I18N {x:Static pixeval:HelpPageResources+ExtensionsHelpExpander.Header}}" HeaderIcon="{markup:SymbolIcon PuzzlePiece}">
+            <controls:SettingsExpander Header="{CompiledBinding [HelpPage-ExtensionsHelpExpander-Header], Source={x:Static loc:LocalizationManager.Instance}}" HeaderIcon="{markup:SymbolIcon PuzzlePiece}">
                 <controls:SettingsExpander.Items>
                     <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Left">
-                        <local:MarkdownBox Markdown="{I18N {x:Static pixeval:MarkdownResources.ExtensionsHelp}}" />
+                        <local:MarkdownBox Markdown="{CompiledBinding [ExtensionsHelp], Source={x:Static loc:LocalizedHelp.Instance}}" />
                     </controls:SettingsCard>
                 </controls:SettingsExpander.Items>
             </controls:SettingsExpander>

@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Common;
 using Pixeval.Config;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Storage;
 using Pixeval.Services.Core;
@@ -91,7 +91,6 @@ public sealed class WorkViewOwnershipTest
         await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerLoadingTest.ViewerApplication));
         await session.Dispatch(() =>
         {
-            I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
             using var storage = new StorageEngine(":memory:");
             using var services = new ServiceCollection()
                 .AddSingleton(new AppSettings()).AddSingleton(storage).BuildServiceProvider();

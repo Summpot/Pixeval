@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Storage;
 
 namespace Pixeval.Filters;
@@ -42,25 +42,25 @@ public partial class FilterCompletionEngine
     public static FilterLocalization CreateLocalization()
     {
         return new FilterLocalization(
-            AndDescription: I18NManager.GetResource(FilterResources.Completions.And),
-            OrDescription: I18NManager.GetResource(FilterResources.Completions.Or),
-            NotDescription: I18NManager.GetResource(FilterResources.Completions.Not),
-            TitleDescription: I18NManager.GetResource(FilterResources.Completions.Title),
-            AuthorDescription: I18NManager.GetResource(FilterResources.Completions.Author),
-            TagDescription: I18NManager.GetResource(FilterResources.Completions.Tag),
-            BookmarkDescription: I18NManager.GetResource(FilterResources.Completions.Bookmark),
-            RatioDescription: I18NManager.GetResource(FilterResources.Completions.Ratio),
-            StartDateDescription: I18NManager.GetResource(FilterResources.Completions.StartDate),
-            EndDateDescription: I18NManager.GetResource(FilterResources.Completions.EndDate),
-            IncludeConstraintDescription: I18NManager.GetResource(FilterResources.Completions.Include.Constraint),
-            ExcludeConstraintDescription: I18NManager.GetResource(FilterResources.Completions.Exclude.Constraint),
-            IncludeAiDescription: I18NManager.GetResource(FilterResources.Completions.Include.Ai),
-            ExcludeAiDescription: I18NManager.GetResource(FilterResources.Completions.Exclude.Ai),
-            IncludeR18Description: I18NManager.GetResource(FilterResources.Completions.Include.R18),
-            ExcludeR18Description: I18NManager.GetResource(FilterResources.Completions.Exclude.R18),
-            IncludeR18gDescription: I18NManager.GetResource(FilterResources.Completions.Include.R18G),
-            ExcludeR18gDescription: I18NManager.GetResource(FilterResources.Completions.Exclude.R18G),
-            IncludeGifDescription: I18NManager.GetResource(FilterResources.Completions.Include.Gif),
-            ExcludeGifDescription: I18NManager.GetResource(FilterResources.Completions.Exclude.Gif));
+            AndDescription: Strings.FilterCompletionsAnd(),
+            OrDescription: Strings.FilterCompletionsOr(),
+            NotDescription: Strings.FilterCompletionsNot(),
+            TitleDescription: Strings.FilterCompletionsTitle(),
+            AuthorDescription: Strings.FilterCompletionsAuthor(),
+            TagDescription: Strings.FilterCompletionsTag(),
+            BookmarkDescription: Strings.FilterCompletionsBookmark(),
+            RatioDescription: Strings.FilterCompletionsRatio(),
+            StartDateDescription: Strings.FilterCompletionsStartDate(),
+            EndDateDescription: Strings.FilterCompletionsEndDate(),
+            IncludeConstraintDescription: Strings.FilterCompletionsIncludeConstraint(),
+            ExcludeConstraintDescription: Strings.FilterCompletionsExcludeConstraint(),
+            IncludeAiDescription: Strings.FilterCompletionsIncludeAi(),
+            ExcludeAiDescription: Strings.FilterCompletionsExcludeAi(),
+            IncludeR18Description: Strings.FilterCompletionsIncludeR18(),
+            ExcludeR18Description: Strings.FilterCompletionsExcludeR18(),
+            IncludeR18gDescription: Strings.FilterCompletionsIncludeR18G(),
+            ExcludeR18gDescription: Strings.FilterCompletionsExcludeR18G(),
+            IncludeGifDescription: Strings.FilterCompletionsIncludeGif(),
+            ExcludeGifDescription: Strings.FilterCompletionsExcludeGif());
     }
 }

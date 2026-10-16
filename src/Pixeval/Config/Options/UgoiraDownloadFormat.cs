@@ -8,18 +8,18 @@ namespace Pixeval.Config;
 [LocalizationMetadata]
 public enum UgoiraDownloadFormat
 {
-    [LocalizedResource(EnumResources.UgoiraDownloadFormat.Original)]
+    [LocalizedResource(nameof(Strings.EnumUgoiraDownloadFormatOriginal))]
     Original,
 
-    [LocalizedResource(EnumResources.UgoiraDownloadFormat.Gif)]
+    [LocalizedResource(nameof(Strings.EnumUgoiraDownloadFormatGif))]
     Gif,
 
-    [LocalizedResource(EnumResources.UgoiraDownloadFormat.Apng)]
+    [LocalizedResource(nameof(Strings.EnumUgoiraDownloadFormatApng))]
     Apng,
 
-    [LocalizedResource(EnumResources.UgoiraDownloadFormat.Webp)]
+    [LocalizedResource(nameof(Strings.EnumUgoiraDownloadFormatWebp))]
     Webp,
 
-    [LocalizedResource(EnumResources.UgoiraDownloadFormat.Mp4)]
+    [LocalizedResource(nameof(Strings.EnumUgoiraDownloadFormatMp4))]
     Mp4
 }

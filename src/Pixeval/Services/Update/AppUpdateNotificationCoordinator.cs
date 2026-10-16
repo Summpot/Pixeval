@@ -4,7 +4,7 @@
 using System;
 using System.Threading.Tasks;
 using Pixeval.Config;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Services.Core;
 using Pixeval.Utilities;
 using Pixeval.Views.Settings;
@@ -103,9 +103,7 @@ public class AppUpdateNotificationCoordinator : IAppUpdateNotificationCoordinato
                 return;
 
             var readyVersion = AppInfo.AppVersion.PendingUpdateVersion ?? version;
-            _notifications.ShowSuccess(I18NManager.GetResource(
-                SettingsMainViewResources.UpdateDownloadReadyFormatted,
-                readyVersion));
+            _notifications.ShowSuccess(Strings.SettingsMainViewUpdateDownloadReadyFormatted(version: readyVersion));
         }
         catch (Exception exception)
         {

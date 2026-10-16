@@ -1,0 +1,5242 @@
+{
+  "AboutPage.DependenciesSubtitleTextBlock.Text": {
+    "key": "AboutPage-DependenciesSubtitleTextBlock-Text",
+    "method": "AboutPageDependenciesSubtitleTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "AboutPage.OpenSourceLicenseSubtitleTextBlock.Text": {
+    "key": "AboutPage-OpenSourceLicenseSubtitleTextBlock-Text",
+    "method": "AboutPageOpenSourceLicenseSubtitleTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "AboutPage.SpecialThanksSubtitleTextBlock.Text": {
+    "key": "AboutPage-SpecialThanksSubtitleTextBlock-Text",
+    "method": "AboutPageSpecialThanksSubtitleTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "AboutPage.AppDescriptionTextBlock.Text": {
+    "key": "AboutPage-AppDescriptionTextBlock-Text",
+    "method": "AboutPageAppDescriptionTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.SettingsGroup.Application.Header": {
+    "key": "AppSettings-SettingsGroup-Application-Header",
+    "method": "AppSettingsSettingsGroupApplicationHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.SettingsGroup.BrowsingExperience.Header": {
+    "key": "AppSettings-SettingsGroup-BrowsingExperience-Header",
+    "method": "AppSettingsSettingsGroupBrowsingExperienceHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.SettingsGroup.Network.Header": {
+    "key": "AppSettings-SettingsGroup-Network-Header",
+    "method": "AppSettingsSettingsGroupNetworkHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.SettingsGroup.Download.Header": {
+    "key": "AppSettings-SettingsGroup-Download-Header",
+    "method": "AppSettingsSettingsGroupDownloadHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.SettingsGroup.Mcp.Header": {
+    "key": "AppSettings-SettingsGroup-Mcp-Header",
+    "method": "AppSettingsSettingsGroupMcpHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.SettingsGroup.Search.Header": {
+    "key": "AppSettings-SettingsGroup-Search-Header",
+    "method": "AppSettingsSettingsGroupSearchHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.SettingsGroup.Novel.Header": {
+    "key": "AppSettings-SettingsGroup-Novel-Header",
+    "method": "AppSettingsSettingsGroupNovelHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.RankOptionEntry.Description": {
+    "key": "AppSettings-RankOptionEntry-Description",
+    "method": "AppSettingsRankOptionEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.RankOptionEntry.Header": {
+    "key": "AppSettings-RankOptionEntry-Header",
+    "method": "AppSettingsRankOptionEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.SimpleWorkTypeEntry.Description": {
+    "key": "AppSettings-SimpleWorkTypeEntry-Description",
+    "method": "AppSettingsSimpleWorkTypeEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.SimpleWorkTypeEntry.Header": {
+    "key": "AppSettings-SimpleWorkTypeEntry-Header",
+    "method": "AppSettingsSimpleWorkTypeEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.DownloadPathMacroEntry.Header": {
+    "key": "AppSettings-DownloadPathMacroEntry-Header",
+    "method": "AppSettingsDownloadPathMacroEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.DownloadPathMacroEntry.Description": {
+    "key": "AppSettings-DownloadPathMacroEntry-Description",
+    "method": "AppSettingsDownloadPathMacroEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.EnableMcpServerEntry.Header": {
+    "key": "AppSettings-EnableMcpServerEntry-Header",
+    "method": "AppSettingsEnableMcpServerEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.EnableMcpServerEntry.Description": {
+    "key": "AppSettings-EnableMcpServerEntry-Description",
+    "method": "AppSettingsEnableMcpServerEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.McpPortEntry.Header": {
+    "key": "AppSettings-McpPortEntry-Header",
+    "method": "AppSettingsMcpPortEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.McpPortEntry.Description": {
+    "key": "AppSettings-McpPortEntry-Description",
+    "method": "AppSettingsMcpPortEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.EnableMcpWriteToolsEntry.Header": {
+    "key": "AppSettings-EnableMcpWriteToolsEntry-Header",
+    "method": "AppSettingsEnableMcpWriteToolsEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.EnableMcpWriteToolsEntry.Description": {
+    "key": "AppSettings-EnableMcpWriteToolsEntry-Description",
+    "method": "AppSettingsEnableMcpWriteToolsEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.McpMaxBinaryResourceMegabytesEntry.Header": {
+    "key": "AppSettings-McpMaxBinaryResourceMegabytesEntry-Header",
+    "method": "AppSettingsMcpMaxBinaryResourceMegabytesEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.McpMaxBinaryResourceMegabytesEntry.Description": {
+    "key": "AppSettings-McpMaxBinaryResourceMegabytesEntry-Description",
+    "method": "AppSettingsMcpMaxBinaryResourceMegabytesEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.HomePageRowsEntry.Description": {
+    "key": "AppSettings-HomePageRowsEntry-Description",
+    "method": "AppSettingsHomePageRowsEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.HomePageRowsEntry.Header": {
+    "key": "AppSettings-HomePageRowsEntry-Header",
+    "method": "AppSettingsHomePageRowsEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.HomePageColumnsEntry.Description": {
+    "key": "AppSettings-HomePageColumnsEntry-Description",
+    "method": "AppSettingsHomePageColumnsEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.HomePageColumnsEntry.Header": {
+    "key": "AppSettings-HomePageColumnsEntry-Header",
+    "method": "AppSettingsHomePageColumnsEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.HideHomePageToolbarEntry.Description": {
+    "key": "AppSettings-HideHomePageToolbarEntry-Description",
+    "method": "AppSettingsHideHomePageToolbarEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.HideHomePageToolbarEntry.Header": {
+    "key": "AppSettings-HideHomePageToolbarEntry-Header",
+    "method": "AppSettingsHideHomePageToolbarEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.HideHomePageCardTitleEntry.Description": {
+    "key": "AppSettings-HideHomePageCardTitleEntry-Description",
+    "method": "AppSettingsHideHomePageCardTitleEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.HideHomePageCardTitleEntry.Header": {
+    "key": "AppSettings-HideHomePageCardTitleEntry-Header",
+    "method": "AppSettingsHideHomePageCardTitleEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.EnablePixivDomainFrontingEntry.Description": {
+    "key": "AppSettings-EnablePixivDomainFrontingEntry-Description",
+    "method": "AppSettingsEnablePixivDomainFrontingEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.EnablePixivDomainFrontingEntry.Header": {
+    "key": "AppSettings-EnablePixivDomainFrontingEntry-Header",
+    "method": "AppSettingsEnablePixivDomainFrontingEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.EnableSubscriptionDaemonEntry.Description": {
+    "key": "AppSettings-EnableSubscriptionDaemonEntry-Description",
+    "method": "AppSettingsEnableSubscriptionDaemonEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.EnableSubscriptionDaemonEntry.Header": {
+    "key": "AppSettings-EnableSubscriptionDaemonEntry-Header",
+    "method": "AppSettingsEnableSubscriptionDaemonEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.SubscriptionDaemonIntervalMinutesEntry.Description": {
+    "key": "AppSettings-SubscriptionDaemonIntervalMinutesEntry-Description",
+    "method": "AppSettingsSubscriptionDaemonIntervalMinutesEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.SubscriptionDaemonIntervalMinutesEntry.Header": {
+    "key": "AppSettings-SubscriptionDaemonIntervalMinutesEntry-Header",
+    "method": "AppSettingsSubscriptionDaemonIntervalMinutesEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.PixivDomainFrontingTypeEntry.Description": {
+    "key": "AppSettings-PixivDomainFrontingTypeEntry-Description",
+    "method": "AppSettingsPixivDomainFrontingTypeEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.PixivDomainFrontingTypeEntry.Header": {
+    "key": "AppSettings-PixivDomainFrontingTypeEntry-Header",
+    "method": "AppSettingsPixivDomainFrontingTypeEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.EnableGitHubDomainFrontingEntry.Description": {
+    "key": "AppSettings-EnableGitHubDomainFrontingEntry-Description",
+    "method": "AppSettingsEnableGitHubDomainFrontingEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.EnableGitHubDomainFrontingEntry.Header": {
+    "key": "AppSettings-EnableGitHubDomainFrontingEntry-Header",
+    "method": "AppSettingsEnableGitHubDomainFrontingEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.DownloadUpdateAutomaticallyEntry.Description": {
+    "key": "AppSettings-DownloadUpdateAutomaticallyEntry-Description",
+    "method": "AppSettingsDownloadUpdateAutomaticallyEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.DownloadUpdateAutomaticallyEntry.Header": {
+    "key": "AppSettings-DownloadUpdateAutomaticallyEntry-Header",
+    "method": "AppSettingsDownloadUpdateAutomaticallyEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.ThumbnailLayoutTypeEntry.Description": {
+    "key": "AppSettings-ThumbnailLayoutTypeEntry-Description",
+    "method": "AppSettingsThumbnailLayoutTypeEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.ThumbnailLayoutTypeEntry.Header": {
+    "key": "AppSettings-ThumbnailLayoutTypeEntry-Header",
+    "method": "AppSettingsThumbnailLayoutTypeEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.BrowseMode.Description": {
+    "key": "AppSettings-BrowseMode-Description",
+    "method": "AppSettingsBrowseModeDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.BrowseMode.Header": {
+    "key": "AppSettings-BrowseMode-Header",
+    "method": "AppSettingsBrowseModeHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.BrowseDirection.Description": {
+    "key": "AppSettings-BrowseDirection-Description",
+    "method": "AppSettingsBrowseDirectionDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.BrowseDirection.Header": {
+    "key": "AppSettings-BrowseDirection-Header",
+    "method": "AppSettingsBrowseDirectionHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.IllustrationViewerAutoPlayIntervalEntry.Description": {
+    "key": "AppSettings-IllustrationViewerAutoPlayIntervalEntry-Description",
+    "method": "AppSettingsIllustrationViewerAutoPlayIntervalEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.IllustrationViewerAutoPlayIntervalEntry.Header": {
+    "key": "AppSettings-IllustrationViewerAutoPlayIntervalEntry-Header",
+    "method": "AppSettingsIllustrationViewerAutoPlayIntervalEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.IllustrationViewerAutoPlayModeEntry.Description": {
+    "key": "AppSettings-IllustrationViewerAutoPlayModeEntry-Description",
+    "method": "AppSettingsIllustrationViewerAutoPlayModeEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.IllustrationViewerAutoPlayModeEntry.Header": {
+    "key": "AppSettings-IllustrationViewerAutoPlayModeEntry-Header",
+    "method": "AppSettingsIllustrationViewerAutoPlayModeEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.IllustrationViewerAutoPlayScopeEntry.Description": {
+    "key": "AppSettings-IllustrationViewerAutoPlayScopeEntry-Description",
+    "method": "AppSettingsIllustrationViewerAutoPlayScopeEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.IllustrationViewerAutoPlayScopeEntry.Header": {
+    "key": "AppSettings-IllustrationViewerAutoPlayScopeEntry-Header",
+    "method": "AppSettingsIllustrationViewerAutoPlayScopeEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.BlockedTagsEntry.Description": {
+    "key": "AppSettings-BlockedTagsEntry-Description",
+    "method": "AppSettingsBlockedTagsEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.BlockedTagsEntry.Header": {
+    "key": "AppSettings-BlockedTagsEntry-Header",
+    "method": "AppSettingsBlockedTagsEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.BlockedTagsEntry.Placeholder": {
+    "key": "AppSettings-BlockedTagsEntry-Placeholder",
+    "method": "AppSettingsBlockedTagsEntryPlaceholder",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.ImageMirrorServerEntry.Description": {
+    "key": "AppSettings-ImageMirrorServerEntry-Description",
+    "method": "AppSettingsImageMirrorServerEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.ImageMirrorServerEntry.Header": {
+    "key": "AppSettings-ImageMirrorServerEntry-Header",
+    "method": "AppSettingsImageMirrorServerEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.ImageMirrorServerEntry.Placeholder": {
+    "key": "AppSettings-ImageMirrorServerEntry-Placeholder",
+    "method": "AppSettingsImageMirrorServerEntryPlaceholder",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.MaxDownloadConcurrencyLevelEntry.Description": {
+    "key": "AppSettings-MaxDownloadConcurrencyLevelEntry-Description",
+    "method": "AppSettingsMaxDownloadConcurrencyLevelEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.MaxDownloadConcurrencyLevelEntry.Header": {
+    "key": "AppSettings-MaxDownloadConcurrencyLevelEntry-Header",
+    "method": "AppSettingsMaxDownloadConcurrencyLevelEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.OverwriteDownloadedFileEntry.Description": {
+    "key": "AppSettings-OverwriteDownloadedFileEntry-Description",
+    "method": "AppSettingsOverwriteDownloadedFileEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.OverwriteDownloadedFileEntry.Header": {
+    "key": "AppSettings-OverwriteDownloadedFileEntry-Header",
+    "method": "AppSettingsOverwriteDownloadedFileEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.TargetAPIPlatformEntry.Description": {
+    "key": "AppSettings-TargetAPIPlatformEntry-Description",
+    "method": "AppSettingsTargetAPIPlatformEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.TargetAPIPlatformEntry.Header": {
+    "key": "AppSettings-TargetAPIPlatformEntry-Header",
+    "method": "AppSettingsTargetAPIPlatformEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.ProxyTypeEntry.Description": {
+    "key": "AppSettings-ProxyTypeEntry-Description",
+    "method": "AppSettingsProxyTypeEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.ProxyTypeEntry.Header": {
+    "key": "AppSettings-ProxyTypeEntry-Header",
+    "method": "AppSettingsProxyTypeEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.ProxyTextBoxEntry.Description": {
+    "key": "AppSettings-ProxyTextBoxEntry-Description",
+    "method": "AppSettingsProxyTextBoxEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.ProxyTextBoxEntry.Header": {
+    "key": "AppSettings-ProxyTextBoxEntry-Header",
+    "method": "AppSettingsProxyTextBoxEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.LimitFileCacheSizeEntry.Description": {
+    "key": "AppSettings-LimitFileCacheSizeEntry-Description",
+    "method": "AppSettingsLimitFileCacheSizeEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.LimitFileCacheSizeEntry.Header": {
+    "key": "AppSettings-LimitFileCacheSizeEntry-Header",
+    "method": "AppSettingsLimitFileCacheSizeEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.FileCacheSizeLimitInMegabytesEntry.Description": {
+    "key": "AppSettings-FileCacheSizeLimitInMegabytesEntry-Description",
+    "method": "AppSettingsFileCacheSizeLimitInMegabytesEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.FileCacheSizeLimitInMegabytesEntry.Header": {
+    "key": "AppSettings-FileCacheSizeLimitInMegabytesEntry-Header",
+    "method": "AppSettingsFileCacheSizeLimitInMegabytesEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.WorkDownloadFormatEntry.Description": {
+    "key": "AppSettings-WorkDownloadFormatEntry-Description",
+    "method": "AppSettingsWorkDownloadFormatEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.WorkDownloadFormatEntry.Header": {
+    "key": "AppSettings-WorkDownloadFormatEntry-Header",
+    "method": "AppSettingsWorkDownloadFormatEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.WorkSubscriptionsSettingsEntry.Description": {
+    "key": "AppSettings-WorkSubscriptionsSettingsEntry-Description",
+    "method": "AppSettingsWorkSubscriptionsSettingsEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.WorkSubscriptionsSettingsEntry.Header": {
+    "key": "AppSettings-WorkSubscriptionsSettingsEntry-Header",
+    "method": "AppSettingsWorkSubscriptionsSettingsEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.WebCookieEntry.Description": {
+    "key": "AppSettings-WebCookieEntry-Description",
+    "method": "AppSettingsWebCookieEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.WebCookieEntry.Header": {
+    "key": "AppSettings-WebCookieEntry-Header",
+    "method": "AppSettingsWebCookieEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.WebCookieEntry.Placeholder": {
+    "key": "AppSettings-WebCookieEntry-Placeholder",
+    "method": "AppSettingsWebCookieEntryPlaceholder",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.SauceNaoApiKeyEntry.Header": {
+    "key": "AppSettings-SauceNaoApiKeyEntry-Header",
+    "method": "AppSettingsSauceNaoApiKeyEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.SauceNaoApiKeyEntry.Description": {
+    "key": "AppSettings-SauceNaoApiKeyEntry-Description",
+    "method": "AppSettingsSauceNaoApiKeyEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.SauceNaoApiKeyEntry.Placeholder": {
+    "key": "AppSettings-SauceNaoApiKeyEntry-Placeholder",
+    "method": "AppSettingsSauceNaoApiKeyEntryPlaceholder",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.OpenWorkInfoByDefaultEntry.Header": {
+    "key": "AppSettings-OpenWorkInfoByDefaultEntry-Header",
+    "method": "AppSettingsOpenWorkInfoByDefaultEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.OpenWorkInfoByDefaultEntry.Description": {
+    "key": "AppSettings-OpenWorkInfoByDefaultEntry-Description",
+    "method": "AppSettingsOpenWorkInfoByDefaultEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.OpenUserInfoByDefaultEntry.Header": {
+    "key": "AppSettings-OpenUserInfoByDefaultEntry-Header",
+    "method": "AppSettingsOpenUserInfoByDefaultEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.OpenUserInfoByDefaultEntry.Description": {
+    "key": "AppSettings-OpenUserInfoByDefaultEntry-Description",
+    "method": "AppSettingsOpenUserInfoByDefaultEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.PixivNameResolverEntry.Header": {
+    "key": "AppSettings-PixivNameResolverEntry-Header",
+    "method": "AppSettingsPixivNameResolverEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.PixivNameResolverEntry.Description": {
+    "key": "AppSettings-PixivNameResolverEntry-Description",
+    "method": "AppSettingsPixivNameResolverEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.GitHubNameResolverEntry.Header": {
+    "key": "AppSettings-GitHubNameResolverEntry-Header",
+    "method": "AppSettingsGitHubNameResolverEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.GitHubNameResolverEntry.Description": {
+    "key": "AppSettings-GitHubNameResolverEntry-Description",
+    "method": "AppSettingsGitHubNameResolverEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.AppLanguageEntry.Header": {
+    "key": "AppSettings-AppLanguageEntry-Header",
+    "method": "AppSettingsAppLanguageEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.AppLanguageEntry.Description": {
+    "key": "AppSettings-AppLanguageEntry-Description",
+    "method": "AppSettingsAppLanguageEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.AppLanguageEntry.Placeholder": {
+    "key": "AppSettings-AppLanguageEntry-Placeholder",
+    "method": "AppSettingsAppLanguageEntryPlaceholder",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.ThemeEntry.Header": {
+    "key": "AppSettings-ThemeEntry-Header",
+    "method": "AppSettingsThemeEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.ThemeEntry.Description": {
+    "key": "AppSettings-ThemeEntry-Description",
+    "method": "AppSettingsThemeEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.AppFontFamilyEntry.Header": {
+    "key": "AppSettings-AppFontFamilyEntry-Header",
+    "method": "AppSettingsAppFontFamilyEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.AppFontFamilyEntry.Description": {
+    "key": "AppSettings-AppFontFamilyEntry-Description",
+    "method": "AppSettingsAppFontFamilyEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.AppFontFamilyEntry.Placeholder": {
+    "key": "AppSettings-AppFontFamilyEntry-Placeholder",
+    "method": "AppSettingsAppFontFamilyEntryPlaceholder",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.NovelSettingsFontFamilyEntry.Header": {
+    "key": "AppSettings-NovelSettingsFontFamilyEntry-Header",
+    "method": "AppSettingsNovelSettingsFontFamilyEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.NovelSettingsFontColorEntry.Header": {
+    "key": "AppSettings-NovelSettingsFontColorEntry-Header",
+    "method": "AppSettingsNovelSettingsFontColorEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.NovelSettingsFontColorEntry.Description": {
+    "key": "AppSettings-NovelSettingsFontColorEntry-Description",
+    "method": "AppSettingsNovelSettingsFontColorEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.NovelSettingsBackgroundEntry.Header": {
+    "key": "AppSettings-NovelSettingsBackgroundEntry-Header",
+    "method": "AppSettingsNovelSettingsBackgroundEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.NovelSettingsBackgroundEntry.Description": {
+    "key": "AppSettings-NovelSettingsBackgroundEntry-Description",
+    "method": "AppSettingsNovelSettingsBackgroundEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.NovelSettingsFontWeightEntry.Header": {
+    "key": "AppSettings-NovelSettingsFontWeightEntry-Header",
+    "method": "AppSettingsNovelSettingsFontWeightEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.NovelSettingsFontWeightEntry.Description": {
+    "key": "AppSettings-NovelSettingsFontWeightEntry-Description",
+    "method": "AppSettingsNovelSettingsFontWeightEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.NovelSettingsFontWeightEntry.Placeholder": {
+    "key": "AppSettings-NovelSettingsFontWeightEntry-Placeholder",
+    "method": "AppSettingsNovelSettingsFontWeightEntryPlaceholder",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.NovelSettingsFontSizeEntry.Header": {
+    "key": "AppSettings-NovelSettingsFontSizeEntry-Header",
+    "method": "AppSettingsNovelSettingsFontSizeEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.NovelSettingsFontSizeEntry.Description": {
+    "key": "AppSettings-NovelSettingsFontSizeEntry-Description",
+    "method": "AppSettingsNovelSettingsFontSizeEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.NovelSettingsLineHeightEntry.Header": {
+    "key": "AppSettings-NovelSettingsLineHeightEntry-Header",
+    "method": "AppSettingsNovelSettingsLineHeightEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.NovelSettingsLineHeightEntry.Description": {
+    "key": "AppSettings-NovelSettingsLineHeightEntry-Description",
+    "method": "AppSettingsNovelSettingsLineHeightEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.NovelSettingsMaxWidthEntry.Header": {
+    "key": "AppSettings-NovelSettingsMaxWidthEntry-Header",
+    "method": "AppSettingsNovelSettingsMaxWidthEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.NovelSettingsMaxWidthEntry.Description": {
+    "key": "AppSettings-NovelSettingsMaxWidthEntry-Description",
+    "method": "AppSettingsNovelSettingsMaxWidthEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "CommentRepliesBlock.EmojiButtonFlyoutEmojiSectionNavigationViewItem.Content": {
+    "key": "CommentRepliesBlock-EmojiButtonFlyoutEmojiSectionNavigationViewItem-Content",
+    "method": "CommentRepliesBlockEmojiButtonFlyoutEmojiSectionNavigationViewItemContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "CommentRepliesBlock.EmojiButtonFlyoutStickersSectionNavigationViewItem.Content": {
+    "key": "CommentRepliesBlock-EmojiButtonFlyoutStickersSectionNavigationViewItem-Content",
+    "method": "CommentRepliesBlockEmojiButtonFlyoutStickersSectionNavigationViewItemContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "ContentDialog.CancelButtonContent": {
+    "key": "ContentDialog-CancelButtonContent",
+    "method": "ContentDialogCancelButtonContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "ContentDialog.OkButtonContent": {
+    "key": "ContentDialog-OkButtonContent",
+    "method": "ContentDialogOkButtonContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.ActionButtonContentOpen": {
+    "key": "DownloadItem-ActionButtonContentOpen",
+    "method": "DownloadItemActionButtonContentOpen",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.ActionButtonContentPause": {
+    "key": "DownloadItem-ActionButtonContentPause",
+    "method": "DownloadItemActionButtonContentPause",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.ActionButtonContentResume": {
+    "key": "DownloadItem-ActionButtonContentResume",
+    "method": "DownloadItemActionButtonContentResume",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.ActionButtonContentRetry": {
+    "key": "DownloadItem-ActionButtonContentRetry",
+    "method": "DownloadItemActionButtonContentRetry",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.CancelDownloadItem.Label": {
+    "key": "DownloadItem-CancelDownloadItem-Label",
+    "method": "DownloadItemCancelDownloadItemLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.CheckErrorMessageInDetailItem.Label": {
+    "key": "DownloadItem-CheckErrorMessageInDetailItem-Label",
+    "method": "DownloadItemCheckErrorMessageInDetailItemLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.DownloadCancelled": {
+    "key": "DownloadItem-DownloadCancelled",
+    "method": "DownloadItemDownloadCancelled",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.ActionDownloadCancelled": {
+    "key": "DownloadItem-ActionDownloadCancelled",
+    "method": "DownloadItemActionDownloadCancelled",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.DownloadCompleted": {
+    "key": "DownloadItem-DownloadCompleted",
+    "method": "DownloadItemDownloadCompleted",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.DownloadErrorMessageFormatted": {
+    "key": "DownloadItem-DownloadErrorMessageFormatted",
+    "method": "DownloadItemDownloadErrorMessageFormatted",
+    "parameters": [
+      "error"
+    ],
+    "formats": {}
+  },
+  "DownloadItem.DownloadPaused": {
+    "key": "DownloadItem-DownloadPaused",
+    "method": "DownloadItemDownloadPaused",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.DownloadPending": {
+    "key": "DownloadItem-DownloadPending",
+    "method": "DownloadItemDownloadPending",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.DownloadQueued": {
+    "key": "DownloadItem-DownloadQueued",
+    "method": "DownloadItemDownloadQueued",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.DownloadRunningFormatted": {
+    "key": "DownloadItem-DownloadRunningFormatted",
+    "method": "DownloadItemDownloadRunningFormatted",
+    "parameters": [
+      "progress"
+    ],
+    "formats": {}
+  },
+  "DownloadItem.ErrorMessageDialogTitle": {
+    "key": "DownloadItem-ErrorMessageDialogTitle",
+    "method": "DownloadItemErrorMessageDialogTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.GoToPageItem.Label": {
+    "key": "DownloadItem-GoToPageItem-Label",
+    "method": "DownloadItemGoToPageItemLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.OpenDownloadLocationItem.Label": {
+    "key": "DownloadItem-OpenDownloadLocationItem-Label",
+    "method": "DownloadItemOpenDownloadLocationItemLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadItem.ResetItem.Label": {
+    "key": "DownloadItem-ResetItem-Label",
+    "method": "DownloadItemResetItemLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadPage.CancelSelectionButtonDefaultLabel": {
+    "key": "DownloadPage-CancelSelectionButtonDefaultLabel",
+    "method": "DownloadPageCancelSelectionButtonDefaultLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadPage.CancelSelectionButtonFormatted": {
+    "key": "DownloadPage-CancelSelectionButtonFormatted",
+    "method": "DownloadPageCancelSelectionButtonFormatted",
+    "parameters": [
+      "count"
+    ],
+    "formats": {}
+  },
+  "DownloadPage.DeleteDownloadHistoryRecordsFormatted": {
+    "key": "DownloadPage-DeleteDownloadHistoryRecordsFormatted",
+    "method": "DownloadPageDeleteDownloadHistoryRecordsFormatted",
+    "parameters": [
+      "count"
+    ],
+    "formats": {}
+  },
+  "DownloadPage.FetchingFolderSubtitleFormatted": {
+    "key": "DownloadPage-FetchingFolderSubtitleFormatted",
+    "method": "DownloadPageFetchingFolderSubtitleFormatted",
+    "parameters": [
+      "count"
+    ],
+    "formats": {}
+  },
+  "DownloadPage.FolderSubtitleFormatted": {
+    "key": "DownloadPage-FolderSubtitleFormatted",
+    "method": "DownloadPageFolderSubtitleFormatted",
+    "parameters": [
+      "count"
+    ],
+    "formats": {}
+  },
+  "DownloadPage.OrdinaryDownloadsButton.Label": {
+    "key": "DownloadPage-OrdinaryDownloadsButton-Label",
+    "method": "DownloadPageOrdinaryDownloadsButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadPage.SubscriptionDownloadsButton.Label": {
+    "key": "DownloadPage-SubscriptionDownloadsButton-Label",
+    "method": "DownloadPageSubscriptionDownloadsButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadPage.SyncSubscriptionButton.Label": {
+    "key": "DownloadPage-SyncSubscriptionButton-Label",
+    "method": "DownloadPageSyncSubscriptionButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadPage.FilterAutoSuggestBox.PlaceholderText": {
+    "key": "DownloadPage-FilterAutoSuggestBox-PlaceholderText",
+    "method": "DownloadPageFilterAutoSuggestBoxPlaceholderText",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadPage.PauseButton.Label": {
+    "key": "DownloadPage-PauseButton-Label",
+    "method": "DownloadPagePauseButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadPage.ResumeButton.Label": {
+    "key": "DownloadPage-ResumeButton-Label",
+    "method": "DownloadPageResumeButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadPage.SelectAllButton.Label": {
+    "key": "DownloadPage-SelectAllButton-Label",
+    "method": "DownloadPageSelectAllButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadPage.ResetButton.Label": {
+    "key": "DownloadPage-ResetButton-Label",
+    "method": "DownloadPageResetButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadPage.StopButton.Label": {
+    "key": "DownloadPage-StopButton-Label",
+    "method": "DownloadPageStopButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadPage.DeleteButton.Label": {
+    "key": "DownloadPage-DeleteButton-Label",
+    "method": "DownloadPageDeleteButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadPage.DeleteLocalFiles.Content": {
+    "key": "DownloadPage-DeleteLocalFiles-Content",
+    "method": "DownloadPageDeleteLocalFilesContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryItem.GenerateLink": {
+    "key": "EntryItem-GenerateLink",
+    "method": "EntryItemGenerateLink",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryItem.GenerateWebLink": {
+    "key": "EntryItem-GenerateWebLink",
+    "method": "EntryItemGenerateWebLink",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryItem.OpenInWebBrowser": {
+    "key": "EntryItem-OpenInWebBrowser",
+    "method": "EntryItemOpenInWebBrowser",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryItem.AddToBookmark": {
+    "key": "EntryItem-AddToBookmark",
+    "method": "EntryItemAddToBookmark",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryItem.AddToWatchLater": {
+    "key": "EntryItem-AddToWatchLater",
+    "method": "EntryItemAddToWatchLater",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryItem.RemoveFromWatchLater": {
+    "key": "EntryItem-RemoveFromWatchLater",
+    "method": "EntryItemRemoveFromWatchLater",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryItem.Save": {
+    "key": "EntryItem-Save",
+    "method": "EntryItemSave",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryItem.OpenUserInfoPage": {
+    "key": "EntryItem-OpenUserInfoPage",
+    "method": "EntryItemOpenUserInfoPage",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryItem.OpenSeries": {
+    "key": "EntryItem-OpenSeries",
+    "method": "EntryItemOpenSeries",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryItem.Copy": {
+    "key": "EntryItem-Copy",
+    "method": "EntryItemCopy",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryItem.SaveAsCancelled": {
+    "key": "EntryItem-SaveAsCancelled",
+    "method": "EntryItemSaveAsCancelled",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryItem.DownloadTaskCreated": {
+    "key": "EntryItem-DownloadTaskCreated",
+    "method": "EntryItemDownloadTaskCreated",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryItem.TheIllustrationIsAMangaFormatted": {
+    "key": "EntryItem-TheIllustrationIsAMangaFormatted",
+    "method": "EntryItemTheIllustrationIsAMangaFormatted",
+    "parameters": [
+      "count"
+    ],
+    "formats": {}
+  },
+  "EntryItem.TheIllustrationIsAnUgoira": {
+    "key": "EntryItem-TheIllustrationIsAnUgoira",
+    "method": "EntryItemTheIllustrationIsAnUgoira",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryView.ResultIsEmptyTextBlock": {
+    "key": "EntryView-ResultIsEmptyTextBlock",
+    "method": "EntryViewResultIsEmptyTextBlock",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.FollowingUserItem.Title": {
+    "key": "EntryViewerPage-FollowingUserItem-Title",
+    "method": "EntryViewerPageFollowingUserItemTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.MyPixivUserItem.Title": {
+    "key": "EntryViewerPage-MyPixivUserItem-Title",
+    "method": "EntryViewerPageMyPixivUserItemTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.IllustrationCountItem.Title": {
+    "key": "EntryViewerPage-IllustrationCountItem-Title",
+    "method": "EntryViewerPageIllustrationCountItemTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.MangaCountItem.Title": {
+    "key": "EntryViewerPage-MangaCountItem-Title",
+    "method": "EntryViewerPageMangaCountItemTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.NovelCountItem.Title": {
+    "key": "EntryViewerPage-NovelCountItem-Title",
+    "method": "EntryViewerPageNovelCountItemTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.Pin": {
+    "key": "EntryViewerPage-Pin",
+    "method": "EntryViewerPagePin",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.InfoAndComments": {
+    "key": "EntryViewerPage-InfoAndComments",
+    "method": "EntryViewerPageInfoAndComments",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.Series": {
+    "key": "EntryViewerPage-Series",
+    "method": "EntryViewerPageSeries",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.PreviousSeriesWork": {
+    "key": "EntryViewerPage-PreviousSeriesWork",
+    "method": "EntryViewerPagePreviousSeriesWork",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.NextSeriesWork": {
+    "key": "EntryViewerPage-NextSeriesWork",
+    "method": "EntryViewerPageNextSeriesWork",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.RotateClockwise": {
+    "key": "EntryViewerPage-RotateClockwise",
+    "method": "EntryViewerPageRotateClockwise",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.RotateCounterclockwise": {
+    "key": "EntryViewerPage-RotateCounterclockwise",
+    "method": "EntryViewerPageRotateCounterclockwise",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.Mirror": {
+    "key": "EntryViewerPage-Mirror",
+    "method": "EntryViewerPageMirror",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.Next.Page": {
+    "key": "EntryViewerPage-Next-Page",
+    "method": "EntryViewerPageNextPage",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.Next.PageOrWork": {
+    "key": "EntryViewerPage-Next-PageOrWork",
+    "method": "EntryViewerPageNextPageOrWork",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.Next.Work": {
+    "key": "EntryViewerPage-Next-Work",
+    "method": "EntryViewerPageNextWork",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.Prev.Page": {
+    "key": "EntryViewerPage-Prev-Page",
+    "method": "EntryViewerPagePrevPage",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.Prev.PageOrWork": {
+    "key": "EntryViewerPage-Prev-PageOrWork",
+    "method": "EntryViewerPagePrevPageOrWork",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.Prev.Work": {
+    "key": "EntryViewerPage-Prev-Work",
+    "method": "EntryViewerPagePrevWork",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.AutoPlay": {
+    "key": "EntryViewerPage-AutoPlay",
+    "method": "EntryViewerPageAutoPlay",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.AutoPlayInterval.Seconds1": {
+    "key": "EntryViewerPage-AutoPlayInterval-Seconds1",
+    "method": "EntryViewerPageAutoPlayIntervalSeconds1",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.AutoPlayInterval.Seconds3": {
+    "key": "EntryViewerPage-AutoPlayInterval-Seconds3",
+    "method": "EntryViewerPageAutoPlayIntervalSeconds3",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.AutoPlayInterval.Seconds5": {
+    "key": "EntryViewerPage-AutoPlayInterval-Seconds5",
+    "method": "EntryViewerPageAutoPlayIntervalSeconds5",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.AutoPlayInterval.Seconds10": {
+    "key": "EntryViewerPage-AutoPlayInterval-Seconds10",
+    "method": "EntryViewerPageAutoPlayIntervalSeconds10",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.AutoPlayInterval.Seconds15": {
+    "key": "EntryViewerPage-AutoPlayInterval-Seconds15",
+    "method": "EntryViewerPageAutoPlayIntervalSeconds15",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.AutoPlayInterval.Seconds30": {
+    "key": "EntryViewerPage-AutoPlayInterval-Seconds30",
+    "method": "EntryViewerPageAutoPlayIntervalSeconds30",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.ZoomIn": {
+    "key": "EntryViewerPage-ZoomIn",
+    "method": "EntryViewerPageZoomIn",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.ZoomOut": {
+    "key": "EntryViewerPage-ZoomOut",
+    "method": "EntryViewerPageZoomOut",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.ZoomToOriginal": {
+    "key": "EntryViewerPage-ZoomToOriginal",
+    "method": "EntryViewerPageZoomToOriginal",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.ZoomToFit": {
+    "key": "EntryViewerPage-ZoomToFit",
+    "method": "EntryViewerPageZoomToFit",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.LoadFailed": {
+    "key": "EntryViewerPage-LoadFailed",
+    "method": "EntryViewerPageLoadFailed",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.Copy": {
+    "key": "EntryViewerPage-Copy",
+    "method": "EntryViewerPageCopy",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.SaveAs": {
+    "key": "EntryViewerPage-SaveAs",
+    "method": "EntryViewerPageSaveAs",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.ViewOriginal": {
+    "key": "EntryViewerPage-ViewOriginal",
+    "method": "EntryViewerPageViewOriginal",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.OtherImageTransformerExtensions": {
+    "key": "EntryViewerPage-OtherImageTransformerExtensions",
+    "method": "EntryViewerPageOtherImageTransformerExtensions",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.ApplicationTheme.Default": {
+    "key": "Enum-ApplicationTheme-Default",
+    "method": "EnumApplicationThemeDefault",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.ApplicationTheme.Light": {
+    "key": "Enum-ApplicationTheme-Light",
+    "method": "EnumApplicationThemeLight",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.ApplicationTheme.Dark": {
+    "key": "Enum-ApplicationTheme-Dark",
+    "method": "EnumApplicationThemeDark",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkType.Illustration": {
+    "key": "Enum-WorkType-Illustration",
+    "method": "EnumWorkTypeIllustration",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkType.Manga": {
+    "key": "Enum-WorkType-Manga",
+    "method": "EnumWorkTypeManga",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkType.Novel": {
+    "key": "Enum-WorkType-Novel",
+    "method": "EnumWorkTypeNovel",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.LocalSortOption.DoNotSort": {
+    "key": "Enum-LocalSortOption-DoNotSort",
+    "method": "EnumLocalSortOptionDoNotSort",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.LocalSortOption.PopularityDescending": {
+    "key": "Enum-LocalSortOption-PopularityDescending",
+    "method": "EnumLocalSortOptionPopularityDescending",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.LocalSortOption.PublishDateAscending": {
+    "key": "Enum-LocalSortOption-PublishDateAscending",
+    "method": "EnumLocalSortOptionPublishDateAscending",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.LocalSortOption.PublishDateDescending": {
+    "key": "Enum-LocalSortOption-PublishDateDescending",
+    "method": "EnumLocalSortOptionPublishDateDescending",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.DomainFrontingType.Fragmentation": {
+    "key": "Enum-DomainFrontingType-Fragmentation",
+    "method": "EnumDomainFrontingTypeFragmentation",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.DomainFrontingType.Desync": {
+    "key": "Enum-DomainFrontingType-Desync",
+    "method": "EnumDomainFrontingTypeDesync",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.PrivacyPolicy.Public": {
+    "key": "Enum-PrivacyPolicy-Public",
+    "method": "EnumPrivacyPolicyPublic",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.PrivacyPolicy.Private": {
+    "key": "Enum-PrivacyPolicy-Private",
+    "method": "EnumPrivacyPolicyPrivate",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchNovelTagMatchOption.PartialMatchForTags": {
+    "key": "Enum-SearchNovelTagMatchOption-PartialMatchForTags",
+    "method": "EnumSearchNovelTagMatchOptionPartialMatchForTags",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchNovelTagMatchOption.ExactMatchForTags": {
+    "key": "Enum-SearchNovelTagMatchOption-ExactMatchForTags",
+    "method": "EnumSearchNovelTagMatchOptionExactMatchForTags",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchNovelTagMatchOption.Text": {
+    "key": "Enum-SearchNovelTagMatchOption-Text",
+    "method": "EnumSearchNovelTagMatchOptionText",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchNovelTagMatchOption.Keyword": {
+    "key": "Enum-SearchNovelTagMatchOption-Keyword",
+    "method": "EnumSearchNovelTagMatchOptionKeyword",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchNovelContentLengthOption.None": {
+    "key": "Enum-SearchNovelContentLengthOption-None",
+    "method": "EnumSearchNovelContentLengthOptionNone",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchNovelContentLengthOption.TextLength": {
+    "key": "Enum-SearchNovelContentLengthOption-TextLength",
+    "method": "EnumSearchNovelContentLengthOptionTextLength",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchNovelContentLengthOption.WordCount": {
+    "key": "Enum-SearchNovelContentLengthOption-WordCount",
+    "method": "EnumSearchNovelContentLengthOptionWordCount",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchNovelContentLengthOption.ReadingTime": {
+    "key": "Enum-SearchNovelContentLengthOption-ReadingTime",
+    "method": "EnumSearchNovelContentLengthOptionReadingTime",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchIllustrationTagMatchOption.PartialMatchForTags": {
+    "key": "Enum-SearchIllustrationTagMatchOption-PartialMatchForTags",
+    "method": "EnumSearchIllustrationTagMatchOptionPartialMatchForTags",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchIllustrationTagMatchOption.ExactMatchForTags": {
+    "key": "Enum-SearchIllustrationTagMatchOption-ExactMatchForTags",
+    "method": "EnumSearchIllustrationTagMatchOptionExactMatchForTags",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchIllustrationTagMatchOption.TitleAndCaption": {
+    "key": "Enum-SearchIllustrationTagMatchOption-TitleAndCaption",
+    "method": "EnumSearchIllustrationTagMatchOptionTitleAndCaption",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchIllustrationContentType.IllustrationAndMangaAndUgoira": {
+    "key": "Enum-SearchIllustrationContentType-IllustrationAndMangaAndUgoira",
+    "method": "EnumSearchIllustrationContentTypeIllustrationAndMangaAndUgoira",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchIllustrationContentType.IllustrationAndUgoira": {
+    "key": "Enum-SearchIllustrationContentType-IllustrationAndUgoira",
+    "method": "EnumSearchIllustrationContentTypeIllustrationAndUgoira",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchIllustrationContentType.Illustration": {
+    "key": "Enum-SearchIllustrationContentType-Illustration",
+    "method": "EnumSearchIllustrationContentTypeIllustration",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchIllustrationContentType.Manga": {
+    "key": "Enum-SearchIllustrationContentType-Manga",
+    "method": "EnumSearchIllustrationContentTypeManga",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchIllustrationContentType.Ugoira": {
+    "key": "Enum-SearchIllustrationContentType-Ugoira",
+    "method": "EnumSearchIllustrationContentTypeUgoira",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchIllustrationRatioPattern.All": {
+    "key": "Enum-SearchIllustrationRatioPattern-All",
+    "method": "EnumSearchIllustrationRatioPatternAll",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchIllustrationRatioPattern.Landscape": {
+    "key": "Enum-SearchIllustrationRatioPattern-Landscape",
+    "method": "EnumSearchIllustrationRatioPatternLandscape",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchIllustrationRatioPattern.Portrait": {
+    "key": "Enum-SearchIllustrationRatioPattern-Portrait",
+    "method": "EnumSearchIllustrationRatioPatternPortrait",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.SearchIllustrationRatioPattern.Square": {
+    "key": "Enum-SearchIllustrationRatioPattern-Square",
+    "method": "EnumSearchIllustrationRatioPatternSquare",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkSortOption.PublishDateDescending": {
+    "key": "Enum-WorkSortOption-PublishDateDescending",
+    "method": "EnumWorkSortOptionPublishDateDescending",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkSortOption.PublishDateAscending": {
+    "key": "Enum-WorkSortOption-PublishDateAscending",
+    "method": "EnumWorkSortOptionPublishDateAscending",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkSortOption.PopularityDescending": {
+    "key": "Enum-WorkSortOption-PopularityDescending",
+    "method": "EnumWorkSortOptionPopularityDescending",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.FontWeight.Thin": {
+    "key": "Enum-FontWeight-Thin",
+    "method": "EnumFontWeightThin",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.FontWeight.ExtraLight": {
+    "key": "Enum-FontWeight-ExtraLight",
+    "method": "EnumFontWeightExtraLight",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.FontWeight.Light": {
+    "key": "Enum-FontWeight-Light",
+    "method": "EnumFontWeightLight",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.FontWeight.SemiLight": {
+    "key": "Enum-FontWeight-SemiLight",
+    "method": "EnumFontWeightSemiLight",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.FontWeight.Normal": {
+    "key": "Enum-FontWeight-Normal",
+    "method": "EnumFontWeightNormal",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.FontWeight.Medium": {
+    "key": "Enum-FontWeight-Medium",
+    "method": "EnumFontWeightMedium",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.FontWeight.SemiBold": {
+    "key": "Enum-FontWeight-SemiBold",
+    "method": "EnumFontWeightSemiBold",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.FontWeight.Bold": {
+    "key": "Enum-FontWeight-Bold",
+    "method": "EnumFontWeightBold",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.FontWeight.ExtraBold": {
+    "key": "Enum-FontWeight-ExtraBold",
+    "method": "EnumFontWeightExtraBold",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.FontWeight.Black": {
+    "key": "Enum-FontWeight-Black",
+    "method": "EnumFontWeightBlack",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.FontWeight.ExtraBlack": {
+    "key": "Enum-FontWeight-ExtraBlack",
+    "method": "EnumFontWeightExtraBlack",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.IllustrationDownloadFormat.Original": {
+    "key": "Enum-IllustrationDownloadFormat-Original",
+    "method": "EnumIllustrationDownloadFormatOriginal",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.UgoiraDownloadFormat.Original": {
+    "key": "Enum-UgoiraDownloadFormat-Original",
+    "method": "EnumUgoiraDownloadFormatOriginal",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.UgoiraDownloadFormat.Gif": {
+    "key": "Enum-UgoiraDownloadFormat-Gif",
+    "method": "EnumUgoiraDownloadFormatGif",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.UgoiraDownloadFormat.Apng": {
+    "key": "Enum-UgoiraDownloadFormat-Apng",
+    "method": "EnumUgoiraDownloadFormatApng",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.UgoiraDownloadFormat.Webp": {
+    "key": "Enum-UgoiraDownloadFormat-Webp",
+    "method": "EnumUgoiraDownloadFormatWebp",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.UgoiraDownloadFormat.Mp4": {
+    "key": "Enum-UgoiraDownloadFormat-Mp4",
+    "method": "EnumUgoiraDownloadFormatMp4",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.NovelDownloadFormat.OriginalTxt": {
+    "key": "Enum-NovelDownloadFormat-OriginalTxt",
+    "method": "EnumNovelDownloadFormatOriginalTxt",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.NovelDownloadFormat.Html": {
+    "key": "Enum-NovelDownloadFormat-Html",
+    "method": "EnumNovelDownloadFormatHtml",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.NovelDownloadFormat.Md": {
+    "key": "Enum-NovelDownloadFormat-Md",
+    "method": "EnumNovelDownloadFormatMd",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.NovelDownloadFormat.Epub": {
+    "key": "Enum-NovelDownloadFormat-Epub",
+    "method": "EnumNovelDownloadFormatEpub",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.Day": {
+    "key": "Enum-RankOption-Day",
+    "method": "EnumRankOptionDay",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.Week": {
+    "key": "Enum-RankOption-Week",
+    "method": "EnumRankOptionWeek",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.Month": {
+    "key": "Enum-RankOption-Month",
+    "method": "EnumRankOptionMonth",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.DayMale": {
+    "key": "Enum-RankOption-DayMale",
+    "method": "EnumRankOptionDayMale",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.DayFemale": {
+    "key": "Enum-RankOption-DayFemale",
+    "method": "EnumRankOptionDayFemale",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.WeekOriginal": {
+    "key": "Enum-RankOption-WeekOriginal",
+    "method": "EnumRankOptionWeekOriginal",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.WeekRookie": {
+    "key": "Enum-RankOption-WeekRookie",
+    "method": "EnumRankOptionWeekRookie",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.DayManga": {
+    "key": "Enum-RankOption-DayManga",
+    "method": "EnumRankOptionDayManga",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.WeekManga": {
+    "key": "Enum-RankOption-WeekManga",
+    "method": "EnumRankOptionWeekManga",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.MonthManga": {
+    "key": "Enum-RankOption-MonthManga",
+    "method": "EnumRankOptionMonthManga",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.DayR18": {
+    "key": "Enum-RankOption-DayR18",
+    "method": "EnumRankOptionDayR18",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.DayMaleR18": {
+    "key": "Enum-RankOption-DayMaleR18",
+    "method": "EnumRankOptionDayMaleR18",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.DayFemaleR18": {
+    "key": "Enum-RankOption-DayFemaleR18",
+    "method": "EnumRankOptionDayFemaleR18",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.WeekR18": {
+    "key": "Enum-RankOption-WeekR18",
+    "method": "EnumRankOptionWeekR18",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.WeekR18G": {
+    "key": "Enum-RankOption-WeekR18G",
+    "method": "EnumRankOptionWeekR18G",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.DayAi": {
+    "key": "Enum-RankOption-DayAi",
+    "method": "EnumRankOptionDayAi",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.DayR18Ai": {
+    "key": "Enum-RankOption-DayR18Ai",
+    "method": "EnumRankOptionDayR18Ai",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.WeekAi": {
+    "key": "Enum-RankOption-WeekAi",
+    "method": "EnumRankOptionWeekAi",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.RankOption.WeekAiR18": {
+    "key": "Enum-RankOption-WeekAiR18",
+    "method": "EnumRankOptionWeekAiR18",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.ProxyOption.Custom": {
+    "key": "Enum-ProxyOption-Custom",
+    "method": "EnumProxyOptionCustom",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.ProxyOption.None": {
+    "key": "Enum-ProxyOption-None",
+    "method": "EnumProxyOptionNone",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.ProxyOption.System": {
+    "key": "Enum-ProxyOption-System",
+    "method": "EnumProxyOptionSystem",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkTypeEnum.Illustration": {
+    "key": "Enum-WorkTypeEnum-Illustration",
+    "method": "EnumWorkTypeEnumIllustration",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkTypeEnum.Manga": {
+    "key": "Enum-WorkTypeEnum-Manga",
+    "method": "EnumWorkTypeEnumManga",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkTypeEnum.Ugoira": {
+    "key": "Enum-WorkTypeEnum-Ugoira",
+    "method": "EnumWorkTypeEnumUgoira",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkTypeEnum.Novel": {
+    "key": "Enum-WorkTypeEnum-Novel",
+    "method": "EnumWorkTypeEnumNovel",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.ClearDataKind.FileCache": {
+    "key": "Enum-ClearDataKind-FileCache",
+    "method": "EnumClearDataKindFileCache",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.ClearDataKind.DownloadHistory": {
+    "key": "Enum-ClearDataKind-DownloadHistory",
+    "method": "EnumClearDataKindDownloadHistory",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.ClearDataKind.SearchHistory": {
+    "key": "Enum-ClearDataKind-SearchHistory",
+    "method": "EnumClearDataKindSearchHistory",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.ClearDataKind.BrowseHistory": {
+    "key": "Enum-ClearDataKind-BrowseHistory",
+    "method": "EnumClearDataKindBrowseHistory",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.ThumbnailLayoutType.LinedFlow": {
+    "key": "Enum-ThumbnailLayoutType-LinedFlow",
+    "method": "EnumThumbnailLayoutTypeLinedFlow",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.ThumbnailLayoutType.Grid": {
+    "key": "Enum-ThumbnailLayoutType-Grid",
+    "method": "EnumThumbnailLayoutTypeGrid",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.ThumbnailLayoutType.Masonry": {
+    "key": "Enum-ThumbnailLayoutType-Masonry",
+    "method": "EnumThumbnailLayoutTypeMasonry",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.BrowseMode.Swipe": {
+    "key": "Enum-BrowseMode-Swipe",
+    "method": "EnumBrowseModeSwipe",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.BrowseMode.Continuous": {
+    "key": "Enum-BrowseMode-Continuous",
+    "method": "EnumBrowseModeContinuous",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.Orientation.Horizontal": {
+    "key": "Enum-Orientation-Horizontal",
+    "method": "EnumOrientationHorizontal",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.Orientation.Vertical": {
+    "key": "Enum-Orientation-Vertical",
+    "method": "EnumOrientationVertical",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.IllustrationViewerAutoPlayMode.Sequential": {
+    "key": "Enum-IllustrationViewerAutoPlayMode-Sequential",
+    "method": "EnumIllustrationViewerAutoPlayModeSequential",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.IllustrationViewerAutoPlayMode.Loop": {
+    "key": "Enum-IllustrationViewerAutoPlayMode-Loop",
+    "method": "EnumIllustrationViewerAutoPlayModeLoop",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.IllustrationViewerAutoPlayScope.CurrentWork": {
+    "key": "Enum-IllustrationViewerAutoPlayScope-CurrentWork",
+    "method": "EnumIllustrationViewerAutoPlayScopeCurrentWork",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.IllustrationViewerAutoPlayScope.AllWorks": {
+    "key": "Enum-IllustrationViewerAutoPlayScope-AllWorks",
+    "method": "EnumIllustrationViewerAutoPlayScopeAllWorks",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkSubscriptionType.Bookmarks": {
+    "key": "Enum-WorkSubscriptionType-Bookmarks",
+    "method": "EnumWorkSubscriptionTypeBookmarks",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkSubscriptionType.Posts": {
+    "key": "Enum-WorkSubscriptionType-Posts",
+    "method": "EnumWorkSubscriptionTypePosts",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkSubscriptionType.Series": {
+    "key": "Enum-WorkSubscriptionType-Series",
+    "method": "EnumWorkSubscriptionTypeSeries",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkSubscriptionWorkKind.Illustration": {
+    "key": "Enum-WorkSubscriptionWorkKind-Illustration",
+    "method": "EnumWorkSubscriptionWorkKindIllustration",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkSubscriptionWorkKind.Manga": {
+    "key": "Enum-WorkSubscriptionWorkKind-Manga",
+    "method": "EnumWorkSubscriptionWorkKindManga",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.WorkSubscriptionWorkKind.Novel": {
+    "key": "Enum-WorkSubscriptionWorkKind-Novel",
+    "method": "EnumWorkSubscriptionWorkKindNovel",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.WorkRecommended": {
+    "key": "Enum-HomePageCardSourceKindDescription-WorkRecommended",
+    "method": "EnumHomePageCardSourceKindDescriptionWorkRecommended",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.WorkBookmarks": {
+    "key": "Enum-HomePageCardSourceKindDescription-WorkBookmarks",
+    "method": "EnumHomePageCardSourceKindDescriptionWorkBookmarks",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.WorkRanking": {
+    "key": "Enum-HomePageCardSourceKindDescription-WorkRanking",
+    "method": "EnumHomePageCardSourceKindDescriptionWorkRanking",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.WorkNew": {
+    "key": "Enum-HomePageCardSourceKindDescription-WorkNew",
+    "method": "EnumHomePageCardSourceKindDescriptionWorkNew",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.WorkFollowing": {
+    "key": "Enum-HomePageCardSourceKindDescription-WorkFollowing",
+    "method": "EnumHomePageCardSourceKindDescriptionWorkFollowing",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.WorkMyPixiv": {
+    "key": "Enum-HomePageCardSourceKindDescription-WorkMyPixiv",
+    "method": "EnumHomePageCardSourceKindDescriptionWorkMyPixiv",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.WorkRelated": {
+    "key": "Enum-HomePageCardSourceKindDescription-WorkRelated",
+    "method": "EnumHomePageCardSourceKindDescriptionWorkRelated",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.WorkPosts": {
+    "key": "Enum-HomePageCardSourceKindDescription-WorkPosts",
+    "method": "EnumHomePageCardSourceKindDescriptionWorkPosts",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.WorkSearch": {
+    "key": "Enum-HomePageCardSourceKindDescription-WorkSearch",
+    "method": "EnumHomePageCardSourceKindDescriptionWorkSearch",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.UserRecommended": {
+    "key": "Enum-HomePageCardSourceKindDescription-UserRecommended",
+    "method": "EnumHomePageCardSourceKindDescriptionUserRecommended",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.UserSearch": {
+    "key": "Enum-HomePageCardSourceKindDescription-UserSearch",
+    "method": "EnumHomePageCardSourceKindDescriptionUserSearch",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.UserFollowing": {
+    "key": "Enum-HomePageCardSourceKindDescription-UserFollowing",
+    "method": "EnumHomePageCardSourceKindDescriptionUserFollowing",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.UserFollower": {
+    "key": "Enum-HomePageCardSourceKindDescription-UserFollower",
+    "method": "EnumHomePageCardSourceKindDescriptionUserFollower",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.UserMyPixiv": {
+    "key": "Enum-HomePageCardSourceKindDescription-UserMyPixiv",
+    "method": "EnumHomePageCardSourceKindDescriptionUserMyPixiv",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.Spotlight": {
+    "key": "Enum-HomePageCardSourceKindDescription-Spotlight",
+    "method": "EnumHomePageCardSourceKindDescriptionSpotlight",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.SingleImage": {
+    "key": "Enum-HomePageCardSourceKindDescription-SingleImage",
+    "method": "EnumHomePageCardSourceKindDescriptionSingleImage",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.SingleNovel": {
+    "key": "Enum-HomePageCardSourceKindDescription-SingleNovel",
+    "method": "EnumHomePageCardSourceKindDescriptionSingleNovel",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.SingleSeries": {
+    "key": "Enum-HomePageCardSourceKindDescription-SingleSeries",
+    "method": "EnumHomePageCardSourceKindDescriptionSingleSeries",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.HomePageCardSourceKindDescription.SingleUser": {
+    "key": "Enum-HomePageCardSourceKindDescription-SingleUser",
+    "method": "EnumHomePageCardSourceKindDescriptionSingleUser",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.DownloadListOption.AllQueued": {
+    "key": "Enum-DownloadListOption-AllQueued",
+    "method": "EnumDownloadListOptionAllQueued",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.DownloadListOption.Cancelled": {
+    "key": "Enum-DownloadListOption-Cancelled",
+    "method": "EnumDownloadListOptionCancelled",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.DownloadListOption.Completed": {
+    "key": "Enum-DownloadListOption-Completed",
+    "method": "EnumDownloadListOptionCompleted",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.DownloadListOption.CustomSearch": {
+    "key": "Enum-DownloadListOption-CustomSearch",
+    "method": "EnumDownloadListOptionCustomSearch",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.DownloadListOption.Error": {
+    "key": "Enum-DownloadListOption-Error",
+    "method": "EnumDownloadListOptionError",
+    "parameters": [],
+    "formats": {}
+  },
+  "Enum.DownloadListOption.Running": {
+    "key": "Enum-DownloadListOption-Running",
+    "method": "EnumDownloadListOptionRunning",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.AddExtensionsButton.Label": {
+    "key": "ExtensionsPage-AddExtensionsButton-Label",
+    "method": "ExtensionsPageAddExtensionsButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.ExtensionFileExistedError": {
+    "key": "ExtensionsPage-ExtensionFileExistedError",
+    "method": "ExtensionsPageExtensionFileExistedError",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.ExtensionLoadedSuccessfully": {
+    "key": "ExtensionsPage-ExtensionLoadedSuccessfully",
+    "method": "ExtensionsPageExtensionLoadedSuccessfully",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.ExtensionLoadFailed": {
+    "key": "ExtensionsPage-ExtensionLoadFailed",
+    "method": "ExtensionsPageExtensionLoadFailed",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.PlatformNotSupportExtensions": {
+    "key": "ExtensionsPage-PlatformNotSupportExtensions",
+    "method": "ExtensionsPagePlatformNotSupportExtensions",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.OpenExtensionsButton.Label": {
+    "key": "ExtensionsPage-OpenExtensionsButton-Label",
+    "method": "ExtensionsPageOpenExtensionsButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.TitleTextBlock.Text": {
+    "key": "ExtensionsPage-TitleTextBlock-Text",
+    "method": "ExtensionsPageTitleTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.SubtitleTextBlock.Text": {
+    "key": "ExtensionsPage-SubtitleTextBlock-Text",
+    "method": "ExtensionsPageSubtitleTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.UninstallExtensionsButton.Label": {
+    "key": "ExtensionsPage-UninstallExtensionsButton-Label",
+    "method": "ExtensionsPageUninstallExtensionsButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.CancelPendingUninstallExtensionsButton.Label": {
+    "key": "ExtensionsPage-CancelPendingUninstallExtensionsButton-Label",
+    "method": "ExtensionsPageCancelPendingUninstallExtensionsButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.UninstallAllExtensionsButton.Label": {
+    "key": "ExtensionsPage-UninstallAllExtensionsButton-Label",
+    "method": "ExtensionsPageUninstallAllExtensionsButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.UninstallOutdatedExtensionsButton.Label": {
+    "key": "ExtensionsPage-UninstallOutdatedExtensionsButton-Label",
+    "method": "ExtensionsPageUninstallOutdatedExtensionsButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.ExtensionWillUninstallOnNextStartup": {
+    "key": "ExtensionsPage-ExtensionWillUninstallOnNextStartup",
+    "method": "ExtensionsPageExtensionWillUninstallOnNextStartup",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.ExtensionPendingUninstallCancelled": {
+    "key": "ExtensionsPage-ExtensionPendingUninstallCancelled",
+    "method": "ExtensionsPageExtensionPendingUninstallCancelled",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.MarkedExtensionsPendingUninstallFormatted": {
+    "key": "ExtensionsPage-MarkedExtensionsPendingUninstallFormatted",
+    "method": "ExtensionsPageMarkedExtensionsPendingUninstallFormatted",
+    "parameters": [
+      "count"
+    ],
+    "formats": {}
+  },
+  "ExtensionsPage.MarkedOutdatedExtensionsPendingUninstallFormatted": {
+    "key": "ExtensionsPage-MarkedOutdatedExtensionsPendingUninstallFormatted",
+    "method": "ExtensionsPageMarkedOutdatedExtensionsPendingUninstallFormatted",
+    "parameters": [
+      "count"
+    ],
+    "formats": {}
+  },
+  "ExtensionsPage.NoExtensionsToUninstall": {
+    "key": "ExtensionsPage-NoExtensionsToUninstall",
+    "method": "ExtensionsPageNoExtensionsToUninstall",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.NoOutdatedExtensionsToUninstall": {
+    "key": "ExtensionsPage-NoOutdatedExtensionsToUninstall",
+    "method": "ExtensionsPageNoOutdatedExtensionsToUninstall",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.ExtensionsPriorityUpButton.Label": {
+    "key": "ExtensionsPage-ExtensionsPriorityUpButton-Label",
+    "method": "ExtensionsPageExtensionsPriorityUpButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.ExtensionsPriorityDownButton.Label": {
+    "key": "ExtensionsPage-ExtensionsPriorityDownButton-Label",
+    "method": "ExtensionsPageExtensionsPriorityDownButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.ExtensionsPriorityTopButton.Label": {
+    "key": "ExtensionsPage-ExtensionsPriorityTopButton-Label",
+    "method": "ExtensionsPageExtensionsPriorityTopButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.ExtensionsPriorityBottomButton.Label": {
+    "key": "ExtensionsPage-ExtensionsPriorityBottomButton-Label",
+    "method": "ExtensionsPageExtensionsPriorityBottomButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.ZipContainsNoExtension": {
+    "key": "ExtensionsPage-ZipContainsNoExtension",
+    "method": "ExtensionsPageZipContainsNoExtension",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.ExtensionsHelpButton.Label": {
+    "key": "ExtensionsPage-ExtensionsHelpButton-Label",
+    "method": "ExtensionsPageExtensionsHelpButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "ExtensionsPage.ExtensionOutdatedFormatted": {
+    "key": "ExtensionsPage-ExtensionOutdatedFormatted",
+    "method": "ExtensionsPageExtensionOutdatedFormatted",
+    "parameters": [
+      "version"
+    ],
+    "formats": {}
+  },
+  "ExtensionsPage.SomeExtensionsOutdatedFormatted": {
+    "key": "ExtensionsPage-SomeExtensionsOutdatedFormatted",
+    "method": "ExtensionsPageSomeExtensionsOutdatedFormatted",
+    "parameters": [
+      "count"
+    ],
+    "formats": {}
+  },
+  "FeedPage.SparseBookmarkFormatted": {
+    "key": "FeedPage-SparseBookmarkFormatted",
+    "method": "FeedPageSparseBookmarkFormatted",
+    "parameters": [
+      "name"
+    ],
+    "formats": {}
+  },
+  "FeedPage.SparseFollowUserFormatted": {
+    "key": "FeedPage-SparseFollowUserFormatted",
+    "method": "FeedPageSparseFollowUserFormatted",
+    "parameters": [
+      "name"
+    ],
+    "formats": {}
+  },
+  "FeedPage.CondensedBookmarkFormatted": {
+    "key": "FeedPage-CondensedBookmarkFormatted",
+    "method": "FeedPageCondensedBookmarkFormatted",
+    "parameters": [
+      "name",
+      "count"
+    ],
+    "formats": {}
+  },
+  "FeedPage.CondensedFollowUserFormatted": {
+    "key": "FeedPage-CondensedFollowUserFormatted",
+    "method": "FeedPageCondensedFollowUserFormatted",
+    "parameters": [
+      "name",
+      "count"
+    ],
+    "formats": {}
+  },
+  "FeedPage.CondensedPostIllustFormatted": {
+    "key": "FeedPage-CondensedPostIllustFormatted",
+    "method": "FeedPageCondensedPostIllustFormatted",
+    "parameters": [
+      "name",
+      "count"
+    ],
+    "formats": {}
+  },
+  "FeedPage.FeedListTextBlock.Text": {
+    "key": "FeedPage-FeedListTextBlock-Text",
+    "method": "FeedPageFeedListTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "FeedPage.SparsePostIllustFormatted": {
+    "key": "FeedPage-SparsePostIllustFormatted",
+    "method": "FeedPageSparsePostIllustFormatted",
+    "parameters": [
+      "name"
+    ],
+    "formats": {}
+  },
+  "Filter.FilterQueryError": {
+    "key": "Filter-FilterQueryError",
+    "method": "FilterFilterQueryError",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Diagnostics.CompletionSuffixFormatted": {
+    "key": "Filter-Diagnostics-CompletionSuffixFormatted",
+    "method": "FilterDiagnosticsCompletionSuffixFormatted",
+    "parameters": [
+      "completions"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.MessageWithPositionFormatted": {
+    "key": "Filter-Diagnostics-MessageWithPositionFormatted",
+    "method": "FilterDiagnosticsMessageWithPositionFormatted",
+    "parameters": [
+      "message",
+      "position",
+      "completionSuffix"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.UnexpectedToken": {
+    "key": "Filter-Diagnostics-UnexpectedToken",
+    "method": "FilterDiagnosticsUnexpectedToken",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.MissingPredicateAfterNegation": {
+    "key": "Filter-Diagnostics-MissingPredicateAfterNegation",
+    "method": "FilterDiagnosticsMissingPredicateAfterNegation",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.MissingTextValue": {
+    "key": "Filter-Diagnostics-MissingTextValue",
+    "method": "FilterDiagnosticsMissingTextValue",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.MissingLongValue": {
+    "key": "Filter-Diagnostics-MissingLongValue",
+    "method": "FilterDiagnosticsMissingLongValue",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.MissingDoubleValue": {
+    "key": "Filter-Diagnostics-MissingDoubleValue",
+    "method": "FilterDiagnosticsMissingDoubleValue",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.MissingRangeValue": {
+    "key": "Filter-Diagnostics-MissingRangeValue",
+    "method": "FilterDiagnosticsMissingRangeValue",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.MissingDateValue": {
+    "key": "Filter-Diagnostics-MissingDateValue",
+    "method": "FilterDiagnosticsMissingDateValue",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.MissingGroupOperator": {
+    "key": "Filter-Diagnostics-MissingGroupOperator",
+    "method": "FilterDiagnosticsMissingGroupOperator",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.MissingRightParenthesis": {
+    "key": "Filter-Diagnostics-MissingRightParenthesis",
+    "method": "FilterDiagnosticsMissingRightParenthesis",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.InvalidValue": {
+    "key": "Filter-Diagnostics-InvalidValue",
+    "method": "FilterDiagnosticsInvalidValue",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.MissingStringQuote": {
+    "key": "Filter-Diagnostics-MissingStringQuote",
+    "method": "FilterDiagnosticsMissingStringQuote",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.InvalidLongRangeFormat": {
+    "key": "Filter-Diagnostics-InvalidLongRangeFormat",
+    "method": "FilterDiagnosticsInvalidLongRangeFormat",
+    "parameters": [
+      "predicate",
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.InvalidDoubleRangeFormat": {
+    "key": "Filter-Diagnostics-InvalidDoubleRangeFormat",
+    "method": "FilterDiagnosticsInvalidDoubleRangeFormat",
+    "parameters": [
+      "predicate",
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.DateRequiresMonthAndDay": {
+    "key": "Filter-Diagnostics-DateRequiresMonthAndDay",
+    "method": "FilterDiagnosticsDateRequiresMonthAndDay",
+    "parameters": [
+      "predicate",
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.ExpectedInteger": {
+    "key": "Filter-Diagnostics-ExpectedInteger",
+    "method": "FilterDiagnosticsExpectedInteger",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.IntegerOutOfRange": {
+    "key": "Filter-Diagnostics-IntegerOutOfRange",
+    "method": "FilterDiagnosticsIntegerOutOfRange",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.DenominatorCannotBeZero": {
+    "key": "Filter-Diagnostics-DenominatorCannotBeZero",
+    "method": "FilterDiagnosticsDenominatorCannotBeZero",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.MissingFractionalPart": {
+    "key": "Filter-Diagnostics-MissingFractionalPart",
+    "method": "FilterDiagnosticsMissingFractionalPart",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.InvalidDoubleValue": {
+    "key": "Filter-Diagnostics-InvalidDoubleValue",
+    "method": "FilterDiagnosticsInvalidDoubleValue",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.DateValueTooLarge": {
+    "key": "Filter-Diagnostics-DateValueTooLarge",
+    "method": "FilterDiagnosticsDateValueTooLarge",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.NegativeRangeUnsupported": {
+    "key": "Filter-Diagnostics-NegativeRangeUnsupported",
+    "method": "FilterDiagnosticsNegativeRangeUnsupported",
+    "parameters": [
+      "predicate",
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.RangeMinimumGreaterThanMaximum": {
+    "key": "Filter-Diagnostics-RangeMinimumGreaterThanMaximum",
+    "method": "FilterDiagnosticsRangeMinimumGreaterThanMaximum",
+    "parameters": [
+      "predicate",
+      "minimum",
+      "maximum"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.DoubleRangeOpenIntervalUnsupported": {
+    "key": "Filter-Diagnostics-DoubleRangeOpenIntervalUnsupported",
+    "method": "FilterDiagnosticsDoubleRangeOpenIntervalUnsupported",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.InvalidDate": {
+    "key": "Filter-Diagnostics-InvalidDate",
+    "method": "FilterDiagnosticsInvalidDate",
+    "parameters": [
+      "predicate",
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.UnsupportedValueKind": {
+    "key": "Filter-Diagnostics-UnsupportedValueKind",
+    "method": "FilterDiagnosticsUnsupportedValueKind",
+    "parameters": [
+      "predicate",
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.InternalExpectedTextValue": {
+    "key": "Filter-Diagnostics-InternalExpectedTextValue",
+    "method": "FilterDiagnosticsInternalExpectedTextValue",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.InternalExpectedLongValue": {
+    "key": "Filter-Diagnostics-InternalExpectedLongValue",
+    "method": "FilterDiagnosticsInternalExpectedLongValue",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.InternalExpectedDoubleValue": {
+    "key": "Filter-Diagnostics-InternalExpectedDoubleValue",
+    "method": "FilterDiagnosticsInternalExpectedDoubleValue",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.InternalExpectedLongRangeValue": {
+    "key": "Filter-Diagnostics-InternalExpectedLongRangeValue",
+    "method": "FilterDiagnosticsInternalExpectedLongRangeValue",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.InternalExpectedDoubleRangeValue": {
+    "key": "Filter-Diagnostics-InternalExpectedDoubleRangeValue",
+    "method": "FilterDiagnosticsInternalExpectedDoubleRangeValue",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Diagnostics.InternalExpectedDateValue": {
+    "key": "Filter-Diagnostics-InternalExpectedDateValue",
+    "method": "FilterDiagnosticsInternalExpectedDateValue",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "Filter.Completions.And": {
+    "key": "Filter-Completions-And",
+    "method": "FilterCompletionsAnd",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Or": {
+    "key": "Filter-Completions-Or",
+    "method": "FilterCompletionsOr",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Not": {
+    "key": "Filter-Completions-Not",
+    "method": "FilterCompletionsNot",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Title": {
+    "key": "Filter-Completions-Title",
+    "method": "FilterCompletionsTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Tag": {
+    "key": "Filter-Completions-Tag",
+    "method": "FilterCompletionsTag",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Author": {
+    "key": "Filter-Completions-Author",
+    "method": "FilterCompletionsAuthor",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Bookmark": {
+    "key": "Filter-Completions-Bookmark",
+    "method": "FilterCompletionsBookmark",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Ratio": {
+    "key": "Filter-Completions-Ratio",
+    "method": "FilterCompletionsRatio",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.StartDate": {
+    "key": "Filter-Completions-StartDate",
+    "method": "FilterCompletionsStartDate",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.EndDate": {
+    "key": "Filter-Completions-EndDate",
+    "method": "FilterCompletionsEndDate",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Include.Constraint": {
+    "key": "Filter-Completions-Include-Constraint",
+    "method": "FilterCompletionsIncludeConstraint",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Include.R18": {
+    "key": "Filter-Completions-Include-R18",
+    "method": "FilterCompletionsIncludeR18",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Include.R18G": {
+    "key": "Filter-Completions-Include-R18G",
+    "method": "FilterCompletionsIncludeR18G",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Include.Gif": {
+    "key": "Filter-Completions-Include-Gif",
+    "method": "FilterCompletionsIncludeGif",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Include.Ai": {
+    "key": "Filter-Completions-Include-Ai",
+    "method": "FilterCompletionsIncludeAi",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Exclude.Constraint": {
+    "key": "Filter-Completions-Exclude-Constraint",
+    "method": "FilterCompletionsExcludeConstraint",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Exclude.R18": {
+    "key": "Filter-Completions-Exclude-R18",
+    "method": "FilterCompletionsExcludeR18",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Exclude.R18G": {
+    "key": "Filter-Completions-Exclude-R18G",
+    "method": "FilterCompletionsExcludeR18G",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Exclude.Gif": {
+    "key": "Filter-Completions-Exclude-Gif",
+    "method": "FilterCompletionsExcludeGif",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.Exclude.Ai": {
+    "key": "Filter-Completions-Exclude-Ai",
+    "method": "FilterCompletionsExcludeAi",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.Text.Plain": {
+    "key": "Filter-Completions-ValueHints-Text-Plain",
+    "method": "FilterCompletionsValueHintsTextPlain",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.Text.Quoted": {
+    "key": "Filter-Completions-ValueHints-Text-Quoted",
+    "method": "FilterCompletionsValueHintsTextQuoted",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.Text.Exact": {
+    "key": "Filter-Completions-ValueHints-Text-Exact",
+    "method": "FilterCompletionsValueHintsTextExact",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.Text.QuotedExact": {
+    "key": "Filter-Completions-ValueHints-Text-QuotedExact",
+    "method": "FilterCompletionsValueHintsTextQuotedExact",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.Long.Plain": {
+    "key": "Filter-Completions-ValueHints-Long-Plain",
+    "method": "FilterCompletionsValueHintsLongPlain",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.Double.Integer": {
+    "key": "Filter-Completions-ValueHints-Double-Integer",
+    "method": "FilterCompletionsValueHintsDoubleInteger",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.Double.Decimal": {
+    "key": "Filter-Completions-ValueHints-Double-Decimal",
+    "method": "FilterCompletionsValueHintsDoubleDecimal",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.Double.Fraction": {
+    "key": "Filter-Completions-ValueHints-Double-Fraction",
+    "method": "FilterCompletionsValueHintsDoubleFraction",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.LongRange.Lower": {
+    "key": "Filter-Completions-ValueHints-LongRange-Lower",
+    "method": "FilterCompletionsValueHintsLongRangeLower",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.LongRange.Upper": {
+    "key": "Filter-Completions-ValueHints-LongRange-Upper",
+    "method": "FilterCompletionsValueHintsLongRangeUpper",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.LongRange.Closed": {
+    "key": "Filter-Completions-ValueHints-LongRange-Closed",
+    "method": "FilterCompletionsValueHintsLongRangeClosed",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.DoubleRange.Lower": {
+    "key": "Filter-Completions-ValueHints-DoubleRange-Lower",
+    "method": "FilterCompletionsValueHintsDoubleRangeLower",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.DoubleRange.UpperDecimal": {
+    "key": "Filter-Completions-ValueHints-DoubleRange-UpperDecimal",
+    "method": "FilterCompletionsValueHintsDoubleRangeUpperDecimal",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.DoubleRange.UpperFraction": {
+    "key": "Filter-Completions-ValueHints-DoubleRange-UpperFraction",
+    "method": "FilterCompletionsValueHintsDoubleRangeUpperFraction",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.DoubleRange.ClosedFraction": {
+    "key": "Filter-Completions-ValueHints-DoubleRange-ClosedFraction",
+    "method": "FilterCompletionsValueHintsDoubleRangeClosedFraction",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.DoubleRange.ClosedDecimalFraction": {
+    "key": "Filter-Completions-ValueHints-DoubleRange-ClosedDecimalFraction",
+    "method": "FilterCompletionsValueHintsDoubleRangeClosedDecimalFraction",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.Date.MonthDayDash": {
+    "key": "Filter-Completions-ValueHints-Date-MonthDayDash",
+    "method": "FilterCompletionsValueHintsDateMonthDayDash",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.Date.MonthDayDot": {
+    "key": "Filter-Completions-ValueHints-Date-MonthDayDot",
+    "method": "FilterCompletionsValueHintsDateMonthDayDot",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.Date.FullDash": {
+    "key": "Filter-Completions-ValueHints-Date-FullDash",
+    "method": "FilterCompletionsValueHintsDateFullDash",
+    "parameters": [],
+    "formats": {}
+  },
+  "Filter.Completions.ValueHints.Date.FullDot": {
+    "key": "Filter-Completions-ValueHints-Date-FullDot",
+    "method": "FilterCompletionsValueHintsDateFullDot",
+    "parameters": [],
+    "formats": {}
+  },
+  "HelpPage.QueryFilterHelpExpander.Header": {
+    "key": "HelpPage-QueryFilterHelpExpander-Header",
+    "method": "HelpPageQueryFilterHelpExpanderHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "HelpPage.QueryFilterSimpleHelpHeader.Text": {
+    "key": "HelpPage-QueryFilterSimpleHelpHeader-Text",
+    "method": "HelpPageQueryFilterSimpleHelpHeaderText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HelpPage.QueryFilterHelpHeader.Text": {
+    "key": "HelpPage-QueryFilterHelpHeader-Text",
+    "method": "HelpPageQueryFilterHelpHeaderText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HelpPage.DownloadMacroHelpExpander.Header": {
+    "key": "HelpPage-DownloadMacroHelpExpander-Header",
+    "method": "HelpPageDownloadMacroHelpExpanderHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "HelpPage.McpHelpExpander.Header": {
+    "key": "HelpPage-McpHelpExpander-Header",
+    "method": "HelpPageMcpHelpExpanderHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "HelpPage.McpToolsExpander.Header": {
+    "key": "HelpPage-McpToolsExpander-Header",
+    "method": "HelpPageMcpToolsExpanderHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "HelpPage.McpToolsExpander.Description": {
+    "key": "HelpPage-McpToolsExpander-Description",
+    "method": "HelpPageMcpToolsExpanderDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "HelpPage.McpToolsRefreshButton.ToolTip": {
+    "key": "HelpPage-McpToolsRefreshButton-ToolTip",
+    "method": "HelpPageMcpToolsRefreshButtonToolTip",
+    "parameters": [],
+    "formats": {}
+  },
+  "HelpPage.McpToolsParameters.Empty": {
+    "key": "HelpPage-McpToolsParameters-Empty",
+    "method": "HelpPageMcpToolsParametersEmpty",
+    "parameters": [],
+    "formats": {}
+  },
+  "HelpPage.McpToolsStatus.Disabled": {
+    "key": "HelpPage-McpToolsStatus-Disabled",
+    "method": "HelpPageMcpToolsStatusDisabled",
+    "parameters": [],
+    "formats": {}
+  },
+  "HelpPage.McpToolsStatus.Unavailable": {
+    "key": "HelpPage-McpToolsStatus-Unavailable",
+    "method": "HelpPageMcpToolsStatusUnavailable",
+    "parameters": [],
+    "formats": {}
+  },
+  "HelpPage.McpToolsStatus.NotRunning": {
+    "key": "HelpPage-McpToolsStatus-NotRunning",
+    "method": "HelpPageMcpToolsStatusNotRunning",
+    "parameters": [],
+    "formats": {}
+  },
+  "HelpPage.McpToolsStatus.Loading": {
+    "key": "HelpPage-McpToolsStatus-Loading",
+    "method": "HelpPageMcpToolsStatusLoading",
+    "parameters": [
+      "endpoint"
+    ],
+    "formats": {}
+  },
+  "HelpPage.McpToolsStatus.Loaded": {
+    "key": "HelpPage-McpToolsStatus-Loaded",
+    "method": "HelpPageMcpToolsStatusLoaded",
+    "parameters": [
+      "endpoint",
+      "count"
+    ],
+    "formats": {}
+  },
+  "HelpPage.McpToolsStatus.Empty": {
+    "key": "HelpPage-McpToolsStatus-Empty",
+    "method": "HelpPageMcpToolsStatusEmpty",
+    "parameters": [],
+    "formats": {}
+  },
+  "HelpPage.McpToolsStatus.Failed": {
+    "key": "HelpPage-McpToolsStatus-Failed",
+    "method": "HelpPageMcpToolsStatusFailed",
+    "parameters": [
+      "error"
+    ],
+    "formats": {}
+  },
+  "HelpPage.ExtensionsHelpExpander.Header": {
+    "key": "HelpPage-ExtensionsHelpExpander-Header",
+    "method": "HelpPageExtensionsHelpExpanderHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "HelpPage.WorkSubscriptionsHelpExpander.Header": {
+    "key": "HelpPage-WorkSubscriptionsHelpExpander-Header",
+    "method": "HelpPageWorkSubscriptionsHelpExpanderHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.EditButton.Label": {
+    "key": "HomePage-EditButton-Label",
+    "method": "HomePageEditButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.HideCardTitleButton.Label": {
+    "key": "HomePage-HideCardTitleButton-Label",
+    "method": "HomePageHideCardTitleButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.HideToolbarButton.Label": {
+    "key": "HomePage-HideToolbarButton-Label",
+    "method": "HomePageHideToolbarButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.EditPaneTitleTextBlock.Text": {
+    "key": "HomePage-EditPaneTitleTextBlock-Text",
+    "method": "HomePageEditPaneTitleTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.EditPaneDescriptionTextBlock.Text": {
+    "key": "HomePage-EditPaneDescriptionTextBlock-Text",
+    "method": "HomePageEditPaneDescriptionTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.SelectedCardTitleTextBlock.Text": {
+    "key": "HomePage-SelectedCardTitleTextBlock-Text",
+    "method": "HomePageSelectedCardTitleTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.GridSizeTitleTextBlock.Text": {
+    "key": "HomePage-GridSizeTitleTextBlock-Text",
+    "method": "HomePageGridSizeTitleTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.GridRowsTextBlock.Text": {
+    "key": "HomePage-GridRowsTextBlock-Text",
+    "method": "HomePageGridRowsTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.GridColumnsTextBlock.Text": {
+    "key": "HomePage-GridColumnsTextBlock-Text",
+    "method": "HomePageGridColumnsTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.NoSelectedCardTextBlock.Text": {
+    "key": "HomePage-NoSelectedCardTextBlock-Text",
+    "method": "HomePageNoSelectedCardTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.PositionXTextBlock.Text": {
+    "key": "HomePage-PositionXTextBlock-Text",
+    "method": "HomePagePositionXTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.PositionYTextBlock.Text": {
+    "key": "HomePage-PositionYTextBlock-Text",
+    "method": "HomePagePositionYTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.WidthTextBlock.Text": {
+    "key": "HomePage-WidthTextBlock-Text",
+    "method": "HomePageWidthTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.HeightTextBlock.Text": {
+    "key": "HomePage-HeightTextBlock-Text",
+    "method": "HomePageHeightTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.CardBackgroundTextBlock.Text": {
+    "key": "HomePage-CardBackgroundTextBlock-Text",
+    "method": "HomePageCardBackgroundTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.DeleteSelectedCardButton.Content": {
+    "key": "HomePage-DeleteSelectedCardButton-Content",
+    "method": "HomePageDeleteSelectedCardButtonContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.OpenCardPageButton.ToolTip": {
+    "key": "HomePage-OpenCardPageButton-ToolTip",
+    "method": "HomePageOpenCardPageButtonToolTip",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.CardTitle.ParameterSeparator": {
+    "key": "HomePage-CardTitle-ParameterSeparator",
+    "method": "HomePageCardTitleParameterSeparator",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.CardLibraryTitleTextBlock.Text": {
+    "key": "HomePage-CardLibraryTitleTextBlock-Text",
+    "method": "HomePageCardLibraryTitleTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.SourceParametersTitleTextBlock.Text": {
+    "key": "HomePage-SourceParametersTitleTextBlock-Text",
+    "method": "HomePageSourceParametersTitleTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.SelectCardSourcePromptTextBlock.Text": {
+    "key": "HomePage-SelectCardSourcePromptTextBlock-Text",
+    "method": "HomePageSelectCardSourcePromptTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.Source.WorkTypeTextBlock.Text": {
+    "key": "HomePage-Source-WorkTypeTextBlock-Text",
+    "method": "HomePageSourceWorkTypeTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.Source.SimpleWorkTypeTextBlock.Text": {
+    "key": "HomePage-Source-SimpleWorkTypeTextBlock-Text",
+    "method": "HomePageSourceSimpleWorkTypeTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.Source.PrivacyPolicyTextBlock.Text": {
+    "key": "HomePage-Source-PrivacyPolicyTextBlock-Text",
+    "method": "HomePageSourcePrivacyPolicyTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.Source.RankOptionTextBlock.Text": {
+    "key": "HomePage-Source-RankOptionTextBlock-Text",
+    "method": "HomePageSourceRankOptionTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.Source.RankingDateTextBlock.Text": {
+    "key": "HomePage-Source-RankingDateTextBlock-Text",
+    "method": "HomePageSourceRankingDateTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.Source.UseSpecifiedRankingDateCheckBox.Content": {
+    "key": "HomePage-Source-UseSpecifiedRankingDateCheckBox-Content",
+    "method": "HomePageSourceUseSpecifiedRankingDateCheckBoxContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.Source.UserIdTextBlock.Text": {
+    "key": "HomePage-Source-UserIdTextBlock-Text",
+    "method": "HomePageSourceUserIdTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.Source.EntryIdTextBlock.Text": {
+    "key": "HomePage-Source-EntryIdTextBlock-Text",
+    "method": "HomePageSourceEntryIdTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.Source.SeriesIdTextBlock.Text": {
+    "key": "HomePage-Source-SeriesIdTextBlock-Text",
+    "method": "HomePageSourceSeriesIdTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.Source.SearchTextTextBlock.Text": {
+    "key": "HomePage-Source-SearchTextTextBlock-Text",
+    "method": "HomePageSourceSearchTextTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.Source.TagTextBlock.Text": {
+    "key": "HomePage-Source-TagTextBlock-Text",
+    "method": "HomePageSourceTagTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.AddConfiguredCardButton.Content": {
+    "key": "HomePage-AddConfiguredCardButton-Content",
+    "method": "HomePageAddConfiguredCardButtonContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.CardPreview.LoadingTextBlock.Text": {
+    "key": "HomePage-CardPreview-LoadingTextBlock-Text",
+    "method": "HomePageCardPreviewLoadingTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.CardPreview.EmptyTextBlock.Text": {
+    "key": "HomePage-CardPreview-EmptyTextBlock-Text",
+    "method": "HomePageCardPreviewEmptyTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.CardPreview.FailedTextBlock.Text": {
+    "key": "HomePage-CardPreview-FailedTextBlock-Text",
+    "method": "HomePageCardPreviewFailedTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.NoSpaceWarning.Title": {
+    "key": "HomePage-NoSpaceWarning-Title",
+    "method": "HomePageNoSpaceWarningTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.NoSpaceWarning.Content": {
+    "key": "HomePage-NoSpaceWarning-Content",
+    "method": "HomePageNoSpaceWarningContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.LayoutConflictWarning.Title": {
+    "key": "HomePage-LayoutConflictWarning-Title",
+    "method": "HomePageLayoutConflictWarningTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.LayoutConflictWarning.Content": {
+    "key": "HomePage-LayoutConflictWarning-Content",
+    "method": "HomePageLayoutConflictWarningContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.GridShrinkBlockedWarning.Title": {
+    "key": "HomePage-GridShrinkBlockedWarning-Title",
+    "method": "HomePageGridShrinkBlockedWarningTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.GridShrinkBlockedWarning.Content": {
+    "key": "HomePage-GridShrinkBlockedWarning-Content",
+    "method": "HomePageGridShrinkBlockedWarningContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.InvalidSourceParameterWarning.Title": {
+    "key": "HomePage-InvalidSourceParameterWarning-Title",
+    "method": "HomePageInvalidSourceParameterWarningTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "HomePage.InvalidSourceParameterWarning.Content": {
+    "key": "HomePage-InvalidSourceParameterWarning-Content",
+    "method": "HomePageInvalidSourceParameterWarningContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "ImageViewerPage.ApplyingTransformerExtensions": {
+    "key": "ImageViewerPage-ApplyingTransformerExtensions",
+    "method": "ImageViewerPageApplyingTransformerExtensions",
+    "parameters": [],
+    "formats": {}
+  },
+  "ImageViewerPage.TransformerExtensionFinishedSuccessfully": {
+    "key": "ImageViewerPage-TransformerExtensionFinishedSuccessfully",
+    "method": "ImageViewerPageTransformerExtensionFinishedSuccessfully",
+    "parameters": [],
+    "formats": {}
+  },
+  "ImageViewerPage.LoadingOriginalImage": {
+    "key": "ImageViewerPage-LoadingOriginalImage",
+    "method": "ImageViewerPageLoadingOriginalImage",
+    "parameters": [],
+    "formats": {}
+  },
+  "ImageViewerPage.OriginalImageLoadedSuccessfully": {
+    "key": "ImageViewerPage-OriginalImageLoadedSuccessfully",
+    "method": "ImageViewerPageOriginalImageLoadedSuccessfully",
+    "parameters": [],
+    "formats": {}
+  },
+  "ImageViewerPage.OriginalImageLoadFailed": {
+    "key": "ImageViewerPage-OriginalImageLoadFailed",
+    "method": "ImageViewerPageOriginalImageLoadFailed",
+    "parameters": [],
+    "formats": {}
+  },
+  "ImageViewerPage.TransformerExtensionFailed": {
+    "key": "ImageViewerPage-TransformerExtensionFailed",
+    "method": "ImageViewerPageTransformerExtensionFailed",
+    "parameters": [],
+    "formats": {}
+  },
+  "IPListInput.InvalidIPFormat": {
+    "key": "IPListInput-InvalidIPFormat",
+    "method": "IPListInputInvalidIPFormat",
+    "parameters": [],
+    "formats": {}
+  },
+  "IPListInput.DuplicatesWithExistingIP": {
+    "key": "IPListInput-DuplicatesWithExistingIP",
+    "method": "IPListInputDuplicatesWithExistingIP",
+    "parameters": [],
+    "formats": {}
+  },
+  "LoginPage.RefreshTokenBox.PlaceholderText": {
+    "key": "LoginPage-RefreshTokenBox-PlaceholderText",
+    "method": "LoginPageRefreshTokenBoxPlaceholderText",
+    "parameters": [],
+    "formats": {}
+  },
+  "LoginPage.RefreshTokenButton.Content": {
+    "key": "LoginPage-RefreshTokenButton-Content",
+    "method": "LoginPageRefreshTokenButtonContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "LoginPage.FetchingSessionFailed.Content": {
+    "key": "LoginPage-FetchingSessionFailed-Content",
+    "method": "LoginPageFetchingSessionFailedContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "LoginPage.FetchingSessionFailed.Title": {
+    "key": "LoginPage-FetchingSessionFailed-Title",
+    "method": "LoginPageFetchingSessionFailedTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "LoginPage.LoginHeader": {
+    "key": "LoginPage-LoginHeader",
+    "method": "LoginPageLoginHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.UnexpectedToken": {
+    "key": "MacroParser-UnexpectedToken",
+    "method": "MacroParserUnexpectedToken",
+    "parameters": [
+      "token"
+    ],
+    "formats": {}
+  },
+  "MacroParser.ExpectedLeftBraceAfterAt": {
+    "key": "MacroParser-ExpectedLeftBraceAfterAt",
+    "method": "MacroParserExpectedLeftBraceAfterAt",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.ExpectedMacroName": {
+    "key": "MacroParser-ExpectedMacroName",
+    "method": "MacroParserExpectedMacroName",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MissingRightBrace": {
+    "key": "MacroParser-MissingRightBrace",
+    "method": "MacroParserMissingRightBrace",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MissingConditionalSeparator": {
+    "key": "MacroParser-MissingConditionalSeparator",
+    "method": "MacroParserMissingConditionalSeparator",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.UnknownMacroName": {
+    "key": "MacroParser-UnknownMacroName",
+    "method": "MacroParserUnknownMacroName",
+    "parameters": [
+      "macroName"
+    ],
+    "formats": {}
+  },
+  "MacroParser.NonParameterizedMacroBearingParameter": {
+    "key": "MacroParser-NonParameterizedMacroBearingParameter",
+    "method": "MacroParserNonParameterizedMacroBearingParameter",
+    "parameters": [
+      "macroName"
+    ],
+    "formats": {}
+  },
+  "MacroParser.ConditionalBranchesMissing": {
+    "key": "MacroParser-ConditionalBranchesMissing",
+    "method": "MacroParserConditionalBranchesMissing",
+    "parameters": [
+      "macroName"
+    ],
+    "formats": {}
+  },
+  "MacroParser.InvalidFormatter": {
+    "key": "MacroParser-InvalidFormatter",
+    "method": "MacroParserInvalidFormatter",
+    "parameters": [
+      "macroName",
+      "formatter"
+    ],
+    "formats": {}
+  },
+  "MacroParser.MacroShouldBeInLastSegment": {
+    "key": "MacroParser-MacroShouldBeInLastSegment",
+    "method": "MacroParserMacroShouldBeInLastSegment",
+    "parameters": [
+      "macroName"
+    ],
+    "formats": {}
+  },
+  "MacroParser.MacroContextRestrictionNotSatisfied": {
+    "key": "MacroParser-MacroContextRestrictionNotSatisfied",
+    "method": "MacroParserMacroContextRestrictionNotSatisfied",
+    "parameters": [
+      "macroName"
+    ],
+    "formats": {}
+  },
+  "MacroParser.MessageWithPositionFormatted": {
+    "key": "MacroParser-MessageWithPositionFormatted",
+    "method": "MacroParserMessageWithPositionFormatted",
+    "parameters": [
+      "message",
+      "position"
+    ],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.Ext": {
+    "key": "MacroParser-MacroDescription-Ext",
+    "method": "MacroParserMacroDescriptionExt",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.Id": {
+    "key": "MacroParser-MacroDescription-Id",
+    "method": "MacroParserMacroDescriptionId",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.Title": {
+    "key": "MacroParser-MacroDescription-Title",
+    "method": "MacroParserMacroDescriptionTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.ArtistId": {
+    "key": "MacroParser-MacroDescription-ArtistId",
+    "method": "MacroParserMacroDescriptionArtistId",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.ArtistName": {
+    "key": "MacroParser-MacroDescription-ArtistName",
+    "method": "MacroParserMacroDescriptionArtistName",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.SeriesId": {
+    "key": "MacroParser-MacroDescription-SeriesId",
+    "method": "MacroParserMacroDescriptionSeriesId",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.SeriesTitle": {
+    "key": "MacroParser-MacroDescription-SeriesTitle",
+    "method": "MacroParserMacroDescriptionSeriesTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.PublishTime": {
+    "key": "MacroParser-MacroDescription-PublishTime",
+    "method": "MacroParserMacroDescriptionPublishTime",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.PicSetIndex": {
+    "key": "MacroParser-MacroDescription-PicSetIndex",
+    "method": "MacroParserMacroDescriptionPicSetIndex",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.GroupId": {
+    "key": "MacroParser-MacroDescription-GroupId",
+    "method": "MacroParserMacroDescriptionGroupId",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.IsPicSet": {
+    "key": "MacroParser-MacroDescription-IsPicSet",
+    "method": "MacroParserMacroDescriptionIsPicSet",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.IsR18": {
+    "key": "MacroParser-MacroDescription-IsR18",
+    "method": "MacroParserMacroDescriptionIsR18",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.IsR18G": {
+    "key": "MacroParser-MacroDescription-IsR18G",
+    "method": "MacroParserMacroDescriptionIsR18G",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.IsAi": {
+    "key": "MacroParser-MacroDescription-IsAi",
+    "method": "MacroParserMacroDescriptionIsAi",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.IsPicOne": {
+    "key": "MacroParser-MacroDescription-IsPicOne",
+    "method": "MacroParserMacroDescriptionIsPicOne",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.IsNovel": {
+    "key": "MacroParser-MacroDescription-IsNovel",
+    "method": "MacroParserMacroDescriptionIsNovel",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.IsPicGif": {
+    "key": "MacroParser-MacroDescription-IsPicGif",
+    "method": "MacroParserMacroDescriptionIsPicGif",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.IsSeries": {
+    "key": "MacroParser-MacroDescription-IsSeries",
+    "method": "MacroParserMacroDescriptionIsSeries",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.IsGroup": {
+    "key": "MacroParser-MacroDescription-IsGroup",
+    "method": "MacroParserMacroDescriptionIsGroup",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.IsBookmarkGroup": {
+    "key": "MacroParser-MacroDescription-IsBookmarkGroup",
+    "method": "MacroParserMacroDescriptionIsBookmarkGroup",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.IsPostGroup": {
+    "key": "MacroParser-MacroDescription-IsPostGroup",
+    "method": "MacroParserMacroDescriptionIsPostGroup",
+    "parameters": [],
+    "formats": {}
+  },
+  "MacroParser.MacroDescription.IsSeriesGroup": {
+    "key": "MacroParser-MacroDescription-IsSeriesGroup",
+    "method": "MacroParserMacroDescriptionIsSeriesGroup",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.Home": {
+    "key": "MainPage-Tab-Home",
+    "method": "MainPageTabHome",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.Search": {
+    "key": "MainPage-Tab-Search",
+    "method": "MainPageTabSearch",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.Login": {
+    "key": "MainPage-Tab-Login",
+    "method": "MainPageTabLogin",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.WorkRecommended": {
+    "key": "MainPage-Tab-WorkRecommended",
+    "method": "MainPageTabWorkRecommended",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.WorkBookmarks": {
+    "key": "MainPage-Tab-WorkBookmarks",
+    "method": "MainPageTabWorkBookmarks",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.Series": {
+    "key": "MainPage-Tab-Series",
+    "method": "MainPageTabSeries",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.WorkFollowing": {
+    "key": "MainPage-Tab-WorkFollowing",
+    "method": "MainPageTabWorkFollowing",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.WorkMyPixiv": {
+    "key": "MainPage-Tab-WorkMyPixiv",
+    "method": "MainPageTabWorkMyPixiv",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.WorkNew": {
+    "key": "MainPage-Tab-WorkNew",
+    "method": "MainPageTabWorkNew",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.WorkRanking": {
+    "key": "MainPage-Tab-WorkRanking",
+    "method": "MainPageTabWorkRanking",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.WorkRelated": {
+    "key": "MainPage-Tab-WorkRelated",
+    "method": "MainPageTabWorkRelated",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.SingleSeries": {
+    "key": "MainPage-Tab-SingleSeries",
+    "method": "MainPageTabSingleSeries",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.WorkPosts": {
+    "key": "MainPage-Tab-WorkPosts",
+    "method": "MainPageTabWorkPosts",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.UserRecommended": {
+    "key": "MainPage-Tab-UserRecommended",
+    "method": "MainPageTabUserRecommended",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.UserFollowing": {
+    "key": "MainPage-Tab-UserFollowing",
+    "method": "MainPageTabUserFollowing",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.UserMyPixiv": {
+    "key": "MainPage-Tab-UserMyPixiv",
+    "method": "MainPageTabUserMyPixiv",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.UserFollower": {
+    "key": "MainPage-Tab-UserFollower",
+    "method": "MainPageTabUserFollower",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.BrowsingHistory": {
+    "key": "MainPage-Tab-BrowsingHistory",
+    "method": "MainPageTabBrowsingHistory",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.Spotlight": {
+    "key": "MainPage-Tab-Spotlight",
+    "method": "MainPageTabSpotlight",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.Feed": {
+    "key": "MainPage-Tab-Feed",
+    "method": "MainPageTabFeed",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.WatchLater": {
+    "key": "MainPage-Tab-WatchLater",
+    "method": "MainPageTabWatchLater",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.Download": {
+    "key": "MainPage-Tab-Download",
+    "method": "MainPageTabDownload",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.Help": {
+    "key": "MainPage-Tab-Help",
+    "method": "MainPageTabHelp",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.About": {
+    "key": "MainPage-Tab-About",
+    "method": "MainPageTabAbout",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.Settings": {
+    "key": "MainPage-Tab-Settings",
+    "method": "MainPageTabSettings",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.Extensions": {
+    "key": "MainPage-Tab-Extensions",
+    "method": "MainPageTabExtensions",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.RelatedUser": {
+    "key": "MainPage-Tab-RelatedUser",
+    "method": "MainPageTabRelatedUser",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.UserSearchResult": {
+    "key": "MainPage-Tab-UserSearchResult",
+    "method": "MainPageTabUserSearchResult",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.WorkSearchResult": {
+    "key": "MainPage-Tab-WorkSearchResult",
+    "method": "MainPageTabWorkSearchResult",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.SingleImage": {
+    "key": "MainPage-Tab-SingleImage",
+    "method": "MainPageTabSingleImage",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.SingleNovel": {
+    "key": "MainPage-Tab-SingleNovel",
+    "method": "MainPageTabSingleNovel",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.SingleUser": {
+    "key": "MainPage-Tab-SingleUser",
+    "method": "MainPageTabSingleUser",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.SauceNaoResult": {
+    "key": "MainPage-Tab-SauceNaoResult",
+    "method": "MainPageTabSauceNaoResult",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.NavigationSettings": {
+    "key": "MainPage-Tab-NavigationSettings",
+    "method": "MainPageTabNavigationSettings",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.WorkInfo": {
+    "key": "MainPage-Tab-WorkInfo",
+    "method": "MainPageTabWorkInfo",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.Tab.Comments": {
+    "key": "MainPage-Tab-Comments",
+    "method": "MainPageTabComments",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.SearchResultFormatted": {
+    "key": "MainPage-SearchResultFormatted",
+    "method": "MainPageSearchResultFormatted",
+    "parameters": [
+      "searchText"
+    ],
+    "formats": {}
+  },
+  "MainPage.SearchKeywordCannotBeBlank.Title": {
+    "key": "MainPage-SearchKeywordCannotBeBlank-Title",
+    "method": "MainPageSearchKeywordCannotBeBlankTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.SearchKeywordCannotBeBlank.Content": {
+    "key": "MainPage-SearchKeywordCannotBeBlank-Content",
+    "method": "MainPageSearchKeywordCannotBeBlankContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.LoggingIn.Header": {
+    "key": "MainPage-LoggingIn-Header",
+    "method": "MainPageLoggingInHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.LoggingIn.Description": {
+    "key": "MainPage-LoggingIn-Description",
+    "method": "MainPageLoggingInDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.LoggingIn.Failed": {
+    "key": "MainPage-LoggingIn-Failed",
+    "method": "MainPageLoggingInFailed",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.OpenMyPageItem.Text": {
+    "key": "MainPage-OpenMyPageItem-Text",
+    "method": "MainPageOpenMyPageItemText",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.OpenMyPageInBrowserItem.Text": {
+    "key": "MainPage-OpenMyPageInBrowserItem-Text",
+    "method": "MainPageOpenMyPageInBrowserItemText",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.RestrictedModeItem.Text": {
+    "key": "MainPage-RestrictedModeItem-Text",
+    "method": "MainPageRestrictedModeItemText",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.AiShowItem.Text": {
+    "key": "MainPage-AiShowItem-Text",
+    "method": "MainPageAiShowItemText",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.MoreViewingSettingsItem.Text": {
+    "key": "MainPage-MoreViewingSettingsItem-Text",
+    "method": "MainPageMoreViewingSettingsItemText",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.SwitchAccountItem.Text": {
+    "key": "MainPage-SwitchAccountItem-Text",
+    "method": "MainPageSwitchAccountItemText",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.TabContextMenu.CloseOtherTabs": {
+    "key": "MainPage-TabContextMenu-CloseOtherTabs",
+    "method": "MainPageTabContextMenuCloseOtherTabs",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.TabContextMenu.CloseTabsToLeft": {
+    "key": "MainPage-TabContextMenu-CloseTabsToLeft",
+    "method": "MainPageTabContextMenuCloseTabsToLeft",
+    "parameters": [],
+    "formats": {}
+  },
+  "MainPage.TabContextMenu.CloseTabsToRight": {
+    "key": "MainPage-TabContextMenu-CloseTabsToRight",
+    "method": "MainPageTabContextMenuCloseTabsToRight",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.AddedToWatchLater": {
+    "key": "Misc-AddedToWatchLater",
+    "method": "MiscAddedToWatchLater",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.AddedToBookmark": {
+    "key": "Misc-AddedToBookmark",
+    "method": "MiscAddedToBookmark",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.RemovedFromWatchLater": {
+    "key": "Misc-RemovedFromWatchLater",
+    "method": "MiscRemovedFromWatchLater",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.Pause": {
+    "key": "Misc-Pause",
+    "method": "MiscPause",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.Play": {
+    "key": "Misc-Play",
+    "method": "MiscPlay",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.OpenBottomList": {
+    "key": "Misc-OpenBottomList",
+    "method": "MiscOpenBottomList",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.CloseBottomList": {
+    "key": "Misc-CloseBottomList",
+    "method": "MiscCloseBottomList",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.ExceptionEncountered": {
+    "key": "Misc-ExceptionEncountered",
+    "method": "MiscExceptionEncountered",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.TagName.All": {
+    "key": "Misc-TagName-All",
+    "method": "MiscTagNameAll",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.TagName.Uncategorized": {
+    "key": "Misc-TagName-Uncategorized",
+    "method": "MiscTagNameUncategorized",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.DownloadItemOpenFailed": {
+    "key": "Misc-DownloadItemOpenFailed",
+    "method": "MiscDownloadItemOpenFailed",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.DownloadItemMaybeDeleted": {
+    "key": "Misc-DownloadItemMaybeDeleted",
+    "method": "MiscDownloadItemMaybeDeleted",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.UnexpectedBehavior": {
+    "key": "Misc-UnexpectedBehavior",
+    "method": "MiscUnexpectedBehavior",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.GoToPageFormatted": {
+    "key": "Misc-GoToPageFormatted",
+    "method": "MiscGoToPageFormatted",
+    "parameters": [
+      "page"
+    ],
+    "formats": {}
+  },
+  "Misc.Copied": {
+    "key": "Misc-Copied",
+    "method": "MiscCopied",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.Saved": {
+    "key": "Misc-Saved",
+    "method": "MiscSaved",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.PixevalBadge.Following": {
+    "key": "Misc-PixevalBadge-Following",
+    "method": "MiscPixevalBadgeFollowing",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationSettingsPage.ApplyButton.Content": {
+    "key": "NavigationSettingsPage-ApplyButton-Content",
+    "method": "NavigationSettingsPageApplyButtonContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationSettingsPage.ApplyButton.ToolTip": {
+    "key": "NavigationSettingsPage-ApplyButton-ToolTip",
+    "method": "NavigationSettingsPageApplyButtonToolTip",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationSettingsPage.FormatButton.Content": {
+    "key": "NavigationSettingsPage-FormatButton-Content",
+    "method": "NavigationSettingsPageFormatButtonContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationSettingsPage.FormatButton.ToolTip": {
+    "key": "NavigationSettingsPage-FormatButton-ToolTip",
+    "method": "NavigationSettingsPageFormatButtonToolTip",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationSettingsPage.ResetButton.Content": {
+    "key": "NavigationSettingsPage-ResetButton-Content",
+    "method": "NavigationSettingsPageResetButtonContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationSettingsPage.ResetButton.ToolTip": {
+    "key": "NavigationSettingsPage-ResetButton-ToolTip",
+    "method": "NavigationSettingsPageResetButtonToolTip",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationSettingsPage.InsertFolderButton.Content": {
+    "key": "NavigationSettingsPage-InsertFolderButton-Content",
+    "method": "NavigationSettingsPageInsertFolderButtonContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationSettingsPage.InsertFolderButton.ToolTip": {
+    "key": "NavigationSettingsPage-InsertFolderButton-ToolTip",
+    "method": "NavigationSettingsPageInsertFolderButtonToolTip",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationSettingsPage.ReferencePages.Header": {
+    "key": "NavigationSettingsPage-ReferencePages-Header",
+    "method": "NavigationSettingsPageReferencePagesHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationSettingsPage.ReferenceIcons.Header": {
+    "key": "NavigationSettingsPage-ReferenceIcons-Header",
+    "method": "NavigationSettingsPageReferenceIconsHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationSettingsPage.Applied": {
+    "key": "NavigationSettingsPage-Applied",
+    "method": "NavigationSettingsPageApplied",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationSettingsPage.StatusInvalidFormatted": {
+    "key": "NavigationSettingsPage-StatusInvalidFormatted",
+    "method": "NavigationSettingsPageStatusInvalidFormatted",
+    "parameters": [
+      "count"
+    ],
+    "formats": {}
+  },
+  "NavigationSettingsPage.DefaultFolderTitle": {
+    "key": "NavigationSettingsPage-DefaultFolderTitle",
+    "method": "NavigationSettingsPageDefaultFolderTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationSettingsPage.WorkFolderTitle": {
+    "key": "NavigationSettingsPage-WorkFolderTitle",
+    "method": "NavigationSettingsPageWorkFolderTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationSettingsPage.UserFolderTitle": {
+    "key": "NavigationSettingsPage-UserFolderTitle",
+    "method": "NavigationSettingsPageUserFolderTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationYamlParser.Diagnostics.BothHeaderAndFooterEmpty": {
+    "key": "NavigationYamlParser-Diagnostics-BothHeaderAndFooterEmpty",
+    "method": "NavigationYamlParserDiagnosticsBothHeaderAndFooterEmpty",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationYamlParser.Diagnostics.EmptyFolderFormatted": {
+    "key": "NavigationYamlParser-Diagnostics-EmptyFolderFormatted",
+    "method": "NavigationYamlParserDiagnosticsEmptyFolderFormatted",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "NavigationYamlParser.Diagnostics.FieldNotAllowedFormatted": {
+    "key": "NavigationYamlParser-Diagnostics-FieldNotAllowedFormatted",
+    "method": "NavigationYamlParserDiagnosticsFieldNotAllowedFormatted",
+    "parameters": [
+      "item",
+      "field"
+    ],
+    "formats": {}
+  },
+  "NavigationYamlParser.Diagnostics.I18NResourceKeyEmptyFormatted": {
+    "key": "NavigationYamlParser-Diagnostics-I18NResourceKeyEmptyFormatted",
+    "method": "NavigationYamlParserDiagnosticsI18NResourceKeyEmptyFormatted",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "NavigationYamlParser.Diagnostics.ItemMustHaveEitherPageOrFolderFormatted": {
+    "key": "NavigationYamlParser-Diagnostics-ItemMustHaveEitherPageOrFolderFormatted",
+    "method": "NavigationYamlParserDiagnosticsItemMustHaveEitherPageOrFolderFormatted",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "NavigationYamlParser.Diagnostics.MenuMustContainSettingsPage": {
+    "key": "NavigationYamlParser-Diagnostics-MenuMustContainSettingsPage",
+    "method": "NavigationYamlParserDiagnosticsMenuMustContainSettingsPage",
+    "parameters": [],
+    "formats": {}
+  },
+  "NavigationYamlParser.Diagnostics.MaxDepthExceededFormatted": {
+    "key": "NavigationYamlParser-Diagnostics-MaxDepthExceededFormatted",
+    "method": "NavigationYamlParserDiagnosticsMaxDepthExceededFormatted",
+    "parameters": [
+      "item",
+      "maxDepth"
+    ],
+    "formats": {}
+  },
+  "NavigationYamlParser.Diagnostics.MaxDepthExceededFolderFormatted": {
+    "key": "NavigationYamlParser-Diagnostics-MaxDepthExceededFolderFormatted",
+    "method": "NavigationYamlParserDiagnosticsMaxDepthExceededFolderFormatted",
+    "parameters": [
+      "item",
+      "maxDepth"
+    ],
+    "formats": {}
+  },
+  "NavigationYamlParser.Diagnostics.UnknownFieldFormatted": {
+    "key": "NavigationYamlParser-Diagnostics-UnknownFieldFormatted",
+    "method": "NavigationYamlParserDiagnosticsUnknownFieldFormatted",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "NavigationYamlParser.Diagnostics.UnknownI18NResourceKeyFormatted": {
+    "key": "NavigationYamlParser-Diagnostics-UnknownI18NResourceKeyFormatted",
+    "method": "NavigationYamlParserDiagnosticsUnknownI18NResourceKeyFormatted",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "NavigationYamlParser.Diagnostics.UnknownIconFormatted": {
+    "key": "NavigationYamlParser-Diagnostics-UnknownIconFormatted",
+    "method": "NavigationYamlParserDiagnosticsUnknownIconFormatted",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "NavigationYamlParser.Diagnostics.UnknownPageFormatted": {
+    "key": "NavigationYamlParser-Diagnostics-UnknownPageFormatted",
+    "method": "NavigationYamlParserDiagnosticsUnknownPageFormatted",
+    "parameters": [
+      "value"
+    ],
+    "formats": {}
+  },
+  "NovelViewerPage.ApplyingTransformerExtensions": {
+    "key": "NovelViewerPage-ApplyingTransformerExtensions",
+    "method": "NovelViewerPageApplyingTransformerExtensions",
+    "parameters": [],
+    "formats": {}
+  },
+  "NovelViewerPage.TransformerExtensionFailed": {
+    "key": "NovelViewerPage-TransformerExtensionFailed",
+    "method": "NovelViewerPageTransformerExtensionFailed",
+    "parameters": [],
+    "formats": {}
+  },
+  "NovelViewerPage.TransformerExtensionFinishedSuccessfully": {
+    "key": "NovelViewerPage-TransformerExtensionFinishedSuccessfully",
+    "method": "NovelViewerPageTransformerExtensionFinishedSuccessfully",
+    "parameters": [],
+    "formats": {}
+  },
+  "PixivReplyBar.CommentIsTooShortOrTooLongToastContentFormatted": {
+    "key": "PixivReplyBar-CommentIsTooShortOrTooLongToastContentFormatted",
+    "method": "PixivReplyBarCommentIsTooShortOrTooLongToastContentFormatted",
+    "parameters": [
+      "count"
+    ],
+    "formats": {}
+  },
+  "PixivReplyBar.CommentIsTooShortOrTooLongToastTitle": {
+    "key": "PixivReplyBar-CommentIsTooShortOrTooLongToastTitle",
+    "method": "PixivReplyBarCommentIsTooShortOrTooLongToastTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "PixivReplyBar.ReplyContentRichEditBox.PlaceholderText": {
+    "key": "PixivReplyBar-ReplyContentRichEditBox-PlaceholderText",
+    "method": "PixivReplyBarReplyContentRichEditBoxPlaceholderText",
+    "parameters": [],
+    "formats": {}
+  },
+  "PixivReplyBar.SendButton.ToolTip": {
+    "key": "PixivReplyBar-SendButton-ToolTip",
+    "method": "PixivReplyBarSendButtonToolTip",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.SearchBox.PlaceholderText": {
+    "key": "Search-SearchBox-PlaceholderText",
+    "method": "SearchSearchBoxPlaceholderText",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.AdvancedOptions.IllustrationTab": {
+    "key": "Search-AdvancedOptions-IllustrationTab",
+    "method": "SearchAdvancedOptionsIllustrationTab",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.AdvancedOptions.NovelTab": {
+    "key": "Search-AdvancedOptions-NovelTab",
+    "method": "SearchAdvancedOptionsNovelTab",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.AdvancedOptions.SauceNaoTab": {
+    "key": "Search-AdvancedOptions-SauceNaoTab",
+    "method": "SearchAdvancedOptionsSauceNaoTab",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Sections.Common": {
+    "key": "Search-Sections-Common",
+    "method": "SearchSectionsCommon",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Sections.Illustration": {
+    "key": "Search-Sections-Illustration",
+    "method": "SearchSectionsIllustration",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Sections.Novel": {
+    "key": "Search-Sections-Novel",
+    "method": "SearchSectionsNovel",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Common.Unspecified": {
+    "key": "Search-Common-Unspecified",
+    "method": "SearchCommonUnspecified",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Common.SortOption": {
+    "key": "Search-Common-SortOption",
+    "method": "SearchCommonSortOption",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Common.StartDate": {
+    "key": "Search-Common-StartDate",
+    "method": "SearchCommonStartDate",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Common.EndDate": {
+    "key": "Search-Common-EndDate",
+    "method": "SearchCommonEndDate",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Common.ShowAiWorks": {
+    "key": "Search-Common-ShowAiWorks",
+    "method": "SearchCommonShowAiWorks",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Common.MergePlainKeywordResults": {
+    "key": "Search-Common-MergePlainKeywordResults",
+    "method": "SearchCommonMergePlainKeywordResults",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Common.IncludeTranslatedTagResults": {
+    "key": "Search-Common-IncludeTranslatedTagResults",
+    "method": "SearchCommonIncludeTranslatedTagResults",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Common.IncludePotentialViolationWorks": {
+    "key": "Search-Common-IncludePotentialViolationWorks",
+    "method": "SearchCommonIncludePotentialViolationWorks",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Illustration.MatchOption": {
+    "key": "Search-Illustration-MatchOption",
+    "method": "SearchIllustrationMatchOption",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Illustration.ContentType": {
+    "key": "Search-Illustration-ContentType",
+    "method": "SearchIllustrationContentType",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Illustration.RatioPattern": {
+    "key": "Search-Illustration-RatioPattern",
+    "method": "SearchIllustrationRatioPattern",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Illustration.WidthMin": {
+    "key": "Search-Illustration-WidthMin",
+    "method": "SearchIllustrationWidthMin",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Illustration.WidthMax": {
+    "key": "Search-Illustration-WidthMax",
+    "method": "SearchIllustrationWidthMax",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Illustration.HeightMin": {
+    "key": "Search-Illustration-HeightMin",
+    "method": "SearchIllustrationHeightMin",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Illustration.HeightMax": {
+    "key": "Search-Illustration-HeightMax",
+    "method": "SearchIllustrationHeightMax",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Illustration.Tool": {
+    "key": "Search-Illustration-Tool",
+    "method": "SearchIllustrationTool",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Novel.MatchOption": {
+    "key": "Search-Novel-MatchOption",
+    "method": "SearchNovelMatchOption",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Novel.Language": {
+    "key": "Search-Novel-Language",
+    "method": "SearchNovelLanguage",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Novel.ContentLengthOption": {
+    "key": "Search-Novel-ContentLengthOption",
+    "method": "SearchNovelContentLengthOption",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Novel.ContentLengthMin": {
+    "key": "Search-Novel-ContentLengthMin",
+    "method": "SearchNovelContentLengthMin",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Novel.ContentLengthMax": {
+    "key": "Search-Novel-ContentLengthMax",
+    "method": "SearchNovelContentLengthMax",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Novel.IsOriginalOnly": {
+    "key": "Search-Novel-IsOriginalOnly",
+    "method": "SearchNovelIsOriginalOnly",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Novel.Genre": {
+    "key": "Search-Novel-Genre",
+    "method": "SearchNovelGenre",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Novel.IsReplaceableOnly": {
+    "key": "Search-Novel-IsReplaceableOnly",
+    "method": "SearchNovelIsReplaceableOnly",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Validation.InvalidDateRange.Title": {
+    "key": "Search-Validation-InvalidDateRange-Title",
+    "method": "SearchValidationInvalidDateRangeTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Validation.InvalidDateRange.Content": {
+    "key": "Search-Validation-InvalidDateRange-Content",
+    "method": "SearchValidationInvalidDateRangeContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Validation.InvalidNumericRange.Title": {
+    "key": "Search-Validation-InvalidNumericRange-Title",
+    "method": "SearchValidationInvalidNumericRangeTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Validation.InvalidNumericRange.Content": {
+    "key": "Search-Validation-InvalidNumericRange-Content",
+    "method": "SearchValidationInvalidNumericRangeContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Validation.PremiumSort.Title": {
+    "key": "Search-Validation-PremiumSort-Title",
+    "method": "SearchValidationPremiumSortTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Validation.PremiumSort.Content": {
+    "key": "Search-Validation-PremiumSort-Content",
+    "method": "SearchValidationPremiumSortContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.Validation.SearchFailed.Title": {
+    "key": "Search-Validation-SearchFailed-Title",
+    "method": "SearchValidationSearchFailedTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.TrendingHeaderTextBlock.Text": {
+    "key": "Search-TrendingHeaderTextBlock-Text",
+    "method": "SearchTrendingHeaderTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.OpenId.User": {
+    "key": "Search-OpenId-User",
+    "method": "SearchOpenIdUser",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.OpenId.Illustration": {
+    "key": "Search-OpenId-Illustration",
+    "method": "SearchOpenIdIllustration",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.OpenId.Novel": {
+    "key": "Search-OpenId-Novel",
+    "method": "SearchOpenIdNovel",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.SearchUser": {
+    "key": "Search-SearchUser",
+    "method": "SearchSearchUser",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.SearchHistory.Copy": {
+    "key": "Search-SearchHistory-Copy",
+    "method": "SearchSearchHistoryCopy",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.SearchHistory.Delete": {
+    "key": "Search-SearchHistory-Delete",
+    "method": "SearchSearchHistoryDelete",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.SauceNAO.Search": {
+    "key": "Search-SauceNAO-Search",
+    "method": "SearchSauceNAOSearch",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.SauceNAO.ProvideImage": {
+    "key": "Search-SauceNAO-ProvideImage",
+    "method": "SearchSauceNAOProvideImage",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.SauceNAO.Or": {
+    "key": "Search-SauceNAO-Or",
+    "method": "SearchSauceNAOOr",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.SauceNAO.PasteFromClipboard": {
+    "key": "Search-SauceNAO-PasteFromClipboard",
+    "method": "SearchSauceNAOPasteFromClipboard",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.SauceNAO.ProvideApiKey": {
+    "key": "Search-SauceNAO-ProvideApiKey",
+    "method": "SearchSauceNAOProvideApiKey",
+    "parameters": [],
+    "formats": {}
+  },
+  "SeriesPage.ViewLatestContent": {
+    "key": "SeriesPage-ViewLatestContent",
+    "method": "SeriesPageViewLatestContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "SeriesViewerPage.AddToWatchlist": {
+    "key": "SeriesViewerPage-AddToWatchlist",
+    "method": "SeriesViewerPageAddToWatchlist",
+    "parameters": [],
+    "formats": {}
+  },
+  "SeriesViewerPage.RemoveFromWatchlist": {
+    "key": "SeriesViewerPage-RemoveFromWatchlist",
+    "method": "SeriesViewerPageRemoveFromWatchlist",
+    "parameters": [],
+    "formats": {}
+  },
+  "SeriesViewerPage.WorksCountFormatted": {
+    "key": "SeriesViewerPage-WorksCountFormatted",
+    "method": "SeriesViewerPageWorksCountFormatted",
+    "parameters": [
+      "count"
+    ],
+    "formats": {}
+  },
+  "SettingsMainView.CheckingForUpdate": {
+    "key": "SettingsMainView-CheckingForUpdate",
+    "method": "SettingsMainViewCheckingForUpdate",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.IsUpToDate": {
+    "key": "SettingsMainView-IsUpToDate",
+    "method": "SettingsMainViewIsUpToDate",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.IsInsider": {
+    "key": "SettingsMainView-IsInsider",
+    "method": "SettingsMainViewIsInsider",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.UpdateAvailable.Major": {
+    "key": "SettingsMainView-UpdateAvailable-Major",
+    "method": "SettingsMainViewUpdateAvailableMajor",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.UpdateAvailable.Minor": {
+    "key": "SettingsMainView-UpdateAvailable-Minor",
+    "method": "SettingsMainViewUpdateAvailableMinor",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.UpdateAvailable.Build": {
+    "key": "SettingsMainView-UpdateAvailable-Build",
+    "method": "SettingsMainViewUpdateAvailableBuild",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.UpdateAvailable.Unknown": {
+    "key": "SettingsMainView-UpdateAvailable-Unknown",
+    "method": "SettingsMainViewUpdateAvailableUnknown",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.LanguageSystemDefault": {
+    "key": "SettingsMainView-LanguageSystemDefault",
+    "method": "SettingsMainViewLanguageSystemDefault",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.DownloadPathMacroTextBox.PlaceholderText": {
+    "key": "SettingsMainView-DownloadPathMacroTextBox-PlaceholderText",
+    "method": "SettingsMainViewDownloadPathMacroTextBoxPlaceholderText",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.DeleteHistoriesEntry.Header": {
+    "key": "SettingsMainView-DeleteHistoriesEntry-Header",
+    "method": "SettingsMainViewDeleteHistoriesEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.DeleteDownloadHistoriesEntry.Description": {
+    "key": "SettingsMainView-DeleteDownloadHistoriesEntry-Description",
+    "method": "SettingsMainViewDeleteDownloadHistoriesEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.DeleteDownloadHistoriesEntry.Header": {
+    "key": "SettingsMainView-DeleteDownloadHistoriesEntry-Header",
+    "method": "SettingsMainViewDeleteDownloadHistoriesEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.DeleteBrowseHistoriesEntry.Description": {
+    "key": "SettingsMainView-DeleteBrowseHistoriesEntry-Description",
+    "method": "SettingsMainViewDeleteBrowseHistoriesEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.DeleteBrowseHistoriesEntry.Header": {
+    "key": "SettingsMainView-DeleteBrowseHistoriesEntry-Header",
+    "method": "SettingsMainViewDeleteBrowseHistoriesEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.DeleteFileCacheEntry.Description": {
+    "key": "SettingsMainView-DeleteFileCacheEntry-Description",
+    "method": "SettingsMainViewDeleteFileCacheEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.DeleteFileCacheEntry.Header": {
+    "key": "SettingsMainView-DeleteFileCacheEntry-Header",
+    "method": "SettingsMainViewDeleteFileCacheEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.DeleteSearchHistoriesEntry.Description": {
+    "key": "SettingsMainView-DeleteSearchHistoriesEntry-Description",
+    "method": "SettingsMainViewDeleteSearchHistoriesEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.DeleteSearchHistoriesEntry.Header": {
+    "key": "SettingsMainView-DeleteSearchHistoriesEntry-Header",
+    "method": "SettingsMainViewDeleteSearchHistoriesEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.DownloadMacroInvalidInfoBarInputCannotBeBlank": {
+    "key": "SettingsMainView-DownloadMacroInvalidInfoBarInputCannotBeBlank",
+    "method": "SettingsMainViewDownloadMacroInvalidInfoBarInputCannotBeBlank",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.DownloadMacroInvalidInfoBarMacroInvalidFormatted": {
+    "key": "SettingsMainView-DownloadMacroInvalidInfoBarMacroInvalidFormatted",
+    "method": "SettingsMainViewDownloadMacroInvalidInfoBarMacroInvalidFormatted",
+    "parameters": [
+      "message"
+    ],
+    "formats": {}
+  },
+  "SettingsMainView.LastCheckedPrefix": {
+    "key": "SettingsMainView-LastCheckedPrefix",
+    "method": "SettingsMainViewLastCheckedPrefix",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.CheckForUpdatesButton.Content": {
+    "key": "SettingsMainView-CheckForUpdatesButton-Content",
+    "method": "SettingsMainViewCheckForUpdatesButtonContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.GitHubCheckForUpdatesEntry.Header": {
+    "key": "SettingsMainView-GitHubCheckForUpdatesEntry-Header",
+    "method": "SettingsMainViewGitHubCheckForUpdatesEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.MsStoreCheckForUpdatesEntry.Header": {
+    "key": "SettingsMainView-MsStoreCheckForUpdatesEntry-Header",
+    "method": "SettingsMainViewMsStoreCheckForUpdatesEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.RateEntry.Description": {
+    "key": "SettingsMainView-RateEntry-Description",
+    "method": "SettingsMainViewRateEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.RateEntry.Header": {
+    "key": "SettingsMainView-RateEntry-Header",
+    "method": "SettingsMainViewRateEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.BugReportEntry.Header": {
+    "key": "SettingsMainView-BugReportEntry-Header",
+    "method": "SettingsMainViewBugReportEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.BugReportEntry.Description": {
+    "key": "SettingsMainView-BugReportEntry-Description",
+    "method": "SettingsMainViewBugReportEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.BugReportChannelsEntry.Header": {
+    "key": "SettingsMainView-BugReportChannelsEntry-Header",
+    "method": "SettingsMainViewBugReportChannelsEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.BugReportChannelsEntry.Description": {
+    "key": "SettingsMainView-BugReportChannelsEntry-Description",
+    "method": "SettingsMainViewBugReportChannelsEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.GitHubBugReportEntry.ToolTip": {
+    "key": "SettingsMainView-GitHubBugReportEntry-ToolTip",
+    "method": "SettingsMainViewGitHubBugReportEntryToolTip",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.EMailBugReportEntry.ToolTip": {
+    "key": "SettingsMainView-EMailBugReportEntry-ToolTip",
+    "method": "SettingsMainViewEMailBugReportEntryToolTip",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.QQBugReportEntry.ToolTip": {
+    "key": "SettingsMainView-QQBugReportEntry-ToolTip",
+    "method": "SettingsMainViewQQBugReportEntryToolTip",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.OpenLogEntry.Header": {
+    "key": "SettingsMainView-OpenLogEntry-Header",
+    "method": "SettingsMainViewOpenLogEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.OpenLogEntry.Description": {
+    "key": "SettingsMainView-OpenLogEntry-Description",
+    "method": "SettingsMainViewOpenLogEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.OpenTempEntry.Header": {
+    "key": "SettingsMainView-OpenTempEntry-Header",
+    "method": "SettingsMainViewOpenTempEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.OpenTempEntry.Description": {
+    "key": "SettingsMainView-OpenTempEntry-Description",
+    "method": "SettingsMainViewOpenTempEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.OpenLocalEntry.Header": {
+    "key": "SettingsMainView-OpenLocalEntry-Header",
+    "method": "SettingsMainViewOpenLocalEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.OpenLocalEntry.Description": {
+    "key": "SettingsMainView-OpenLocalEntry-Description",
+    "method": "SettingsMainViewOpenLocalEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.ResetDefaultSettingsEntry.Description": {
+    "key": "SettingsMainView-ResetDefaultSettingsEntry-Description",
+    "method": "SettingsMainViewResetDefaultSettingsEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.ResetDefaultSettingsEntry.Header": {
+    "key": "SettingsMainView-ResetDefaultSettingsEntry-Header",
+    "method": "SettingsMainViewResetDefaultSettingsEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.ResetSettingConfirmationDialogContent": {
+    "key": "SettingsMainView-ResetSettingConfirmationDialogContent",
+    "method": "SettingsMainViewResetSettingConfirmationDialogContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.ResetSettingConfirmationDialogTitle": {
+    "key": "SettingsMainView-ResetSettingConfirmationDialogTitle",
+    "method": "SettingsMainViewResetSettingConfirmationDialogTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.SwitchAccountEntry.Description": {
+    "key": "SettingsMainView-SwitchAccountEntry-Description",
+    "method": "SettingsMainViewSwitchAccountEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.SwitchAccountEntry.Header": {
+    "key": "SettingsMainView-SwitchAccountEntry-Header",
+    "method": "SettingsMainViewSwitchAccountEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.ProxyTextBoxErrorUri": {
+    "key": "SettingsMainView-ProxyTextBoxErrorUri",
+    "method": "SettingsMainViewProxyTextBoxErrorUri",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.PredicateMacroHeader": {
+    "key": "SettingsMainView-PredicateMacroHeader",
+    "method": "SettingsMainViewPredicateMacroHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.OpenExtensionsEntry.Header": {
+    "key": "SettingsMainView-OpenExtensionsEntry-Header",
+    "method": "SettingsMainViewOpenExtensionsEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.OpenExtensionsEntry.Description": {
+    "key": "SettingsMainView-OpenExtensionsEntry-Description",
+    "method": "SettingsMainViewOpenExtensionsEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.BackupSettingsEntry.Header": {
+    "key": "SettingsMainView-BackupSettingsEntry-Header",
+    "method": "SettingsMainViewBackupSettingsEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.BackupSettingsEntry.Description": {
+    "key": "SettingsMainView-BackupSettingsEntry-Description",
+    "method": "SettingsMainViewBackupSettingsEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.OpenSettingsEntry.Header": {
+    "key": "SettingsMainView-OpenSettingsEntry-Header",
+    "method": "SettingsMainViewOpenSettingsEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.OpenSettingsEntry.Description": {
+    "key": "SettingsMainView-OpenSettingsEntry-Description",
+    "method": "SettingsMainViewOpenSettingsEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.ExportSettingsSuccess": {
+    "key": "SettingsMainView-ExportSettingsSuccess",
+    "method": "SettingsMainViewExportSettingsSuccess",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.ImportSettingsSuccess": {
+    "key": "SettingsMainView-ImportSettingsSuccess",
+    "method": "SettingsMainViewImportSettingsSuccess",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.ExportSettingsPlaintextEntry.Header": {
+    "key": "SettingsMainView-ExportSettingsPlaintextEntry-Header",
+    "method": "SettingsMainViewExportSettingsPlaintextEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.ExportSettingsPlaintextEntry.Description": {
+    "key": "SettingsMainView-ExportSettingsPlaintextEntry-Description",
+    "method": "SettingsMainViewExportSettingsPlaintextEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.ImportSettingsPlaintextEntry.Description": {
+    "key": "SettingsMainView-ImportSettingsPlaintextEntry-Description",
+    "method": "SettingsMainViewImportSettingsPlaintextEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.ImportSettingsPlaintextEntry.Header": {
+    "key": "SettingsMainView-ImportSettingsPlaintextEntry-Header",
+    "method": "SettingsMainViewImportSettingsPlaintextEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.AnimatedPathBlock.Text": {
+    "key": "SettingsMainView-AnimatedPathBlock-Text",
+    "method": "SettingsMainViewAnimatedPathBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.SinglePathBlock.Text": {
+    "key": "SettingsMainView-SinglePathBlock-Text",
+    "method": "SettingsMainViewSinglePathBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.SetPathBlock.Text": {
+    "key": "SettingsMainView-SetPathBlock-Text",
+    "method": "SettingsMainViewSetPathBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.NovelPathBlock.Text": {
+    "key": "SettingsMainView-NovelPathBlock-Text",
+    "method": "SettingsMainViewNovelPathBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.ReleaseNoteDialog.Title": {
+    "key": "SettingsMainView-ReleaseNoteDialog-Title",
+    "method": "SettingsMainViewReleaseNoteDialogTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.ReleaseNoteDialog.TitleFormatted": {
+    "key": "SettingsMainView-ReleaseNoteDialog-TitleFormatted",
+    "method": "SettingsMainViewReleaseNoteDialogTitleFormatted",
+    "parameters": [
+      "version"
+    ],
+    "formats": {}
+  },
+  "SettingsMainView.ReleaseNoteDialog.Empty": {
+    "key": "SettingsMainView-ReleaseNoteDialog-Empty",
+    "method": "SettingsMainViewReleaseNoteDialogEmpty",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.SettingsSaved": {
+    "key": "SettingsMainView-SettingsSaved",
+    "method": "SettingsMainViewSettingsSaved",
+    "parameters": [],
+    "formats": {}
+  },
+  "UserViewerPage.Follow": {
+    "key": "UserViewerPage-Follow",
+    "method": "UserViewerPageFollow",
+    "parameters": [],
+    "formats": {}
+  },
+  "UserViewerPage.PrivateFollow": {
+    "key": "UserViewerPage-PrivateFollow",
+    "method": "UserViewerPagePrivateFollow",
+    "parameters": [],
+    "formats": {}
+  },
+  "UserViewerPage.Unfollow": {
+    "key": "UserViewerPage-Unfollow",
+    "method": "UserViewerPageUnfollow",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkContainer.CancelSelectionButtonFormatted": {
+    "key": "WorkContainer-CancelSelectionButtonFormatted",
+    "method": "WorkContainerCancelSelectionButtonFormatted",
+    "parameters": [
+      "count"
+    ],
+    "formats": {}
+  },
+  "WorkContainer.AddedAllToBookmarkContentFormatted": {
+    "key": "WorkContainer-AddedAllToBookmarkContentFormatted",
+    "method": "WorkContainerAddedAllToBookmarkContentFormatted",
+    "parameters": [
+      "count"
+    ],
+    "formats": {}
+  },
+  "WorkContainer.SelectAllButton.Label": {
+    "key": "WorkContainer-SelectAllButton-Label",
+    "method": "WorkContainerSelectAllButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkContainer.SelectedTooManyItems.Content": {
+    "key": "WorkContainer-SelectedTooManyItems-Content",
+    "method": "WorkContainerSelectedTooManyItemsContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkContainer.SelectedTooManyItems.ForBookmarkTitle": {
+    "key": "WorkContainer-SelectedTooManyItems-ForBookmarkTitle",
+    "method": "WorkContainerSelectedTooManyItemsForBookmarkTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkContainer.SelectedTooManyItems.ForSaveTitle": {
+    "key": "WorkContainer-SelectedTooManyItems-ForSaveTitle",
+    "method": "WorkContainerSelectedTooManyItemsForSaveTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkContainer.SelectedTooManyItems.ForOpenInBrowser.Content": {
+    "key": "WorkContainer-SelectedTooManyItems-ForOpenInBrowser-Content",
+    "method": "WorkContainerSelectedTooManyItemsForOpenInBrowserContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkContainer.SelectedTooManyItems.ForOpenInBrowser.Title": {
+    "key": "WorkContainer-SelectedTooManyItems-ForOpenInBrowser-Title",
+    "method": "WorkContainerSelectedTooManyItemsForOpenInBrowserTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkContainer.SelectionButton.Label": {
+    "key": "WorkContainer-SelectionButton-Label",
+    "method": "WorkContainerSelectionButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkContainer.RefreshButton.Label": {
+    "key": "WorkContainer-RefreshButton-Label",
+    "method": "WorkContainerRefreshButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkContainer.CancelSelectionButtonDefaultLabel": {
+    "key": "WorkContainer-CancelSelectionButtonDefaultLabel",
+    "method": "WorkContainerCancelSelectionButtonDefaultLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkContainer.DownloadItemsQueuedFormatted": {
+    "key": "WorkContainer-DownloadItemsQueuedFormatted",
+    "method": "WorkContainerDownloadItemsQueuedFormatted",
+    "parameters": [
+      "count"
+    ],
+    "formats": {}
+  },
+  "WorkContainer.FilterAutoSuggestBox.PlaceholderText": {
+    "key": "WorkContainer-FilterAutoSuggestBox-PlaceholderText",
+    "method": "WorkContainerFilterAutoSuggestBoxPlaceholderText",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkInfoPage.CopyOriginalTagMenuItem.Text": {
+    "key": "WorkInfoPage-CopyOriginalTagMenuItem-Text",
+    "method": "WorkInfoPageCopyOriginalTagMenuItemText",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkInfoPage.CopyTranslatedTagMenuItem.Text": {
+    "key": "WorkInfoPage-CopyTranslatedTagMenuItem-Text",
+    "method": "WorkInfoPageCopyTranslatedTagMenuItemText",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkSubscriptionsSettingsExpander.AddSubscriptionButton.Label": {
+    "key": "WorkSubscriptionsSettingsExpander-AddSubscriptionButton-Label",
+    "method": "WorkSubscriptionsSettingsExpanderAddSubscriptionButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkSubscriptionsSettingsExpander.SyncAllSubscriptionsButton.Label": {
+    "key": "WorkSubscriptionsSettingsExpander-SyncAllSubscriptionsButton-Label",
+    "method": "WorkSubscriptionsSettingsExpanderSyncAllSubscriptionsButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkSubscriptionsSettingsExpander.ExitConfirmation.Title": {
+    "key": "WorkSubscriptionsSettingsExpander-ExitConfirmation-Title",
+    "method": "WorkSubscriptionsSettingsExpanderExitConfirmationTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkSubscriptionsSettingsExpander.ExitConfirmation.Content": {
+    "key": "WorkSubscriptionsSettingsExpander-ExitConfirmation-Content",
+    "method": "WorkSubscriptionsSettingsExpanderExitConfirmationContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkSubscriptionsSettingsExpander.TargetIdTextBox.PlaceholderText": {
+    "key": "WorkSubscriptionsSettingsExpander-TargetIdTextBox-PlaceholderText",
+    "method": "WorkSubscriptionsSettingsExpanderTargetIdTextBoxPlaceholderText",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkSubscriptionsSettingsExpander.InvalidTargetId": {
+    "key": "WorkSubscriptionsSettingsExpander-InvalidTargetId",
+    "method": "WorkSubscriptionsSettingsExpanderInvalidTargetId",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.HomePageEntry.Header": {
+    "key": "AppSettings-HomePageEntry-Header",
+    "method": "AppSettingsHomePageEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.HomePageEntry.Description": {
+    "key": "AppSettings-HomePageEntry-Description",
+    "method": "AppSettingsHomePageEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.AutoPlayEntry.Header": {
+    "key": "AppSettings-AutoPlayEntry-Header",
+    "method": "AppSettingsAutoPlayEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.AutoPlayEntry.Description": {
+    "key": "AppSettings-AutoPlayEntry-Description",
+    "method": "AppSettingsAutoPlayEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.IllustrationLinedFlowItemHeightEntry.Description": {
+    "key": "AppSettings-IllustrationLinedFlowItemHeightEntry-Description",
+    "method": "AppSettingsIllustrationLinedFlowItemHeightEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.IllustrationLinedFlowItemHeightEntry.Header": {
+    "key": "AppSettings-IllustrationLinedFlowItemHeightEntry-Header",
+    "method": "AppSettingsIllustrationLinedFlowItemHeightEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.IllustrationGridItemSizeEntry.Description": {
+    "key": "AppSettings-IllustrationGridItemSizeEntry-Description",
+    "method": "AppSettingsIllustrationGridItemSizeEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.IllustrationGridItemSizeEntry.Header": {
+    "key": "AppSettings-IllustrationGridItemSizeEntry-Header",
+    "method": "AppSettingsIllustrationGridItemSizeEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.IllustrationGridLineSizeEntry.Description": {
+    "key": "AppSettings-IllustrationGridLineSizeEntry-Description",
+    "method": "AppSettingsIllustrationGridLineSizeEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.IllustrationGridLineSizeEntry.Header": {
+    "key": "AppSettings-IllustrationGridLineSizeEntry-Header",
+    "method": "AppSettingsIllustrationGridLineSizeEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.IllustrationMasonryColumnWidthEntry.Description": {
+    "key": "AppSettings-IllustrationMasonryColumnWidthEntry-Description",
+    "method": "AppSettingsIllustrationMasonryColumnWidthEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.IllustrationMasonryColumnWidthEntry.Header": {
+    "key": "AppSettings-IllustrationMasonryColumnWidthEntry-Header",
+    "method": "AppSettingsIllustrationMasonryColumnWidthEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.PinnedTagsEntry.Description": {
+    "key": "AppSettings-PinnedTagsEntry-Description",
+    "method": "AppSettingsPinnedTagsEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.PinnedTagsEntry.Header": {
+    "key": "AppSettings-PinnedTagsEntry-Header",
+    "method": "AppSettingsPinnedTagsEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.PinnedTagsEntry.Placeholder": {
+    "key": "AppSettings-PinnedTagsEntry-Placeholder",
+    "method": "AppSettingsPinnedTagsEntryPlaceholder",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.BlockedUsersEntry.Description": {
+    "key": "AppSettings-BlockedUsersEntry-Description",
+    "method": "AppSettingsBlockedUsersEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.BlockedUsersEntry.Header": {
+    "key": "AppSettings-BlockedUsersEntry-Header",
+    "method": "AppSettingsBlockedUsersEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.ApiRequestCooldownEntry.Header": {
+    "key": "AppSettings-ApiRequestCooldownEntry-Header",
+    "method": "AppSettingsApiRequestCooldownEntryHeader",
+    "parameters": [],
+    "formats": {}
+  },
+  "AppSettings.ApiRequestCooldownEntry.Description": {
+    "key": "AppSettings-ApiRequestCooldownEntry-Description",
+    "method": "AppSettingsApiRequestCooldownEntryDescription",
+    "parameters": [],
+    "formats": {}
+  },
+  "BlockedContent.Work": {
+    "key": "BlockedContent-Work",
+    "method": "BlockedContentWork",
+    "parameters": [],
+    "formats": {}
+  },
+  "BlockedContent.User": {
+    "key": "BlockedContent-User",
+    "method": "BlockedContentUser",
+    "parameters": [],
+    "formats": {}
+  },
+  "BlockedContent.Comment": {
+    "key": "BlockedContent-Comment",
+    "method": "BlockedContentComment",
+    "parameters": [],
+    "formats": {}
+  },
+  "BlockedContent.BlockUser": {
+    "key": "BlockedContent-BlockUser",
+    "method": "BlockedContentBlockUser",
+    "parameters": [],
+    "formats": {}
+  },
+  "BlockedContent.BlockTag": {
+    "key": "BlockedContent-BlockTag",
+    "method": "BlockedContentBlockTag",
+    "parameters": [],
+    "formats": {}
+  },
+  "BlockedUsersSettingsExpander.AddUserButton.Label": {
+    "key": "BlockedUsersSettingsExpander-AddUserButton-Label",
+    "method": "BlockedUsersSettingsExpanderAddUserButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "BlockedUsersSettingsExpander.RefreshAllButton.Label": {
+    "key": "BlockedUsersSettingsExpander-RefreshAllButton-Label",
+    "method": "BlockedUsersSettingsExpanderRefreshAllButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "BlockedUsersSettingsExpander.RefreshUserButton.Label": {
+    "key": "BlockedUsersSettingsExpander-RefreshUserButton-Label",
+    "method": "BlockedUsersSettingsExpanderRefreshUserButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "BlockedUsersSettingsExpander.DeleteUserButton.Label": {
+    "key": "BlockedUsersSettingsExpander-DeleteUserButton-Label",
+    "method": "BlockedUsersSettingsExpanderDeleteUserButtonLabel",
+    "parameters": [],
+    "formats": {}
+  },
+  "BlockedUsersSettingsExpander.TargetIdTextBox.PlaceholderText": {
+    "key": "BlockedUsersSettingsExpander-TargetIdTextBox-PlaceholderText",
+    "method": "BlockedUsersSettingsExpanderTargetIdTextBoxPlaceholderText",
+    "parameters": [],
+    "formats": {}
+  },
+  "BlockedUsersSettingsExpander.InvalidUserId": {
+    "key": "BlockedUsersSettingsExpander-InvalidUserId",
+    "method": "BlockedUsersSettingsExpanderInvalidUserId",
+    "parameters": [],
+    "formats": {}
+  },
+  "DownloadPage.RateLimitedFolderSubtitleFormatted": {
+    "key": "DownloadPage-RateLimitedFolderSubtitleFormatted",
+    "method": "DownloadPageRateLimitedFolderSubtitleFormatted",
+    "parameters": [
+      "count",
+      "retryAt"
+    ],
+    "formats": {
+      "1": "yyyy-MM-dd HH:mm:ss"
+    }
+  },
+  "EntryViewerPage.LoadingTextBlock.Text": {
+    "key": "EntryViewerPage-LoadingTextBlock-Text",
+    "method": "EntryViewerPageLoadingTextBlockText",
+    "parameters": [],
+    "formats": {}
+  },
+  "EntryViewerPage.SaveImage": {
+    "key": "EntryViewerPage-SaveImage",
+    "method": "EntryViewerPageSaveImage",
+    "parameters": [],
+    "formats": {}
+  },
+  "LoginPage.WebViewButton.Content": {
+    "key": "LoginPage-WebViewButton-Content",
+    "method": "LoginPageWebViewButtonContent",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.RateLimitNotification.Title": {
+    "key": "Misc-RateLimitNotification-Title",
+    "method": "MiscRateLimitNotificationTitle",
+    "parameters": [],
+    "formats": {}
+  },
+  "Misc.RateLimitNotification.ContentFormatted": {
+    "key": "Misc-RateLimitNotification-ContentFormatted",
+    "method": "MiscRateLimitNotificationContentFormatted",
+    "parameters": [
+      "retryAt"
+    ],
+    "formats": {
+      "0": "yyyy-MM-dd HH:mm:ss"
+    }
+  },
+  "Misc.InvertSelection": {
+    "key": "Misc-InvertSelection",
+    "method": "MiscInvertSelection",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.SearchHistory.AddPinnedTag": {
+    "key": "Search-SearchHistory-AddPinnedTag",
+    "method": "SearchSearchHistoryAddPinnedTag",
+    "parameters": [],
+    "formats": {}
+  },
+  "Search.SearchHistory.Unpin": {
+    "key": "Search-SearchHistory-Unpin",
+    "method": "SearchSearchHistoryUnpin",
+    "parameters": [],
+    "formats": {}
+  },
+  "SettingsMainView.UpdateDownloadProgressFormatted": {
+    "key": "SettingsMainView-UpdateDownloadProgressFormatted",
+    "method": "SettingsMainViewUpdateDownloadProgressFormatted",
+    "parameters": [
+      "progress"
+    ],
+    "formats": {}
+  },
+  "SettingsMainView.UpdateDownloadReadyFormatted": {
+    "key": "SettingsMainView-UpdateDownloadReadyFormatted",
+    "method": "SettingsMainViewUpdateDownloadReadyFormatted",
+    "parameters": [
+      "version"
+    ],
+    "formats": {}
+  },
+  "SettingsMainView.UpdateDownloadFailed": {
+    "key": "SettingsMainView-UpdateDownloadFailed",
+    "method": "SettingsMainViewUpdateDownloadFailed",
+    "parameters": [],
+    "formats": {}
+  },
+  "WorkSubscriptionsSettingsExpander.RemoveSubscriptionButton.Label": {
+    "key": "WorkSubscriptionsSettingsExpander-RemoveSubscriptionButton-Label",
+    "method": "WorkSubscriptionsSettingsExpanderRemoveSubscriptionButtonLabel",
+    "parameters": [],
+    "formats": {}
+  }
+}

@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Works.WorkFilterAutoSuggestBox"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:filters="using:Pixeval.Filters"
     xmlns:local="using:Pixeval"
@@ -29,7 +30,7 @@
         IsTextCompletionEnabled="False"
         ItemTemplate="{StaticResource FilterCompletionTemplate}"
         MinimumPrefixLength="0"
-        PlaceholderText="{I18N {x:Static local:WorkContainerResources+FilterAutoSuggestBox.PlaceholderText}}"
+        PlaceholderText="{CompiledBinding [WorkContainer-FilterAutoSuggestBox-PlaceholderText], Source={x:Static loc:LocalizationManager.Instance}}"
         Tapped="FilterAutoSuggestBox_OnTapped"
         TemplateApplied="FilterAutoSuggestBox_OnTemplateApplied"
         TextChanged="FilterAutoSuggestBox_OnTextChanged" />

@@ -1,9 +1,9 @@
-﻿// Copyright (c) Pixeval.
+// Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Config;
 
 namespace Pixeval.Download;
@@ -18,9 +18,9 @@ public partial record struct DownloadFolderSnapshot
 
     public string Subtitle => IsFetching
         ? RetryAt is { } retryAt && retryAt > DateTimeOffset.UtcNow
-            ? I18NManager.GetResource(DownloadPageResources.RateLimitedFolderSubtitleFormatted, (int)FetchedCount, retryAt.ToLocalTime())
-            : I18NManager.GetResource(DownloadPageResources.FetchingFolderSubtitleFormatted, (int)FetchedCount)
-        : I18NManager.GetResource(DownloadPageResources.FolderSubtitleFormatted, (int)TotalCount);
+            ? Strings.DownloadPageRateLimitedFolderSubtitleFormatted(count: (int)FetchedCount, retryAt: (retryAt.ToLocalTime()).ToString("yyyy-MM-dd HH:mm:ss", AppLocalization.Instance.CurrentCulture))
+            : Strings.DownloadPageFetchingFolderSubtitleFormatted(count: (int)FetchedCount)
+        : Strings.DownloadPageFolderSubtitleFormatted(count: (int)TotalCount);
 
     public string StateBrushKey => CurrentState switch
     {

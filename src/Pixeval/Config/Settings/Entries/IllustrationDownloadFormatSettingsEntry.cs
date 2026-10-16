@@ -10,7 +10,7 @@ using Pixeval.Config;
 using Pixeval.Controls;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.FormatProviders;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Download;
 using Pixeval.Services.Background;
 
@@ -20,10 +20,7 @@ public class IllustrationDownloadFormatSettingsEntry(DownloadFormatsSettings set
     : SingleValueSettingsEntry<DownloadFormatsSettings, object>(
         settings,
         nameof(DownloadFormatsSettings.IllustrationDownloadFormat),
-        I18NManager.GetResource(EnumResources.WorkTypeEnum.Illustration),
-        "",
-        Symbol.Image,
-        null,
+        new SettingsEntryAttribute(Symbol.Image, nameof(Strings.EnumWorkTypeEnumIllustration), null),
         static settings => new IllustrationDownloadFormatToken(settings.IllustrationDownloadFormat),
         static (settings, value) => settings.IllustrationDownloadFormat = ((IllustrationDownloadFormatToken) value).Value),
         IEnumSettingsEntry<object>
@@ -34,13 +31,15 @@ public class IllustrationDownloadFormatSettingsEntry(DownloadFormatsSettings set
     {
         var builtIns = SymbolComboBoxItem.GetValues<IllustrationDownloadFormat>()
             .Where(static t => (IllustrationDownloadFormat) t.Value is IllustrationDownloadFormat.Original)
-            .Select(t => t with { Value = IllustrationDownloadFormatToken.BuiltIn((IllustrationDownloadFormat) t.Value) });
+            .Select(t => new SymbolComboBoxItem(IllustrationDownloadFormatToken.BuiltIn((IllustrationDownloadFormat) t.Value), "", t.Symbol) { ResourceKey = t.ResourceKey });
 
         var extensionItems = extensionService
             .ActiveStaticImageFormatProviders
             .Select(t => new SymbolComboBoxItem(IllustrationDownloadFormatToken.Extension(t), t.FormatDescription, t is IEntryExtension entry ? entry.Icon : Symbol.Image));
 
-        return [.. builtIns.Concat(extensionItems)];
+        var items = builtIns.Concat(extensionItems).ToArray();
+        foreach (var item in items) item.EnableLocalization();
+        return items;
     }
 
     public override object Value

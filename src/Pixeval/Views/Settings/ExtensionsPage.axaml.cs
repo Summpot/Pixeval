@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Services.Background;
 using Pixeval.Utilities;
 
@@ -32,7 +32,7 @@ public partial class ExtensionsPage : IconContentPage
         {
             _firstTime = false;
             this.Notifications.ShowWarning(
-                I18NManager.GetResource(ExtensionsPageResources.SomeExtensionsOutdatedFormatted, count));
+                Strings.ExtensionsPageSomeExtensionsOutdatedFormatted(count: count));
         }
     }
 
@@ -43,7 +43,7 @@ public partial class ExtensionsPage : IconContentPage
     {
                 if (ExtensionService.NativeLibraryExtension is not { } extension)
         {
-            this.Notifications.ShowError(I18NManager.GetResource(ExtensionsPageResources.PlatformNotSupportExtensions));
+            this.Notifications.ShowError(Strings.ExtensionsPagePlatformNotSupportExtensions());
             return;
         }
 
@@ -71,7 +71,7 @@ public partial class ExtensionsPage : IconContentPage
                 if (installResult.InstalledHostLibraries.Count is 0)
                 {
                     this.Notifications.ShowWarning(
-                        I18NManager.GetResource(ExtensionsPageResources.ZipContainsNoExtension), fileName);
+                        Strings.ExtensionsPageZipContainsNoExtension(), fileName);
                     continue;
                 }
 
@@ -82,7 +82,7 @@ public partial class ExtensionsPage : IconContentPage
             }
             catch (Exception ex)
             {
-                this.Notifications.ShowError(I18NManager.GetResource(ExtensionsPageResources.ExtensionLoadFailed),
+                this.Notifications.ShowError(Strings.ExtensionsPageExtensionLoadFailed(),
                     $"{fileName}: {ex.Message}");
             }
         }
@@ -98,19 +98,19 @@ public partial class ExtensionsPage : IconContentPage
                 if (result is ExtensionHostLoadResult.Loaded)
                 {
                     this.Notifications.ShowSuccess(
-                        I18NManager.GetResource(ExtensionsPageResources.ExtensionLoadedSuccessfully), fileName);
+                        Strings.ExtensionsPageExtensionLoadedSuccessfully(), fileName);
                     return;
                 }
 
                 this.Notifications.ShowError(
                     outdatedVersion is null
-                        ? I18NManager.GetResource(ExtensionsPageResources.ExtensionLoadFailed)
-                        : I18NManager.GetResource(ExtensionsPageResources.ExtensionOutdatedFormatted, outdatedVersion),
+                        ? Strings.ExtensionsPageExtensionLoadFailed()
+                        : Strings.ExtensionsPageExtensionOutdatedFormatted(version: outdatedVersion),
                     fileName);
             }
             catch (Exception ex)
             {
-                this.Notifications.ShowError(I18NManager.GetResource(ExtensionsPageResources.ExtensionLoadFailed),
+                this.Notifications.ShowError(Strings.ExtensionsPageExtensionLoadFailed(),
                     $"{fileName}: {ex.Message}");
             }
         }
@@ -125,14 +125,14 @@ public partial class ExtensionsPage : IconContentPage
         {
             if (ExtensionService.CancelHostUninstall(model))
                 this.Notifications.ShowInformation(
-                    I18NManager.GetResource(ExtensionsPageResources.ExtensionPendingUninstallCancelled),
+                    Strings.ExtensionsPageExtensionPendingUninstallCancelled(),
                     model.Name);
             return;
         }
 
         if (ExtensionService.ScheduleHostUninstall(model))
             this.Notifications.ShowInformation(
-                I18NManager.GetResource(ExtensionsPageResources.ExtensionWillUninstallOnNextStartup),
+                Strings.ExtensionsPageExtensionWillUninstallOnNextStartup(),
                 model.Name);
     }
 
@@ -140,17 +140,16 @@ public partial class ExtensionsPage : IconContentPage
     {
         var count = ExtensionService.ScheduleAllHostUninstalls();
         this.Notifications.ShowInformation(count is 0
-            ? I18NManager.GetResource(ExtensionsPageResources.NoExtensionsToUninstall)
-            : I18NManager.GetResource(ExtensionsPageResources.MarkedExtensionsPendingUninstallFormatted, count));
+            ? Strings.ExtensionsPageNoExtensionsToUninstall()
+            : Strings.ExtensionsPageMarkedExtensionsPendingUninstallFormatted(count: count));
     }
 
     private void UninstallOutdatedExtensionsOnClick(object? sender, RoutedEventArgs e)
     {
         var count = ExtensionService.ScheduleOutdatedHostUninstalls();
         this.Notifications.ShowInformation(count is 0
-            ? I18NManager.GetResource(ExtensionsPageResources.NoOutdatedExtensionsToUninstall)
-            : I18NManager.GetResource(ExtensionsPageResources.MarkedOutdatedExtensionsPendingUninstallFormatted,
-                count));
+            ? Strings.ExtensionsPageNoOutdatedExtensionsToUninstall()
+            : Strings.ExtensionsPageMarkedOutdatedExtensionsPendingUninstallFormatted(count: count));
     }
 
     private void OpenExtensionsOnClick(object? sender, RoutedEventArgs e)

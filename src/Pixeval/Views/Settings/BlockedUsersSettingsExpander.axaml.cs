@@ -10,7 +10,7 @@ using AutoSettingsPage.Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using CommunityToolkit.Avalonia.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Config;
 using Pixeval.Storage;
 using Pixeval.Utilities;
@@ -67,7 +67,7 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
         HideError();
         if (!long.TryParse(TargetIdTextBox.Text, out var userId) || userId <= 0)
         {
-            ShowError(I18NManager.GetResource(BlockedUsersSettingsExpanderResources.InvalidUserId));
+            ShowError(Strings.BlockedUsersSettingsExpanderInvalidUserId());
             return;
         }
 

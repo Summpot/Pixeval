@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Settings.NavigationSettingsPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:common="using:FluentIcons.Common"
     xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:controls1="using:Pixeval.Controls"
@@ -17,7 +18,7 @@
     xmlns:core="using:Pixeval.Services.Core"
     xmlns:common2="using:Pixeval.Common"
     x:DataType="{x:Type settings:NavigationSettingsPage}"
-    Header="{I18N {x:Static pixeval:MainPageResources+Tab.NavigationSettings}}"
+    Header="{CompiledBinding [MainPage-Tab-NavigationSettings], Source={x:Static loc:LocalizationManager.Instance}}"
     mc:Ignorable="d"
     d:DesignHeight="720"
     d:DesignWidth="1100">
@@ -27,23 +28,23 @@
                 x:Name="CanApplyButton"
                 Click="ApplyButton_OnClicked"
                 Icon="{markup:SymbolIcon Checkmark}"
-                Label="{I18N {x:Static pixeval:NavigationSettingsPageResources+ApplyButton.Content}}"
-                ToolTip.Tip="{I18N {x:Static pixeval:NavigationSettingsPageResources+ApplyButton.ToolTip}}" />
+                Label="{CompiledBinding [NavigationSettingsPage-ApplyButton-Content], Source={x:Static loc:LocalizationManager.Instance}}"
+                ToolTip.Tip="{CompiledBinding [NavigationSettingsPage-ApplyButton-ToolTip], Source={x:Static loc:LocalizationManager.Instance}}" />
             <CommandBarButton
                 Click="FormatButton_OnClicked"
                 Icon="{markup:SymbolIcon TextNumberFormat}"
-                Label="{I18N {x:Static pixeval:NavigationSettingsPageResources+FormatButton.Content}}"
-                ToolTip.Tip="{I18N {x:Static pixeval:NavigationSettingsPageResources+FormatButton.ToolTip}}" />
+                Label="{CompiledBinding [NavigationSettingsPage-FormatButton-Content], Source={x:Static loc:LocalizationManager.Instance}}"
+                ToolTip.Tip="{CompiledBinding [NavigationSettingsPage-FormatButton-ToolTip], Source={x:Static loc:LocalizationManager.Instance}}" />
             <CommandBarButton
                 Click="ResetButton_OnClicked"
                 Icon="{markup:SymbolIcon ArrowReset}"
-                Label="{I18N {x:Static pixeval:NavigationSettingsPageResources+ResetButton.Content}}"
-                ToolTip.Tip="{I18N {x:Static pixeval:NavigationSettingsPageResources+ResetButton.ToolTip}}" />
+                Label="{CompiledBinding [NavigationSettingsPage-ResetButton-Content], Source={x:Static loc:LocalizationManager.Instance}}"
+                ToolTip.Tip="{CompiledBinding [NavigationSettingsPage-ResetButton-ToolTip], Source={x:Static loc:LocalizationManager.Instance}}" />
             <CommandBarButton
                 Click="InsertFolderButton_OnClicked"
                 Icon="{markup:SymbolIcon DocumentFolder}"
-                Label="{I18N {x:Static pixeval:NavigationSettingsPageResources+InsertFolderButton.Content}}"
-                ToolTip.Tip="{I18N {x:Static pixeval:NavigationSettingsPageResources+InsertFolderButton.ToolTip}}" />
+                Label="{CompiledBinding [NavigationSettingsPage-InsertFolderButton-Content], Source={x:Static loc:LocalizationManager.Instance}}"
+                ToolTip.Tip="{CompiledBinding [NavigationSettingsPage-InsertFolderButton-ToolTip], Source={x:Static loc:LocalizationManager.Instance}}" />
         </CommandBar>
     </NavigationPage.TopCommandBar>
     <Grid
@@ -78,7 +79,7 @@
             Grid.RowSpan="2"
             Grid.Column="1">
             <StackPanel Spacing="12">
-                <controls:SettingsExpander Header="{I18N {x:Static pixeval:NavigationSettingsPageResources+ReferencePages.Header}}" HeaderIcon="{markup:SymbolIcon DocumentBulletList}">
+                <controls:SettingsExpander Header="{CompiledBinding [NavigationSettingsPage-ReferencePages-Header], Source={x:Static loc:LocalizationManager.Instance}}" HeaderIcon="{markup:SymbolIcon DocumentBulletList}">
                     <controls:SettingsExpander.Items>
                         <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
                             <ItemsControl ItemsSource="{x:Static core:NavigationPageRegistry.Pages}">
@@ -107,7 +108,7 @@
                         </controls:SettingsCard>
                     </controls:SettingsExpander.Items>
                 </controls:SettingsExpander>
-                <controls:SettingsExpander Header="{I18N {x:Static pixeval:NavigationSettingsPageResources+ReferenceIcons.Header}}" HeaderIcon="{markup:SymbolIcon Icons}">
+                <controls:SettingsExpander Header="{CompiledBinding [NavigationSettingsPage-ReferenceIcons-Header], Source={x:Static loc:LocalizationManager.Instance}}" HeaderIcon="{markup:SymbolIcon Icons}">
                     <controls:SettingsExpander.Items>
                         <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
                             <ItemsControl ItemsSource="{x:Static core:NavigationPageRegistry.ColorSymbols}">

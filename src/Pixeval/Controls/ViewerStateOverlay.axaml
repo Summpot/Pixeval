@@ -1,6 +1,7 @@
 <ResourceDictionary
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:pixeval="using:Pixeval">
     <ControlTheme x:Key="{x:Type controls:ViewerStateOverlay}" TargetType="{x:Type controls:ViewerStateOverlay}">
@@ -16,7 +17,7 @@
                             VerticalAlignment="Center"
                             Spacing="10">
                             <ProgressBar Width="160" IsIndeterminate="{TemplateBinding IsLoading}" />
-                            <TextBlock Text="{I18N {x:Static pixeval:EntryViewerPageResources+LoadingTextBlock.Text}}" />
+                            <TextBlock Text="{CompiledBinding [EntryViewerPage-LoadingTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                         </StackPanel>
                     </Border>
                     <Border Background="{TemplateBinding Background}" IsVisible="{TemplateBinding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">

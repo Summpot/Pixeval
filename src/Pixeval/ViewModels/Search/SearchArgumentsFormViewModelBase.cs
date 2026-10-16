@@ -3,13 +3,13 @@
 
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Pixeval.I18N;
+using Pixeval.Localization;
 
 namespace Pixeval.ViewModels.Search;
 
 public abstract partial class SearchArgumentsFormViewModelBase : ViewModelBase
 {
-    public static readonly string CommonUnspecified = I18NManager.GetResource(SearchResources.Common.Unspecified);
+    public static string CommonUnspecified => Strings.SearchCommonUnspecified();
 
     private readonly IUserSessionService? _userSession;
 
@@ -45,8 +45,8 @@ public abstract partial class SearchArgumentsFormViewModelBase : ViewModelBase
 
         if (startDate > endDate || startDate > japanToday || endDate > japanToday)
         {
-            title = I18NManager.GetResource(SearchResources.Validation.InvalidDateRange.Title);
-            content = I18NManager.GetResource(SearchResources.Validation.InvalidDateRange.Content);
+            title = Strings.SearchValidationInvalidDateRangeTitle();
+            content = Strings.SearchValidationInvalidDateRangeContent();
             return false;
         }
 
@@ -54,8 +54,8 @@ public abstract partial class SearchArgumentsFormViewModelBase : ViewModelBase
         if (!isPremium
             && SortOption is WorkSortOption.PopularityDescending)
         {
-            title = I18NManager.GetResource(SearchResources.Validation.PremiumSort.Title);
-            content = I18NManager.GetResource(SearchResources.Validation.PremiumSort.Content);
+            title = Strings.SearchValidationPremiumSortTitle();
+            content = Strings.SearchValidationPremiumSortContent();
             return false;
         }
 

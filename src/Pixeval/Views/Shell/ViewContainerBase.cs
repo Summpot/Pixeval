@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 
 namespace Pixeval.Views.Shell;
 
@@ -33,8 +33,8 @@ public abstract class ViewContainerBase : ContentControl
         {
             Title = title,
             Content = content,
-            PrimaryButtonText = I18NManager.GetResource(ContentDialogResources.OkButtonContent),
-            CloseButtonText = I18NManager.GetResource(ContentDialogResources.CancelButtonContent),
+            PrimaryButtonText = Strings.ContentDialogOkButtonContent(),
+            CloseButtonText = Strings.ContentDialogCancelButtonContent(),
             DefaultButton = ContentDialogButton.Primary
         });
 
@@ -43,7 +43,7 @@ public abstract class ViewContainerBase : ContentControl
         {
             Title = title,
             Content = content,
-            PrimaryButtonText = I18NManager.GetResource(ContentDialogResources.OkButtonContent),
+            PrimaryButtonText = Strings.ContentDialogOkButtonContent(),
             DefaultButton = ContentDialogButton.Primary
         });
 
@@ -56,7 +56,7 @@ public abstract class ViewContainerBase : ContentControl
             {
                 IsIndeterminate = true
             },
-            PrimaryButtonText = I18NManager.GetResource(ContentDialogResources.OkButtonContent),
+            PrimaryButtonText = Strings.ContentDialogOkButtonContent(),
             DefaultButton = ContentDialogButton.Primary
         };
         _ = updateAsync(contentDialog);
