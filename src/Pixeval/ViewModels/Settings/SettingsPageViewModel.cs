@@ -419,8 +419,8 @@ public partial class SettingsPageViewModel : ViewModelBase
             case ClearDataKind.DownloadHistory:
                 var storage = _serviceProvider.GetRequiredService<StorageEngine>();
                 _downloadManager.ClearTasks();
-                storage.ClearDownloadHistory();
-                storage.ClearSubscriptionDownloadHistory();
+                storage.DownloadRepository.ClearDownloadHistory();
+                storage.DownloadRepository.ClearSubscriptionDownloadHistory();
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, null);

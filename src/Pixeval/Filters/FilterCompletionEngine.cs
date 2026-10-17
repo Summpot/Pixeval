@@ -13,7 +13,7 @@ public sealed class StorageFilterProvider(StorageEngine storage) : IFilterStorag
 {
     public List<TagCandidate> QuerySearchHistoryTags(string pattern, uint limit)
     {
-        return storage.QuerySearchHistorySuggestions(pattern, limit)
+        return storage.HistoryRepository.QuerySearchHistorySuggestions(pattern, limit)
             .Select(r => new TagCandidate(r.Value, r.TranslatedName))
             .ToList();
     }

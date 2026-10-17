@@ -771,7 +771,7 @@ impl McpToolRegistry {
 
                 match hist_type {
                     "Search" => {
-                        let entries = self.storage.stream_search_histories(skip, count).unwrap_or_default();
+                        let entries = self.storage.history().stream_search_histories(skip, count).unwrap_or_default();
                         let list: Vec<_> = entries
                             .into_iter()
                             .map(|e| {
@@ -786,7 +786,7 @@ impl McpToolRegistry {
                         CallToolResult::json(&list)
                     }
                     _ => {
-                        let entries = self.storage.stream_browse_history(skip, count).unwrap_or_default();
+                        let entries = self.storage.history().stream_browse_history(skip, count).unwrap_or_default();
                         let list: Vec<_> = entries
                             .into_iter()
                             .map(|e| {
@@ -1659,12 +1659,12 @@ impl McpToolRegistry {
                 let work_key = format!("{work_type}:{id}");
 
                 if watch_later {
-                    match self.storage.add_or_replace_watch_later(id.to_string(), None, work_key.clone(), "{}".to_string()) {
+                    match self.storage.watch_later().add_or_replace_watch_later(id.to_string(), None, work_key.clone(), "{}".to_string()) {
                         Ok(_) => CallToolResult::text(format!("Work {id} added to watch-later list.")),
                         Err(e) => CallToolResult::error(format!("Failed to update watch-later: {e}")),
                     }
                 } else {
-                    match self.storage.remove_watch_later(work_key) {
+                    match self.storage.watch_later().remove_watch_later(work_key) {
                         Ok(_) => CallToolResult::text(format!("Work {id} removed from watch-later list.")),
                         Err(e) => CallToolResult::error(format!("Failed to remove from watch-later: {e}")),
                     }

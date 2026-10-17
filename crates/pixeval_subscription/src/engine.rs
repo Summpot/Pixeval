@@ -646,6 +646,7 @@ impl SubscriptionSyncEngine {
                         .any(|path| std::path::Path::new(path).is_file());
 
                     let is_dup = storage
+                        .download()
                         .contains_subscription_download_identity(
                             history_id,
                             novel.id.to_string(),
@@ -754,6 +755,7 @@ impl SubscriptionSyncEngine {
                         .any(|path| std::path::Path::new(path).is_file());
 
                     let is_dup = storage
+                        .download()
                         .contains_subscription_download_identity(
                             history_id,
                             illust.id.to_string(),

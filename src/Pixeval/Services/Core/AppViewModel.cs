@@ -190,7 +190,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
     {
         try
         {
-            var searches = await Task.Run(() => StorageEngine.StreamSearchHistories(0, 50));
+            var searches = await Task.Run(() => StorageEngine.HistoryRepository.StreamSearchHistories(0, 50));
             foreach (var s in searches)
                 SearchHistoryEntries.Add(s);
 
@@ -234,8 +234,8 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
     public void ClearDownloadHistories()
     {
         DownloadManager.ClearTasks();
-        StorageEngine.ClearDownloadHistory();
-        StorageEngine.ClearSubscriptionDownloadHistory();
+        StorageEngine.DownloadRepository.ClearDownloadHistory();
+        StorageEngine.DownloadRepository.ClearSubscriptionDownloadHistory();
     }
 
     public Task RemoveWorkSubscriptionDownloadsAsync(long workSubscriptionId)

@@ -344,7 +344,7 @@ impl DownloadManager {
             }
         }
         if let Some(storage) = self.storage.read().clone() {
-            let _ = storage.delete_subscription_downloads_by_work_subscription_id(subscription_id);
+            let _ = storage.download().delete_subscription_downloads_by_work_subscription_id(subscription_id);
         }
         let _ = removed;
         self.publish(true);
@@ -476,7 +476,7 @@ impl DownloadManager {
         };
         let state = state_code(persist.state);
         if persist.subscription_id == 0 {
-            let _ = storage.add_or_replace_download_history(
+            let _ = storage.download().add_or_replace_download_history(
                 persist.artwork_id.clone(),
                 Some(persist.serialize_key.clone()),
                 persist.destination.clone(),
@@ -486,7 +486,7 @@ impl DownloadManager {
                 persist.payload_json.clone(),
             );
         } else {
-            let _ = storage.add_or_replace_subscription_download_history(
+            let _ = storage.download().add_or_replace_subscription_download_history(
                 persist.artwork_id.clone(),
                 Some(persist.serialize_key.clone()),
                 persist.destination.clone(),
@@ -506,9 +506,9 @@ impl DownloadManager {
         };
         let state = state_code(persist.state);
         if persist.subscription_id == 0 {
-            let _ = storage.update_download_history_state(persist.destination.clone(), state, persist.error.clone());
+            let _ = storage.download().update_download_history_state(persist.destination.clone(), state, persist.error.clone());
         } else {
-            let _ = storage.update_subscription_download_history_state(
+            let _ = storage.download().update_subscription_download_history_state(
                 persist.subscription_id,
                 persist.artwork_id.clone(),
                 persist.destination.clone(),
@@ -523,9 +523,9 @@ impl DownloadManager {
             return;
         };
         if persist.subscription_id == 0 {
-            let _ = storage.try_delete_download_history_by_destination(persist.destination.clone());
+            let _ = storage.download().try_delete_download_history_by_destination(persist.destination.clone());
         } else {
-            let _ = storage.try_delete_subscription_download_by_identity(
+            let _ = storage.download().try_delete_subscription_download_by_identity(
                 persist.subscription_id,
                 persist.artwork_id.clone(),
                 persist.destination.clone(),
@@ -600,7 +600,7 @@ fn load_history(storage: &StorageEngine) -> Vec<HistoryRow> {
     let mut rows = Vec::new();
     let mut cursor = None;
     loop {
-        let Ok(page) = storage.stream_download_history_cursor(cursor, 200) else {
+        let Ok(page) = storage.download().stream_download_history_cursor(cursor, 200) else {
             break;
         };
         if page.is_empty() {
@@ -620,7 +620,7 @@ fn load_subscription_history(storage: &StorageEngine) -> Vec<(SubscriptionDownlo
     let mut rows = Vec::new();
     let mut cursor = None;
     loop {
-        let Ok(page) = storage.stream_subscription_download_history_cursor(cursor, 200) else {
+        let Ok(page) = storage.download().stream_subscription_download_history_cursor(cursor, 200) else {
             break;
         };
         if page.is_empty() {
@@ -1580,7 +1580,7 @@ mod tests {
         let destination = manager.enqueue_external_image(request(&path, "Kept", "8", 0));
         let snapshot = wait_completed(&manager, 1);
         assert_eq!(snapshot.ordinary_items[0].state, DownloadState::Completed);
-        let row = storage.get_download_history_by_destination(destination.clone()).unwrap().unwrap();
+        let row = storage.download().get_download_history_by_destination(destination.clone()).unwrap().unwrap();
         assert_eq!(row.state, state_code(DownloadState::Completed));
 
         let restored = DownloadManager::new(1, None, None);
