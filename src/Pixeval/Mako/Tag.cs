@@ -3,7 +3,7 @@
 
 namespace Pixeval.Mako;
 
-public partial record Tag
+public partial record struct Tag
 {
     public string Description => ToolTip;
 

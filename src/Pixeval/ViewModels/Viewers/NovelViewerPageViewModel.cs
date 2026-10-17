@@ -10,9 +10,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 using Pixeval.Utilities;
@@ -24,6 +23,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
     private readonly MakoClient _makoClient;
     private readonly AppSettings _appSettings;
     private readonly StorageEngine _storageEngine;
+    private readonly IBlockedContentService? _blockedContent;
 
     private readonly Dictionary<int, Mako.Novel> _refreshedNovels = [];
 
@@ -43,13 +43,15 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
     public NovelViewerPageViewModel(
         Mako.Novel novelViewModel,
         bool needRefresh,
-        MakoClient? makoClient = null,
-        AppSettings? appSettings = null,
-        StorageEngine? storageEngine = null)
+        MakoClient makoClient,
+        AppSettings appSettings,
+        StorageEngine storageEngine,
+        IBlockedContentService? blockedContent = null)
     {
-        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
-        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
-        _storageEngine = storageEngine ?? App.Services!.GetRequiredService<StorageEngine>();
+        _makoClient = makoClient;
+        _appSettings = appSettings;
+        _storageEngine = storageEngine;
+        _blockedContent = blockedContent;
         _needRefresh = needRefresh;
         CurrentNovel = novelViewModel;
         CurrentWorkIndex = 0;
@@ -57,13 +59,15 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
     public NovelViewerPageViewModel(
         long id,
-        MakoClient? makoClient = null,
-        AppSettings? appSettings = null,
-        StorageEngine? storageEngine = null)
+        MakoClient makoClient,
+        AppSettings appSettings,
+        StorageEngine storageEngine,
+        IBlockedContentService? blockedContent = null)
     {
-        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
-        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
-        _storageEngine = storageEngine ?? App.Services!.GetRequiredService<StorageEngine>();
+        _makoClient = makoClient;
+        _appSettings = appSettings;
+        _storageEngine = storageEngine;
+        _blockedContent = blockedContent;
         _ = LoadSingleNovelAsync(id, _loadingCts.Token);
     }
 
@@ -71,13 +75,15 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         IReadOnlyList<Mako.Novel> novels,
         int currentNovelIndex,
         bool needRefresh,
-        MakoClient? makoClient = null,
-        AppSettings? appSettings = null,
-        StorageEngine? storageEngine = null)
+        MakoClient makoClient,
+        AppSettings appSettings,
+        StorageEngine storageEngine,
+        IBlockedContentService? blockedContent = null)
     {
-        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
-        _appSettings = appSettings ?? App.Services!.GetRequiredService<AppSettings>();
-        _storageEngine = storageEngine ?? App.Services!.GetRequiredService<StorageEngine>();
+        _makoClient = makoClient;
+        _appSettings = appSettings;
+        _storageEngine = storageEngine;
+        _blockedContent = blockedContent;
         _needRefresh = needRefresh;
         _novels = novels;
         CurrentWorkIndex = currentNovelIndex;
@@ -112,7 +118,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
     public ArtworkUiState? CurrentUiState => CurrentNovel is { } nov ? ArtworkUiStateStore.GetOrCreate(nov) : null;
 
-    public long NovelId => CurrentNovel?.Id ?? 0;
+    public long NovelId => CurrentNovel is { Id: var id } ? id : 0;
 
     public override int CurrentWorkIndex
     {
@@ -192,9 +198,13 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
     public bool IsMultiPage => PageCount > 1;
 
-    public string CurrentMarkdown => PageCount is 0 ? "" : _pageMarkdowns[CurrentPageIndex];
+    public string CurrentMarkdown => CurrentNovel is { } novel && BlockedContentHelper.IsBlockedPlaceholder(novel)
+        ? Strings.BlockedContentWork()
+        : PageCount is 0 ? "" : _pageMarkdowns[CurrentPageIndex];
 
     #region Settings
+
+    internal AppSettings AppSettings => _appSettings;
 
     private AppSettings Settings => _appSettings;
 
@@ -260,18 +270,19 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             if (currentNovel is null || index != CurrentWorkIndex || _disposed)
                 return;
 
-            if (BlockedContentHelper.IsBlockedPlaceholder(currentNovel))
-                _pageMarkdowns = [I18NManager.GetResource(BlockedContentResources.Work)];
+            var novel = currentNovel.Value;
+            if (BlockedContentHelper.IsBlockedPlaceholder(novel))
+                _pageMarkdowns = [Strings.BlockedContentWork()];
             else
             {
-                SeriesInfo = WorkSeriesInfoViewModel.Create(currentNovel, SimpleWorkType.Novel);
-                var content = await _makoClient.GetNovelContentStructuredAsync(currentNovel.Id);
+                SeriesInfo = WorkSeriesInfoViewModel.Create(novel, SimpleWorkKind.Novel);
+                var content = await _makoClient.GetNovelContentStructuredAsync(novel.Id);
                 token.ThrowIfCancellationRequested();
                 if (index != CurrentWorkIndex || _disposed)
                     return;
 
-                SeriesInfo = WorkSeriesInfoViewModel.Create(content, currentNovel.Series);
-                _storageEngine.HistoryRepository.AddBrowseHistory(currentNovel);
+                SeriesInfo = WorkSeriesInfoViewModel.Create(content, novel.Series);
+                _storageEngine.HistoryRepository.AddBrowseHistory(novel);
                 var markdowns = await Task.Run(() => BuildPageMarkdowns(content), token);
                 token.ThrowIfCancellationRequested();
                 if (index != CurrentWorkIndex || _disposed)
@@ -291,12 +302,12 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
                         try
                         {
                             var markers = await _makoClient.GetNovelMarkersAsync();
-                            var match = markers.MarkedNovels.FirstOrDefault(x => x.Novel.Id == currentNovel.Id);
+                            var match = markers.MarkedNovels.FirstOrDefault(x => x.Novel.Id == novel.Id);
                             if (match is { NovelMarker: { Page: > 0 and var page } } && page <= _pageMarkdowns.Count)
                             {
                                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
                                 {
-                                    if (!_disposed && CurrentNovel?.Id == currentNovel.Id && CurrentPageIndex == 0)
+                                    if (!_disposed && CurrentNovel is { Id: var curId } && curId == novel.Id && CurrentPageIndex == 0)
                                     {
                                         _suppressMarkerSync = true;
                                         CurrentPageIndex = page - 1;
@@ -382,8 +393,8 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         LoadErrorMessage = null;
         try
         {
-            var novel = BlockedContentHelper.Replace(
-                await _makoClient.GetNovelFromIdAsync(id, token));
+            var loaded = await _makoClient.GetNovelAsync(id, token);
+            var novel = _blockedContent?.Replace(loaded) ?? loaded;
             token.ThrowIfCancellationRequested();
             onLoaded(novel);
             return novel;

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Booru;
 using Pixeval.Mako;
@@ -42,8 +42,8 @@ public static class WorkContainerBatchOperations
         };
 
         var type = target is Mako.Novel || viewModel is NovelViewViewModel or SimpleOperableViewViewModel<Mako.Novel>
-            ? SimpleWorkType.Novel
-            : SimpleWorkType.Illustration;
+            ? SimpleWorkKind.Novel
+            : SimpleWorkKind.Illustration;
 
         await BookmarkTagSelectorFlyoutHelper.ShowAsync(
             placementTarget,
@@ -64,8 +64,8 @@ public static class WorkContainerBatchOperations
 
         if (target is IWorkEntry workTarget)
         {
-            await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(workTarget, options.IsPrivate, options.Tags));
-            notifications.ShowSuccess(I18NManager.GetResource(MiscResources.AddedToBookmark));
+            await sourceControl.GetRequiredUiService<WorkCommands>().AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(workTarget, options.IsPrivate, options.Tags));
+            notifications.ShowSuccess(Strings.MiscAddedToBookmark());
             return;
         }
 
@@ -74,18 +74,18 @@ public static class WorkContainerBatchOperations
 
         if (viewModel.SelectedEntries.Count >= 20
             && await dialogs.CreateOkCancelAsync(
-                I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.ForBookmarkTitle),
-                I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.Content)) is not ContentDialogResult.Primary)
+                Strings.WorkContainerSelectedTooManyItemsForBookmarkTitle(),
+                Strings.WorkContainerSelectedTooManyItemsContent()) is not ContentDialogResult.Primary)
             return;
 
         foreach (var i in viewModel.SelectedEntries)
         {
             if (i is IWorkEntry work)
-                await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(work, options.IsPrivate, options.Tags));
+                await sourceControl.GetRequiredUiService<WorkCommands>().AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(work, options.IsPrivate, options.Tags));
         }
 
         if (viewModel.SelectedEntries.Count is var c and > 0)
-            notifications.ShowSuccess(I18NManager.GetResource(WorkContainerResources.AddedAllToBookmarkContentFormatted, c));
+            notifications.ShowSuccess(Strings.WorkContainerAddedAllToBookmarkContentFormatted(count: c));
     }
 
     public static async Task SaveAllAsync(Control sourceControl, IOperableViewViewModel? viewModel)
@@ -95,15 +95,15 @@ public static class WorkContainerBatchOperations
 
         if (viewModel.SelectedEntries.Count >= 20
             && await sourceControl.Dialogs.CreateOkCancelAsync(
-                I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.ForSaveTitle),
-                I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.Content)) is not ContentDialogResult.Primary)
+                Strings.WorkContainerSelectedTooManyItemsForSaveTitle(),
+                Strings.WorkContainerSelectedTooManyItemsContent()) is not ContentDialogResult.Primary)
             return;
 
         foreach (var i in viewModel.SelectedEntries)
-            WorkCommands.SaveCommand.Execute(i);
+            sourceControl.GetRequiredUiService<WorkCommands>().SaveCommand.Execute(i);
 
         sourceControl.Notifications.ShowInformation(
-            I18NManager.GetResource(WorkContainerResources.DownloadItemsQueuedFormatted, viewModel.SelectedEntries.Count));
+            Strings.WorkContainerDownloadItemsQueuedFormatted(count: viewModel.SelectedEntries.Count));
     }
 
     public static async Task OpenAllInBrowserAsync(Control sourceControl, IOperableViewViewModel? viewModel)
@@ -113,8 +113,8 @@ public static class WorkContainerBatchOperations
 
         if (viewModel.SelectedEntries.Count > 15
             && await sourceControl.Dialogs.CreateOkCancelAsync(
-                I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.ForOpenInBrowser.Title),
-                I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.ForOpenInBrowser.Content)) is not ContentDialogResult.Primary)
+                Strings.WorkContainerSelectedTooManyItemsForOpenInBrowserTitle(),
+                Strings.WorkContainerSelectedTooManyItemsForOpenInBrowserContent()) is not ContentDialogResult.Primary)
             return;
 
         foreach (var selectedEntry in viewModel.SelectedEntries)

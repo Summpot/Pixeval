@@ -52,7 +52,7 @@ public partial class WorkBookmarksPage : IconContentPage
         AddSubscriptionCommand = new AsyncRelayCommand(AddSubscriptionAsync);
         RemoveSubscriptionCommand = new AsyncRelayCommand(RemoveSubscriptionAsync);
         InitializeComponent();
-        Configure(SimpleWorkType.Illustration, PrivacyPolicy.Public, null);
+        Configure(SimpleWorkKind.Illustration, PrivacyRestrict.Public, null);
     }
 
     public WorkBookmarksPage(
@@ -63,14 +63,14 @@ public partial class WorkBookmarksPage : IconContentPage
         StorageEngine storage,
         IUserSessionService session,
         FileLogger logger)
-        : this(user, settings.SearchSettings.DefaultSimpleWorkType, PrivacyPolicy.Public, null, client, subscriptions, storage, session, logger)
+        : this(user, settings.SearchSettings.DefaultSimpleWorkType, PrivacyRestrict.Public, null, client, subscriptions, storage, session, logger)
     {
     }
 
     public WorkBookmarksPage(
         User user,
-        SimpleWorkType simpleWorkType,
-        PrivacyPolicy privacyPolicy,
+        SimpleWorkKind simpleWorkType,
+        PrivacyRestrict privacyPolicy,
         string? tag,
         MakoClient client,
         IWorkSubscriptionService subscriptions,
@@ -117,7 +117,7 @@ public partial class WorkBookmarksPage : IconContentPage
         return _client is not null && _subscriptions is not null && _storage is not null && _session is not null && _logger is not null;
     }
 
-    private void Configure(SimpleWorkType simpleWorkType, PrivacyPolicy privacyPolicy, IWorkViewViewModel? viewModel)
+    private void Configure(SimpleWorkKind simpleWorkType, PrivacyRestrict privacyPolicy, IWorkViewViewModel? viewModel)
     {
         _suppressChangeSource = true;
         SimpleWorkTypeComboBox.SelectedValue = simpleWorkType;
@@ -205,12 +205,12 @@ public partial class WorkBookmarksPage : IconContentPage
         {
             var tags = await _client!.GetBookmarkTagsAsync(
                 _user.Id,
-                SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>(),
-                PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>());
+                SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>(),
+                PrivacyPolicyComboBox.GetSelectedValue<PrivacyRestrict>());
 
             _suppressChangeSource = true;
             TagComboBox.ItemsSource = tags;
-            TagComboBox.SelectedItem = tags.FirstOrDefault(tag => tag.Name == _initialTag) ?? AllBookmarkTag.Instance;
+            TagComboBox.SelectedItem = tags.Cast<BookmarkTag?>().FirstOrDefault(tag => tag!.Value.Name == _initialTag) ?? AllBookmarkTag.Instance;
             _suppressChangeSource = false;
         }
         catch (Exception ex)
@@ -227,23 +227,18 @@ public partial class WorkBookmarksPage : IconContentPage
     {
         if (_user.Id <= 0)
         {
-            WorkContainer.ResetEngine(AsyncEnumerable.Empty<IWorkEntry>().ToFetchEngine());
+            WorkContainer.ResetSource(AsyncEnumerable.Empty<object>(), SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>());
             UpdateSubscriptionButtons();
             return;
         }
 
-        var tag = (TagComboBox.SelectedItem as BookmarkTag)?.Name;
-        var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
-        var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>() is PrivacyPolicy.Private ? "private" : "public";
-        var engine = (workType is SimpleWorkType.Novel
-            ? (IAsyncEnumerable<IWorkEntry>) _client!.NovelBookmarks(_user.Id, privacy, tag)
-            : _client!.WorkBookmarks(_user.Id, privacy, tag)).ToFetchEngine();
-        WorkContainer.ResetEngine(engine);
-        _subscriptions!.QueueSyncCurrentSource(
-            _user.Id,
-            WorkSubscriptionType.Bookmarks,
-            GetSubscriptionWorkKind(),
-            engine);
+        var tag = (TagComboBox.SelectedItem as IBookmarkTag)?.Name;
+        var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>();
+        var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyRestrict>();
+        var workEntries = _client!.WorkBookmarksUnified(workType, _user.Id, privacy, tag);
+        WorkContainer.ResetSource(workEntries.AsObjects(), workType);
+        if (_subscriptions!.TryGetSubscription(_user.Id, WorkSubscriptionType.Bookmarks, GetSubscriptionWorkKind()) is { } subscription)
+            _subscriptions!.QueueSyncSubscription(subscription);
         UpdateSubscriptionButtons();
     }
 
@@ -294,7 +289,7 @@ public partial class WorkBookmarksPage : IconContentPage
     }
 
     private WorkSubscriptionWorkKind GetSubscriptionWorkKind() =>
-        SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>() is SimpleWorkType.Novel
+        SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>() is SimpleWorkKind.Novel
             ? WorkSubscriptionWorkKind.Novel
             : WorkSubscriptionWorkKind.Illustration;
 }

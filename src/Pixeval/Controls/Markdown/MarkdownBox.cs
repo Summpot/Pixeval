@@ -23,7 +23,6 @@ using Markdown.Avalonia.StyleCollections;
 using Markdown.Avalonia.Svg;
 using Markdown.Avalonia.SyntaxHigh;
 using Markdown.Avalonia.Utils;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Pixiv;
 using Pixeval.Services.Core;
 using Pixeval.Utilities;
@@ -40,17 +39,16 @@ public sealed class MarkdownHyperlinkClickedEventArgs(string url) : EventArgs
 
 public class MarkdownBox : MarkdownScrollViewer
 {
-    private static IClipboardService Clipboard =>
-        App.Services?.GetService<IClipboardService>() ?? NullClipboardService.Instance;
+    private IClipboardService Clipboard =>
+        this.GetUiService<IClipboardService>() ?? NullClipboardService.Instance;
 
-    private static ILauncherService Launcher =>
-        App.Services?.GetService<ILauncherService>() ?? NullLauncherService.Instance;
+    private ILauncherService Launcher =>
+        this.GetUiService<ILauncherService>() ?? NullLauncherService.Instance;
 
-    private static INavigationService? Navigation =>
-        App.Services?.GetService<INavigationService>();
+    private INavigationService? Navigation =>
+        this.GetUiService<INavigationService>();
 
-    private readonly AsyncRelayCommand<string> _copySelectionCommand = new(static text =>
-        text is null ? Task.CompletedTask : Clipboard.SetTextAsync(text));
+    private readonly AsyncRelayCommand<string> _copySelectionCommand;
 
     private const double AnchorScrollOffset = 12;
     private const string CodePadTypeName = "Markdown.Avalonia.SyntaxHigh.CodePad";
@@ -121,6 +119,8 @@ public class MarkdownBox : MarkdownScrollViewer
 
     public MarkdownBox()
     {
+        _copySelectionCommand = new(text =>
+            text is null ? Task.CompletedTask : Clipboard.SetTextAsync(text));
         SelectionEnabled = true;
         Cursor = TextCursor;
         Classes.Add("PixevalMarkdownBox");
@@ -433,7 +433,7 @@ public class MarkdownBox : MarkdownScrollViewer
             NormalizeCodeBlockToolbar(border);
     }
 
-    private static void NormalizeCodeBlockToolbar(Border codeBlock)
+    private void NormalizeCodeBlockToolbar(Border codeBlock)
     {
         if (codeBlock.Child is Grid root && root.Classes.Contains(CodeBlockRootClass))
             return;
@@ -518,7 +518,7 @@ public class MarkdownBox : MarkdownScrollViewer
             if (Uri.TryCreate(relativeOrAbsolutePath, UriKind.Absolute, out var uri)
                 && uri.Scheme is "http" or "https")
             {
-                if (Pixeval.Controls.Source.GetImageProvider(owner) is { } images)
+                if (Pixeval.Controls.Source.ResolveImageProvider(owner) is { } images)
                 {
                     return await images
                         .GetImageStreamAsync(ResolvePlatform(uri), uri.OriginalString)
@@ -535,7 +535,7 @@ public class MarkdownBox : MarkdownScrollViewer
         {
             var host = uri.Host;
             if (GitHubHttpOptions.IsGitHubHost(host))
-                return GitHubHttpClientProvider.PlatformKey;
+                return GitHubService.PlatformKey;
             if (IsHostOrSubdomain(host, "pixiv.net") || IsHostOrSubdomain(host, "pximg.net"))
                 return PlatformConstants.Pixiv;
             if (IsHostOrSubdomain(host, "donmai.us"))

@@ -29,6 +29,23 @@ struct TokenEntry {
     obtained_at: Instant,
 }
 
+#[derive(serde::Deserialize)]
+struct TokenResponseEnvelope {
+    response: Option<TokenResponse>,
+    #[serde(flatten)]
+    direct: Option<TokenResponse>,
+}
+
+pub(crate) fn parse_token_response(bytes: &[u8]) -> Result<TokenResponse, AuthError> {
+    if let Ok(env) = serde_json::from_slice::<TokenResponseEnvelope>(bytes) {
+        if let Some(resp) = env.response.or(env.direct) {
+            return Ok(resp);
+        }
+    }
+    let token_resp: TokenResponse = serde_json::from_slice(bytes)?;
+    Ok(token_resp)
+}
+
 #[derive(Clone)]
 pub struct OAuthManager {
     state: Arc<RwLock<Option<TokenEntry>>>,
@@ -185,7 +202,8 @@ impl OAuthManager {
             return Err(AuthError::AuthFailed(status, text));
         }
 
-        let token_resp: TokenResponse = resp.json().await?;
+        let bytes = resp.bytes().await?;
+        let token_resp = parse_token_response(&bytes)?;
         self.set_token_response(token_resp.clone());
         Ok(token_resp)
     }
@@ -223,8 +241,39 @@ impl OAuthManager {
             return Err(AuthError::AuthFailed(status, text));
         }
 
-        let token_resp: TokenResponse = resp.json().await?;
+        let bytes = resp.bytes().await?;
+        let token_resp = parse_token_response(&bytes)?;
         self.set_token_response(token_resp.clone());
         Ok(token_resp)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_token_response_direct_and_wrapped() {
+        let direct_json = r#"{
+            "access_token": "direct_access_token",
+            "expires_in": 3600,
+            "token_type": "bearer",
+            "refresh_token": "direct_refresh_token"
+        }"#;
+        let direct_parsed = parse_token_response(direct_json.as_bytes()).unwrap();
+        assert_eq!(direct_parsed.access_token, "direct_access_token");
+        assert_eq!(direct_parsed.refresh_token, "direct_refresh_token");
+
+        let wrapped_json = r#"{
+            "response": {
+                "access_token": "wrapped_access_token",
+                "expires_in": 3600,
+                "token_type": "bearer",
+                "refresh_token": "wrapped_refresh_token"
+            }
+        }"#;
+        let wrapped_parsed = parse_token_response(wrapped_json.as_bytes()).unwrap();
+        assert_eq!(wrapped_parsed.access_token, "wrapped_access_token");
+        assert_eq!(wrapped_parsed.refresh_token, "wrapped_refresh_token");
     }
 }

@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Works.UserItem"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:animatedImage="using:AnimatedControls.Avalonia"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Common.Converters"
@@ -83,30 +84,30 @@
                 <MenuFlyout>
                     <MenuItem
                         controls:UserStateBehavior.TrackFollow="True"
-                        Header="{I18N {x:Static pixeval:UserViewerPageResources.Follow}}"
+                        Header="{CompiledBinding [UserViewerPage-Follow], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup1:SymbolIconEx Person}" />
                     <Separator />
                     <MenuItem
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                        Header="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
+                        Header="{CompiledBinding [EntryItem-OpenInWebBrowser], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup:SymbolIcon GlobeArrowUp}"
                         Tag="{Binding WebsiteUri}" />
 
                     <MenuItem
                         Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                        Header="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
+                        Header="{CompiledBinding [EntryItem-GenerateWebLink], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup:SymbolIcon LinkMultiple}"
                         Tag="{Binding WebsiteUri}" />
                     <MenuItem
                         Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                        Header="{I18N {x:Static pixeval:EntryItemResources.GenerateLink}}"
+                        Header="{CompiledBinding [EntryItem-GenerateLink], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup:SymbolIcon Link}"
                         Tag="{Binding AppUri}" />
                     <Separator />
                     <MenuItem
-                        Command="{x:Static viewModels:WorkCommands.BlockUserCommand}"
+                        Command="{Binding BlockUserCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                         CommandParameter="{Binding}"
-                        Header="{I18N {x:Static pixeval:BlockedContentResources.BlockUser}}"
+                        Header="{CompiledBinding [BlockedContent-BlockUser], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup:SymbolIcon PersonProhibited}" />
                 </MenuFlyout>
             </Button.Flyout>

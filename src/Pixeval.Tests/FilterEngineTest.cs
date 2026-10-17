@@ -93,9 +93,9 @@ public sealed class FilterEngineTest
     }
 
     [TestMethod]
-    public void WorkFilterLanguageWrapperShouldAnalyzeAndReconstructAst()
+    public void FilterSessionShouldAnalyzeQueries()
     {
-        var language = WorkFilterLanguage.Instance;
+        var language = FilterSession.CreateDefault();
         var result = language.Analyze("#sky @Alice +ai");
         Assert.IsTrue(result.IsSuccess);
         Assert.IsNotNull(result.Query);
@@ -120,9 +120,9 @@ public sealed class FilterEngineTest
     }
 
     [TestMethod]
-    public void FilterCompletionEngineShouldProvideContextAwareCompletionsAndCompletedText()
+    public void FilterSessionShouldProvideContextAwareCompletionsAndCompletedText()
     {
-        var engine = new FilterCompletionEngine();
+        var engine = new FilterSession();
         engine.SetSessionCandidates(
             tags: [new ArtworkTag("touhou", "东方"), new ArtworkTag("genshin", null)],
             authors: [new AuthorCandidate("Alice", "alice_acc"), new AuthorCandidate("Bob", null)]);
@@ -153,10 +153,10 @@ public sealed class FilterEngineTest
     }
 
     [TestMethod]
-    public void FilterCompletionEngineShouldIntegrateStorageProvider()
+    public void FilterSessionShouldIntegrateStorageProvider()
     {
         var provider = new MockFilterStorageProvider();
-        var engine = FilterCompletionEngine.WithProvider(provider, null);
+        var engine = FilterSession.WithProvider(provider, null);
 
         var result = engine.Analyze("#gen", 4);
         Assert.IsTrue(result.Completions.Count > 0);
@@ -168,9 +168,9 @@ public sealed class FilterEngineTest
     }
 
     [TestMethod]
-    public void FilterCompletionEngineShouldFilterArtworksBatch()
+    public void FilterSessionShouldFilterArtworksBatch()
     {
-        var engine = new FilterCompletionEngine();
+        var engine = new FilterSession();
         var matchingWork = new ArtworkMetadata(
             Id: "1",
             Title: "Blue Sky",

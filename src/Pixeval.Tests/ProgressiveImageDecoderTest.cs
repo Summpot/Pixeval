@@ -19,13 +19,13 @@ public sealed class ProgressiveImageDecoderTest
         source.Write(encoded.AsSpan(0, encoded.Length / 3));
         var partial = decoder.Decode(source);
         Assert.IsNotNull(partial);
-        var before = partial.Bytes;
+        var before = partial.Value.Bytes;
         source.Write(encoded.AsSpan(encoded.Length / 3));
         var complete = decoder.Decode(source);
         Assert.IsNotNull(complete);
         using var expected = SKBitmap.Decode(encoded);
-        AssertPixelsMatch(expected.Bytes, complete.Bytes, 4);
-        CollectionAssert.AreNotEqual(before, complete.Bytes);
+        AssertPixelsMatch(expected.Bytes, complete.Value.Bytes, 4);
+        CollectionAssert.AreNotEqual(before, complete.Value.Bytes);
     }
 
     [TestMethod]
@@ -39,9 +39,10 @@ public sealed class ProgressiveImageDecoderTest
         using var decoder = new ProgressiveImageDecoder();
         var partial = decoder.Decode(source);
         Assert.IsNotNull(partial);
-        Assert.AreEqual((byte) 255, partial.GetPixel(0, 0).Alpha);
-        for (var x = 0; x < partial.Width; x++)
-            Assert.AreEqual(new SKColor(0), partial.GetPixel(x, partial.Height - 1));
+        var frame = partial.Value;
+        Assert.AreEqual((byte) 255, frame.GetPixel(0, 0).Alpha);
+        for (var x = 0; x < frame.Width; x++)
+            Assert.AreEqual(new SKColor(0), frame.GetPixel(x, frame.Height - 1));
     }
 
     [TestMethod]
@@ -84,7 +85,7 @@ public sealed class ProgressiveImageDecoderTest
         stream.Write(encoded.AsSpan(0, prefix));
         var partial = decoder.Decode(stream);
         Assert.IsNotNull(partial, $"No partial {format} image.");
-        var before = partial.Bytes;
+        var before = partial.Value.Bytes;
         Assert.IsTrue(Array.Exists(before, b => b is not 0));
         Assert.AreEqual(prefix, stream.Position);
         Assert.IsTrue(stream.CanWrite);
@@ -93,8 +94,8 @@ public sealed class ProgressiveImageDecoderTest
         var complete = decoder.Decode(stream);
         Assert.IsNotNull(complete);
         using var expected = SKBitmap.Decode(encoded);
-        AssertPixelsMatch(expected.Bytes, complete.Bytes, format is SKEncodedImageFormat.Jpeg ? 4 : 0);
-        CollectionAssert.AreNotEqual(before, complete.Bytes);
+        AssertPixelsMatch(expected.Bytes, complete.Value.Bytes, format is SKEncodedImageFormat.Jpeg ? 4 : 0);
+        CollectionAssert.AreNotEqual(before, complete.Value.Bytes);
         Assert.AreEqual(encoded.Length, stream.Position);
     }
 

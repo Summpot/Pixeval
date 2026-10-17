@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+#[boltffi::error]
 #[derive(uniffi::Error, thiserror::Error, Debug)]
 pub enum BooruError {
     #[error("Post not found on {platform}: {id}")]

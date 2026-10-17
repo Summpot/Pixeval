@@ -9,7 +9,7 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using FluentIcons.Common;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Download;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -22,7 +22,7 @@ public partial class DownloadItem : UserControl
 
     public DownloadItem() => InitializeComponent();
 
-    private DownloadItemSnapshot? Item => DataContext as DownloadItemSnapshot;
+    private DownloadItemSnapshot? Item => DataContext as DownloadItemSnapshot?;
 
     private DownloadPageViewModel? Page =>
         this.FindAncestorOfType<DownloadItemView>()?.DataContext is DownloadItemPageViewModel itemPage
@@ -83,7 +83,7 @@ public partial class DownloadItem : UserControl
             return;
 
         _ = await this.Dialogs.CreateAcknowledgementAsync(
-                I18NManager.GetResource(DownloadItemResources.ErrorMessageDialogTitle),
+                Strings.DownloadItemErrorMessageDialogTitle(),
                 item.ErrorMessage);
     }
 
@@ -108,33 +108,32 @@ public partial class DownloadItem : UserControl
 
     private async Task OpenPathAsync(string path)
     {
-        if (TopLevel.GetTopLevel(this) is not { Launcher: { } launcher })
-            return;
+        var launcher = this.LauncherService;
 
         try
         {
             var info = new DirectoryInfo(path);
             if (info.Exists)
             {
-                _ = await launcher.LaunchDirectoryInfoAsync(info);
+                await launcher.LaunchDirectoryInfoAsync(info);
                 return;
             }
 
             var file = new FileInfo(path);
             if (file.Exists)
             {
-                _ = await launcher.LaunchFileInfoAsync(file);
+                await launcher.LaunchFileInfoAsync(file);
                 return;
             }
 
             this.Notifications.ShowError(
-                I18NManager.GetResource(DownloadItemResources.ActionButtonContentOpen),
+                Strings.DownloadItemActionButtonContentOpen(),
                 path);
         }
         catch
         {
             this.Notifications.ShowError(
-                I18NManager.GetResource(DownloadItemResources.ActionButtonContentOpen),
+                Strings.DownloadItemActionButtonContentOpen(),
                 path);
         }
     }

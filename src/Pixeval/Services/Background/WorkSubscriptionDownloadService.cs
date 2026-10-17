@@ -22,7 +22,7 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
     private readonly FileLogger _logger;
     private readonly IUserSessionService _userSessionService;
     private readonly AppSettings _appSettings;
-    private readonly SubscriptionSyncEngine _syncEngine;
+    private readonly SubscriptionSync _syncEngine;
     private readonly Lock _gate = new();
     private readonly SemaphoreSlim _mutationGate = new(1, 1);
     private SubscriptionFetchState? _currentFetchState;
@@ -50,7 +50,7 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
 
     public bool IsSyncInProgress => _syncEngine.IsSyncInProgress();
 
-    public SubscriptionSyncEngine SyncEngine => _syncEngine;
+    public SubscriptionSync SyncEngine => _syncEngine;
 
     public bool IsDaemonRunning => _syncEngine.IsDaemonRunning();
 
@@ -71,7 +71,7 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
         _appSettings = appSettings;
 
         var config = CreateSyncConfig();
-        _syncEngine = SubscriptionSyncEngine.NewWithServices(
+        _syncEngine = SubscriptionSync.NewWithServices(
             storageEngine,
             makoClient,
             downloadManager,
@@ -144,21 +144,6 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
             _syncEngine.UpdateConfig(CreateSyncConfig());
             _ = _syncEngine.QueueSyncSubscription(subscription.HistoryEntryId);
         }
-    }
-
-    public void QueueInitialSync(
-        WorkSubscriptionRecord subscription,
-        IFetchEngine<IWorkEntry>? sourceEngine = null) =>
-        QueueSyncSubscription(subscription);
-
-    public void QueueSyncCurrentSource(
-        long targetId,
-        WorkSubscriptionType subscriptionType,
-        WorkSubscriptionWorkKind workKind,
-        IFetchEngine<IWorkEntry> engine)
-    {
-        if (TryGetSubscription(targetId, subscriptionType, workKind) is { } subscription)
-            QueueSyncSubscription(subscription);
     }
 
     public WorkSubscriptionRecord? TryGetSubscription(
@@ -266,22 +251,14 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
         }
     }
 
-    public void OnSubscriptionUpdated(long subscriptionId, string name, string account, string avatarUrl)
+    public void OnSubscriptionUpdated(WorkSubscriptionRecord updated)
     {
         try
         {
-            if (_storageEngine.GetSubscriptionByHistoryId(subscriptionId) is { } entry)
-            {
-                var updated = entry with { Title = name, Author = account, Avatar = avatarUrl };
-                _storageEngine.UpsertSubscription(updated);
-                PublishSubscriptions();
-
-                void Notify() => SubscriptionUpdated?.Invoke(this, updated);
-                if (Dispatcher.UIThread.CheckAccess())
-                    Notify();
-                else
-                    Dispatcher.UIThread.Post(Notify);
-            }
+            PublishSubscriptions();
+            void Notify() => SubscriptionUpdated?.Invoke(this, updated);
+            if (Dispatcher.UIThread.CheckAccess()) Notify();
+            else Dispatcher.UIThread.Post(Notify);
         }
         catch (Exception ex)
         {

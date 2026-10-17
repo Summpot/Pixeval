@@ -3,75 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Filters;
-using Pixeval.Filters.Analysis;
-using Pixeval.Filters.Syntax;
 
 namespace Pixeval.Tests;
 
 [TestClass]
 public sealed class FilterLanguageTest
 {
-    private static readonly FilterLanguage _Language = new([
-            new TitleSyntax(),
-            new AuthorSyntax(),
-            new TagSyntax(),
-            new BookmarkSyntax(),
-            new ScoreSyntax(),
-            new WeightSyntax(),
-            new StartDateSyntax(),
-            new AiSyntax(),
-            new R18Syntax(),
-            new R18GSyntax(),
-            new GifSyntax()
-        ],
-        [
-            new("builtin.and", "and", "and", "逻辑与分组"),
-            new("builtin.or", "or", "or", "逻辑或分组"),
-            new("builtin.not", "!", "!", "逻辑非")
-        ],
-        [
-            new("constraint.include", "+ai", "+ai", "正约束", CoveredSyntaxPrefixes: ["+"]),
-            new("constraint.exclude", "-ai", "-ai", "反约束", CoveredSyntaxPrefixes: ["-"])
-        ],
-        new Dictionary<FilterValueKind, IReadOnlyCollection<FilterCompletionDefinition>>
-        {
-            [FilterValueKind.Text] =
-            [
-                new("hint.text.plain", "abc", "", "普通的字符串"),
-                new("hint.text.quoted", "\"ab# c\"", "", "带空格或转义字符的字符串")
-            ],
-            [FilterValueKind.Long] =
-            [
-                new("hint.long.plain", "12345", "", "普通的整数")
-            ],
-            [FilterValueKind.Double] =
-            [
-                new("hint.double.integer", "2", "", "整数形式的小数值"),
-                new("hint.double.decimal", "1.5", "", "小数形式的小数值"),
-                new("hint.double.fraction", "1/2", "", "分数形式的小数值")
-            ],
-            [FilterValueKind.LongRange] =
-            [
-                new("hint.long-range.lower", "2-", "", "大于等于 2"),
-                new("hint.long-range.upper", "-3", "", "小于等于 3"),
-                new("hint.long-range.closed", "2-3", "", "大于等于 2 且小于等于 3")
-            ],
-            [FilterValueKind.DoubleRange] =
-            [
-                new("hint.double-range.lower", "2-", "", "大于等于 2"),
-                new("hint.double-range.upper-fraction", "-1/2", "", "小于等于 1/2")
-            ],
-            [FilterValueKind.Date] =
-            [
-                new("hint.date.month-day-dash", "MM-dd", "", "今年某月某日"),
-                new("hint.date.full-dash", "yyyy-MM-dd", "", "某年某月某日")
-            ]
-        });
+    private static readonly FilterEngine _Engine = CreateLanguage();
+
+    [ClassCleanup]
+    public static void Cleanup() => _Engine.Dispose();
 
     [TestMethod]
     public void NumericTextAfterTagShouldRemainString()
     {
-        var result = _Language.Analyze("#123");
+        var result = Analyze("#123");
 
         Assert.IsTrue(result.IsSuccess);
         Assert.IsNotNull(result.Query);
@@ -85,7 +31,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void MissingTagValueShouldReturnTagCompletion()
     {
-        var result = _Language.Analyze("#", 1);
+        var result = Analyze("#", 1);
 
         Assert.IsFalse(result.IsSuccess);
         Assert.AreEqual(FilterDiagnosticKind.MissingTextValue, result.Diagnostics[0].Kind);
@@ -97,12 +43,12 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void TagValueCompletionProviderShouldOverrideSyntaxExample()
     {
-        var result = _Language.Analyze(
+        var result = Analyze(
             "#to",
             3,
-            static context => context.MatchSyntaxKey == "Tag"
-                ? new FilterCompletionDefinition[] { new("tag:touhou", "touhou", "touhou", "东方") }
-                : []);
+            new DelegateCallback(static context => context.MatchSyntaxKey == "Tag"
+                ? [new("tag:touhou", "touhou", "touhou", "东方")]
+                : []));
 
         Assert.Contains(t => t.DisplayText == "touhou", result.Completions);
         Assert.DoesNotContain(t => t.DisplayText == "#tag", result.Completions);
@@ -114,12 +60,12 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void AuthorValueCompletionProviderShouldOverrideSyntaxExample()
     {
-        var result = _Language.Analyze(
+        var result = Analyze(
             "artist:sa",
             9,
-            static context => context.MatchSyntaxKey == "Author"
-                ? new FilterCompletionDefinition[] { new("author:saberiii", "saberiii", "saberiii", null) }
-                : []);
+            new DelegateCallback(static context => context.MatchSyntaxKey == "Author"
+                ? [new("author:saberiii", "saberiii", "saberiii", null)]
+                : []));
 
         Assert.Contains(t => t.DisplayText == "saberiii", result.Completions);
         Assert.DoesNotContain(t => t.DisplayText.Contains("artist", StringComparison.OrdinalIgnoreCase),
@@ -131,7 +77,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void MissingConstraintValueShouldReturnFlagCompletion()
     {
-        var result = _Language.Analyze("+", 1);
+        var result = Analyze("+", 1);
 
         Assert.IsFalse(result.IsSuccess);
         Assert.AreSequenceEqual((string[]) ["+ai", "+r18", "+r18g", "+gif"], result.Completions.Select(t => t.DisplayText).ToArray(), Microsoft.VisualStudio.TestTools.UnitTesting.SequenceOrder.InAnyOrder);
@@ -140,7 +86,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void LongerFlagSyntaxShouldWinSharedPrefix()
     {
-        var result = _Language.Analyze("+r18g");
+        var result = Analyze("+r18g");
 
         Assert.IsTrue(result.IsSuccess);
         var ast = result.Query!.GetAst();
@@ -151,7 +97,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void AliasCompletionShouldOnlyShowOneItemPerSyntax()
     {
-        var result = _Language.Analyze(string.Empty, 0);
+        var result = Analyze(string.Empty, 0);
 
         Assert.IsTrue(result.IsSuccess);
         _ = Assert.ContainsSingle(t => t.DisplayText.Contains("artist", StringComparison.OrdinalIgnoreCase),
@@ -161,7 +107,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void EmptyInputShouldReturnIntrinsicAndRegisteredCompletions()
     {
-        var result = _Language.Analyze(string.Empty, 0);
+        var result = Analyze(string.Empty, 0);
 
         Assert.IsTrue(result.IsSuccess);
         CollectionAssert.IsSubsetOf((string[]) ["and", "or", "!"],
@@ -177,7 +123,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void SyntaxExampleCompletionsShouldOnlyInsertHeader()
     {
-        var result = _Language.Analyze(string.Empty, 0);
+        var result = Analyze(string.Empty, 0);
 
         Assert.IsTrue(result.IsSuccess);
         Assert.AreEqual("", result.Completions.Single(t => t.DisplayText == "keyword").InsertText);
@@ -203,7 +149,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void ValueSyntaxHintsShouldIgnoreTypedPrefix()
     {
-        var result = _Language.Analyze("s:202", 5);
+        var result = Analyze("s:202", 5);
 
         Assert.AreSequenceEqual((string[]) ["MM-dd", "yyyy-MM-dd"], result.Completions.Select(t => t.DisplayText).ToArray(), Microsoft.VisualStudio.TestTools.UnitTesting.SequenceOrder.InAnyOrder);
         Assert.IsTrue(result.Completions.All(t => t.InsertText == "s:202"));
@@ -213,17 +159,8 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void ValueSyntaxHintsShouldSupportDoubleRange()
     {
-        var language = new FilterLanguage(
-            [new RatioSyntax()],
-            valueHintCompletions: new Dictionary<FilterValueKind, IReadOnlyCollection<FilterCompletionDefinition>>
-            {
-                [FilterValueKind.DoubleRange] =
-                [
-                    new("hint.double-range.lower", "2-", "", null),
-                    new("hint.double-range.upper-fraction", "-1/2", "", null)
-                ]
-            });
-        var result = language.Analyze("r:", 2);
+        using var language = CreateRatioEngine();
+        var result = language.Analyze("r:", 2, null);
 
         Assert.AreSequenceEqual((string[]) ["2-", "-1/2"], result.Completions.Select(t => t.DisplayText).ToArray(), Microsoft.VisualStudio.TestTools.UnitTesting.SequenceOrder.InAnyOrder);
         Assert.IsTrue(result.Completions.All(t => t.InsertText == "r:"));
@@ -233,7 +170,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void LongValueSyntaxShouldBindLong()
     {
-        var result = _Language.Analyze("score:12345");
+        var result = Analyze("score:12345");
 
         Assert.IsTrue(result.IsSuccess);
         var ast = result.Query!.GetAst();
@@ -245,7 +182,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void DoubleValueSyntaxShouldBindDouble()
     {
-        var result = _Language.Analyze("weight:1/2");
+        var result = Analyze("weight:1/2");
 
         Assert.IsTrue(result.IsSuccess);
         var ast = result.Query!.GetAst();
@@ -257,7 +194,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void EmptyInputShouldGroupFlagConstraintCompletions()
     {
-        var result = _Language.Analyze(string.Empty, 0);
+        var result = Analyze(string.Empty, 0);
         var displayTexts = result.Completions.Select(t => t.DisplayText).ToArray();
 
         Assert.IsTrue(result.IsSuccess);
@@ -276,8 +213,8 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void PrefixConstraintInputShouldShowSpecificFlagCompletions()
     {
-        var includeResult = _Language.Analyze("+", 1);
-        var excludeResult = _Language.Analyze("-", 1);
+        var includeResult = Analyze("+", 1);
+        var excludeResult = Analyze("-", 1);
 
         Assert.IsFalse(includeResult.IsSuccess);
         Assert.AreSequenceEqual((string[]) ["+ai", "+r18", "+r18g", "+gif"], includeResult.Completions.Select(t => t.DisplayText).ToArray(), Microsoft.VisualStudio.TestTools.UnitTesting.SequenceOrder.InAnyOrder);
@@ -288,7 +225,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void RightParenthesisShouldStillShowAllCompletions()
     {
-        var result = _Language.Analyze("keyword)", 8);
+        var result = Analyze("keyword)", 8);
 
         Assert.IsFalse(result.IsSuccess);
         Assert.AreEqual(FilterDiagnosticKind.UnexpectedToken, result.Diagnostics[0].Kind);
@@ -301,7 +238,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void NegationInputShouldShowUnprefixedDisplayText()
     {
-        var result = _Language.Analyze("!", 1);
+        var result = Analyze("!", 1);
 
         Assert.IsFalse(result.IsSuccess);
         var authorCompletion =
@@ -315,7 +252,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void LeftParenthesisShouldOnlyShowGroupOperatorCompletions()
     {
-        var result = _Language.Analyze("(xxx", 4);
+        var result = Analyze("(xxx", 4);
 
         Assert.IsFalse(result.IsSuccess);
         Assert.AreSequenceEqual((string[]) ["and", "or"], result.Completions.Select(t => t.DisplayText).ToArray(), Microsoft.VisualStudio.TestTools.UnitTesting.SequenceOrder.InAnyOrder);
@@ -326,12 +263,12 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void LeftParenthesisShouldNotEnterValueCompletion()
     {
-        var result = _Language.Analyze(
+        var result = Analyze(
             "(#",
             2,
-            static context => context.MatchSyntaxKey == "Tag"
-                ? new FilterCompletionDefinition[] { new("tag:touhou", "touhou", "touhou", null) }
-                : []);
+            new DelegateCallback(static context => context.MatchSyntaxKey == "Tag"
+                ? [new("tag:touhou", "touhou", "touhou", null)]
+                : []));
 
         Assert.IsFalse(result.IsSuccess);
         Assert.AreSequenceEqual((string[]) ["and", "or"], result.Completions.Select(t => t.DisplayText).ToArray(), Microsoft.VisualStudio.TestTools.UnitTesting.SequenceOrder.InAnyOrder);
@@ -340,7 +277,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void BookmarkRangeShouldRemainInclusive()
     {
-        var result = _Language.Analyze("l:100-200");
+        var result = Analyze("l:100-200");
 
         Assert.IsTrue(result.IsSuccess);
         Assert.IsNotNull(result.Query);
@@ -354,7 +291,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void MissingRangeDashShouldIncludeSyntaxAndLiteral()
     {
-        var result = _Language.Analyze("l:100");
+        var result = Analyze("l:100");
 
         Assert.IsFalse(result.IsSuccess);
         Assert.AreEqual(FilterDiagnosticKind.InvalidLongRangeFormat, result.Diagnostics[0].Kind);
@@ -365,7 +302,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void RangeOrderDiagnosticShouldIncludeSyntaxAndBounds()
     {
-        var result = _Language.Analyze("l:200-100");
+        var result = Analyze("l:200-100");
 
         Assert.IsFalse(result.IsSuccess);
         Assert.AreEqual(FilterDiagnosticKind.RangeMinimumGreaterThanMaximum, result.Diagnostics[0].Kind);
@@ -377,7 +314,7 @@ public sealed class FilterLanguageTest
     [TestMethod]
     public void InvalidDateShouldIncludeSyntaxAndDateLiteral()
     {
-        var result = _Language.Analyze("s:2024-2-31");
+        var result = Analyze("s:2024-2-31");
 
         Assert.IsFalse(result.IsSuccess);
         Assert.AreEqual(FilterDiagnosticKind.InvalidDate, result.Diagnostics[0].Kind);
@@ -385,135 +322,142 @@ public sealed class FilterLanguageTest
         Assert.AreEqual("2024-2-31", result.Diagnostics[0].Arguments[1]?.ToString());
     }
 
-    private sealed class TitleSyntax : FilterTextSyntax<object>
+    private static FilterEngine CreateLanguage()
     {
-        public override string Key => "Title";
+        var syntaxes = new List<FilterSyntaxDefinition>
+        {
+            new("Title", FilterValueKind.Text, "keyword",
+            [
+                new("", [""], "", null, "keyword", null)
+            ]),
+            new("Author", FilterValueKind.Text, "artist",
+            [
+                new("", ["a"], ":", null, "artist", null),
+                new("", ["artist"], ":", null, "artist", null)
+            ]),
+            new("Tag", FilterValueKind.Text, "tag",
+            [
+                new("#", [""], "", null, "tag", null)
+            ]),
+            new("Bookmark", FilterValueKind.LongRange, "100-200",
+            [
+                new("", ["l"], ":", null, "100-200", null)
+            ]),
+            new("Score", FilterValueKind.Long, "12345",
+            [
+                new("", ["score"], ":", null, "12345", null)
+            ]),
+            new("Weight", FilterValueKind.Double, "1/2",
+            [
+                new("", ["weight"], ":", null, "1/2", null)
+            ]),
+            new("StartDate", FilterValueKind.Date, "2024-1-1",
+            [
+                new("", ["s"], ":", null, "2024-1-1", null)
+            ]),
+            new("Ai", FilterValueKind.Flag, null,
+            [
+                new("+", ["ai"], "", "false", null, "仅显示 AI"),
+                new("-", ["ai"], "", "true", null, "排除 AI")
+            ]),
+            new("R18", FilterValueKind.Flag, null,
+            [
+                new("+", ["r18"], "", "false", null, "仅显示 R18"),
+                new("-", ["r18"], "", "true", null, "排除 R18")
+            ]),
+            new("R18G", FilterValueKind.Flag, null,
+            [
+                new("+", ["r18g"], "", "false", null, "仅显示 R18G"),
+                new("-", ["r18g"], "", "true", null, "排除 R18G")
+            ]),
+            new("Gif", FilterValueKind.Flag, null,
+            [
+                new("+", ["gif"], "", "false", null, "仅显示动图"),
+                new("-", ["gif"], "", "true", null, "排除动图")
+            ])
+        };
 
-        public override string? ExampleValue => "keyword";
-
-        public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } = [FilterSyntaxPattern.Default("keyword")];
-    }
-
-    private sealed class TagSyntax : FilterTextSyntax<object>
-    {
-        public override string Key => "Tag";
-
-        public override string? ExampleValue => "tag";
-
-        public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
-            [FilterSyntaxPattern.PrefixOnly("#", "tag")];
-    }
-
-    private sealed class AuthorSyntax : FilterTextSyntax<object>
-    {
-        public override string Key => "Author";
-
-        public override string? ExampleValue => "artist";
-
-        public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
+        List<FilterCompletionDefinition> intrinsic =
         [
-            FilterSyntaxPattern.Keyword("a", exampleValue: "artist"),
-            FilterSyntaxPattern.Keyword("artist", exampleValue: "artist")
+            new("builtin.and", "and", "and", "逻辑与分组"),
+            new("builtin.or", "or", "or", "逻辑或分组"),
+            new("builtin.not", "!", "!", "逻辑非")
         ];
-    }
 
-    private sealed class BookmarkSyntax : FilterLongRangeSyntax<object>
-    {
-        public override string Key => "Bookmark";
-
-        public override string? ExampleValue => "100-200";
-
-        public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
-            [FilterSyntaxPattern.Keyword("l", exampleValue: "100-200")];
-    }
-
-    private sealed class ScoreSyntax : FilterLongSyntax<object>
-    {
-        public override string Key => "Score";
-
-        public override string? ExampleValue => "12345";
-
-        public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
-            [FilterSyntaxPattern.Keyword("score", exampleValue: "12345")];
-    }
-
-    private sealed class WeightSyntax : FilterDoubleSyntax<object>
-    {
-        public override string Key => "Weight";
-
-        public override string? ExampleValue => "1/2";
-
-        public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
-            [FilterSyntaxPattern.Keyword("weight", exampleValue: "1/2")];
-    }
-
-    private sealed class RatioSyntax : FilterDoubleRangeSyntax<object>
-    {
-        public override string Key => "Ratio";
-
-        public override string? ExampleValue => "1-2";
-
-        public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
-            [FilterSyntaxPattern.Keyword("r", exampleValue: "1-2")];
-    }
-
-    private sealed class StartDateSyntax : FilterDateSyntax<object>
-    {
-        public override string Key => "StartDate";
-
-        public override string? ExampleValue => "2024-1-1";
-
-        public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
-            [FilterSyntaxPattern.Keyword("s", exampleValue: "2024-1-1")];
-    }
-
-    private sealed class AiSyntax : FilterFlagSyntax<object>
-    {
-        public override string Key => "Ai";
-
-        public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
+        List<FilterFullCompletionDefinition> full =
         [
-            new("+", ["ai"], Metadata: "false", Description: "仅显示 AI"),
-            new("-", ["ai"], Metadata: "true", Description: "排除 AI")
+            new("constraint.include", "+ai", "+ai", "正约束", ["+"]),
+            new("constraint.exclude", "-ai", "-ai", "反约束", ["-"])
         ];
-    }
 
-    private sealed class R18Syntax : FilterFlagSyntax<object>
-    {
-        public override string Key => "R18";
-
-        public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
+        List<FilterValueHintGroup> hints =
         [
-            new("+", ["r18"], Metadata: "false", Description: "仅显示 R18"),
-            new("-", ["r18"], Metadata: "true", Description: "排除 R18")
+            new(FilterValueKind.Text,
+            [
+                new("hint.text.plain", "abc", "", "普通的字符串"),
+                new("hint.text.quoted", "\"ab# c\"", "", "带空格或转义字符的字符串")
+            ]),
+            new(FilterValueKind.Long,
+            [
+                new("hint.long.plain", "12345", "", "普通的整数")
+            ]),
+            new(FilterValueKind.Double,
+            [
+                new("hint.double.integer", "2", "", "整数形式的小数值"),
+                new("hint.double.decimal", "1.5", "", "小数形式的小数值"),
+                new("hint.double.fraction", "1/2", "", "分数形式的小数值")
+            ]),
+            new(FilterValueKind.LongRange,
+            [
+                new("hint.long-range.lower", "2-", "", "大于等于 2"),
+                new("hint.long-range.upper", "-3", "", "小于等于 3"),
+                new("hint.long-range.closed", "2-3", "", "大于等于 2 且小于等于 3")
+            ]),
+            new(FilterValueKind.DoubleRange,
+            [
+                new("hint.double-range.lower", "2-", "", "大于等于 2"),
+                new("hint.double-range.upper-fraction", "-1/2", "", "小于等于 1/2")
+            ]),
+            new(FilterValueKind.Date,
+            [
+                new("hint.date.month-day-dash", "MM-dd", "", "今年某月某日"),
+                new("hint.date.full-dash", "yyyy-MM-dd", "", "某年某月某日")
+            ])
         ];
+
+        return new FilterEngine(syntaxes, intrinsic, full, hints);
     }
 
-    private sealed class R18GSyntax : FilterFlagSyntax<object>
+    private static FilterEngine CreateRatioEngine()
     {
-        public override string Key => "R18G";
+        var syntaxes = new List<FilterSyntaxDefinition>
+        {
+            new("Ratio", FilterValueKind.DoubleRange, "1-2",
+            [
+                new("", ["r"], ":", null, "1-2", null)
+            ])
+        };
 
-        public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
+        List<FilterValueHintGroup> hints =
         [
-            new("+", ["r18g"], Metadata: "false", Description: "仅显示 R18G"),
-            new("-", ["r18g"], Metadata: "true", Description: "排除 R18G")
+            new(FilterValueKind.DoubleRange,
+            [
+                new("hint.double-range.lower", "2-", "", null),
+                new("hint.double-range.upper-fraction", "-1/2", "", null)
+            ])
         ];
+
+        return new FilterEngine(syntaxes, null, null, hints);
     }
 
-    private sealed class GifSyntax : FilterFlagSyntax<object>
-    {
-        public override string Key => "Gif";
+    private static FilterAnalysisResult Analyze(string text) => _Engine.Analyze(text, text.Length, null);
 
-        public override IReadOnlyList<FilterSyntaxPattern> Patterns { get; } =
-        [
-            new("+", ["gif"], Metadata: "false", Description: "仅显示动图"),
-            new("-", ["gif"], Metadata: "true", Description: "排除动图")
-        ];
-    }
+    private static FilterAnalysisResult Analyze(string text, int caretPosition, IFilterCompletionCallback? callback = null) =>
+        _Engine.Analyze(text, caretPosition, callback);
 
     private static void AssertValueHintsOnly(string text, IReadOnlyCollection<string> displayTexts)
     {
-        var result = _Language.Analyze(text, text.Length);
+        var result = Analyze(text, text.Length);
 
         Assert.AreSequenceEqual(displayTexts.ToArray(), result.Completions.Select(t => t.DisplayText).ToArray(), Microsoft.VisualStudio.TestTools.UnitTesting.SequenceOrder.InAnyOrder);
         Assert.IsTrue(result.Completions.All(t => t.InsertText == text));
@@ -521,4 +465,11 @@ public sealed class FilterLanguageTest
     }
 
     private static FilterTextSpan FromBounds(int start, int end) => new(Math.Max(start, 0), Math.Max(0, end - start));
+
+    private sealed class DelegateCallback(Func<FilterValueCompletionContext, FilterCompletionDefinition[]> provider)
+        : IFilterCompletionCallback
+    {
+        public List<FilterCompletionDefinition> GetCompletions(FilterValueCompletionContext context) =>
+            [.. provider(context)];
+    }
 }

@@ -41,7 +41,7 @@ public abstract partial class WorkTypeWorksPage : IconContentPage
 
     public IAsyncRelayCommand RemoveSubscriptionCommand { get; }
 
-    protected void InitializeSource(WorkType workType, IWorkViewViewModel? viewModel = null)
+    protected void InitializeSource(WorkKind workType, IWorkViewViewModel? viewModel = null)
     {
         WorkTypeComboBox.SelectedValue = workType;
 
@@ -80,15 +80,15 @@ public abstract partial class WorkTypeWorksPage : IconContentPage
     {
         if (_sourcePending = !EnsureServices())
             return;
-        var workType = WorkTypeComboBox.GetSelectedValue<WorkType>();
-        var engine = GetFetchEngine(_client!, workType);
-        WorkContainer.ResetEngine(engine);
+        var workType = WorkTypeComboBox.GetSelectedValue<WorkKind>();
+        var engine = GetSource(_client!, workType);
+        WorkContainer.ResetSource(engine.AsObjects(), workType is WorkKind.Novel ? SimpleWorkKind.Novel : SimpleWorkKind.Illustration);
         OnSourceChanged(engine, workType);
     }
 
-    protected abstract IAsyncEnumerable<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType);
+    protected abstract IAsyncEnumerable<WorkEntry> GetSource(MakoClient makoClient, WorkKind workType);
 
-    protected virtual void OnSourceChanged(IAsyncEnumerable<IWorkEntry> engine, WorkType workType)
+    protected virtual void OnSourceChanged(IAsyncEnumerable<WorkEntry> engine, WorkKind workType)
     {
     }
 
@@ -126,12 +126,12 @@ public abstract partial class WorkTypeWorksPage : IconContentPage
 public class WorkRecommendedPage : WorkTypeWorksPage
 {
     public WorkRecommendedPage(AppSettings settings, MakoClient client, IWorkSubscriptionService subscriptions, StorageEngine storage)
-        : this(settings.SearchSettings.WorkType, client, subscriptions, storage)
+        : this(settings.SearchSettings.WorkKind, client, subscriptions, storage)
     {
     }
 
     public WorkRecommendedPage(
-        WorkType workType,
+        WorkKind workType,
         MakoClient client,
         IWorkSubscriptionService subscriptions,
         StorageEngine storage,
@@ -141,25 +141,19 @@ public class WorkRecommendedPage : WorkTypeWorksPage
         InitializeSource(workType, viewModel);
     }
 
-    protected override IAsyncEnumerable<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType)
-    {
-        return workType switch
-        {
-            WorkType.Novel => makoClient.NovelRecommended(true, true),
-            _ => makoClient.WorkRecommended(true, true)
-        };
-    }
+    protected override IAsyncEnumerable<WorkEntry> GetSource(MakoClient makoClient, WorkKind workType) =>
+        makoClient.WorkRecommendedUnified(workType);
 }
 
 public class WorkNewPage : WorkTypeWorksPage
 {
     public WorkNewPage(AppSettings settings, MakoClient client, IWorkSubscriptionService subscriptions, StorageEngine storage)
-        : this(settings.SearchSettings.WorkType, client, subscriptions, storage)
+        : this(settings.SearchSettings.WorkKind, client, subscriptions, storage)
     {
     }
 
     public WorkNewPage(
-        WorkType workType,
+        WorkKind workType,
         MakoClient client,
         IWorkSubscriptionService subscriptions,
         StorageEngine storage,
@@ -169,12 +163,9 @@ public class WorkNewPage : WorkTypeWorksPage
         InitializeSource(workType, viewModel);
     }
 
-    protected override IAsyncEnumerable<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType)
-    {
-        return workType is WorkType.Novel
-            ? makoClient.NovelNew(null)
-            : makoClient.WorkNew(workType is WorkType.Manga ? "manga" : "illust", null);
-    }
+    protected override IAsyncEnumerable<WorkEntry> GetSource(MakoClient makoClient, WorkKind workType) =>
+        makoClient.WorkNewUnified(workType);
+
 }
 
 public class WorkPostsPage : WorkTypeWorksPage
@@ -186,24 +177,24 @@ public class WorkPostsPage : WorkTypeWorksPage
         new(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []);
 
     private User _user = EmptyUser();
-    private readonly WorkType _workType;
+    private readonly WorkKind _workType;
     private readonly IWorkViewViewModel? _viewModel;
     private bool _initialized;
 
     /// <summary>XAML constructor: services are resolved from <see cref="UiServices.ProviderProperty"/> once the page is attached under the shell.</summary>
     public WorkPostsPage() : base(null, null, null)
     {
-        _workType = WorkType.Illustration;
+        _workType = WorkKind.Illustration;
     }
 
     public WorkPostsPage(User user, AppSettings settings, MakoClient client, IWorkSubscriptionService subscriptions, StorageEngine storage)
-        : this(user, settings.SearchSettings.WorkType, client, subscriptions, storage)
+        : this(user, settings.SearchSettings.WorkKind, client, subscriptions, storage)
     {
     }
 
     public WorkPostsPage(
         User user,
-        WorkType workType,
+        WorkKind workType,
         MakoClient client,
         IWorkSubscriptionService subscriptions,
         StorageEngine storage,
@@ -251,35 +242,28 @@ public class WorkPostsPage : WorkTypeWorksPage
         ChangeSource();
     }
 
-    protected override IAsyncEnumerable<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType)
+    protected override IAsyncEnumerable<WorkEntry> GetSource(MakoClient makoClient, WorkKind workType)
     {
         if (_user.Id <= 0)
-            return AsyncEnumerable.Empty<IWorkEntry>();
+            return AsyncEnumerable.Empty<WorkEntry>();
 
-        return workType switch
-        {
-            WorkType.Novel => makoClient.NovelPosted(_user.Id),
-            WorkType.Manga => makoClient.WorkPosted(_user.Id, "manga"),
-            _ => makoClient.WorkPosted(_user.Id, "illust")
-        };
+        return makoClient.WorkPostedUnified(workType, _user.Id);
+
     }
 
-    protected override void OnSourceChanged(IAsyncEnumerable<IWorkEntry> engine, WorkType workType)
+    protected override void OnSourceChanged(IAsyncEnumerable<WorkEntry> engine, WorkKind workType)
     {
         if (_user.Id <= 0)
             return;
         var workKind = GetSubscriptionWorkKind(workType);
-        SubscriptionService.QueueSyncCurrentSource(
-            _user.Id,
-            WorkSubscriptionType.Posts,
-            workKind,
-            engine.ToFetchEngine());
+        if (SubscriptionService.TryGetSubscription(_user.Id, WorkSubscriptionType.Posts, workKind) is { } subscription)
+            SubscriptionService.QueueSyncSubscription(subscription);
         UpdateSubscriptionButtons(_user.Id, WorkSubscriptionType.Posts, workKind);
     }
 
     protected override async Task AddSubscriptionAsync()
     {
-        var workType = WorkTypeComboBox.GetSelectedValue<WorkType>();
+        var workType = WorkTypeComboBox.GetSelectedValue<WorkKind>();
         var workKind = GetSubscriptionWorkKind(workType);
 
         _ = await RunSubscriptionOperationAsync(
@@ -289,14 +273,14 @@ public class WorkPostsPage : WorkTypeWorksPage
                 workKind,
                 Storage,
                 SubscriptionService)),
-            () => UpdateSubscriptionButtons(WorkTypeComboBox.GetSelectedValue<WorkType>()));
+            () => UpdateSubscriptionButtons(WorkTypeComboBox.GetSelectedValue<WorkKind>()));
     }
 
     protected override async Task RemoveSubscriptionAsync()
     {
         _ = await RunSubscriptionOperationAsync(
             RemoveCurrentSubscriptionAsync,
-            () => UpdateSubscriptionButtons(WorkTypeComboBox.GetSelectedValue<WorkType>()));
+            () => UpdateSubscriptionButtons(WorkTypeComboBox.GetSelectedValue<WorkKind>()));
     }
 
     private async Task<bool> RemoveCurrentSubscriptionAsync()
@@ -312,9 +296,9 @@ public class WorkPostsPage : WorkTypeWorksPage
         SubscriptionService.TryGetSubscription(
             _user.Id,
             WorkSubscriptionType.Posts,
-            GetSubscriptionWorkKind(WorkTypeComboBox.GetSelectedValue<WorkType>()))?.HistoryEntryId;
+            GetSubscriptionWorkKind(WorkTypeComboBox.GetSelectedValue<WorkKind>()))?.HistoryEntryId;
 
-    private void UpdateSubscriptionButtons(WorkType workType)
+    private void UpdateSubscriptionButtons(WorkKind workType)
     {
         if (_user.Id <= 0)
         {
@@ -325,11 +309,11 @@ public class WorkPostsPage : WorkTypeWorksPage
         UpdateSubscriptionButtons(_user.Id, WorkSubscriptionType.Posts, GetSubscriptionWorkKind(workType));
     }
 
-    private static WorkSubscriptionWorkKind GetSubscriptionWorkKind(WorkType workType) => workType switch
+    private static WorkSubscriptionWorkKind GetSubscriptionWorkKind(WorkKind workType) => workType switch
     {
-        WorkType.Illustration => WorkSubscriptionWorkKind.Illustration,
-        WorkType.Manga => WorkSubscriptionWorkKind.Manga,
-        WorkType.Novel => WorkSubscriptionWorkKind.Novel,
+        WorkKind.Illustration => WorkSubscriptionWorkKind.Illustration,
+        WorkKind.Manga => WorkSubscriptionWorkKind.Manga,
+        WorkKind.Novel => WorkSubscriptionWorkKind.Novel,
         _ => throw new ArgumentOutOfRangeException(nameof(workType))
     };
 }

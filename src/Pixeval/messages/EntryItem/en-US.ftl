@@ -1,0 +1,27 @@
+GenerateLink = Copy application link
+
+GenerateWebLink = Copy website link
+
+OpenInWebBrowser = Open in web
+
+AddToBookmark = Add to Bookmarks
+
+AddToWatchLater = Add to Watch Later
+
+RemoveFromWatchLater = Remove from Watch Later
+
+Save = Save
+
+OpenUserInfoPage = Illustrator info
+
+OpenSeries = Open Series
+
+Copy = Copy to clipboard
+
+SaveAsCancelled = Cancelled the "save as" operation
+
+DownloadTaskCreated = Created download task
+
+TheIllustrationIsAMangaFormatted = { "This work contains " }{ $count }{ " pictures" }
+
+TheIllustrationIsAnUgoira = This is an ugoira

@@ -27,9 +27,7 @@ public partial class StorageEngine
             record.WorkKind,
             record.Title,
             record.Author,
-            record.Avatar,
-            record.LastCheckTime,
-            record.LastWorkId);
+            record.Avatar);
 
     public WorkSubscriptionRecord? GetSubscriptionByIdentity(long id, uint subscriptionType, uint workKind) =>
         GetSubscriptionByKey(id, subscriptionType, workKind);

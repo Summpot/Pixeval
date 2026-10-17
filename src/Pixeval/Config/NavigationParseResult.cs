@@ -5,7 +5,7 @@ using Pixeval.Config;
 
 namespace Pixeval.Config;
 
-public partial record NavigationParseResult
+public partial record struct NavigationParseResult
 {
     public NavigationConfiguration? Configuration { get; init; }
 }

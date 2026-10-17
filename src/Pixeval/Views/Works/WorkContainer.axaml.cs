@@ -12,7 +12,7 @@ using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 using Pixeval.Filters;
 using Pixeval.Config;
@@ -26,7 +26,7 @@ namespace Pixeval.Views.Works;
 /// </summary>
 public partial class WorkContainer : UserControl
 {
-    private readonly WorkContainerFilterCoordinator _filterCoordinator = new();
+    private WorkContainerFilterCoordinator? _filterCoordinator;
 
     public static readonly DirectProperty<WorkContainer, bool> IsRefreshEnabledProperty = AvaloniaProperty.RegisterDirect<WorkContainer, bool>(
         nameof(IsRefreshEnabled),
@@ -77,6 +77,9 @@ public partial class WorkContainer : UserControl
 
     public AvaloniaList<ICommandBarElement> CommandBarSubElements { get; } = [];
 
+    private WorkContainerFilterCoordinator FilterCoordinator =>
+        _filterCoordinator ??= new WorkContainerFilterCoordinator(this.GetRequiredUiService<LocalizedFilterSession>());
+
     public WorkContainer()
     {
         InitializeComponent();
@@ -124,7 +127,7 @@ public partial class WorkContainer : UserControl
     private void WorkView_OnDataContextChanged(object? sender, EventArgs args)
     {
         DataContext = (sender as Control)?.DataContext;
-        _filterCoordinator.ResetFilterValueCompletions();
+        _filterCoordinator?.ResetFilterValueCompletions();
         SetSortOption();
     }
 
@@ -158,19 +161,20 @@ public partial class WorkContainer : UserControl
     private void RefreshButton_OnClick(object? sender, RoutedEventArgs e) => RefreshRequested?.Invoke(sender, e);
 
     private void WorkFilterAutoSuggestBox_OnSearchRequested(object? sender, WorkFilterSearchRequestedEventArgs e) =>
-        _filterCoordinator.PerformSearch(DataContext as IOperableViewViewModel, WorkFilterAutoSuggestBox, this.Notifications, e.Text, e.CaretIndex);
+        FilterCoordinator.PerformSearch(DataContext as IOperableViewViewModel, WorkFilterAutoSuggestBox, this.Notifications, e.Text, e.CaretIndex);
 
     private FilterAnalysisResult AnalyzeFilter(string? text, int caret) =>
-        _filterCoordinator.AnalyzeFilter(DataContext as IOperableViewViewModel, text, caret);
+        FilterCoordinator.AnalyzeFilter(DataContext as IOperableViewViewModel, text, caret);
 
-    public void ResetEngine(IAsyncEnumerable<object> newEngine) => WorkView.ResetEngine(newEngine);
+    public void ResetSource(IAsyncEnumerable<object> source, SimpleWorkKind workType) =>
+        WorkView.ResetSource(source, workType);
 
     public void SetViewModel(IWorkViewViewModel viewModel) => WorkView.SetViewModel(viewModel);
 
-    public void SetSource(IReadOnlyCollection<object> source, SimpleWorkType workType, bool needRefreshOnOpen = false) =>
+    public void SetSource(IReadOnlyCollection<object> source, SimpleWorkKind workType, bool needRefreshOnOpen = false) =>
         WorkView.SetSource(source, workType, needRefreshOnOpen);
 
     public static readonly FuncValueConverter<int, string> CancelSelectionButtonConverter = new(i => i > 0
-        ? I18NManager.GetResource(WorkContainerResources.CancelSelectionButtonFormatted, i)
-        : I18NManager.GetResource(WorkContainerResources.CancelSelectionButtonDefaultLabel));
+        ? Strings.WorkContainerCancelSelectionButtonFormatted(count: i)
+        : Strings.WorkContainerCancelSelectionButtonDefaultLabel());
 }

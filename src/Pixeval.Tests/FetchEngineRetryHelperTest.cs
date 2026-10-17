@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Pixiv;
+using Pixeval.Mako;
 using Pixeval.Utilities;
 using Pixeval.Services.Network;
 
@@ -16,7 +16,7 @@ public sealed class FetchEngineRetryHelperTest
     [TestMethod]
     public async Task StreamAsync_RetriesInterruptedEnumeratorWithoutStartingOver()
     {
-        var engine = new InterruptingFetchEngine();
+        var engine = new InterruptingEnumerable();
         var results = new List<int>();
 
         await foreach (var result in FetchEngineRetryHelper.StreamAsync(
@@ -27,29 +27,27 @@ public sealed class FetchEngineRetryHelperTest
         Assert.AreSequenceEqual([1, 2], results);
         Assert.AreEqual(1, engine.EnumeratorCount);
         Assert.AreEqual(4, engine.MoveNextCount);
-        Assert.IsTrue(engine.EngineHandle.IsCompleted);
     }
 
     [TestMethod]
-    public async Task StreamAsync_CanCancelEnumerationWithoutCancellingSharedEngine()
+    public async Task StreamAsync_CanCancelEnumerationWithoutCancellingFeed()
     {
-        var engine = new InterruptingFetchEngine();
+        var feed = new CancellableFeed();
         using var cancellationTokenSource = new CancellationTokenSource();
         cancellationTokenSource.Cancel();
 
         _ = await Assert.ThrowsExactlyAsync<OperationCanceledException>(async () =>
         {
             await foreach (var _ in FetchEngineRetryHelper.StreamAsync(
-                               engine,
+                               feed,
                                cancelEngineOnCancellation: false,
                                token: cancellationTokenSource.Token))
             {
             }
         });
 
-        Assert.IsFalse(engine.EngineHandle.IsCancelled);
-        Assert.AreEqual(0, engine.EnumeratorCount);
-        Assert.AreEqual(0, engine.MoveNextCount);
+        Assert.IsFalse(feed.Cancelled);
+        Assert.AreEqual(0, feed.FetchCount);
     }
 
     [TestMethod]
@@ -67,10 +65,8 @@ public sealed class FetchEngineRetryHelperTest
         Assert.AreEqual(2, attemptCount);
     }
 
-    private sealed class InterruptingFetchEngine : IFetchEngine<int>
+    private sealed class InterruptingEnumerable : IAsyncEnumerable<int>
     {
-        public IFetchEngineHandle EngineHandle { get; } = new DummyEngineHandle();
-
         public int EnumeratorCount { get; private set; }
 
         public int MoveNextCount { get; private set; }
@@ -81,7 +77,7 @@ public sealed class FetchEngineRetryHelperTest
             return new Enumerator(this);
         }
 
-        private sealed class Enumerator(InterruptingFetchEngine engine) : IAsyncEnumerator<int>
+        private sealed class Enumerator(InterruptingEnumerable engine) : IAsyncEnumerator<int>
         {
             public int Current { get; private set; }
 
@@ -101,10 +97,27 @@ public sealed class FetchEngineRetryHelperTest
                         Current = 2;
                         return ValueTask.FromResult(true);
                     default:
-                        engine.EngineHandle.IsCompleted = true;
                         return ValueTask.FromResult(false);
                 }
             }
         }
+    }
+
+    private sealed class CancellableFeed : IPageFeed<int>, IAsyncEnumerable<int>
+    {
+        public bool Cancelled { get; private set; }
+
+        public int FetchCount { get; private set; }
+
+        public Task<(IReadOnlyList<int> Items, bool Exhausted)> FetchPageAsync(CancellationToken cancellationToken = default)
+        {
+            FetchCount++;
+            return Task.FromResult<(IReadOnlyList<int>, bool)>(([], true));
+        }
+
+        public void Cancel() => Cancelled = true;
+
+        public IAsyncEnumerator<int> GetAsyncEnumerator(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 }

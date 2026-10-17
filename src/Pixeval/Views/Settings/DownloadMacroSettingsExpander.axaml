@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Settings.DownloadMacroSettingsExpander"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:avalonia="using:AutoSettingsPage.Avalonia"
     xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:controls2="using:Pixeval.Controls"
@@ -13,7 +14,7 @@
     xmlns:pixeval="using:Pixeval"
     xmlns:utilities="using:Pixeval.Common"
     x:DataType="{x:Type entries:DownloadMacroSettingsEntry}"
-    Description="{Binding Converter={x:Static avalonia:SettingsEntryHelper.DescriptionConverter}}"
+    Description="{avalonia:SettingsDescription}"
     Header="{Binding Header}"
     mc:Ignorable="d"
     d:DesignHeight="520"
@@ -39,7 +40,7 @@
                     </DataTemplate>
                 </StackPanel.DataTemplates>
                 <ItemsControl ItemsPanel="{StaticResource WrapPanelTemplate}" ItemsSource="{x:Static entries:DownloadMacroSettingsEntry.AvailableTransducerMacros}" />
-                <TextBlock Text="{I18N {x:Static pixeval:SettingsMainViewResources.PredicateMacroHeader}}" TextWrapping="Wrap" />
+                <TextBlock Text="{CompiledBinding [SettingsMainView-PredicateMacroHeader], Source={x:Static loc:LocalizationManager.Instance}}" TextWrapping="Wrap" />
                 <ItemsControl ItemsPanel="{StaticResource WrapPanelTemplate}" ItemsSource="{x:Static entries:DownloadMacroSettingsEntry.AvailablePredicateMacros}" />
             </StackPanel>
         </controls:SettingsCard>
@@ -47,7 +48,7 @@
             <StackPanel HorizontalAlignment="Stretch" Spacing="6">
                 <TextBlock
                     Opacity="0.7"
-                    Text="{I18N {x:Static pixeval:SettingsMainViewResources+DownloadPathMacroTextBox.PlaceholderText}}"
+                    Text="{CompiledBinding [SettingsMainView-DownloadPathMacroTextBox-PlaceholderText], Source={x:Static loc:LocalizationManager.Instance}}"
                     TextWrapping="Wrap" />
                 <edit:TextEditor
                     x:Name="DownloadPathMacroTextBox"
@@ -60,16 +61,16 @@
                     TextChanged="DownloadPathMacroTextBox_OnTextChanged"
                     VerticalScrollBarVisibility="Auto" />
                 <TextBlock>
-                    <Run Text="{I18N {x:Static pixeval:SettingsMainViewResources+SinglePathBlock.Text}}" />
+                    <Run Text="{CompiledBinding [SettingsMainView-SinglePathBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                     <Run x:Name="SinglePathBlock" />
                     <LineBreak />
-                    <Run Text="{I18N {x:Static pixeval:SettingsMainViewResources+AnimatedPathBlock.Text}}" />
+                    <Run Text="{CompiledBinding [SettingsMainView-AnimatedPathBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                     <Run x:Name="AnimatedPathBlock" />
                     <LineBreak />
-                    <Run Text="{I18N {x:Static pixeval:SettingsMainViewResources+SetPathBlock.Text}}" />
+                    <Run Text="{CompiledBinding [SettingsMainView-SetPathBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                     <Run x:Name="SetPathBlock" />
                     <LineBreak />
-                    <Run Text="{I18N {x:Static pixeval:SettingsMainViewResources+NovelPathBlock.Text}}" />
+                    <Run Text="{CompiledBinding [SettingsMainView-NovelPathBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                     <Run x:Name="NovelPathBlock" />
                     <LineBreak />
                 </TextBlock>

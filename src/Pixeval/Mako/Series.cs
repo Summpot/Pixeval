@@ -7,19 +7,19 @@ using Pixeval.Pixiv;
 
 namespace Pixeval.Mako;
 
-public partial record Series
+public partial record struct Series
 {
     [JsonIgnore]
-    public SimpleWorkType WorkType { get; init; } = SimpleWorkType.Illustration;
+    public SimpleWorkKind WorkKind { get; init; } = SimpleWorkKind.Illustration;
 
     [JsonIgnore]
     public string? ThumbnailUrl => CoverUrl ?? "";
 
     [JsonIgnore]
-    public Uri AppUri => new($"pixeval://series/{(WorkType is SimpleWorkType.Novel ? "novel" : "illust")}/{Id}");
+    public Uri AppUri => new($"pixeval://series/{(WorkKind is SimpleWorkKind.Novel ? "novel" : "illust")}/{Id}");
 
     [JsonIgnore]
-    public Uri WebsiteUri => new(WorkType is SimpleWorkType.Novel
+    public Uri WebsiteUri => new(WorkKind is SimpleWorkKind.Novel
         ? $"https://www.pixiv.net/novel/series/{Id}"
         : $"https://www.pixiv.net/user/{User?.Id}/series/{Id}");
 

@@ -3,7 +3,6 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 
@@ -15,7 +14,7 @@ public class CommentsViewViewModel : EntryViewViewModel<CommentRecord, CommentRe
 
     public long ParentId { get; }
 
-    public SimpleWorkType ParentType { get; }
+    public SimpleWorkKind ParentType { get; }
 
     public long? ReplyToCommentId { get; }
 
@@ -39,39 +38,39 @@ public class CommentsViewViewModel : EntryViewViewModel<CommentRecord, CommentRe
 
     private readonly MakoClient _makoClient;
     private readonly IUserSessionService? _userSessionService;
+    private readonly IBlockedContentService? _blockedContent;
 
     public CommentsViewViewModel(
-        SimpleWorkType parentType,
+        SimpleWorkKind parentType,
         long parentId,
-        MakoClient? makoClient = null,
+        MakoClient makoClient,
         IUserSessionService? userSessionService = null,
+        IBlockedContentService? blockedContent = null,
         long? replyToCommentId = null)
+        : base(blockedContent)
     {
         ParentType = parentType;
         ParentId = parentId;
         ReplyToCommentId = replyToCommentId;
-        _makoClient = makoClient ?? App.Services!.GetRequiredService<MakoClient>();
-        _userSessionService = userSessionService ?? App.Services?.GetService<IUserSessionService>();
+        _makoClient = makoClient;
+        _userSessionService = userSessionService;
+        _blockedContent = blockedContent;
     }
 
     public bool IsOwnComment(CommentRecord comment) =>
         _userSessionService is { CurrentUserId: > 0 } && comment.User.Id == _userSessionService.CurrentUserId;
 
     public CommentsViewViewModel OpenReplies(long commentId) =>
-        new(ParentType, ParentId, _makoClient, _userSessionService, commentId);
+        new(ParentType, ParentId, _makoClient, _userSessionService, _blockedContent, commentId);
 
     public async Task<CommentRecord> AddCommentAsync(string content)
     {
-        return ReplyToCommentId is long parentCommentId
-            ? await _makoClient.AddWorkCommentAsync(ParentType, ParentId, parentCommentId, content)
-            : await _makoClient.AddWorkCommentAsync(ParentType, ParentId, content);
+        return await _makoClient.AddWorkCommentUnifiedAsync(ParentType, ParentId, content, ReplyToCommentId, null);
     }
 
     public async Task<CommentRecord> AddStickerAsync(int stampId)
     {
-        return ReplyToCommentId is long parentCommentId
-            ? await _makoClient.AddWorkCommentAsync(ParentType, ParentId, parentCommentId, stampId)
-            : await _makoClient.AddWorkCommentAsync(ParentType, ParentId, stampId);
+        return await _makoClient.AddWorkCommentUnifiedAsync(ParentType, ParentId, "", ReplyToCommentId, stampId);
     }
 
     public void AddComment(CommentRecord comment)
@@ -79,7 +78,7 @@ public class CommentsViewViewModel : EntryViewViewModel<CommentRecord, CommentRe
         if (comment.Id is 0)
             return;
 
-        Source.Insert(0, BlockedContentHelper.Replace(comment));
+        Source.Insert(0, _blockedContent is { } blocked ? blocked.Replace(comment) : comment);
     }
 
     public async Task<bool> DeleteCommentAsync(CommentRecord comment)
@@ -87,7 +86,7 @@ public class CommentsViewViewModel : EntryViewViewModel<CommentRecord, CommentRe
         if (!IsOwnComment(comment))
             return false;
 
-        return await _makoClient.DeleteWorkCommentAsync(ParentType, comment.Id);
+        return (await _makoClient.DeleteWorkCommentUnifiedAsync(ParentType, comment.Id)).Success;
     }
 
     public void RemoveComment(long commentId)
@@ -102,11 +101,11 @@ public class CommentsViewViewModel : EntryViewViewModel<CommentRecord, CommentRe
         }
     }
 
-    public void RefreshEngine()
+    public void RefreshSource()
     {
         var engine = ReplyToCommentId is long commentId
             ? _makoClient.WorkCommentReplies(ParentType, commentId)
             : _makoClient.WorkComments(ParentType, ParentId);
-        ResetEngine(engine);
+        ResetSource(engine);
     }
 }

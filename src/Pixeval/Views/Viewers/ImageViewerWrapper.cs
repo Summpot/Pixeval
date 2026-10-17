@@ -5,7 +5,7 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Microsoft.Extensions.DependencyInjection;
+using Avalonia.Layout;
 using Pixeval.Config;
 using Pixeval.Controls;
 using Pixeval.Utilities;
@@ -37,18 +37,44 @@ public class ImageViewerWrapper : ContentControl
 
     public ImageViewerBase ImageViewer => (ImageViewerBase) Content!;
 
-    public bool IsSwipeMode { get; } = App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.BrowseMode is BrowseMode.Swipe;
+    public bool IsSwipeMode { get; private set; } = true;
 
     public SwipeImageViewer? SwipeImageViewer => Content as SwipeImageViewer;
 
     public ImageViewerWrapper()
     {
         DataContext = null;
-        ImageViewerBase imageViewer = IsSwipeMode
-            ? new SwipeImageViewer()
-            : new ContinuousImageViewer();
-        imageViewer.BrowseDirection = App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.BrowseDirection;
+        var imageViewer = new SwipeImageViewer
+        {
+            BrowseDirection = Orientation.Horizontal
+        };
         Content = imageViewer;
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        ApplySettings(this.GetUiService<AppSettings>());
+    }
+
+    private void ApplySettings(AppSettings? settings)
+    {
+        if (settings is null)
+            return;
+
+        var swipe = settings.BrowsingExperienceSettings.BrowseMode is BrowseMode.Swipe;
+        var direction = settings.BrowsingExperienceSettings.BrowseDirection;
+        if (swipe != IsSwipeMode)
+        {
+            IsSwipeMode = swipe;
+            ImageViewerBase imageViewer = swipe ? new SwipeImageViewer() : new ContinuousImageViewer();
+            imageViewer.BrowseDirection = direction;
+            Content = imageViewer;
+            return;
+        }
+
+        if (Content is ImageViewerBase viewer)
+            viewer.BrowseDirection = direction;
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

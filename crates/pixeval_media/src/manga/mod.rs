@@ -10,6 +10,7 @@ use zip::CompressionMethod;
 
 use crate::error::MediaError;
 
+#[boltffi::data]
 #[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MangaArchiveFormat {
     Zip,

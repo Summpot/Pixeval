@@ -5,7 +5,7 @@ using System;
 
 namespace Pixeval.Subscription;
 
-public partial record SubscriptionFetchState
+public partial record struct SubscriptionFetchState
 {
     public int WorkSubscriptionId => (int)SubscriptionId;
 

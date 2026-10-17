@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Settings.BlockedUsersSettingsExpander"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:avalonia="using:AutoSettingsPage.Avalonia"
     xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:controls1="using:Pixeval.Controls"
@@ -15,7 +16,7 @@
     xmlns:pixeval="using:Pixeval"
     xmlns:storage="using:Pixeval.Storage"
     x:DataType="{x:Type entries:BlockedUsersSettingsEntry}"
-    Description="{Binding Converter={x:Static avalonia:SettingsEntryHelper.DescriptionConverter}}"
+    Description="{avalonia:SettingsDescription}"
     Header="{Binding Header}"
     Tag="{Binding Token}"
     mc:Ignorable="d"
@@ -28,7 +29,7 @@
         <Button
             Click="RefreshAllButton_OnClicked"
             Content="{markup:SymbolIcon ArrowSync}"
-            ToolTip.Tip="{I18N {x:Static pixeval:BlockedUsersSettingsExpanderResources+RefreshAllButton.Label}}" />
+            ToolTip.Tip="{CompiledBinding [BlockedUsersSettingsExpander-RefreshAllButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
     </controls:SettingsExpander.Content>
     <controls:SettingsExpander.Items>
         <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Left">
@@ -37,12 +38,12 @@
                 ColumnSpacing="8"
                 RowDefinitions="Auto,Auto"
                 RowSpacing="8">
-                <TextBox x:Name="TargetIdTextBox" PlaceholderText="{I18N {x:Static pixeval:BlockedUsersSettingsExpanderResources+TargetIdTextBox.PlaceholderText}}" />
+                <TextBox x:Name="TargetIdTextBox" PlaceholderText="{CompiledBinding [BlockedUsersSettingsExpander-TargetIdTextBox-PlaceholderText], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <Button
                     Grid.Column="1"
                     Click="AddButton_OnClicked"
                     Content="{markup:SymbolIcon Add}"
-                    ToolTip.Tip="{I18N {x:Static pixeval:BlockedUsersSettingsExpanderResources+AddUserButton.Label}}" />
+                    ToolTip.Tip="{CompiledBinding [BlockedUsersSettingsExpander-AddUserButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <controls1:InfoBar
                     x:Name="ErrorTextBlock"
                     Grid.Row="1"
@@ -72,14 +73,14 @@
                                 Click="RefreshButton_OnClicked"
                                 Content="{markup:SymbolIcon ArrowSync}"
                                 Tag="{Binding}"
-                                ToolTip.Tip="{I18N {x:Static pixeval:BlockedUsersSettingsExpanderResources+RefreshUserButton.Label}}" />
+                                ToolTip.Tip="{CompiledBinding [BlockedUsersSettingsExpander-RefreshUserButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <Button
                                 Grid.Column="3"
                                 VerticalAlignment="Center"
                                 Click="DeleteButton_OnClicked"
                                 Content="{markup:SymbolIcon Delete}"
                                 Tag="{Binding}"
-                                ToolTip.Tip="{I18N {x:Static pixeval:BlockedUsersSettingsExpanderResources+DeleteUserButton.Label}}" />
+                                ToolTip.Tip="{CompiledBinding [BlockedUsersSettingsExpander-DeleteUserButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                         </Grid>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

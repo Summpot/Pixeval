@@ -8,7 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Metadata;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 using Pixeval.Utilities;
@@ -63,7 +63,7 @@ public partial class IllustrationViewerInfoPane : UserControl
         if (sender is Control c && ViewModel?.CurrentIllustration is Illustration ill)
             await BookmarkTagSelectorFlyoutHelper.ShowAsync(
                 c,
-                SimpleWorkType.Illustration,
+                SimpleWorkKind.Illustration,
                 ill.Id,
                 AddToBookmarkAsync,
                 PlacementMode.TopEdgeAlignedRight);
@@ -74,9 +74,9 @@ public partial class IllustrationViewerInfoPane : UserControl
         if (ViewModel?.CurrentIllustration is not IWorkEntry current)
             return;
 
-        await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
+        await this.GetRequiredUiService<WorkCommands>().AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
         this.Notifications.ShowSuccess(
-            I18NManager.GetResource(MiscResources.AddedToBookmark));
+            Strings.MiscAddedToBookmark());
     }
     
     private void ChevronButtonClicked(object? sender, RoutedEventArgs e)

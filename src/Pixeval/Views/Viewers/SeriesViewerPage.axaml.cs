@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System.Collections.Generic;
 using System.ComponentModel;
 using Avalonia.Interactivity;
 using Pixeval.Pixiv;
@@ -40,7 +41,7 @@ public partial class SeriesViewerPage : IconContentPage
             && viewModel.TakeWorksViewModel() is { } worksViewModel)
         {
             SeriesContainerHost.Content = new SeriesContainer(
-                viewModel.WorkType,
+                viewModel.WorkKind,
                 viewModel.Id,
                 worksViewModel,
                 seriesDetail,
@@ -64,11 +65,11 @@ public partial class SeriesViewerPage : IconContentPage
 
     private void SetWorksEngine(
         SeriesViewerPageViewModel viewModel,
-        IFetchEngine<IWorkEntry>? engine)
+        IAsyncEnumerable<WorkEntry>? engine)
     {
         SeriesContainerHost.Content = engine is not null
                                       && viewModel is { SeriesDetail: { } seriesDetail, FirstWork: { } firstWork }
-            ? new SeriesContainer(viewModel.WorkType, viewModel.Id, engine, seriesDetail, firstWork, _client, _subscriptions, _storage)
+            ? new SeriesContainer(viewModel.WorkKind, viewModel.Id, engine, seriesDetail, firstWork, _client, _subscriptions, _storage)
             : null;
     }
 

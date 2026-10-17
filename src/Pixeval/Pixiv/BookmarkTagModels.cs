@@ -2,40 +2,36 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using Pixeval.I18N;
 using Pixeval.Mako;
 
 namespace Pixeval.Pixiv;
 
-public record AddNewBookmarkTag() : BookmarkTag("", 0, false)
+public interface IBookmarkTag
 {
+    string? Name { get; }
+    long Count { get; }
+    bool IsRegistered { get; }
+}
+
+public class AddNewBookmarkTag : IBookmarkTag
+{
+    public string? Name { get; set; } = "";
+    public long Count { get; set; } = 0;
+    public bool IsRegistered { get; set; } = false;
     public EventHandler<AddNewBookmarkTag, string>? TagAdded;
 }
 
-public record AllBookmarkTag() : BookmarkTag(null!, 0, false)
+public static class AllBookmarkTag
 {
-    public static AllBookmarkTag Instance { get; } = new();
-
-    private static readonly string _TagNameAll = I18NManager.GetResource(MiscResources.TagName.All);
-
-    /// <inheritdoc />
-    public override string ToString() => _TagNameAll;
+    public static BookmarkTag Instance => new(null!, 0, false);
 }
 
-public record UncategorizedBookmarkTag() : BookmarkTag("未分類", 0, false)
+public static class UncategorizedBookmarkTag
 {
-    public static UncategorizedBookmarkTag Instance { get; } = new();
-
-    private static readonly string _TagNameUncategorized = I18NManager.GetResource(MiscResources.TagName.Uncategorized);
-
-    /// <inheritdoc />
-    public override string ToString() => _TagNameUncategorized;
+    public static BookmarkTag Instance => new("未分類", 0, false);
 }
 
-public record BookmarkDetailBookmarkTag(string TagName, long TagCount, bool IsRegistered) : BookmarkTag(TagName, TagCount, IsRegistered)
+public static class BookmarkDetailBookmarkTag
 {
-    public static BookmarkDetailBookmarkTag Create(BookmarkTag tag) => new(tag.Name, tag.Count, tag.IsRegistered);
-
-    /// <inheritdoc />
-    public override string ToString() => Name;
+    public static BookmarkTag Create(BookmarkTag tag) => tag;
 }

@@ -23,7 +23,5 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<BundleResource Include="..\Pixeval\i18n\**\*.json" Link="i18n/%(RecursiveDir)%(Filename)%(Extension)" />
-		<BundleResource Include="..\Pixeval\i18n\**\*.md" Link="i18n/%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 </Project>

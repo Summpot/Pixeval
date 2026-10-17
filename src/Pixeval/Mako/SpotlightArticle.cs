@@ -7,7 +7,7 @@ using Pixeval.Pixiv;
 
 namespace Pixeval.Mako;
 
-public partial record SpotlightArticle
+public partial record struct SpotlightArticle
 {
     [JsonIgnore]
     public string? ThumbnailUrl => Thumbnail;
@@ -25,12 +25,5 @@ public partial record SpotlightArticle
     public DateTimeOffset PublishDateOffset => DateTimeOffset.TryParse(PublishDate, out var dt) ? dt : default;
 
     [JsonIgnore]
-    public SpotlightCategory CategoryEnum => Category.ToLowerInvariant() switch
-    {
-        "all" => SpotlightCategory.All,
-        "spotlight" => SpotlightCategory.Spotlight,
-        "tutorial" => SpotlightCategory.Tutorial,
-        "inspiration" => SpotlightCategory.Inspiration,
-        _ => SpotlightCategory.Spotlight
-    };
+    public SpotlightCategory CategoryEnum => Category;
 }

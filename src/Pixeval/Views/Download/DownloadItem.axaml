@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Download.DownloadItem"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Pixeval"
@@ -31,31 +32,31 @@
                 Click="ActionButton_OnClicked"
                 Icon="{markup1:SymbolIconEx Symbol={Binding ActionButtonSymbol}}"
                 IsEnabled="{Binding IsItemEnabled}"
-                Label="{Binding ActionButtonContent}" />
+                Label="{loc:LocalizedDownloadText ActionButtonContent}" />
             <CommandBar.SecondaryCommands>
                 <CommandBarButton
                     Click="ResetItem_OnClicked"
                     Icon="{markup:SymbolIcon ArrowRepeatAll}"
                     IsEnabled="{Binding IsResetItemEnabled}"
-                    Label="{I18N {x:Static local:DownloadItemResources+ResetItem.Label}}" />
+                    Label="{CompiledBinding [DownloadItem-ResetItem-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <CommandBarButton
                     Click="CancelDownloadItem_OnClicked"
                     Icon="{markup:SymbolIcon Dismiss}"
                     IsEnabled="{Binding IsCancelItemEnabled}"
-                    Label="{I18N {x:Static local:DownloadItemResources+CancelDownloadItem.Label}}" />
+                    Label="{CompiledBinding [DownloadItem-CancelDownloadItem-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <CommandBarButton
                     Click="OpenDownloadLocationItem_OnClicked"
                     Icon="{markup:SymbolIcon FolderArrowRight}"
-                    Label="{I18N {x:Static local:DownloadItemResources+OpenDownloadLocationItem.Label}}" />
+                    Label="{CompiledBinding [DownloadItem-OpenDownloadLocationItem-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <CommandBarButton
                     Click="GoToPageItem_OnClicked"
                     Icon="{markup:SymbolIcon Open}"
-                    Label="{I18N {x:Static local:DownloadItemResources+GoToPageItem.Label}}" />
+                    Label="{CompiledBinding [DownloadItem-GoToPageItem-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <CommandBarButton
                     Click="CheckErrorMessageInDetail_OnClicked"
                     Icon="{markup:SymbolIcon ErrorCircle}"
                     IsEnabled="{Binding IsError}"
-                    Label="{I18N {x:Static local:DownloadItemResources+CheckErrorMessageInDetailItem.Label}}" />
+                    Label="{CompiledBinding [DownloadItem-CheckErrorMessageInDetailItem-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
             </CommandBar.SecondaryCommands>
         </CommandBar>
 
@@ -79,7 +80,7 @@
                     Grid.Column="0"
                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                     MaxLines="1"
-                    Text="{Binding ProgressMessage}"
+                    Text="{loc:LocalizedDownloadText ProgressMessage}"
                     TextTrimming="CharacterEllipsis"
                     TextWrapping="NoWrap" />
                 <StackPanel

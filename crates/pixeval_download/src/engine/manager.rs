@@ -28,6 +28,7 @@ static DOWNLOAD_RUNTIME: LazyLock<tokio::runtime::Runtime> = LazyLock::new(|| {
         .expect("Failed to build Tokio runtime for download manager")
 });
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Default)]
 pub struct DownloadNetworkOptions {
     pub proxy_url: Option<String>,
@@ -50,6 +51,21 @@ pub struct DownloadManager {
     pub(crate) storage: Arc<RwLock<Option<Arc<pixeval_storage::StorageEngine>>>>,
     pub(crate) mako: Arc<RwLock<Option<Arc<pixeval_mako::MakoClient>>>>,
     pub(crate) snapshot_emit_scheduled: Arc<AtomicBool>,
+}
+
+impl Drop for DownloadManager {
+    fn drop(&mut self) {
+        let cb = self.callback.take();
+        let page_cb = self.page_callback.write().take();
+        let enc = self.encoder.write().take();
+        if cb.is_some() || page_cb.is_some() || enc.is_some() {
+            DOWNLOAD_RUNTIME.spawn(async move {
+                drop(cb);
+                drop(page_cb);
+                drop(enc);
+            });
+        }
+    }
 }
 
 #[uniffi::export]

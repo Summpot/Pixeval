@@ -9,11 +9,15 @@ use std::sync::Arc;
 use pixeval_maho::{DnsResolver, MahoConfig, MahoHttpClient, MahoResponse};
 
 use crate::auth::{AuthError, OAuthManager};
+use crate::catalog::{
+    self, IllustSearchTarget, IllustrationSearchParams, NovelSearchParams, NovelSearchTarget,
+    PrivacyRestrict, QueryDate, RankMode, SimpleWorkKind, SortOrder, SpotlightCategory, WorkKind,
+};
 use crate::models::*;
 use crate::stream::{
-    CommentFetchEngine, IllustrationFetchEngine, MakoFetchEngine, NovelFetchEngine,
-    PageFetchResult, PageFetcher, SeriesFetchEngine, SpotlightFetchEngine, UserFetchEngine,
-    WorkFetchEngine,
+    CommentFeed, IllustrationFeed, MakoFeed, NovelFeed,
+    PageFetchResult, PageFetcher, SeriesFeed, SpotlightFeed, UserFeed,
+    WorkFeed,
 };
 use crate::throttle::RequestThrottler;
 use md5::{Digest, Md5};
@@ -61,6 +65,7 @@ fn apply_request_headers(
     req
 }
 
+#[boltffi::error]
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum MakoError {
     #[error("Network error: {message}")]
@@ -130,6 +135,53 @@ pub struct MakoClient {
     web_cookie: Arc<parking_lot::RwLock<Option<String>>>,
     session_callback: Arc<parking_lot::RwLock<Option<Box<dyn MakoSessionCallback>>>>,
     tag_translation_cache: Arc<parking_lot::RwLock<std::collections::HashMap<String, String>>>,
+}
+
+impl Drop for MakoClient {
+    fn drop(&mut self) {
+        if Arc::strong_count(&self.session_callback) == 1 {
+            if let Some(cb) = self.session_callback.write().take() {
+                std::thread::spawn(move || drop(cb));
+            }
+        }
+    }
+}
+
+impl MakoClient {
+    fn catalog_work_feed(&self, url: String, is_novel: bool) -> Arc<WorkFeed> {
+        let fetcher = Arc::new(WorkEntryPageFetcher {
+            client: self.clone(),
+            initial_url: url.clone(),
+            is_novel,
+        });
+        Arc::new(WorkFeed::new(Arc::new(MakoFeed::new(fetcher, Some(url)))))
+    }
+
+    fn filter(&self) -> String {
+        self.target_filter.read().clone()
+    }
+}
+
+#[derive(uniffi::Object)]
+pub struct WorkSeriesQuery {
+    detail: Series,
+    first: Option<WorkEntry>,
+    engine: Arc<WorkFeed>,
+}
+
+#[uniffi::export]
+impl WorkSeriesQuery {
+    pub fn detail(&self) -> Series {
+        self.detail.clone()
+    }
+
+    pub fn first(&self) -> Option<WorkEntry> {
+        self.first.clone()
+    }
+
+    pub fn engine(&self) -> Arc<WorkFeed> {
+        self.engine.clone()
+    }
 }
 
 #[uniffi::export(async_runtime = "tokio")]
@@ -360,7 +412,7 @@ impl MakoClient {
         &self,
         include_ranking: bool,
         include_privacy: bool,
-    ) -> Arc<IllustrationFetchEngine> {
+    ) -> Arc<IllustrationFeed> {
         let filter = self.target_filter.read().clone();
         let initial_url = format!(
             "{APP_API_BASE_URL}/v1/illust/recommended?filter={filter}&include_ranking_illusts={include_ranking}&include_privacy_policy={include_privacy}"
@@ -369,8 +421,8 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(
-            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        Arc::new(IllustrationFeed::new(Arc::new(
+            MakoFeed::new(fetcher, Some(initial_url)),
         )))
     }
 
@@ -378,7 +430,7 @@ impl MakoClient {
         &self,
         include_ranking: bool,
         include_privacy: bool,
-    ) -> Arc<NovelFetchEngine> {
+    ) -> Arc<NovelFeed> {
         let filter = self.target_filter.read().clone();
         let initial_url = format!(
             "{APP_API_BASE_URL}/v1/novel/recommended?filter={filter}&include_ranking_novels={include_ranking}&include_privacy_policy={include_privacy}"
@@ -387,13 +439,13 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(NovelFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(NovelFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
     }
 
-    pub fn work_ranking(&self, mode: String, date: Option<String>) -> Arc<IllustrationFetchEngine> {
+    pub fn work_ranking(&self, mode: String, date: Option<String>) -> Arc<IllustrationFeed> {
         let filter = self.target_filter.read().clone();
         let mut initial_url = format!(
             "{APP_API_BASE_URL}/v1/illust/ranking?filter={filter}&mode={}",
@@ -406,8 +458,8 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(
-            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        Arc::new(IllustrationFeed::new(Arc::new(
+            MakoFeed::new(fetcher, Some(initial_url)),
         )))
     }
 
@@ -416,7 +468,7 @@ impl MakoClient {
         user_id: i64,
         restrict: String,
         tag: Option<String>,
-    ) -> Arc<IllustrationFetchEngine> {
+    ) -> Arc<IllustrationFeed> {
         let initial_url = if user_id <= 0 {
             String::new()
         } else {
@@ -433,8 +485,8 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(
-            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        Arc::new(IllustrationFeed::new(Arc::new(
+            MakoFeed::new(fetcher, Some(initial_url)),
         )))
     }
 
@@ -442,7 +494,7 @@ impl MakoClient {
         &self,
         content_type: Option<String>,
         max_illust_id: Option<i64>,
-    ) -> Arc<IllustrationFetchEngine> {
+    ) -> Arc<IllustrationFeed> {
         let filter = self.target_filter.read().clone();
         let mut initial_url = format!("{APP_API_BASE_URL}/v1/illust/new?filter={filter}");
         if let Some(ref ct) = content_type {
@@ -455,12 +507,12 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(
-            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        Arc::new(IllustrationFeed::new(Arc::new(
+            MakoFeed::new(fetcher, Some(initial_url)),
         )))
     }
 
-    pub fn novel_new(&self, max_novel_id: Option<i64>) -> Arc<NovelFetchEngine> {
+    pub fn novel_new(&self, max_novel_id: Option<i64>) -> Arc<NovelFeed> {
         let filter = self.target_filter.read().clone();
         let mut initial_url = format!("{APP_API_BASE_URL}/v1/novel/new?filter={filter}");
         if let Some(id) = max_novel_id {
@@ -470,7 +522,7 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(NovelFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(NovelFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
@@ -479,205 +531,83 @@ impl MakoClient {
     pub fn illustration_search_advanced(
         &self,
         params: IllustrationSearchParams,
-    ) -> Arc<IllustrationFetchEngine> {
-        let filter = self.target_filter.read().clone();
-        let target = params
-            .search_target
-            .unwrap_or_else(|| "partial_match_for_tags".to_string());
-        let sort_order = params.sort.unwrap_or_else(|| "date_desc".to_string());
-        let mut initial_url = format!(
-            "{APP_API_BASE_URL}/v1/search/illust?filter={filter}&word={}&search_target={}&sort={}",
-            url_encode(&params.word),
-            url_encode(&target),
-            url_encode(&sort_order)
-        );
-        if let Some(ai) = params.search_ai_type {
-            initial_url.push_str(&format!("&search_ai_type={ai}"));
-        }
-        if let Some(ct) = params.content_type {
-            initial_url.push_str(&format!("&content_type={}", url_encode(&ct)));
-        }
-        if let Some(rp) = params.ratio_pattern {
-            initial_url.push_str(&format!("&ratio_pattern={}", url_encode(&rp)));
-        }
-        if let Some(v) = params.merge_plain_keyword_results {
-            initial_url.push_str(&format!("&merge_plain_keyword_results={v}"));
-        }
-        if let Some(v) = params.include_translated_tag_results {
-            initial_url.push_str(&format!("&include_translated_tag_results={v}"));
-        }
-        if let Some(v) = params.include_potential_violation_works {
-            initial_url.push_str(&format!("&include_potential_violation_works={v}"));
-        }
-        if let Some(sd) = params.start_date {
-            initial_url.push_str(&format!("&start_date={}", url_encode(&sd)));
-        }
-        if let Some(ed) = params.end_date {
-            initial_url.push_str(&format!("&end_date={}", url_encode(&ed)));
-        }
-        if let Some(w_min) = params.width_min {
-            initial_url.push_str(&format!("&width_min={w_min}"));
-        }
-        if let Some(w_max) = params.width_max {
-            initial_url.push_str(&format!("&width_max={w_max}"));
-        }
-        if let Some(h_min) = params.height_min {
-            initial_url.push_str(&format!("&height_min={h_min}"));
-        }
-        if let Some(h_max) = params.height_max {
-            initial_url.push_str(&format!("&height_max={h_max}"));
-        }
-        if let Some(tool) = params.tool {
-            initial_url.push_str(&format!("&tool={}", url_encode(&tool)));
-        }
-
+    ) -> Arc<IllustrationFeed> {
+        let initial_url = catalog::illustration_search_url(&self.filter(), &params);
         let fetcher = Arc::new(IllustrationPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(
-            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        Arc::new(IllustrationFeed::new(Arc::new(
+            MakoFeed::new(fetcher, Some(initial_url)),
         )))
     }
 
-    pub fn illustration_search(
-        &self,
-        word: String,
-        search_target: Option<String>,
-        sort: Option<String>,
-    ) -> Arc<IllustrationFetchEngine> {
+    pub fn illustration_search(&self, word: String) -> Arc<IllustrationFeed> {
         self.illustration_search_advanced(IllustrationSearchParams {
             word,
-            search_target,
-            sort,
             ..Default::default()
         })
     }
 
-    pub fn novel_search_advanced(&self, params: NovelSearchParams) -> Arc<NovelFetchEngine> {
-        let filter = self.target_filter.read().clone();
-        let target = params
-            .search_target
-            .unwrap_or_else(|| "partial_match_for_tags".to_string());
-        let sort_order = params.sort.unwrap_or_else(|| "date_desc".to_string());
-        let mut initial_url = format!(
-            "{APP_API_BASE_URL}/v1/search/novel?filter={filter}&word={}&search_target={}&sort={}",
-            url_encode(&params.word),
-            url_encode(&target),
-            url_encode(&sort_order)
-        );
-        if let Some(ai) = params.search_ai_type {
-            initial_url.push_str(&format!("&search_ai_type={ai}"));
-        }
-        if let Some(lang) = params.lang {
-            initial_url.push_str(&format!("&lang={}", url_encode(&lang)));
-        }
-        if let Some(opt) = params.content_length_option {
-            if let Some(c_min) = params.content_length_min {
-                initial_url.push_str(&format!("&{opt}_min={c_min}"));
-            }
-            if let Some(c_max) = params.content_length_max {
-                initial_url.push_str(&format!("&{opt}_max={c_max}"));
-            }
-        }
-        if let Some(orig) = params.is_original_only {
-            initial_url.push_str(&format!("&is_original_only={orig}"));
-        }
-        if let Some(genre) = params.genre {
-            initial_url.push_str(&format!("&genre={genre}"));
-        }
-        if let Some(rep) = params.is_replaceable_only {
-            initial_url.push_str(&format!("&is_replaceable_only={rep}"));
-        }
-        if let Some(v) = params.merge_plain_keyword_results {
-            initial_url.push_str(&format!("&merge_plain_keyword_results={v}"));
-        }
-        if let Some(v) = params.include_translated_tag_results {
-            initial_url.push_str(&format!("&include_translated_tag_results={v}"));
-        }
-        if let Some(v) = params.include_potential_violation_works {
-            initial_url.push_str(&format!("&include_potential_violation_works={v}"));
-        }
-        if let Some(sd) = params.start_date {
-            initial_url.push_str(&format!("&start_date={}", url_encode(&sd)));
-        }
-        if let Some(ed) = params.end_date {
-            initial_url.push_str(&format!("&end_date={}", url_encode(&ed)));
-        }
-
+    pub fn novel_search_advanced(&self, params: NovelSearchParams) -> Arc<NovelFeed> {
+        let initial_url = catalog::novel_search_url(&self.filter(), &params);
         let fetcher = Arc::new(NovelPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(NovelFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(NovelFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
     }
 
-    pub fn novel_search(
-        &self,
-        word: String,
-        search_target: Option<String>,
-        sort: Option<String>,
-    ) -> Arc<NovelFetchEngine> {
+    pub fn novel_search(&self, word: String) -> Arc<NovelFeed> {
         self.novel_search_advanced(NovelSearchParams {
             word,
-            search_target,
-            sort,
             ..Default::default()
         })
     }
 
-    pub fn work_search(
-        &self,
-        work_type: String,
-        keyword: String,
-        target: Option<String>,
-        sort: Option<String>,
-    ) -> Arc<WorkFetchEngine> {
-        let filter = self.target_filter.read().clone();
-        let is_novel = work_type.eq_ignore_ascii_case("novel");
-        let path = if is_novel {
-            "/v1/search/novel"
+    pub fn work_search(&self, kind: SimpleWorkKind, word: String) -> Arc<WorkFeed> {
+        let filter = self.filter();
+        let url = if kind.is_novel() {
+            catalog::novel_search_url(
+                &filter,
+                &NovelSearchParams {
+                    word,
+                    search_target: NovelSearchTarget::PartialMatchForTags,
+                    sort: SortOrder::DateDesc,
+                    ..Default::default()
+                },
+            )
         } else {
-            "/v1/search/illust"
+            catalog::illustration_search_url(
+                &filter,
+                &IllustrationSearchParams {
+                    word,
+                    search_target: IllustSearchTarget::PartialMatchForTags,
+                    sort: SortOrder::DateDesc,
+                    ..Default::default()
+                },
+            )
         };
-        let search_target = target.unwrap_or_else(|| "partial_match_for_tags".to_string());
-        let sort_order = sort.unwrap_or_else(|| "date_desc".to_string());
-        let initial_url = format!(
-            "{APP_API_BASE_URL}{path}?filter={filter}&word={}&search_target={}&sort={}",
-            url_encode(&keyword),
-            url_encode(&search_target),
-            url_encode(&sort_order)
-        );
-
-        let fetcher = Arc::new(WorkEntryPageFetcher {
-            client: self.clone(),
-            initial_url: initial_url.clone(),
-            is_novel,
-        });
-
-        Arc::new(WorkFetchEngine::new(Arc::new(MakoFetchEngine::new(
-            fetcher,
-            Some(initial_url),
-        ))))
+        self.catalog_work_feed(url, kind.is_novel())
     }
 
-    pub fn user_recommended(&self) -> Arc<UserFetchEngine> {
+    pub fn user_recommended(&self) -> Arc<UserFeed> {
         let filter = self.target_filter.read().clone();
         let initial_url = format!("{APP_API_BASE_URL}/v1/user/recommended?filter={filter}");
         let fetcher = Arc::new(UserPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(UserFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(UserFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
     }
 
-    pub fn user_search(&self, word: String) -> Arc<UserFetchEngine> {
+    pub fn user_search(&self, word: String) -> Arc<UserFeed> {
         let filter = self.target_filter.read().clone();
         let initial_url = format!(
             "{APP_API_BASE_URL}/v1/search/user?filter={filter}&word={}",
@@ -687,13 +617,13 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(UserFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(UserFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
     }
 
-    pub fn user_related(&self, seed_user_id: i64) -> Arc<UserFetchEngine> {
+    pub fn user_related(&self, seed_user_id: i64) -> Arc<UserFeed> {
         let initial_url = if seed_user_id <= 0 {
             String::new()
         } else {
@@ -704,13 +634,13 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(UserFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(UserFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
     }
 
-    pub fn user_following(&self, user_id: i64, restrict: String) -> Arc<UserFetchEngine> {
+    pub fn user_following(&self, user_id: i64, restrict: String) -> Arc<UserFeed> {
         let initial_url = if user_id <= 0 {
             String::new()
         } else {
@@ -723,13 +653,13 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(UserFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(UserFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
     }
 
-    pub fn user_follower(&self, user_id: i64) -> Arc<UserFetchEngine> {
+    pub fn user_follower(&self, user_id: i64) -> Arc<UserFeed> {
         let initial_url = if user_id <= 0 {
             String::new()
         } else {
@@ -740,13 +670,13 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(UserFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(UserFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
     }
 
-    pub fn user_mypixiv(&self, user_id: i64) -> Arc<UserFetchEngine> {
+    pub fn user_mypixiv(&self, user_id: i64) -> Arc<UserFeed> {
         let initial_url = if user_id <= 0 {
             String::new()
         } else {
@@ -756,7 +686,7 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(UserFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(UserFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
@@ -799,7 +729,7 @@ impl MakoClient {
         })
     }
 
-    pub fn work_following(&self, restrict: String) -> Arc<IllustrationFetchEngine> {
+    pub fn work_following(&self, restrict: String) -> Arc<IllustrationFeed> {
         let initial_url = format!(
             "{APP_API_BASE_URL}/v2/illust/follow?restrict={}",
             url_encode(&restrict)
@@ -808,23 +738,23 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(
-            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        Arc::new(IllustrationFeed::new(Arc::new(
+            MakoFeed::new(fetcher, Some(initial_url)),
         )))
     }
 
-    pub fn work_mypixiv(&self) -> Arc<IllustrationFetchEngine> {
+    pub fn work_mypixiv(&self) -> Arc<IllustrationFeed> {
         let initial_url = format!("{APP_API_BASE_URL}/v2/illust/mypixiv");
         let fetcher = Arc::new(IllustrationPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(
-            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        Arc::new(IllustrationFeed::new(Arc::new(
+            MakoFeed::new(fetcher, Some(initial_url)),
         )))
     }
 
-    pub fn work_related(&self, illust_id: i64) -> Arc<IllustrationFetchEngine> {
+    pub fn work_related(&self, illust_id: i64) -> Arc<IllustrationFeed> {
         let filter = self.target_filter.read().clone();
         let initial_url =
             format!("{APP_API_BASE_URL}/v2/illust/related?illust_id={illust_id}&filter={filter}");
@@ -832,12 +762,12 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(
-            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        Arc::new(IllustrationFeed::new(Arc::new(
+            MakoFeed::new(fetcher, Some(initial_url)),
         )))
     }
 
-    pub fn novel_related(&self, novel_id: i64) -> Arc<NovelFetchEngine> {
+    pub fn novel_related(&self, novel_id: i64) -> Arc<NovelFeed> {
         let filter = self.target_filter.read().clone();
         let initial_url =
             format!("{APP_API_BASE_URL}/v1/novel/related?novel_id={novel_id}&filter={filter}");
@@ -845,13 +775,13 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(NovelFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(NovelFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
     }
 
-    pub fn work_posted(&self, user_id: i64, work_type: String) -> Arc<IllustrationFetchEngine> {
+    pub fn work_posted(&self, user_id: i64, work_type: String) -> Arc<IllustrationFeed> {
         let initial_url = if user_id <= 0 {
             String::new()
         } else {
@@ -865,12 +795,12 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(
-            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        Arc::new(IllustrationFeed::new(Arc::new(
+            MakoFeed::new(fetcher, Some(initial_url)),
         )))
     }
 
-    pub fn novel_ranking(&self, mode: String, date: Option<String>) -> Arc<NovelFetchEngine> {
+    pub fn novel_ranking(&self, mode: String, date: Option<String>) -> Arc<NovelFeed> {
         let filter = self.target_filter.read().clone();
         let mut initial_url = format!(
             "{APP_API_BASE_URL}/v1/novel/ranking?filter={filter}&mode={}",
@@ -883,7 +813,7 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(NovelFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(NovelFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
@@ -894,7 +824,7 @@ impl MakoClient {
         user_id: i64,
         restrict: String,
         tag: Option<String>,
-    ) -> Arc<NovelFetchEngine> {
+    ) -> Arc<NovelFeed> {
         let initial_url = if user_id <= 0 {
             String::new()
         } else {
@@ -911,13 +841,13 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(NovelFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(NovelFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
     }
 
-    pub fn novel_following(&self, restrict: String) -> Arc<NovelFetchEngine> {
+    pub fn novel_following(&self, restrict: String) -> Arc<NovelFeed> {
         let initial_url = format!(
             "{APP_API_BASE_URL}/v1/novel/follow?restrict={}",
             url_encode(&restrict)
@@ -926,25 +856,25 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(NovelFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(NovelFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
     }
 
-    pub fn novel_mypixiv(&self) -> Arc<NovelFetchEngine> {
+    pub fn novel_mypixiv(&self) -> Arc<NovelFeed> {
         let initial_url = format!("{APP_API_BASE_URL}/v1/novel/mypixiv");
         let fetcher = Arc::new(NovelPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(NovelFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(NovelFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
     }
 
-    pub fn novel_posted(&self, user_id: i64) -> Arc<NovelFetchEngine> {
+    pub fn novel_posted(&self, user_id: i64) -> Arc<NovelFeed> {
         let initial_url = if user_id <= 0 {
             String::new()
         } else {
@@ -955,13 +885,13 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(NovelFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(NovelFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
     }
 
-    pub fn novel_series(&self, series_id: i64) -> Arc<NovelFetchEngine> {
+    pub fn novel_series(&self, series_id: i64) -> Arc<NovelFeed> {
         let filter = self.target_filter.read().clone();
         let initial_url =
             format!("{APP_API_BASE_URL}/v2/novel/series?series_id={series_id}&filter={filter}");
@@ -969,13 +899,13 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(NovelFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(NovelFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
     }
 
-    pub fn work_series(&self, series_id: i64) -> Arc<IllustrationFetchEngine> {
+    pub fn work_series(&self, series_id: i64) -> Arc<IllustrationFeed> {
         let filter = self.target_filter.read().clone();
         let initial_url = format!(
             "{APP_API_BASE_URL}/v1/illust/series?illust_series_id={series_id}&filter={filter}"
@@ -984,8 +914,8 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(
-            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        Arc::new(IllustrationFeed::new(Arc::new(
+            MakoFeed::new(fetcher, Some(initial_url)),
         )))
     }
 
@@ -1300,20 +1230,20 @@ impl MakoClient {
         Ok(res.ugoira_metadata)
     }
 
-    pub fn work_series_watchlist(&self, is_novel: bool) -> Arc<SeriesFetchEngine> {
+    pub fn work_series_watchlist(&self, is_novel: bool) -> Arc<SeriesFeed> {
         let kind = if is_novel { "novel" } else { "manga" };
         let initial_url = format!("{APP_API_BASE_URL}/v1/watchlist/{kind}");
         let fetcher = Arc::new(SeriesPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(SeriesFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(SeriesFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
     }
 
-    pub fn spotlight_articles(&self, category: Option<String>) -> Arc<SpotlightFetchEngine> {
+    pub fn spotlight_articles(&self, category: Option<String>) -> Arc<SpotlightFeed> {
         let filter = self.target_filter.read().clone();
         let cat = category.unwrap_or_else(|| "all".to_string());
         let initial_url = format!(
@@ -1324,7 +1254,7 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(SpotlightFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        Arc::new(SpotlightFeed::new(Arc::new(MakoFeed::new(
             fetcher,
             Some(initial_url),
         ))))
@@ -1444,7 +1374,7 @@ impl MakoClient {
         illust_tag: Option<String>,
         bookmark_period: Option<String>,
         order: Option<String>,
-    ) -> Arc<IllustrationFetchEngine> {
+    ) -> Arc<IllustrationFeed> {
         let mut initial_url = format!(
             "{APP_API_BASE_URL}/v1/search/bookmark/illust?bookmark_restrict={}",
             url_encode(&restrict)
@@ -1465,8 +1395,8 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(
-            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        Arc::new(IllustrationFeed::new(Arc::new(
+            MakoFeed::new(fetcher, Some(initial_url)),
         )))
     }
 
@@ -1477,7 +1407,7 @@ impl MakoClient {
         novel_tag: Option<String>,
         bookmark_period: Option<String>,
         order: Option<String>,
-    ) -> Arc<NovelFetchEngine> {
+    ) -> Arc<NovelFeed> {
         let mut initial_url = format!(
             "{APP_API_BASE_URL}/v1/search/bookmark/novel?bookmark_restrict={}",
             url_encode(&restrict)
@@ -1498,8 +1428,8 @@ impl MakoClient {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(NovelFetchEngine::new(Arc::new(
-            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        Arc::new(NovelFeed::new(Arc::new(
+            MakoFeed::new(fetcher, Some(initial_url)),
         )))
     }
 
@@ -1553,25 +1483,25 @@ impl MakoClient {
     }
 
     // ==================== Browsing History ====================
-    pub fn browsing_history_illusts(&self) -> Arc<IllustrationFetchEngine> {
+    pub fn browsing_history_illusts(&self) -> Arc<IllustrationFeed> {
         let initial_url = format!("{APP_API_BASE_URL}/v1/user/browsing-history/illusts");
         let fetcher = Arc::new(IllustrationPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(IllustrationFetchEngine::new(Arc::new(
-            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        Arc::new(IllustrationFeed::new(Arc::new(
+            MakoFeed::new(fetcher, Some(initial_url)),
         )))
     }
 
-    pub fn browsing_history_novels(&self) -> Arc<NovelFetchEngine> {
+    pub fn browsing_history_novels(&self) -> Arc<NovelFeed> {
         let initial_url = format!("{APP_API_BASE_URL}/v1/user/browsing-history/novels");
         let fetcher = Arc::new(NovelPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
         });
-        Arc::new(NovelFetchEngine::new(Arc::new(
-            MakoFetchEngine::new(fetcher, Some(initial_url)),
+        Arc::new(NovelFeed::new(Arc::new(
+            MakoFeed::new(fetcher, Some(initial_url)),
         )))
     }
 
@@ -1614,285 +1544,253 @@ impl MakoClient {
     }
 
     pub fn ranking_max_date(&self) -> String {
-        let yesterday = chrono::Utc::now() - chrono::Duration::days(1);
-        yesterday.format("%Y-%m-%d").to_string()
+        catalog::ranking_max_date()
+            .format()
+            .unwrap_or_else(|_| "1970-01-01".to_string())
+    }
+
+    pub fn ranking_max_query_date(&self) -> QueryDate {
+        catalog::ranking_max_date()
+    }
+
+    pub async fn set_bookmark(
+        &self,
+        kind: SimpleWorkKind,
+        id: i64,
+        favorite: bool,
+        restrict: PrivacyRestrict,
+        tags: Option<Vec<String>>,
+    ) -> Result<BoolResult, MakoError> {
+        if favorite {
+            self.post_bookmark(kind.is_novel(), id, restrict.as_str().to_string(), tags)
+                .await
+        } else {
+            self.remove_bookmark(kind.is_novel(), id).await
+        }
+    }
+
+    pub async fn set_follow(
+        &self,
+        user_id: i64,
+        follow: bool,
+        restrict: PrivacyRestrict,
+    ) -> Result<BoolResult, MakoError> {
+        if follow {
+            self.post_follow_user(user_id, restrict.as_str().to_string()).await
+        } else {
+            self.remove_follow_user(user_id).await
+        }
+    }
+
+    pub fn rank_modes_for(&self, kind: SimpleWorkKind) -> Vec<RankMode> {
+        RankMode::supported_for(kind)
     }
 
     pub fn work_ranking_unified(
         &self,
-        work_type: String,
-        mode: String,
-        date: Option<String>,
-    ) -> Result<Arc<WorkFetchEngine>, MakoError> {
-        const VALID_MODES: &[&str] = &[
-            "day", "week", "month", "day_male", "day_female", "day_manga", "week_manga",
-            "month_manga", "week_original", "week_rookie", "day_r18", "day_male_r18",
-            "day_female_r18", "week_r18", "week_r18g", "day_ai", "day_r18_ai", "week_ai",
-            "week_ai_r18",
-        ];
-        if !VALID_MODES.contains(&mode.as_str()) {
-            return Err(MakoError::InvalidParameter {
-                message: format!("Invalid ranking mode: {mode}"),
-            });
-        }
-        if let Some(ref d) = date {
-            if chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").is_err() {
-                return Err(MakoError::InvalidParameter {
-                    message: format!("Invalid date format (expected yyyy-MM-dd): {d}"),
-                });
-            }
-        }
-
-        let is_novel = work_type.eq_ignore_ascii_case("novel");
-        let filter = self.target_filter.read().clone();
-        let date_param = date.as_deref().unwrap_or("");
-        let url = if is_novel {
-            if date_param.is_empty() {
-                format!("{APP_API_BASE_URL}/v1/novel/ranking?mode={mode}&filter={filter}")
-            } else {
-                format!("{APP_API_BASE_URL}/v1/novel/ranking?mode={mode}&date={date_param}&filter={filter}")
-            }
-        } else {
-            if date_param.is_empty() {
-                format!("{APP_API_BASE_URL}/v1/illust/ranking?mode={mode}&filter={filter}")
-            } else {
-                format!("{APP_API_BASE_URL}/v1/illust/ranking?mode={mode}&date={date_param}&filter={filter}")
-            }
-        };
-
-        let fetcher = Arc::new(WorkEntryPageFetcher {
-            client: self.clone(),
-            initial_url: url.clone(),
-            is_novel,
-        });
-        let engine = Arc::new(MakoFetchEngine::new(fetcher, Some(url)));
-        Ok(Arc::new(WorkFetchEngine::new(engine)))
+        kind: SimpleWorkKind,
+        mode: RankMode,
+        date: Option<QueryDate>,
+    ) -> Result<Arc<WorkFeed>, MakoError> {
+        let url = catalog::work_ranking_url(&self.filter(), kind, mode, date.as_ref())?;
+        Ok(self.catalog_work_feed(url, kind.is_novel()))
     }
 
-    pub fn work_recommended_unified(&self, work_type: String) -> Arc<WorkFetchEngine> {
-        let is_novel = work_type.eq_ignore_ascii_case("novel");
-        let filter = self.target_filter.read().clone();
-        let url = if is_novel {
-            format!("{APP_API_BASE_URL}/v1/novel/recommended?include_ranking_novels=true&include_privacy_policy=true&filter={filter}")
-        } else {
-            let content_type = if work_type.eq_ignore_ascii_case("manga") { "&content_type=manga" } else { "" };
-            format!("{APP_API_BASE_URL}/v1/illust/recommended?include_ranking_illusts=true&include_privacy_policy=true&filter={filter}{content_type}")
-        };
-        let fetcher = Arc::new(WorkEntryPageFetcher {
-            client: self.clone(),
-            initial_url: url.clone(),
-            is_novel,
-        });
-        let engine = Arc::new(MakoFetchEngine::new(fetcher, Some(url)));
-        Arc::new(WorkFetchEngine::new(engine))
+    pub fn work_recommended_unified(&self, kind: WorkKind) -> Arc<WorkFeed> {
+        let url = catalog::work_recommended_url(&self.filter(), kind);
+        self.catalog_work_feed(url, kind.is_novel())
     }
 
-    pub fn work_new_unified(&self, work_type: String) -> Arc<WorkFetchEngine> {
-        let is_novel = work_type.eq_ignore_ascii_case("novel");
-        let filter = self.target_filter.read().clone();
-        let url = if is_novel {
-            format!("{APP_API_BASE_URL}/v1/novel/new?filter={filter}")
-        } else {
-            let content_type = if work_type.eq_ignore_ascii_case("manga") { "manga" } else { "illust" };
-            format!("{APP_API_BASE_URL}/v1/illust/new?content_type={content_type}&filter={filter}")
-        };
-        let fetcher = Arc::new(WorkEntryPageFetcher {
-            client: self.clone(),
-            initial_url: url.clone(),
-            is_novel,
-        });
-        let engine = Arc::new(MakoFetchEngine::new(fetcher, Some(url)));
-        Arc::new(WorkFetchEngine::new(engine))
+    pub fn work_new_unified(&self, kind: WorkKind) -> Arc<WorkFeed> {
+        let url = catalog::work_new_url(&self.filter(), kind);
+        self.catalog_work_feed(url, kind.is_novel())
     }
 
-    pub fn work_following_unified(&self, work_type: String, restrict: String) -> Arc<WorkFetchEngine> {
-        let is_novel = work_type.eq_ignore_ascii_case("novel");
-        let url = if is_novel {
-            format!("{APP_API_BASE_URL}/v1/novel/follow?restrict={restrict}")
-        } else {
-            format!("{APP_API_BASE_URL}/v2/illust/follow?restrict={restrict}")
-        };
-        let fetcher = Arc::new(WorkEntryPageFetcher {
-            client: self.clone(),
-            initial_url: url.clone(),
-            is_novel,
-        });
-        let engine = Arc::new(MakoFetchEngine::new(fetcher, Some(url)));
-        Arc::new(WorkFetchEngine::new(engine))
+    pub fn work_following_unified(&self, kind: SimpleWorkKind, restrict: PrivacyRestrict) -> Arc<WorkFeed> {
+        self.catalog_work_feed(catalog::work_following_url(kind, restrict), kind.is_novel())
     }
 
     pub fn work_bookmarks_unified(
         &self,
-        work_type: String,
+        kind: SimpleWorkKind,
         user_id: i64,
-        restrict: String,
+        restrict: PrivacyRestrict,
         tag: Option<String>,
-    ) -> Arc<WorkFetchEngine> {
-        let is_novel = work_type.eq_ignore_ascii_case("novel");
-        let tag_param = match tag {
-            Some(t) if !t.is_empty() => format!("&tag={}", url_encode(&t)),
-            _ => String::new(),
-        };
-        let url = if is_novel {
-            format!("{APP_API_BASE_URL}/v1/user/bookmarks/novel?user_id={user_id}&restrict={restrict}{tag_param}")
-        } else {
-            format!("{APP_API_BASE_URL}/v1/user/bookmarks/illust?user_id={user_id}&restrict={restrict}{tag_param}")
-        };
-        let fetcher = Arc::new(WorkEntryPageFetcher {
-            client: self.clone(),
-            initial_url: url.clone(),
-            is_novel,
-        });
-        let engine = Arc::new(MakoFetchEngine::new(fetcher, Some(url)));
-        Arc::new(WorkFetchEngine::new(engine))
+    ) -> Arc<WorkFeed> {
+        self.catalog_work_feed(
+            catalog::work_bookmarks_url(kind, user_id, restrict, tag.as_deref()),
+            kind.is_novel(),
+        )
     }
 
-    pub fn work_posted_unified(&self, work_type: String, user_id: i64) -> Arc<WorkFetchEngine> {
-        let is_novel = work_type.eq_ignore_ascii_case("novel");
-        let filter = self.target_filter.read().clone();
-        let url = if is_novel {
-            format!("{APP_API_BASE_URL}/v1/user/novels?user_id={user_id}&filter={filter}")
-        } else {
-            let content_type = if work_type.eq_ignore_ascii_case("manga") { "manga" } else { "illust" };
-            format!("{APP_API_BASE_URL}/v1/user/illusts?user_id={user_id}&type={content_type}&filter={filter}")
-        };
-        let fetcher = Arc::new(WorkEntryPageFetcher {
-            client: self.clone(),
-            initial_url: url.clone(),
-            is_novel,
-        });
-        let engine = Arc::new(MakoFetchEngine::new(fetcher, Some(url)));
-        Arc::new(WorkFetchEngine::new(engine))
+    pub fn work_posted_unified(&self, kind: WorkKind, user_id: i64) -> Arc<WorkFeed> {
+        self.catalog_work_feed(
+            catalog::work_posted_url(&self.filter(), kind, user_id),
+            kind.is_novel(),
+        )
     }
 
-    pub fn work_related_unified(&self, work_type: String, id: i64) -> Arc<WorkFetchEngine> {
-        let is_novel = work_type.eq_ignore_ascii_case("novel");
-        let filter = self.target_filter.read().clone();
-        let url = if is_novel {
-            format!("{APP_API_BASE_URL}/v1/novel/related?novel_id={id}&filter={filter}")
-        } else {
-            format!("{APP_API_BASE_URL}/v2/illust/related?illust_id={id}&filter={filter}")
-        };
-        let fetcher = Arc::new(WorkEntryPageFetcher {
-            client: self.clone(),
-            initial_url: url.clone(),
-            is_novel,
-        });
-        let engine = Arc::new(MakoFetchEngine::new(fetcher, Some(url)));
-        Arc::new(WorkFetchEngine::new(engine))
+    pub fn work_related_unified(&self, kind: SimpleWorkKind, id: i64) -> Arc<WorkFeed> {
+        self.catalog_work_feed(
+            catalog::work_related_url(&self.filter(), kind, id),
+            kind.is_novel(),
+        )
     }
 
-    pub fn work_mypixiv_unified(&self, work_type: String) -> Arc<WorkFetchEngine> {
-        let is_novel = work_type.eq_ignore_ascii_case("novel");
-        let url = if is_novel {
-            format!("{APP_API_BASE_URL}/v1/novel/mypixiv")
-        } else {
-            format!("{APP_API_BASE_URL}/v1/illust/mypixiv")
-        };
-        let fetcher = Arc::new(WorkEntryPageFetcher {
-            client: self.clone(),
-            initial_url: url.clone(),
-            is_novel,
-        });
-        let engine = Arc::new(MakoFetchEngine::new(fetcher, Some(url)));
-        Arc::new(WorkFetchEngine::new(engine))
+    pub fn work_mypixiv_unified(&self, kind: SimpleWorkKind) -> Arc<WorkFeed> {
+        self.catalog_work_feed(catalog::work_mypixiv_url(kind), kind.is_novel())
     }
 
     pub fn search_bookmark_works_unified(
         &self,
-        work_type: String,
-        restrict: String,
+        kind: SimpleWorkKind,
+        restrict: PrivacyRestrict,
         bookmark_tag: Option<String>,
         work_tag: Option<String>,
         bookmark_period: Option<String>,
         order: Option<String>,
-    ) -> Arc<WorkFetchEngine> {
-        let is_novel = work_type.eq_ignore_ascii_case("novel");
-        let mut query = vec![format!("restrict={restrict}")];
-        if let Some(bt) = bookmark_tag {
-            if !bt.is_empty() {
-                query.push(format!("tag={}", url_encode(&bt)));
-            }
-        }
-        if let Some(wt) = work_tag {
-            if !wt.is_empty() {
-                query.push(format!("word={}", url_encode(&wt)));
-            }
-        }
-        if let Some(bp) = bookmark_period {
-            if !bp.is_empty() {
-                query.push(format!("bookmark_period={bp}"));
-            }
-        }
-        if let Some(ord) = order {
-            if !ord.is_empty() {
-                query.push(format!("order={ord}"));
-            }
-        }
-        let qs = query.join("&");
-        let url = if is_novel {
-            format!("{APP_API_BASE_URL}/v1/novel/bookmarks_ranges?{qs}")
-        } else {
-            format!("{APP_API_BASE_URL}/v1/illust/bookmarks_ranges?{qs}")
-        };
-        let fetcher = Arc::new(WorkEntryPageFetcher {
-            client: self.clone(),
-            initial_url: url.clone(),
-            is_novel,
-        });
-        let engine = Arc::new(MakoFetchEngine::new(fetcher, Some(url)));
-        Arc::new(WorkFetchEngine::new(engine))
+    ) -> Arc<WorkFeed> {
+        self.catalog_work_feed(
+            catalog::search_bookmark_works_url(
+                kind,
+                restrict,
+                bookmark_tag.as_deref(),
+                work_tag.as_deref(),
+                bookmark_period.as_deref(),
+                order.as_deref(),
+            ),
+            kind.is_novel(),
+        )
     }
 
-    pub fn browsing_history_unified(&self, work_type: String) -> Arc<WorkFetchEngine> {
-        let is_novel = work_type.eq_ignore_ascii_case("novel");
-        let url = if is_novel {
-            format!("{APP_API_BASE_URL}/v1/novel/browsing-history")
-        } else {
-            format!("{APP_API_BASE_URL}/v1/illust/browsing-history")
-        };
-        let fetcher = Arc::new(WorkEntryPageFetcher {
-            client: self.clone(),
-            initial_url: url.clone(),
-            is_novel,
-        });
-        let engine = Arc::new(MakoFetchEngine::new(fetcher, Some(url)));
-        Arc::new(WorkFetchEngine::new(engine))
+    pub fn browsing_history_unified(&self, kind: SimpleWorkKind) -> Arc<WorkFeed> {
+        self.catalog_work_feed(catalog::browsing_history_url(kind), kind.is_novel())
     }
 
-    pub fn work_comments(&self, is_novel: bool, work_id: i64) -> Arc<CommentFetchEngine> {
-        let filter = self.target_filter.read().clone();
-        let url = if is_novel {
-            format!("{APP_API_BASE_URL}/v3/novel/comments?novel_id={work_id}&filter={filter}")
-        } else {
-            format!("{APP_API_BASE_URL}/v3/illust/comments?illust_id={work_id}&filter={filter}")
+    pub fn work_series_unified(&self, kind: SimpleWorkKind, series_id: i64) -> Arc<WorkFeed> {
+        self.catalog_work_feed(
+            catalog::work_series_url(&self.filter(), kind, series_id),
+            kind.is_novel(),
+        )
+    }
+
+    pub fn spotlight(&self, category: SpotlightCategory) -> Arc<SpotlightFeed> {
+        let initial_url = catalog::spotlight_url(&self.filter(), category);
+        let fetcher = Arc::new(SpotlightPageFetcher {
+            client: self.clone(),
+            initial_url: initial_url.clone(),
+        });
+        Arc::new(SpotlightFeed::new(Arc::new(MakoFeed::new(
+            fetcher,
+            Some(initial_url),
+        ))))
+    }
+
+    pub async fn get_work_series(
+        &self,
+        kind: SimpleWorkKind,
+        series_id: i64,
+    ) -> Result<Arc<WorkSeriesQuery>, MakoError> {
+        let engine = self.work_series_unified(kind, series_id);
+        let first = engine.next().await;
+        let detail = match &first {
+            Some(WorkEntry::NovelWork { novel }) => Series {
+                id: series_id,
+                title: novel.title.clone(),
+                user: Some(novel.user.clone()),
+                mask_text: None,
+                cover_url: novel
+                    .image_urls
+                    .medium
+                    .clone()
+                    .or_else(|| novel.image_urls.square_medium.clone()),
+                published_content_count: Some(1),
+                latest_content_id: Some(novel.id),
+                last_published_content_datetime: None,
+            },
+            Some(WorkEntry::Illust { illustration }) => Series {
+                id: series_id,
+                title: illustration.title.clone(),
+                user: Some(illustration.user.clone()),
+                mask_text: None,
+                cover_url: illustration
+                    .image_urls
+                    .medium
+                    .clone()
+                    .or_else(|| illustration.image_urls.square_medium.clone()),
+                published_content_count: Some(1),
+                latest_content_id: Some(illustration.id),
+                last_published_content_datetime: None,
+            },
+            None => Series {
+                id: series_id,
+                title: String::new(),
+                ..Default::default()
+            },
         };
+        Ok(Arc::new(WorkSeriesQuery {
+            detail,
+            first,
+            engine: self.work_series_unified(kind, series_id),
+        }))
+    }
+
+    pub fn work_comments(&self, kind: SimpleWorkKind, work_id: i64) -> Arc<CommentFeed> {
+        let url = catalog::work_comments_url(&self.filter(), kind, work_id);
         let fetcher = Arc::new(CommentPageFetcher {
             client: self.clone(),
             initial_url: url.clone(),
         });
-        let engine = Arc::new(MakoFetchEngine::new(fetcher, Some(url)));
-        Arc::new(CommentFetchEngine::new(engine))
+        let engine = Arc::new(MakoFeed::new(fetcher, Some(url)));
+        Arc::new(CommentFeed::new(engine))
     }
 
-    pub fn work_comment_replies(&self, is_novel: bool, comment_id: i64) -> Arc<CommentFetchEngine> {
-        let filter = self.target_filter.read().clone();
-        let url = if is_novel {
-            format!("{APP_API_BASE_URL}/v2/novel/comment/replies?comment_id={comment_id}&filter={filter}")
-        } else {
-            format!("{APP_API_BASE_URL}/v2/illust/comment/replies?comment_id={comment_id}&filter={filter}")
-        };
+    pub fn work_comment_replies(&self, kind: SimpleWorkKind, comment_id: i64) -> Arc<CommentFeed> {
+        let url = catalog::work_comment_replies_url(&self.filter(), kind, comment_id);
         let fetcher = Arc::new(CommentPageFetcher {
             client: self.clone(),
             initial_url: url.clone(),
         });
-        let engine = Arc::new(MakoFetchEngine::new(fetcher, Some(url)));
-        Arc::new(CommentFetchEngine::new(engine))
+        let engine = Arc::new(MakoFeed::new(fetcher, Some(url)));
+        Arc::new(CommentFeed::new(engine))
+    }
+
+    pub fn user_following_unified(&self, user_id: i64, restrict: PrivacyRestrict) -> Arc<UserFeed> {
+        self.user_following(user_id, restrict.as_str().to_string())
+    }
+
+    pub async fn work_bookmark_tags_unified(
+        &self,
+        kind: SimpleWorkKind,
+        user_id: i64,
+        restrict: PrivacyRestrict,
+    ) -> Result<Vec<BookmarkTag>, MakoError> {
+        self.work_bookmark_tags(kind.is_novel(), user_id, restrict.as_str().to_string())
+            .await
+    }
+
+    pub async fn work_trending_tags_unified(
+        &self,
+        kind: SimpleWorkKind,
+    ) -> Result<Vec<TrendingTag>, MakoError> {
+        self.work_trending_tags(kind.is_novel()).await
+    }
+
+    pub fn work_series_watchlist_unified(&self, kind: SimpleWorkKind) -> Arc<SeriesFeed> {
+        self.work_series_watchlist(kind.is_novel())
+    }
+
+    pub async fn get_bookmark_detail_unified(
+        &self,
+        kind: SimpleWorkKind,
+        id: i64,
+    ) -> Result<BookmarkDetail, MakoError> {
+        self.get_bookmark_detail(kind.is_novel(), id).await
     }
 
     pub async fn add_work_comment_unified(
         &self,
-        is_novel: bool,
+        kind: SimpleWorkKind,
         parent_id: i64,
         comment: Option<String>,
         parent_comment_id: Option<i64>,
@@ -1900,7 +1798,7 @@ impl MakoClient {
     ) -> Result<CommentRecord, MakoError> {
         let comment_str = comment.clone().unwrap_or_default();
         let rec_opt = self.add_work_comment(
-            is_novel,
+            kind.is_novel(),
             parent_id,
             comment_str.clone(),
             parent_comment_id,
@@ -1936,10 +1834,10 @@ impl MakoClient {
 
     pub async fn delete_work_comment_unified(
         &self,
-        is_novel: bool,
+        kind: SimpleWorkKind,
         comment_id: i64,
     ) -> Result<BoolResult, MakoError> {
-        self.delete_work_comment(is_novel, comment_id).await
+        self.delete_work_comment(kind.is_novel(), comment_id).await
     }
 
     pub async fn get_work_series_detail(
@@ -2012,6 +1910,16 @@ impl MakoClient {
         } else {
             self.delete_series_watchlist(is_novel, series_id).await
         }
+    }
+
+    pub async fn set_series_watchlist_unified(
+        &self,
+        kind: SimpleWorkKind,
+        series_id: i64,
+        watch: bool,
+    ) -> Result<BoolResult, MakoError> {
+        self.set_series_watchlist(kind.is_novel(), series_id, watch)
+            .await
     }
 }
 

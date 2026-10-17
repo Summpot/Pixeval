@@ -7,7 +7,7 @@ using System.Globalization;
 
 namespace Pixeval.Mako;
 
-public partial record CommentRecord
+public partial record struct CommentRecord
 {
     public DateTimeOffset PostedAt =>
         DateTimeOffset.TryParse(Date, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var postedAt)

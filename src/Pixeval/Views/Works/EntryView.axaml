@@ -1,6 +1,7 @@
 <ResourceDictionary
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval"
     xmlns:pixevalControls="using:Pixeval.Controls"
     xmlns:entry="using:Pixeval.Views.Works"
@@ -43,7 +44,7 @@
                             <fluent:SymbolIcon FontSize="150" Symbol="GiftOpen" />
                             <TextBlock
                                 HorizontalAlignment="Center"
-                                Text="{I18N {x:Static controls:EntryViewResources.ResultIsEmptyTextBlock}}"
+                                Text="{CompiledBinding [EntryView-ResultIsEmptyTextBlock], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Theme="{StaticResource TitleTextBlockStyle}" />
                         </StackPanel>
                         <pixevalControls:Skeleton Grid.Row="0">

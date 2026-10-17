@@ -24,7 +24,7 @@ public partial class SeriesItem : EntryItem
         if (viewModel.LatestContentId is not { } latestContentId)
             return;
 
-        if (viewModel.WorkType is SimpleWorkType.Novel)
+        if (viewModel.WorkKind is SimpleWorkKind.Novel)
             navigator.CreateNovelPage(latestContentId);
         else
             navigator.CreateIllustrationPage(

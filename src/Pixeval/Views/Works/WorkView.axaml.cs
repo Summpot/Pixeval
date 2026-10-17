@@ -11,7 +11,6 @@ using Avalonia.Controls.Selection;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.Pixiv;
 using Pixeval.Utilities;
@@ -33,10 +32,12 @@ public sealed partial class WorkView : UserControl, IDisposable
         set => SetValue(LayoutTypeProperty, value);
     }
 
-    private INavigationService NavigationService =>
-        this.AppNavigation ?? new NavigationService();
+    private INavigationService NavigationService => this.GetRequiredUiService<INavigationService>();
 
     private bool _isDisposed;
+    private ISimpleViewViewModel? _ownedViewModel;
+    private IAsyncEnumerable<object>? _pendingSource;
+    private SimpleWorkKind _pendingWorkType = SimpleWorkKind.Illustration;
 
     public static FuncValueConverter<bool, SelectionMode> SelectionModeConverter { get; } =
         new(b => b ? SelectionMode.Multiple : SelectionMode.Single);
@@ -51,6 +52,14 @@ public sealed partial class WorkView : UserControl, IDisposable
     public WorkView()
     {
         InitializeComponent();
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (!_isDisposed && change.Property == UiServices.ProviderProperty && _pendingSource is { } source
+            && this.GetUiService<AppSettings>() is not null)
+            ResetSource(source, _pendingWorkType);
     }
 
     private void UpdateLayoutPseudoClasses()
@@ -130,33 +139,50 @@ public sealed partial class WorkView : UserControl, IDisposable
     }
 
     /// <summary>
-    /// 在调用<see cref="ResetEngine"/>前<see cref="Control.DataContext"/>为<see langword="null"/>
+    /// Resets the source of the model owned by this view, creating it if necessary.
     /// </summary>
-    public void ResetEngine(IAsyncEnumerable<object> newEngine)
+    public void ResetSource(IAsyncEnumerable<object> source, SimpleWorkKind workType)
     {
-        var isNovelEngine = newEngine is IAsyncEnumerable<Mako.Novel>;
-        var viewModel = DataContext as IWorkViewViewModel;
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
+        // Pages configure their source in their constructors, before inheriting UI services
+        // from the shell. Create the owned model once those services reach this control.
+        if (this.GetUiService<AppSettings>() is null)
+        {
+            _pendingSource = source;
+            _pendingWorkType = workType;
+            return;
+        }
+
+        _pendingSource = null;
+        var isNovel = workType is SimpleWorkKind.Novel;
+        var viewModel = _ownedViewModel as IWorkViewViewModel;
         switch (viewModel)
         {
-            case NovelViewViewModel when isNovelEngine:
-            case IllustrationViewViewModel when !isNovelEngine:
-                viewModel.ResetEngine(newEngine);
+            case NovelViewViewModel when isNovel:
+            case IllustrationViewViewModel when !isNovel:
+                viewModel.ResetSource(source);
                 break;
             default:
-                IWorkViewViewModel newViewModel = isNovelEngine ? new NovelViewViewModel() : new IllustrationViewViewModel();
-                newViewModel.ResetEngine(newEngine);
+                var settings = this.GetRequiredUiService<AppSettings>();
+                var blocked = this.GetUiService<IBlockedContentService>();
+                IWorkViewViewModel newViewModel = isNovel
+                    ? new NovelViewViewModel(settings, blocked)
+                    : new IllustrationViewViewModel(settings, blocked);
+                newViewModel.ResetSource(source);
                 SetOwnedViewModel(newViewModel);
                 break;
         }
     }
 
-    public void SetSource(IReadOnlyCollection<object> source, SimpleWorkType workType, bool needRefreshOnOpen = false)
+    public void SetSource(IReadOnlyCollection<object> source, SimpleWorkKind workType, bool needRefreshOnOpen = false)
     {
-        IOperableViewViewModel viewModel = workType is SimpleWorkType.Novel
-            ? new SimpleOperableViewViewModel<Mako.Novel>(source.OfType<Mako.Novel>().ToList(), needRefreshOnOpen)
-            : new SimpleOperableViewViewModel<object>(source, needRefreshOnOpen);
+        var blocked = this.GetUiService<IBlockedContentService>();
+        IOperableViewViewModel viewModel = workType is SimpleWorkKind.Novel
+            ? new SimpleOperableViewViewModel<Mako.Novel>(source.Where(static s => s is Mako.Novel).ToList(), blocked, needRefreshOnOpen)
+            : new SimpleOperableViewViewModel<object>(source, blocked, needRefreshOnOpen);
         SetOwnedViewModel(viewModel);
     }
+
 
     /// <summary>
     /// Takes ownership of <paramref name="viewModel"/> and disposes it when it is replaced or this view is disposed.
@@ -169,9 +195,12 @@ public sealed partial class WorkView : UserControl, IDisposable
 
     private void SetOwnedViewModel(ISimpleViewViewModel viewModel)
     {
-        var oldViewModel = DataContext as IDisposable;
+        _pendingSource = null;
+        var oldViewModel = _ownedViewModel;
+        _ownedViewModel = viewModel;
         DataContext = viewModel;
-        oldViewModel?.Dispose();
+        if (!ReferenceEquals(oldViewModel, viewModel))
+            (oldViewModel as IDisposable)?.Dispose();
     }
 
     private void ListBox_OnContainerPrepared(object? sender, ContainerPreparedEventArgs e)
@@ -207,11 +236,12 @@ public sealed partial class WorkView : UserControl, IDisposable
             return;
 
         _isDisposed = true;
+        _pendingSource = null;
         WorkListBox.ItemsSource = null;
-        var d = DataContext;
+        var viewModel = _ownedViewModel;
+        _ownedViewModel = null;
         DataContext = null!;
-        if (d is IDisposable viewModel)
-            viewModel.Dispose();
+        (viewModel as IDisposable)?.Dispose();
     }
 
     #endregion

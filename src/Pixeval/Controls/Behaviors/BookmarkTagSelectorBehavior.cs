@@ -52,14 +52,16 @@ public static class BookmarkTagSelectorBehavior
 
         e.Handled = true;
 
-        var workType = work is Mako.Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
+        var workType = work is Mako.Novel
+            ? SimpleWorkKind.Novel
+            : SimpleWorkKind.Illustration;
         _ = BookmarkTagSelectorFlyoutHelper.ShowAsync(
             control,
             workType,
             work.Id,
             async result =>
             {
-                await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(work, result.IsPrivate, result.Tags));
+                await control.GetRequiredUiService<WorkCommands>().AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(work, result.IsPrivate, result.Tags));
             },
             PlacementMode.Bottom);
     }

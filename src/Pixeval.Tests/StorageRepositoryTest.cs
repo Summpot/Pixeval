@@ -1,3 +1,4 @@
+using Pixeval.Mako;
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
@@ -89,7 +90,7 @@ public sealed class StorageRepositoryTest
         repo.AddBrowseHistory(post);
 
         Assert.AreEqual(1, repo.CountBrowseHistory());
-        await using var enumerator = repo.StreamAsync(SimpleWorkType.Illustration).GetAsyncEnumerator();
+        await using var enumerator = repo.StreamAsync(SimpleWorkKind.Illustration).GetAsyncEnumerator();
         Assert.IsTrue(await enumerator.MoveNextAsync());
         Assert.AreEqual(post.Id, ((BooruPost) enumerator.Current).Id);
     }
@@ -134,7 +135,7 @@ public sealed class StorageRepositoryTest
 
         var retrieved = repo.GetDownloadHistoryByDestination("dest/1.jpg");
         Assert.IsNotNull(retrieved);
-        Assert.AreEqual(3u, retrieved.State);
+        Assert.AreEqual(3u, retrieved.Value.State);
 
         var deleted = repo.TryDeleteDownloadHistoryByDestination("dest/1.jpg");
         Assert.IsTrue(deleted);
@@ -149,9 +150,9 @@ public sealed class StorageRepositoryTest
 
         repo.AddOrReplaceSubscriptionDownloadHistoryBatch(
         [
-            new(0, "1", null, "dest/1.jpg", 1, null, null, 10, "1", "{}"),
-            new(0, "2", null, "dest/2.jpg", 1, null, null, 10, "2", "{}"),
-            new(0, "3", null, "dest/3.jpg", 1, null, null, 20, "3", "{}"),
+            new(0, "1", null, "dest/1.jpg", 1, null, null, 10, "1", "{}", null),
+            new(0, "2", null, "dest/2.jpg", 1, null, null, 10, "2", "{}", null),
+            new(0, "3", null, "dest/3.jpg", 1, null, null, 20, "3", "{}", null),
         ]);
 
         Assert.AreEqual(3, repo.CountSubscriptionDownloadHistory());
@@ -230,56 +231,6 @@ public sealed class StorageRepositoryTest
         Assert.AreEqual(existing.HistoryEntryId, result.HistoryEntryId);
         Assert.AreEqual("new-token", result.RefreshToken);
         Assert.AreEqual("new-name", result.Name);
-    }
-
-    [TestMethod]
-    public void ArtworkPayloadHydrator_LegacyImoutoJson_HydratesCorrectly()
-    {
-        var legacyJson = """
-        {
-          "Id": {
-            "Id": "12345",
-            "Md5Hash": "abcdef123456",
-            "PlatformType": 0
-          },
-          "OriginalUrl": "https://danbooru.donmai.us/data/sample.jpg",
-          "SampleUrl": "https://danbooru.donmai.us/data/sample.jpg",
-          "PreviewUrl": "https://danbooru.donmai.us/data/preview.jpg",
-          "ExistState": 0,
-          "CreateDate": "2026-01-01T00:00:00+00:00",
-          "Uploader": {
-            "Id": "1",
-            "Name": "test_uploader",
-            "Platform": 0
-          },
-          "Source": "https://twitter.com/test",
-          "FileResolution": {
-            "Width": 1920,
-            "Height": 1080
-          },
-          "ByteSize": 102400,
-          "SafeRating": 1,
-          "Tags": [
-            {
-              "Type": "character",
-              "Name": "hatsune_miku"
-            }
-          ]
-        }
-        """;
-
-        var hydrated = ArtworkPayloadHydrator.Hydrate("Imouto.BooruParser.Post", legacyJson);
-        Assert.IsNotNull(hydrated);
-        Assert.IsInstanceOfType<BooruPost>(hydrated);
-        var post = (BooruPost) hydrated;
-        Assert.AreEqual("12345", post.Id);
-        Assert.AreEqual(BooruPlatform.Danbooru, post.Platform);
-        Assert.AreEqual(1920u, post.Width);
-        Assert.AreEqual(1080u, post.Height);
-        Assert.AreEqual("test_uploader", post.UploaderName);
-        Assert.AreEqual(1, post.Tags.Count);
-        Assert.AreEqual("hatsune_miku", post.Tags[0].Name);
-        Assert.AreEqual("character", post.Tags[0].TagType);
     }
 
     private static BooruPost CreatePost(string id) => new(

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -109,6 +110,57 @@ public sealed class FilteredIncrementalCollectionTest
         Assert.AreSequenceEqual((int[]) [3, 3, 3], await Task.WhenAll(first, second, third));
         Assert.AreSequenceEqual((int[]) [1, 2, 3], collection.ToArray());
         Assert.IsTrue(collection.HasMoreItems);
+    }
+
+    [TestMethod]
+    public async Task Test_IncrementalLoadingCollection_AppendsPageWithSingleChange()
+    {
+        var source = new ControlledIncrementalSource<int>();
+        var collection = new IncrementalLoadingCollection<int>(source, 3);
+        var adds = 0;
+        var added = 0;
+        collection.CollectionChanged += (_, e) =>
+        {
+            if (e.Action != NotifyCollectionChangedAction.Add)
+                return;
+            adds++;
+            added += e.NewItems?.Count ?? 0;
+        };
+
+        var loading = collection.LoadMoreItemsAsync(0);
+        var call = await source.WaitForCallAsync(0);
+        call.Completion.SetResult([1, 2, 3]);
+
+        Assert.AreEqual(3, await loading);
+        Assert.AreEqual(1, adds);
+        Assert.AreEqual(3, added);
+        Assert.AreSequenceEqual((int[]) [1, 2, 3], collection.ToArray());
+    }
+
+    [TestMethod]
+    public async Task Test_FilteredIncrementalCollection_PassThroughRangeAdd()
+    {
+        var source = new ControlledIncrementalSource<int>();
+        var inner = new IncrementalLoadingCollection<int>(source, 3);
+        using var filtered = new FilteredIncrementalCollection<int>(inner);
+        var adds = 0;
+        var added = 0;
+        filtered.CollectionChanged += (_, e) =>
+        {
+            if (e.Action != NotifyCollectionChangedAction.Add)
+                return;
+            adds++;
+            added += e.NewItems?.Count ?? 0;
+        };
+
+        var loading = inner.LoadMoreItemsAsync(0);
+        var call = await source.WaitForCallAsync(0);
+        call.Completion.SetResult([1, 2, 3]);
+
+        Assert.AreEqual(3, await loading);
+        Assert.AreEqual(1, adds);
+        Assert.AreEqual(3, added);
+        Assert.AreSequenceEqual((int[]) [1, 2, 3], filtered.ToArray());
     }
 
     [TestMethod]

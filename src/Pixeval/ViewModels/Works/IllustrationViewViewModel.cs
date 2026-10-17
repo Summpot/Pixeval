@@ -1,17 +1,12 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using System.Collections.Frozen;
-
 namespace Pixeval.ViewModels.Works;
 
 public sealed class IllustrationViewViewModel : WorkViewViewModelBase<object, object>
 {
-    public IllustrationViewViewModel() : this(null)
-    {
-    }
-
-    public IllustrationViewViewModel(FrozenSet<string>? blockedTags) : base(blockedTags)
+    public IllustrationViewViewModel(AppSettings appSettings, IBlockedContentService? blockedContent = null)
+        : base(appSettings, blockedContent)
     {
     }
 

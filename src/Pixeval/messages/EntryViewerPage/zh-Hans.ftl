@@ -1,0 +1,73 @@
+FollowingUserItem-Title = 关注中
+
+MyPixivUserItem-Title = 好P友
+
+IllustrationCountItem-Title = 插画数
+
+MangaCountItem-Title = 漫画数
+
+NovelCountItem-Title = 小说数
+
+Pin = 固定面板
+
+InfoAndComments = 详情
+
+Series = 系列
+
+PreviousSeriesWork = 上一话
+
+NextSeriesWork = 下一话
+
+RotateClockwise = 顺时针旋转
+
+RotateCounterclockwise = 逆时针旋转
+
+Mirror = 镜像翻转
+
+Next-Page = L/R：下一页
+
+Next-PageOrWork = { "L：下一页\u000AR：下一篇" }
+
+Next-Work = L/R：下一篇
+
+Prev-Page = L/R：上一页
+
+Prev-PageOrWork = { "L：上一页\u000AR：上一篇" }
+
+Prev-Work = L/R：上一篇
+
+AutoPlay = 自动播放
+
+AutoPlayInterval-Seconds1 = 1 秒
+
+AutoPlayInterval-Seconds3 = 3 秒
+
+AutoPlayInterval-Seconds5 = 5 秒
+
+AutoPlayInterval-Seconds10 = 10 秒
+
+AutoPlayInterval-Seconds15 = 15 秒
+
+AutoPlayInterval-Seconds30 = 30 秒
+
+ZoomIn = 放大
+
+ZoomOut = 缩小
+
+ZoomToOriginal = 缩放到原始大小
+
+ZoomToFit = 缩放以适应屏幕
+
+LoadFailed = 加载失败
+
+LoadingTextBlock-Text = 正在加载
+
+Copy = 复制显示的图片
+
+SaveAs = 保存显示的图片
+
+SaveImage = 保存图片
+
+ViewOriginal = 查看原图
+
+OtherImageTransformerExtensions = 其他图片转换扩展

@@ -3,14 +3,13 @@
 
 using System;
 using System.Linq;
-using System.Text.Json;
 using System.Text.Json.Serialization;
+using Pixeval.Filters;
 using Pixeval.Pixiv;
-using Pixeval.Storage;
 
 namespace Pixeval.SauceNao;
 
-public partial record SauceNaoItem : IArtworkSerializable
+public partial record struct SauceNaoItem
 {
     [JsonIgnore]
     public int SetIndex => -1;
@@ -45,12 +44,17 @@ public partial record SauceNaoItem : IArtworkSerializable
     [JsonIgnore]
     public Uri AppUri => new($"pixeval://saucenao/{RawId}");
 
-    public const string SauceNaoItemToken = "Pixeval.SauceNao.SauceNaoItem";
-
-    [JsonIgnore]
-    public string SerializeKey => SauceNaoItemToken;
-
-    public string Serialize() => JsonSerializer.Serialize(this);
-
-    public static SauceNaoItem Deserialize(string data) => JsonSerializer.Deserialize<SauceNaoItem>(data)!;
+    public ArtworkMetadata ToArtworkMetadata() => new(
+        RawId,
+        TitleText,
+        AuthorName ?? string.Empty,
+        string.Empty,
+        [],
+        0,
+        0,
+        0,
+        0,
+        SafeRating.IsR18G ? 2 : SafeRating.IsR18 ? 1 : 0,
+        0,
+        0);
 }

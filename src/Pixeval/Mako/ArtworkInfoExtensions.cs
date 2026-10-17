@@ -19,16 +19,17 @@ public static class ArtworkInfoExtensions
         {
             Illustration illust => option switch
             {
-                ThumbnailUrlOption.Large => illust.ImageUrls?.Large ?? illust.ImageUrls?.Medium ?? "",
-                ThumbnailUrlOption.SquareMedium => illust.ImageUrls?.SquareMedium ?? illust.ImageUrls?.Medium ?? "",
-                _ => illust.ImageUrls?.Medium ?? illust.ImageUrls?.SquareMedium ?? ""
+                ThumbnailUrlOption.Large => illust.ImageUrls.Large ?? illust.ImageUrls.Medium ?? "",
+                ThumbnailUrlOption.SquareMedium => illust.ImageUrls.SquareMedium ?? illust.ImageUrls.Medium ?? "",
+                _ => illust.ImageUrls.Medium ?? illust.ImageUrls.SquareMedium ?? ""
             },
             Novel novel => option switch
             {
-                ThumbnailUrlOption.Large => novel.ImageUrls?.Large ?? novel.ImageUrls?.Medium ?? "",
-                ThumbnailUrlOption.SquareMedium => novel.ImageUrls?.SquareMedium ?? novel.ImageUrls?.Medium ?? "",
-                _ => novel.ImageUrls?.Medium ?? novel.ImageUrls?.SquareMedium ?? ""
+                ThumbnailUrlOption.Large => novel.ImageUrls.Large ?? novel.ImageUrls.Medium ?? "",
+                ThumbnailUrlOption.SquareMedium => novel.ImageUrls.SquareMedium ?? novel.ImageUrls.Medium ?? "",
+                _ => novel.ImageUrls.Medium ?? novel.ImageUrls.SquareMedium ?? ""
             },
+
             WorkEntry we => GetThumbnailUrl(we.AsWorkEntry, option),
             BooruPost booru => booru.PreviewUrl ?? booru.SampleUrl ?? booru.OriginalUrl ?? "",
             SauceNaoItem sauce => sauce.ThumbnailUrl,
@@ -68,7 +69,7 @@ public static class ArtworkInfoExtensions
             Illustration illust => illust.CreateDateOffset,
             Novel novel => novel.CreateDateOffset,
             BooruPost booru => booru.CreateDateOffset,
-            WorkEntry we => we.CreateDateOffset,
+            WorkEntry we => GetCreateDate(we.AsWorkEntry),
             _ => default
         };
 
@@ -77,7 +78,7 @@ public static class ArtworkInfoExtensions
             Illustration illust => illust.Id,
             Novel novel => novel.Id,
             BooruPost booru => long.TryParse(booru.Id, out var id) ? id : 0,
-            WorkEntry we => we.Id,
+            WorkEntry we => we.AsWorkEntry.Id,
             _ => 0
         };
     }

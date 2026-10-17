@@ -28,7 +28,6 @@
   <Project Path="src/Pixeval.Android/Pixeval.Android.csproj" />
   <Project Path="src/Pixeval.Browser/Pixeval.Browser.csproj" />
   <Project Path="src/Pixeval.Desktop/Pixeval.Desktop.csproj" />
-  <Project Path="src/Pixeval.I18N/Pixeval.I18N.csproj" />
   <Project Path="src/Pixeval.iOS/Pixeval.iOS.csproj" />
   <Project Path="src/Pixeval.SourceGen/Pixeval.SourceGen.csproj" />
   <Project Path="src/Pixeval.Utilities/Pixeval.Utilities.csproj" />

@@ -8,7 +8,7 @@ using Pixeval.Mako;
 
 namespace Pixeval.Config;
 
-public partial record HomePageCardLayout
+public partial record struct HomePageCardLayout
 {
     public HomePageCardLayout()
         : this(HomePageCardSourceKind.WorkRecommended, 0, 0, 1, 1)
@@ -42,13 +42,13 @@ public partial record HomePageCardLayout
     {
     }
 
-    public WorkType WorkType => (WorkType)RawWorkType;
+    public WorkKind WorkKind => StoredEnum.FromIndex<WorkKind>(RawWorkType);
 
-    public SimpleWorkType SimpleWorkType => (SimpleWorkType)RawSimpleWorkType;
+    public SimpleWorkKind SimpleWorkKind => StoredEnum.FromIndex<SimpleWorkKind>(RawSimpleWorkType);
 
-    public PrivacyPolicy PrivacyPolicy => (PrivacyPolicy)RawPrivacyPolicy;
+    public PrivacyRestrict PrivacyRestrict => StoredEnum.FromIndex<PrivacyRestrict>(RawPrivacyPolicy);
 
-    public RankOption RankOption => (RankOption)RawRankOption;
+    public RankMode RankMode => StoredEnum.FromIndex<RankMode>(RawRankOption);
 
     public DateTimeOffset RankingDate
     {

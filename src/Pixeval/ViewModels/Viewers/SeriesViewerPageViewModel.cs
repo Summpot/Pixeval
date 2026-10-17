@@ -2,12 +2,12 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.DependencyInjection;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 
 namespace Pixeval.ViewModels.Viewers;
@@ -36,50 +36,52 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
     public partial IWorkEntry? FirstWork { get; private set; }
 
     [ObservableProperty]
-    public partial IFetchEngine<IWorkEntry>? WorksEngine { get; private set; }
+    public partial IAsyncEnumerable<WorkEntry>? WorksEngine { get; private set; }
 
     [ObservableProperty]
     public partial bool IsWatchlistAdded { get; private set; }
 
-    private readonly MakoClient _makoClient = App.Services!.GetRequiredService<MakoClient>();
+    private readonly MakoClient _makoClient;
     private IWorkViewViewModel? _worksViewModel;
 
-    public SeriesViewerPageViewModel(SimpleWorkType workType, long seriesId)
+    public SeriesViewerPageViewModel(SimpleWorkKind workType, long seriesId, MakoClient makoClient)
     {
-        WorkType = workType;
+        _makoClient = makoClient;
+        WorkKind = workType;
         Id = seriesId;
         _ = LoadSeriesAsync();
     }
 
     public SeriesViewerPageViewModel(
-        SimpleWorkType workType,
+        SimpleWorkKind workType,
         long seriesId,
         Series seriesDetail,
         IWorkEntry? firstWork,
-        IWorkViewViewModel worksViewModel)
+        IWorkViewViewModel worksViewModel,
+        MakoClient makoClient)
     {
-        WorkType = workType;
+        _makoClient = makoClient;
+        WorkKind = workType;
         Id = seriesId;
         FirstWork = firstWork;
         SeriesDetail = seriesDetail;
         _worksViewModel = worksViewModel;
     }
 
-    public SimpleWorkType WorkType { get; }
+    public SimpleWorkKind WorkKind { get; }
 
     public long Id { get; }
 
     public string Header => SeriesDetail?.Title ?? Id.ToString();
 
-    public long AuthorId => SeriesDetail?.User?.Id ?? FirstWork?.User?.Id ?? 0;
+    public long AuthorId => SeriesDetail is { User: { } su } ? su.Id : (FirstWork is { } w ? w.User.Id : 0);
 
-    public string? AuthorName => SeriesDetail?.User?.Name ?? FirstWork?.User?.Name;
+    public string? AuthorName => SeriesDetail is { User: { } su } ? su.Name : (FirstWork is { } w ? w.User.Name : null);
+
 
     public string? Caption => SeriesDetail?.Caption;
 
-    public string ContentCountText => I18NManager.GetResource(
-        SeriesViewerPageResources.WorksCountFormatted,
-        SeriesDetail?.PublishedContentCount ?? 0);
+    public string ContentCountText => Strings.SeriesViewerPageWorksCountFormatted(count: SeriesDetail?.PublishedContentCount ?? 0);
 
     public string? CoverUrl => SeriesDetail?.CoverUrl ?? FirstWork?.GetThumbnailUrl();
 
@@ -104,13 +106,13 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
         LoadErrorMessage = null;
         try
         {
-            var (detail, first, engine) = await _makoClient.GetWorkSeriesAsync(WorkType, Id, token);
+            var query = await _makoClient.GetWorkSeriesAsync(WorkKind, Id, token);
+            var detail = query.Detail();
+            var first = query.First()?.AsWorkEntry;
+            var engine = query.Engine();
 
             if (_disposed)
-            {
-                engine.EngineHandle.Cancel();
                 return;
-            }
 
             FirstWork = first;
             SeriesDetail = detail;
@@ -136,22 +138,22 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
     [RelayCommand(CanExecute = nameof(CanChangeWatchlist))]
     private async Task AddToWatchlistAsync()
     {
-        if (!await _makoClient.PostWorkSeriesWatchlistAsync(WorkType, Id))
+        if (!(await _makoClient.SetSeriesWatchlistUnifiedAsync(WorkKind, Id, true, _loadingCts.Token)).Success)
             return;
 
-        if (SeriesDetail is not null)
-            SeriesDetail = SeriesDetail with { WatchlistAdded = true };
+        if (SeriesDetail is { } s1)
+            SeriesDetail = s1 with { WatchlistAdded = true };
         IsWatchlistAdded = true;
     }
 
     [RelayCommand(CanExecute = nameof(CanChangeWatchlist))]
     private async Task RemoveFromWatchlistAsync()
     {
-        if (!await _makoClient.RemoveWorkSeriesWatchlistAsync(WorkType, Id))
+        if (!(await _makoClient.SetSeriesWatchlistUnifiedAsync(WorkKind, Id, false, _loadingCts.Token)).Success)
             return;
 
-        if (SeriesDetail is not null)
-            SeriesDetail = SeriesDetail with { WatchlistAdded = false };
+        if (SeriesDetail is { } s2)
+            SeriesDetail = s2 with { WatchlistAdded = false };
         IsWatchlistAdded = false;
     }
 
@@ -168,9 +170,7 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
         IsLoading = false;
         _loadingCts.Cancel();
         _loadingCts.Dispose();
-        var worksEngine = WorksEngine;
         WorksEngine = null;
-        worksEngine?.EngineHandle.Cancel();
         _worksViewModel?.Dispose();
         _worksViewModel = null;
     }

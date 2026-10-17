@@ -12,7 +12,7 @@ namespace Pixeval.Common;
 
 public static class DesignHelper
 {
-    public static UserViewerPageViewModel DesignUserViewerPageViewModel => field ??= new(123456);
+    public static UserViewerPageViewModel DesignUserViewerPageViewModel => field ??= new(DesignSingleUserResponse);
 
     public static User DesignUserViewModel => DesignUser;
 
@@ -22,33 +22,38 @@ public static class DesignHelper
 
     public static Series DesignSeriesViewModel => DesignSeries;
 
-    public static WorkSeriesInfoViewModel DesignWorkSeriesInfoViewModel => field ??= new(SimpleWorkType.Illustration, 123456, "Title", new(12345, "PrevTitle"), new(1234567, "NextTitle"), "2/3");
+    public static WorkSeriesInfoViewModel DesignWorkSeriesInfoViewModel => field ??= new(SimpleWorkKind.Illustration, 123456, "Title", new(12345, "PrevTitle"), new(1234567, "NextTitle"), "2/3");
 
-    public static SingleUserResponse DesignSingleUserResponse => field ??= new(DesignUser, new UserProfile(
+    private static SingleUserResponse? s_designSingleUserResponse;
+    public static SingleUserResponse DesignSingleUserResponse => s_designSingleUserResponse ??= new(DesignUser, new UserProfile(
         "WebPage", "Gender", "Birth", "BirthDay", 1990, "Region", 0, "CountryCode", "Job", 0,
         100, 10, 50, 5, 10, 1000, 2, 1, AppInfo.ImageNotAvailablePath, "TwitterAccount", "TwitterUrl", true));
 
-    public static User DesignUser => field ??= new(
+    private static User? s_designUser;
+    public static User DesignUser => s_designUser ??= new(
         123456, "Username", "Account", new ProfileImageUrls(null, null, null, AppInfo.ImageNotAvailablePath), true, "Comment");
 
-    public static Mako.Novel DesignNovel => field ??= new(
-        123456, "Title", "Caption", 0, 0, false,
+    private static Mako.Novel? s_designNovel;
+    public static Mako.Novel DesignNovel => s_designNovel ??= new(
+        123456, "Title", "Caption", 0, Mako.XRestrict.Ordinary, false,
         new ImageUrls(AppInfo.ImageNotAvailablePath, AppInfo.ImageNotAvailablePath, AppInfo.ImageNotAvailablePath, AppInfo.ImageNotAvailablePath),
         DateTimeOffset.UtcNow.ToString("o"),
         [new Tag("Tag A", null), new Tag("Tag B", null)],
         3, 50, DesignUser, new Series(123, "SeriesTitle", null, null, null, null, null, null), false, 123, 456, 3, false, 0);
 
-    public static Illustration DesignIllustration => field ??= new(
-        123456, "Title", "illust",
+    private static Illustration? s_designIllustration;
+    public static Illustration DesignIllustration => s_designIllustration ??= new(
+        123456, "Title", IllustContentType.Illustration,
         new ImageUrls(AppInfo.ImageNotAvailablePath, AppInfo.ImageNotAvailablePath, AppInfo.ImageNotAvailablePath, AppInfo.ImageNotAvailablePath),
         "Caption", 0, DesignUser,
         [new Tag("Tag A", null), new Tag("Tag B", null)],
-        [], DateTimeOffset.UtcNow.ToString("o"), 3, 800, 600, 0, 0,
+        [], DateTimeOffset.UtcNow.ToString("o"), 3, 800, 600, 0, Mako.XRestrict.Ordinary,
         new Series(123, "SeriesTitle", null, null, null, null, null, null),
         new MetaSinglePage(AppInfo.ImageNotAvailablePath),
         [], 456, 123, true, true, false, 3, 0, 0, null);
 
-    public static Series DesignSeries => field ??= new(
+    private static Series? s_designSeries;
+    public static Series DesignSeries => s_designSeries ??= new(
         123456,
         "Title",
         DesignUser,
@@ -58,8 +63,9 @@ public static class DesignHelper
         0,
         DateTimeOffset.UtcNow.ToString("o"));
 
+
     public static Illustration DownloadParserSampleSingleIllustration => DesignIllustration with { PageCount = 1 };
-    public static Illustration DownloadParserSampleAnimatedIllustration => DesignIllustration with { IllustType = "ugoira" };
+    public static Illustration DownloadParserSampleAnimatedIllustration => DesignIllustration with { IllustType = IllustContentType.Ugoira };
     public static Illustration DownloadParserSampleImageSetIllustration => DesignIllustration with { PageCount = 5, SetIndex = 0 };
     public static Mako.Novel DownloadParserSampleNovel => DesignNovel;
 }

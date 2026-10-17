@@ -9,9 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Services.Background;
 
 namespace Pixeval.Views.Settings;
@@ -22,6 +21,13 @@ public partial class McpHelpSection
         AvaloniaProperty.RegisterDirect<McpHelpSection, string>(nameof(McpToolsStatus), static section => section.McpToolsStatus);
 
     private bool _isLoadingMcpTools;
+    private Func<string> _status = Strings.HelpPageMcpToolsStatusDisabled;
+    private IDisposable? _languageSubscription;
+    private void SetMcpStatus(Func<string> status)
+    {
+        _status = status;
+        McpToolsStatus = status();
+    }
 
     public ObservableCollection<McpToolItemViewModel> McpTools { get; } = [];
 
@@ -50,21 +56,21 @@ public partial class McpHelpSection
         if (!settings.EnableServer)
         {
             McpTools.Clear();
-            McpToolsStatus = I18NManager.GetResource(HelpPageResources.McpToolsStatus.Disabled);
+            SetMcpStatus(() => Strings.HelpPageMcpToolsStatusDisabled());
             return;
         }
 
         if (this.GetUiService<IPixevalMcpService>() is not { } service)
         {
             McpTools.Clear();
-            McpToolsStatus = I18NManager.GetResource(HelpPageResources.McpToolsStatus.Unavailable);
+            SetMcpStatus(() => Strings.HelpPageMcpToolsStatusUnavailable());
             return;
         }
 
         var configuredEndpoint = new Uri($"http://127.0.0.1:{settings.Port}{PixevalMcpService.DefaultPath}");
         _isLoadingMcpTools = true;
         RefreshMcpToolsButton.IsEnabled = false;
-        McpToolsStatus = I18NManager.GetResource(HelpPageResources.McpToolsStatus.Loading, configuredEndpoint);
+        SetMcpStatus(() => Strings.HelpPageMcpToolsStatusLoading(endpoint: configuredEndpoint));
 
         try
         {
@@ -73,7 +79,7 @@ public partial class McpHelpSection
             if (service.Endpoint is not { } endpoint)
             {
                 McpTools.Clear();
-                McpToolsStatus = I18NManager.GetResource(HelpPageResources.McpToolsStatus.NotRunning);
+                SetMcpStatus(() => Strings.HelpPageMcpToolsStatusNotRunning());
                 return;
             }
 
@@ -82,14 +88,14 @@ public partial class McpHelpSection
             foreach (var tool in tools)
                 McpTools.Add(tool);
 
-            McpToolsStatus = tools.Count is 0
-                ? I18NManager.GetResource(HelpPageResources.McpToolsStatus.Empty)
-                : I18NManager.GetResource(HelpPageResources.McpToolsStatus.Loaded, endpoint, tools.Count);
+            SetMcpStatus(() => tools.Count is 0
+                ? Strings.HelpPageMcpToolsStatusEmpty()
+                : Strings.HelpPageMcpToolsStatusLoaded(endpoint: endpoint, count: tools.Count));
         }
         catch (Exception e) when (e is HttpRequestException or JsonException or InvalidOperationException or OperationCanceledException)
         {
             McpTools.Clear();
-            McpToolsStatus = I18NManager.GetResource(HelpPageResources.McpToolsStatus.Failed, TrimErrorMessage(e.Message));
+            SetMcpStatus(() => Strings.HelpPageMcpToolsStatusFailed(error: TrimErrorMessage(e.Message)));
         }
         finally
         {

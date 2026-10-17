@@ -158,6 +158,16 @@ public sealed class MahoNetworkTest
     }
 
     [TestMethod]
+    public void CoreIsPixivHostShouldPreserveUtf8AndLargeInputs()
+    {
+        Assert.IsTrue(PixevalMahoMethods.IsPixivHost("APP-API.PIXIV.NET"));
+        Assert.IsTrue(PixevalMahoMethods.IsPixivHost("你好.pixiv.net"));
+        Assert.IsTrue(PixevalMahoMethods.IsPixivHost(new string('a', 2048) + ".pximg.net"));
+        Assert.IsFalse(PixevalMahoMethods.IsPixivHost("pixiv.net\0example.com"));
+        Assert.IsFalse(PixevalMahoMethods.IsPixivHost(string.Empty));
+    }
+
+    [TestMethod]
     public void MahoClientShouldInitializeAndUpdateOptions()
     {
         var options = new MahoClientOptions(

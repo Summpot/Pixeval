@@ -77,12 +77,19 @@ public partial class SwipeImageViewer : ImageViewerBase
 
     private void SelectingMultiPage_OnSelectionChanged(Control sender, ImageViewerSelectionChangedEventArgs e)
     {
-        if (sender.DataContext is ImageViewerViewModel viewModel)
+        var viewModel = (sender.DataContext as ImageViewerViewModel) ?? (DataContext as ImageViewerViewModel);
+        if (viewModel is not null)
         {
             var preloadPageCount = 2;
-            var load = viewModel.Images.Skip(e.NewIndex - preloadPageCount).Take((preloadPageCount * 2) + 1);
+            var startIndex = Math.Max(0, e.NewIndex - preloadPageCount);
+            var count = Math.Min(viewModel.Images.Count - startIndex, (preloadPageCount * 2) + 1);
+            var load = viewModel.Images.Skip(startIndex).Take(count);
             foreach (var loadableBitmap in load)
                 _ = loadableBitmap.LoadOriginalImageAsync();
+        }
+        else if (e.NewItem is SingleViewerViewModel singleVm)
+        {
+            _ = singleVm.LoadOriginalImageAsync();
         }
 
         RaiseSelectionChanged(e.NewIndex, e.NewItem);

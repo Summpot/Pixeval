@@ -3,9 +3,10 @@
 
 namespace Pixeval.Config;
 
+[System.Text.Json.Serialization.JsonConverter(typeof(RankOptionsSettingsJsonConverter))]
 public record RankOptionsSettings
 {
-    public RankOption IllustrationRankOption { get; set; }
+    public RankMode IllustrationRankOption { get; set; } = RankMode.Day;
 
-    public RankOption NovelRankOption { get; set; }
+    public RankMode NovelRankOption { get; set; } = RankMode.Day;
 }

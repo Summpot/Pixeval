@@ -7,10 +7,9 @@ using System.Linq;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Mako;
 using Pixeval.Utilities;
 using Pixeval.Views.Home;
@@ -23,12 +22,13 @@ public partial class HomePageViewModel : ViewModelBase
     private readonly HomeCardDefinitions _definitions;
     private readonly IUserSessionService _session;
 
-    public HomePageViewModel()
-        : this(
-            App.Services!.GetRequiredService<AppSettings>(),
-            App.Services!.GetRequiredService<HomeCardDefinitions>(),
-            App.Services!.GetRequiredService<IUserSessionService>())
+    public HomeCardDefinitions Definitions => _definitions;
+
+    public HomePageViewModel(AppSettings settings, HomeCardDefinitions definitions, IUserSessionService session)
     {
+        _settings = settings;
+        _definitions = definitions;
+        _session = session;
         _sourceParameterEditors =
         [
             _sourceWorkTypeEditor,
@@ -48,62 +48,55 @@ public partial class HomePageViewModel : ViewModelBase
         SyncSelectedCardEditorValues();
     }
 
-    public HomePageViewModel(AppSettings settings, HomeCardDefinitions definitions, IUserSessionService session)
-    {
-        _settings = settings;
-        _definitions = definitions;
-        _session = session;
-    }
-
     private readonly IReadOnlyList<HomeCardParameterEditorViewModel> _sourceParameterEditors;
 
     private readonly HomeCardChoiceParameterEditorViewModel _sourceWorkTypeEditor = new(
-        HomeCardParameterKinds.WorkType,
-        GetResource(HomePageResources.Source.WorkTypeTextBlock.Text),
-        SymbolComboBoxItem.GetValues<WorkType>(),
-        WorkType.Illustration);
+        HomeCardParameterKinds.WorkKind,
+        nameof(Strings.HomePageSourceWorkTypeTextBlockText),
+        SymbolComboBoxItem.GetValues<WorkKind>(),
+        WorkKind.Illustration);
 
     private readonly HomeCardChoiceParameterEditorViewModel _sourceSimpleWorkTypeEditor = new(
-        HomeCardParameterKinds.SimpleWorkType,
-        GetResource(HomePageResources.Source.SimpleWorkTypeTextBlock.Text),
-        SymbolComboBoxItem.GetValues<SimpleWorkType>(),
-        SimpleWorkType.Illustration);
+        HomeCardParameterKinds.SimpleWorkKind,
+        nameof(Strings.HomePageSourceSimpleWorkTypeTextBlockText),
+        SymbolComboBoxItem.GetValues<SimpleWorkKind>(),
+        SimpleWorkKind.Illustration);
 
     private readonly HomeCardChoiceParameterEditorViewModel _sourcePrivacyPolicyEditor = new(
-        HomeCardParameterKinds.PrivacyPolicy,
-        GetResource(HomePageResources.Source.PrivacyPolicyTextBlock.Text),
-        SymbolComboBoxItem.GetValues<PrivacyPolicy>(),
-        PrivacyPolicy.Public);
+        HomeCardParameterKinds.PrivacyRestrict,
+        nameof(Strings.HomePageSourcePrivacyPolicyTextBlockText),
+        SymbolComboBoxItem.GetValues<PrivacyRestrict>(),
+        PrivacyRestrict.Public);
 
     private readonly HomeCardChoiceParameterEditorViewModel _sourceRankOptionEditor = new(
-        HomeCardParameterKinds.RankOption,
-        GetResource(HomePageResources.Source.RankOptionTextBlock.Text),
-        SymbolComboBoxItem.GetValues<RankOption>(SimpleWorkType.Illustration),
-        RankOption.Day);
+        HomeCardParameterKinds.RankMode,
+        nameof(Strings.HomePageSourceRankOptionTextBlockText),
+        SymbolComboBoxItem.GetValues<RankMode>(SimpleWorkKind.Illustration),
+        RankMode.Day);
 
     private readonly HomeCardRankingDateParameterEditorViewModel _sourceRankingDateEditor = new(
-        GetResource(HomePageResources.Source.RankingDateTextBlock.Text),
+        nameof(Strings.HomePageSourceRankingDateTextBlockText),
         MakoClient.RankingMaxDateTime.LocalDateTime);
 
     private readonly HomeCardTextParameterEditorViewModel _sourceUserIdEditor = new(
         HomeCardParameterKinds.UserId,
-        GetResource(HomePageResources.Source.UserIdTextBlock.Text));
+        nameof(Strings.HomePageSourceUserIdTextBlockText));
 
     private readonly HomeCardTextParameterEditorViewModel _sourceEntryIdEditor = new(
         HomeCardParameterKinds.EntryId,
-        GetResource(HomePageResources.Source.EntryIdTextBlock.Text));
+        nameof(Strings.HomePageSourceEntryIdTextBlockText));
 
     private readonly HomeCardTextParameterEditorViewModel _sourceSeriesIdEditor = new(
         HomeCardParameterKinds.SeriesId,
-        GetResource(HomePageResources.Source.SeriesIdTextBlock.Text));
+        nameof(Strings.HomePageSourceSeriesIdTextBlockText));
 
     private readonly HomeCardTextParameterEditorViewModel _sourceSearchTextEditor = new(
         HomeCardParameterKinds.SearchText,
-        GetResource(HomePageResources.Source.SearchTextTextBlock.Text));
+        nameof(Strings.HomePageSourceSearchTextTextBlockText));
 
     private readonly HomeCardTextParameterEditorViewModel _sourceTagEditor = new(
         HomeCardParameterKinds.Tag,
-        GetResource(HomePageResources.Source.TagTextBlock.Text));
+        nameof(Strings.HomePageSourceTagTextBlockText));
 
     private HomePageCardLayout? _selectedCard;
 
@@ -123,7 +116,7 @@ public partial class HomePageViewModel : ViewModelBase
 
     public string SelectedCardDescription => _selectedCard is { } card
         ? _definitions.BuildTitle(card)
-        : I18NManager.GetResource(HomePageResources.NoSelectedCardTextBlock.Text);
+        : Strings.HomePageNoSelectedCardTextBlockText();
 
     [ObservableProperty] public partial decimal SelectedColumnValue { get; set; } = 1;
 
@@ -140,10 +133,10 @@ public partial class HomePageViewModel : ViewModelBase
     public bool IsAddingConfiguredCard { get; private set; }
 
     public string SourceParameterTitle =>
-        PendingTemplate?.Title ?? I18NManager.GetResource(HomePageResources.SourceParametersTitleTextBlock.Text);
+        PendingTemplate?.Title ?? Strings.HomePageSourceParametersTitleTextBlockText();
 
     public string SourceParameterDescription =>
-        PendingTemplate?.Description ?? I18NManager.GetResource(HomePageResources.SelectCardSourcePromptTextBlock.Text);
+        PendingTemplate?.Description ?? Strings.HomePageSelectCardSourcePromptTextBlockText();
 
     public bool CanAddConfiguredCard => PendingTemplate is not null && !IsAddingConfiguredCard;
 
@@ -164,7 +157,7 @@ public partial class HomePageViewModel : ViewModelBase
 
     public void SetSelectedCard(HomePageCardLayout? card)
     {
-        if (ReferenceEquals(_selectedCard, card))
+        if (_selectedCard == card)
             return;
 
         _selectedCard = card;
@@ -187,10 +180,10 @@ public partial class HomePageViewModel : ViewModelBase
     public void SelectTemplate(HomeCardDefinition template)
     {
         PendingTemplate = template;
-        _sourceWorkTypeEditor.Value = template.WorkType;
-        _sourceSimpleWorkTypeEditor.Value = template.SimpleWorkType;
+        _sourceWorkTypeEditor.Value = template.WorkKind;
+        _sourceSimpleWorkTypeEditor.Value = template.SimpleWorkKind;
         UpdateRankOptionEditor();
-        _sourcePrivacyPolicyEditor.Value = template.PrivacyPolicy;
+        _sourcePrivacyPolicyEditor.Value = template.PrivacyRestrict;
         _sourceRankingDateEditor.Reset(MakoClient.RankingMaxDateTime.LocalDateTime);
 
         var currentUserId = _session.CurrentUserId;
@@ -244,10 +237,10 @@ public partial class HomePageViewModel : ViewModelBase
 
         card = new HomePageCardLayout(
             template.SourceKind,
-            (uint)_sourceWorkTypeEditor.GetValue<WorkType>(),
-            (uint)_sourceSimpleWorkTypeEditor.GetValue<SimpleWorkType>(),
-            (uint)_sourcePrivacyPolicyEditor.GetValue<PrivacyPolicy>(),
-            (uint)_sourceRankOptionEditor.GetValue<RankOption>(),
+            StoredEnum.ToIndex(_sourceWorkTypeEditor.GetValue<WorkKind>()),
+            StoredEnum.ToIndex(_sourceSimpleWorkTypeEditor.GetValue<SimpleWorkKind>()),
+            StoredEnum.ToIndex(_sourcePrivacyPolicyEditor.GetValue<PrivacyRestrict>()),
+            StoredEnum.ToIndex(_sourceRankOptionEditor.GetValue<RankMode>()),
             userId,
             entryId,
             seriesId,
@@ -275,15 +268,14 @@ public partial class HomePageViewModel : ViewModelBase
 
     private void UpdateRankOptionEditor()
     {
-        var simpleWorkType = _sourceSimpleWorkTypeEditor.GetValue<SimpleWorkType>();
-        var rankOption = simpleWorkType is SimpleWorkType.Illustration
+        var simpleWorkType = _sourceSimpleWorkTypeEditor.GetValue<SimpleWorkKind>();
+        var rankOption = simpleWorkType is SimpleWorkKind.Illustration
             ? _settings.SearchSettings.RankOptions.IllustrationRankOption
             : _settings.SearchSettings.RankOptions.NovelRankOption;
-        _sourceRankOptionEditor.Reset(SymbolComboBoxItem.GetValues<RankOption>(simpleWorkType), rankOption);
+        _sourceRankOptionEditor.Reset(SymbolComboBoxItem.GetValues<RankMode>(simpleWorkType), rankOption);
     }
 
     private static bool TryReadUInt64(string? text, out long value) =>
         long.TryParse(text, out value) && value > 0;
 
-    private static string GetResource(string resource) => I18NManager.GetResource(resource);
 }

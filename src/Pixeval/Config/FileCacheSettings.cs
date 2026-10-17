@@ -10,7 +10,7 @@ public record FileCacheSettings
 {
     public bool LimitFileCacheSize { get; set; }
 
-    [SettingsEntry(Symbol.HardDrive, AppSettingsResources.FileCacheSizeLimitInMegabytesEntry.Header,
-        AppSettingsResources.FileCacheSizeLimitInMegabytesEntry.Description)]
+    [SettingsEntry(Symbol.HardDrive, nameof(Strings.AppSettingsFileCacheSizeLimitInMegabytesEntryHeader),
+        nameof(Strings.AppSettingsFileCacheSizeLimitInMegabytesEntryDescription))]
     public int FileCacheSizeLimitInMegabytes { get; set; } = 2048;
 }

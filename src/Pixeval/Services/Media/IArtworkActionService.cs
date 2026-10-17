@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
@@ -50,6 +51,8 @@ public interface IArtworkActionService
     Task SaveWorkAsync(object work);
 
     Task<bool> ToggleFollowUserAsync(User user);
+
+    Task<bool> SetFollowUserAsync(User user, bool followed, bool privately = false, CancellationToken token = default);
 
     bool BlockUser(User user);
 

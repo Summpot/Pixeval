@@ -3,14 +3,11 @@
 
 using System;
 using System.IO;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Utilities;
 using Pixeval.Services.Update;
 using Pixeval.Common.IO;
@@ -94,13 +91,12 @@ public partial class Supporter : ViewModelBase
     ];
     // ReSharper restore StringLiteralTypo
 
-    public static async Task GetSupportersAsync()
+    public static async Task GetSupportersAsync(GitHubService github)
     {
         try
         {
             _ = Directory.CreateDirectory(BasePath);
 
-            var httpClient = App.Services!.GetRequiredService<GitHubHttpClientProvider>().GetApiClient();
 
             var path = Path.Combine(BasePath, "github-supporters.json");
             var exists = File.Exists(path);
@@ -112,18 +108,18 @@ public partial class Supporter : ViewModelBase
                     && supporters.Length == Supporters.Length)
                 {
                     foreach (var supporter in Supporters)
-                        await LoadAvatarAsync(supporter, BasePath, httpClient);
+                        await LoadAvatarAsync(supporter, BasePath, github);
 
                     return;
                 }
             }
 
             foreach (var supporter in Supporters)
-                if (await httpClient.GetFromJsonAsync("https://api.github.com/users/" + supporter.Name, GitHubUserSerializeContext.Default.GitHubUser) is { } user)
+                if (await github.GetUserProfileAsync(supporter.Name) is { } user)
                 {
-                    supporter.ProfilePicture = user.AvatarUrl;
-                    supporter.ProfileUri = user.HtmlUrl;
-                    await LoadAvatarAsync(supporter, BasePath, httpClient);
+                    supporter.ProfilePicture = new Uri(user.AvatarUrl);
+                    supporter.ProfileUri = new Uri(user.HtmlUrl);
+                    await LoadAvatarAsync(supporter, BasePath, github);
                 }
 
             if (!exists)
@@ -139,7 +135,7 @@ public partial class Supporter : ViewModelBase
 
         return;
 
-        static async ValueTask LoadAvatarAsync(Supporter supporter, string basePath, HttpClient client)
+        static async ValueTask LoadAvatarAsync(Supporter supporter, string basePath, GitHubService client)
         {
             var path = Path.Combine(basePath, supporter.Name + ".png");
             if (File.Exists(path) || supporter.ProfilePicture is null)
@@ -147,7 +143,7 @@ public partial class Supporter : ViewModelBase
 
             try
             {
-                var bytes = await client.GetByteArrayAsync(supporter.ProfilePicture);
+                var bytes = await client.DownloadBytesAsync(supporter.ProfilePicture.AbsoluteUri);
                 await File.WriteAllBytesAsync(path, bytes);
                 supporter.OnPropertyChanged(nameof(LocalProfilePicture));
             }
@@ -167,15 +163,5 @@ public partial class Supporter : ViewModelBase
     }
 }
 
-[JsonSerializable(typeof(GitHubUser))]
 [JsonSerializable(typeof(Supporter[]))]
 public partial class GitHubUserSerializeContext : JsonSerializerContext;
-
-public class GitHubUser
-{
-    [JsonPropertyName("avatar_url")]
-    public required Uri AvatarUrl { get; init; }
-
-    [JsonPropertyName("html_url")]
-    public required Uri HtmlUrl { get; init; }
-}

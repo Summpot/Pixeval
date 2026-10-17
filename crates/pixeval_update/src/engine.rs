@@ -51,13 +51,13 @@ impl UpdateCancellationToken {
 
 /// 原生应用更新引擎
 #[derive(uniffi::Object)]
-pub struct UpdateEngine {
+pub struct GithubClient {
     repo_owner: String,
     repo_name: String,
     client: MahoHttpClient,
 }
 
-impl UpdateEngine {
+impl GithubClient {
     fn build_client(options: Option<&UpdateNetworkOptions>) -> MahoHttpClient {
         let enable_domain_fronting = options.map(|o| o.enable_domain_fronting).unwrap_or(true);
         let proxy_url = options.and_then(|o| o.proxy_url.clone());
@@ -146,7 +146,14 @@ impl UpdateEngine {
                 for (host, ips) in &opts.custom_dns_mappings {
                     let parsed: Vec<_> = ips.iter().filter_map(|s| s.parse().ok()).collect();
                     if !parsed.is_empty() {
-                        resolver.set_static_ips(host, parsed);
+                        resolver.set_static_ips(host, parsed.clone());
+                        if host == "*.githubusercontent.com" {
+                            for name in ["raw.githubusercontent.com", "objects.githubusercontent.com", "github-releases.githubusercontent.com"] {
+                                resolver.remove_mapping(name);
+                            }
+                        } else if host == "github.com" {
+                            resolver.set_static_ips("gist.github.com", parsed);
+                        }
                     }
                 }
             }
@@ -163,7 +170,7 @@ impl UpdateEngine {
 }
 
 #[uniffi::export]
-impl UpdateEngine {
+impl GithubClient {
     #[uniffi::constructor]
     pub fn new(options: Option<UpdateNetworkOptions>) -> Arc<Self> {
         Self::new_with_repo("Pixeval".to_string(), "Pixeval".to_string(), options)
@@ -181,6 +188,12 @@ impl UpdateEngine {
             repo_name: repo,
             client,
         })
+    }
+
+    pub async fn get_user_profile(&self, username: String) -> Result<crate::models::GitHubUserProfile, UpdateError> {
+        let username: String = url::form_urlencoded::byte_serialize(username.as_bytes()).collect();
+        let url = format!("https://api.github.com/users/{username}");
+        crate::github::fetch_user_profile(&self.client, &url).await
     }
 
     /// 检查更新
@@ -415,7 +428,7 @@ mod tests {
 
     #[test]
     fn test_compare_versions_via_engine() {
-        let engine = UpdateEngine::new(None);
+        let engine = GithubClient::new(None);
         assert_eq!(
             engine.compare_versions("5.0.13.0".to_string(), "5.0.14".to_string()),
             UpdateState::BuildUpdate
@@ -438,7 +451,7 @@ mod tests {
             .await
             .unwrap();
 
-        let engine = UpdateEngine::new(None);
+        let engine = GithubClient::new(None);
         // echo -n "test content for sha256" | sha256sum -> 20689b7fae1aa14cfc9a41926c483a912aaad7ea4b971c26b5278c775a22830a
         let sha256 = compute_file_sha256(&file_path).await.unwrap();
 

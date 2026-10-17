@@ -5,6 +5,6 @@ mod formatter;
 mod models;
 pub mod parser;
 
-pub use formatter::*;
+pub(crate) use formatter::format_navigation_yaml;
 pub use models::*;
 pub use parser::*;

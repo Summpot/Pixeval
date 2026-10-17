@@ -1,3 +1,4 @@
+using Pixeval.Mako;
 using System.Collections.Generic;
 using Pixeval.Pixiv;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -15,26 +16,26 @@ public sealed class HomeCardParameterEditorViewModelTest
     {
         IReadOnlyList<SymbolComboBoxItem> items =
         [
-            new(SimpleWorkType.Illustration, "Illustration", default),
-            new(SimpleWorkType.Novel, "Novel", default)
+            new(SimpleWorkKind.Illustration, "Illustration", default),
+            new(SimpleWorkKind.Novel, "Novel", default)
         ];
         var editor = new HomeCardChoiceParameterEditorViewModel(
-            HomeCardParameterKinds.SimpleWorkType,
+            HomeCardParameterKinds.SimpleWorkKind,
             "Work type",
             items,
-            SimpleWorkType.Illustration);
+            SimpleWorkKind.Illustration);
         var changeCount = 0;
         editor.ValueChanged += (_, _) => changeCount++;
 
         editor.Value = null!;
-        editor.Value = WorkType.Novel;
+        editor.Value = WorkKind.Novel;
 
-        Assert.AreEqual(SimpleWorkType.Illustration, editor.GetValue<SimpleWorkType>());
+        Assert.AreEqual(SimpleWorkKind.Illustration, editor.GetValue<SimpleWorkKind>());
         Assert.AreEqual(0, changeCount);
 
-        editor.Value = SimpleWorkType.Novel;
+        editor.Value = SimpleWorkKind.Novel;
 
-        Assert.AreEqual(SimpleWorkType.Novel, editor.GetValue<SimpleWorkType>());
+        Assert.AreEqual(SimpleWorkKind.Novel, editor.GetValue<SimpleWorkKind>());
         Assert.AreEqual(1, changeCount);
     }
 }

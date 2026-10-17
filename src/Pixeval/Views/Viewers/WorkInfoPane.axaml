@@ -1,6 +1,7 @@
 <ResourceDictionary
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
@@ -53,7 +54,7 @@
                     <MenuItem
                         Command="{Binding $parent[viewers:WorkInfoPane].BlockUserCommand}"
                         CommandParameter="{Binding RawUser}"
-                        Header="{I18N {x:Static pixeval:BlockedContentResources.BlockUser}}"
+                        Header="{CompiledBinding [BlockedContent-BlockUser], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup:SymbolIcon PersonProhibited}" />
                 </ContextMenu>
             </Button.ContextMenu>
@@ -86,7 +87,7 @@
                     <MenuItem
                         Command="{Binding $parent[viewers:WorkInfoPane].BlockUserCommand}"
                         CommandParameter="{Binding RawUser}"
-                        Header="{I18N {x:Static pixeval:BlockedContentResources.BlockUser}}"
+                        Header="{CompiledBinding [BlockedContent-BlockUser], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup:SymbolIcon PersonProhibited}" />
                 </ContextMenu>
             </Button.ContextMenu>
@@ -211,19 +212,19 @@
                                                             <ContextMenu>
                                                                 <MenuItem
                                                                     Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                                                                    Header="{I18N {x:Static pixeval:WorkInfoPageResources+CopyOriginalTagMenuItem.Text}}"
+                                                                    Header="{CompiledBinding [WorkInfoPage-CopyOriginalTagMenuItem-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                                                     Icon="{markup:SymbolIcon Copy}"
                                                                     Tag="{Binding Name}" />
                                                                 <MenuItem
                                                                     Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                                                                    Header="{I18N {x:Static pixeval:WorkInfoPageResources+CopyTranslatedTagMenuItem.Text}}"
+                                                                    Header="{CompiledBinding [WorkInfoPage-CopyTranslatedTagMenuItem-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                                                     Icon="{markup:SymbolIcon CopyAdd}"
                                                                     IsVisible="{Binding TranslatedName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                                                     Tag="{Binding TranslatedName}" />
                                                                 <MenuItem
                                                                     Command="{Binding $parent[viewers:WorkInfoPane].BlockTagCommand}"
                                                                     CommandParameter="{Binding}"
-                                                                    Header="{I18N {x:Static pixeval:BlockedContentResources.BlockTag}}"
+                                                                    Header="{CompiledBinding [BlockedContent-BlockTag], Source={x:Static loc:LocalizationManager.Instance}}"
                                                                     Icon="{markup:SymbolIcon TagDismiss}" />
                                                             </ContextMenu>
                                                         </Button.ContextMenu>

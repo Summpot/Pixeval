@@ -13,16 +13,16 @@ public record McpSettingsGroup
     // BlobResourceContents is backed by a byte[], so keep the UI limit inside that boundary.
     public const int MaxBinaryResourceMegabytesLimit = 2047;
 
-    [SettingsEntry(Symbol.ServerPlay, AppSettingsResources.EnableMcpServerEntry.Header, AppSettingsResources.EnableMcpServerEntry.Description)]
+    [SettingsEntry(Symbol.ServerPlay, nameof(Strings.AppSettingsEnableMcpServerEntryHeader), nameof(Strings.AppSettingsEnableMcpServerEntryDescription))]
     public bool EnableServer { get; set; }
 
-    [SettingsEntry(Symbol.SerialPort, AppSettingsResources.McpPortEntry.Header, AppSettingsResources.McpPortEntry.Description)]
+    [SettingsEntry(Symbol.SerialPort, nameof(Strings.AppSettingsMcpPortEntryHeader), nameof(Strings.AppSettingsMcpPortEntryDescription))]
     public ushort Port { get; set; } = DefaultPort;
 
-    [SettingsEntry(Symbol.CalligraphyPenCheckmark, AppSettingsResources.EnableMcpWriteToolsEntry.Header, AppSettingsResources.EnableMcpWriteToolsEntry.Description)]
+    [SettingsEntry(Symbol.CalligraphyPenCheckmark, nameof(Strings.AppSettingsEnableMcpWriteToolsEntryHeader), nameof(Strings.AppSettingsEnableMcpWriteToolsEntryDescription))]
     public bool EnableWriteTools { get; set; }
 
-    [SettingsEntry(Symbol.DatabaseCheckmark, AppSettingsResources.McpMaxBinaryResourceMegabytesEntry.Header,
-        AppSettingsResources.McpMaxBinaryResourceMegabytesEntry.Description)]
+    [SettingsEntry(Symbol.DatabaseCheckmark, nameof(Strings.AppSettingsMcpMaxBinaryResourceMegabytesEntryHeader),
+        nameof(Strings.AppSettingsMcpMaxBinaryResourceMegabytesEntryDescription))]
     public int MaxBinaryResourceMegabytes { get; set; } = 50;
 }

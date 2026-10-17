@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Settings.IPListInput"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:avalonia="using:FluentIcons.Avalonia"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -28,12 +29,12 @@
         x:Name="InvalidFormatInfoBar"
         IsVisible="{Binding #IPBox.IsValid, Converter={x:Static BoolConverters.Not}}"
         Mode="Error"
-        Text="{I18N {x:Static pixeval:IPListInputResources.InvalidIPFormat}}" />
+        Text="{CompiledBinding [IPListInput-InvalidIPFormat], Source={x:Static loc:LocalizationManager.Instance}}" />
     <controls:InfoBar
         x:Name="DuplicatesInfoBar"
         IsVisible="False"
         Mode="Error"
-        Text="{I18N {x:Static pixeval:IPListInputResources.DuplicatesWithExistingIP}}" />
+        Text="{CompiledBinding [IPListInput-DuplicatesWithExistingIP], Source={x:Static loc:LocalizationManager.Instance}}" />
     <ItemsControl ItemsSource="{Binding Value, Mode=OneWay}">
         <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="{x:Type x:String}">

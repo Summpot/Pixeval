@@ -26,13 +26,13 @@ public partial class WorkRelatedPage : IconContentPage
     public static readonly StyledProperty<long> WorkIdProperty =
         AvaloniaProperty.Register<WorkRelatedPage, long>(nameof(WorkId));
 
-    public static readonly StyledProperty<SimpleWorkType> WorkTypeProperty =
-        AvaloniaProperty.Register<WorkRelatedPage, SimpleWorkType>(nameof(WorkType));
+    public static readonly StyledProperty<SimpleWorkKind> WorkTypeProperty =
+        AvaloniaProperty.Register<WorkRelatedPage, SimpleWorkKind>(nameof(WorkKind), SimpleWorkKind.Illustration);
 
     private MakoClient? _client;
     private bool _sourcePending;
     private long _id;
-    private SimpleWorkType _simpleWorkType;
+    private SimpleWorkKind _simpleWorkType = SimpleWorkKind.Illustration;
     private bool _suppressSourceChange;
     private bool _hasViewModel;
 
@@ -48,7 +48,7 @@ public partial class WorkRelatedPage : IconContentPage
         InitializeComponent();
     }
 
-    public WorkRelatedPage(long id, SimpleWorkType simpleWorkType, MakoClient client, IWorkViewViewModel? viewModel = null)
+    public WorkRelatedPage(long id, SimpleWorkKind simpleWorkType, MakoClient client, IWorkViewViewModel? viewModel = null)
     {
         _client = client;
         InitializeComponent();
@@ -59,7 +59,7 @@ public partial class WorkRelatedPage : IconContentPage
         }
 
         _suppressSourceChange = true;
-        WorkType = simpleWorkType;
+        WorkKind = simpleWorkType;
         WorkId = id;
         _suppressSourceChange = false;
         if (!_hasViewModel)
@@ -72,7 +72,7 @@ public partial class WorkRelatedPage : IconContentPage
         set => SetValue(WorkIdProperty, value);
     }
 
-    public SimpleWorkType WorkType
+    public SimpleWorkKind WorkKind
     {
         get => GetValue(WorkTypeProperty);
         set => SetValue(WorkTypeProperty, value);
@@ -84,7 +84,7 @@ public partial class WorkRelatedPage : IconContentPage
         if (change.Property == WorkIdProperty)
             _id = change.GetNewValue<long>();
         else if (change.Property == WorkTypeProperty)
-            _simpleWorkType = change.GetNewValue<SimpleWorkType>();
+            _simpleWorkType = change.GetNewValue<SimpleWorkKind>();
         else if (change.Property == UiServices.ProviderProperty)
         {
             if (!_sourcePending)
@@ -108,7 +108,7 @@ public partial class WorkRelatedPage : IconContentPage
         _sourcePending = _client is null;
         var engine = !IsVisible || _id is 0 || _client is null
             ? (IAsyncEnumerable<object>) AsyncEnumerable.Empty<object>()
-            : _client.WorkRelated(_id, _simpleWorkType);
-        WorkContainer.ResetEngine(engine);
+            : _client.WorkRelatedUnified(_simpleWorkType, _id).AsObjects();
+        WorkContainer.ResetSource(engine, _simpleWorkType);
     }
 }

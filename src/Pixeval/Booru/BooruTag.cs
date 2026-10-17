@@ -3,7 +3,7 @@
 
 namespace Pixeval.Booru;
 
-public partial record BooruTag
+public partial record struct BooruTag
 {
     public string Description => "";
 

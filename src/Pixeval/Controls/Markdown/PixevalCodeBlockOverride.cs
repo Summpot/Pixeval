@@ -18,7 +18,6 @@ using CommunityToolkit.Mvvm.Input;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
 using Markdown.Avalonia;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Services.Core;
 using Markdown.Avalonia.Parsers;
 using Markdown.Avalonia.Plugins;

@@ -52,27 +52,27 @@ public record AppSettings
         }
     }
 
-    [SettingsEntry(Symbol.Apps, AppSettingsResources.SettingsGroup.Application.Header, null)]
+    [SettingsEntry(Symbol.Apps, nameof(Strings.AppSettingsSettingsGroupApplicationHeader), null)]
     public ApplicationSettingsGroup ApplicationSettings { get; set; } = new();
 
-    [SettingsEntry(Symbol.WiFi, AppSettingsResources.SettingsGroup.Network.Header, null)]
+    [SettingsEntry(Symbol.WiFi, nameof(Strings.AppSettingsSettingsGroupNetworkHeader), null)]
     public NetworkSettingsGroup NetworkSettings { get; set; } = new();
 
-    [SettingsEntry(Symbol.News, AppSettingsResources.SettingsGroup.BrowsingExperience.Header, null)]
+    [SettingsEntry(Symbol.News, nameof(Strings.AppSettingsSettingsGroupBrowsingExperienceHeader), null)]
     public BrowsingExperienceSettingsGroup BrowsingExperienceSettings { get; set; } = new();
 
-    [SettingsEntry(Symbol.SearchSparkle, AppSettingsResources.SettingsGroup.Search.Header, null)]
+    [SettingsEntry(Symbol.SearchSparkle, nameof(Strings.AppSettingsSettingsGroupSearchHeader), null)]
     public SearchSettingsGroup SearchSettings { get; set; } = new();
 
-    [SettingsEntry(Symbol.ArrowSquareDown, AppSettingsResources.SettingsGroup.Download.Header, null)]
+    [SettingsEntry(Symbol.ArrowSquareDown, nameof(Strings.AppSettingsSettingsGroupDownloadHeader), null)]
     public DownloadSettingsGroup DownloadSettings { get; set; } = new();
 
 #if PIXEVAL_MCP
-    [SettingsEntry(Symbol.Bot, AppSettingsResources.SettingsGroup.Mcp.Header, null)]
+    [SettingsEntry(Symbol.Bot, nameof(Strings.AppSettingsSettingsGroupMcpHeader), null)]
     public McpSettingsGroup McpSettings { get; set; } = new();
 #endif
 
-    [SettingsEntry(Symbol.Settings, AppSettingsResources.SettingsGroup.Novel.Header, null)]
+    [SettingsEntry(Symbol.Settings, nameof(Strings.AppSettingsSettingsGroupNovelHeader), null)]
     public NovelSettingsGroup NovelSettings { get; set; } = new();
 
     /// <summary>

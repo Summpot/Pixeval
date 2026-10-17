@@ -60,9 +60,9 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
 
     public void InitializeProvider()
     {
-        AppInfo.AppVersion.Attach(AppSettings, logger);
         AppSettings.Initialize();
         AppServiceProvider = CreateServiceProvider();
+        AppInfo.AppVersion.Attach(AppSettings, logger, AppServiceProvider.GetRequiredService<GitHubService>());
         UserSession = AppServiceProvider.GetRequiredService<IUserSessionService>();
         NavigationService = AppServiceProvider.GetRequiredService<INavigationService>();
         AppUpdateNotificationCoordinator = AppServiceProvider.GetRequiredService<IAppUpdateNotificationCoordinator>();
@@ -106,7 +106,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         MakoClient = new MakoClient(makoConfig);
         MakoClient.SetSessionCallback(new MakoSessionCallbackHandler(this, logger));
         MahoClient = new MahoClient(CreateMahoClientOptions());
-        DownloadManager = new DownloadManager(null, AppSettings.DownloadSettings.MaxDownloadTaskConcurrencyLevel);
+        DownloadManager = new DownloadManager(AppSettings.DownloadSettings.MaxDownloadTaskConcurrencyLevel, AppSettings);
         DownloadManager.BindStorage(StorageEngine);
         DownloadManager.BindMako(MakoClient);
         DownloadManager.SetDownloadPolicy(CreateDownloadPolicy(AppSettings));
@@ -116,9 +116,9 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         SearchHistory = new SearchHistorySession(StorageEngine, _searchHistoryEntries);
         HomePageCardsSession = new HomePageCardSession(_homePageCards);
         var images = new ImageProviderService(AppSettings, logger);
-        var networkRuntime = new NetworkRuntime(AppSettings, MakoClient, MahoClient, CreateMahoClientOptions, images);
+        var github = new GitHubService(AppSettings.NetworkSettings);
+        var networkRuntime = new NetworkRuntime(AppSettings, MakoClient, MahoClient, CreateMahoClientOptions, images, github);
         NetworkRuntime = networkRuntime;
-        var gitHubHttp = new GitHubHttpClientProvider(AppSettings.NetworkSettings);
 
         try
         {
@@ -135,8 +135,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             .AddSingleton(AppSettings)
             .AddSingleton(LoginContext)
             .AddBooruServices()
-            .AddSingleton(gitHubHttp)
-            .AddKeyedSingleton(GitHubHttpClientProvider.PlatformKey, gitHubHttp)
+            .AddSingleton(_ => github)
             .AddSingleton(SearchHistory)
             .AddSingleton(HomePageCardsSession)
             .AddSingleton(NavigationMenu)
@@ -159,11 +158,18 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             .AddSingleton<INavigationService, NavigationService>()
             .AddSingleton<IAppUpdateNotificationCoordinator, AppUpdateNotificationCoordinator>()
             .AddSingleton<HomeCardDefinitions>()
+            .AddSingleton<WorkCommands>()
+            .AddSingleton<LocalizedFilterSession>()
+            .AddSingleton<IBlockedContentService, BlockedContentService>()
             .AddSingleton<WorkSubscriptionDownloadService>()
             .AddSingleton<IWorkSubscriptionService>(provider =>
                 provider.GetRequiredService<WorkSubscriptionDownloadService>())
             .AddSingleton(extensionService)
             .AddTransient<Pixeval.ViewModels.Settings.SettingsPageViewModel>()
+            .AddTransient<HomePageViewModel>()
+            .AddTransient<LoginPageViewModel>()
+            .AddTransient<TabViewContainerViewModel>()
+            .AddTransient<SauceNaoSearchPageViewModel>()
             .AddSingleton<Pixeval.ViewModels.Search.SearchPageViewModel>()
 #if PIXEVAL_MCP
             .AddSingleton<IPixevalMcpService>(t =>
@@ -183,7 +189,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
     {
         try
         {
-            var searches = await Task.Run(() => StorageEngine.StreamSearchHistories(0, 50));
+            var searches = await Task.Run(() => StorageEngine.HistoryRepository.StreamSearchHistories(0, 50));
             foreach (var s in searches)
                 SearchHistoryEntries.Add(s);
 
@@ -227,8 +233,8 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
     public void ClearDownloadHistories()
     {
         DownloadManager.ClearTasks();
-        StorageEngine.ClearDownloadHistory();
-        StorageEngine.ClearSubscriptionDownloadHistory();
+        StorageEngine.DownloadRepository.ClearDownloadHistory();
+        StorageEngine.DownloadRepository.ClearSubscriptionDownloadHistory();
     }
 
     public Task RemoveWorkSubscriptionDownloadsAsync(long workSubscriptionId)
@@ -252,18 +258,9 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
     public void QueueWorkSubscriptionSync(WorkSubscriptionRecord subscription) =>
         AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().QueueSyncSubscription(subscription);
 
-    public void QueueWorkSubscriptionInitialSync(WorkSubscriptionRecord subscription, IFetchEngine<IWorkEntry>? sourceEngine = null) =>
-        AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().QueueInitialSync(subscription, sourceEngine);
-
-    public void QueueWorkSubscriptionSyncCurrentSource(long uid, WorkSubscriptionType subscriptionType, WorkSubscriptionWorkKind workKind, IFetchEngine<IWorkEntry> engine) =>
-        AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().QueueSyncCurrentSource(uid, subscriptionType, workKind, engine);
-
     public void SetNameResolvers() => NetworkRuntime.AttachNameResolverHooks();
 
     public void UpdateMakoNetworkOptions() => NetworkRuntime.UpdateNetworkOptions();
-
-    public HttpClient GetRequiredGitHubHttpClient() =>
-        AppServiceProvider.GetRequiredKeyedService<GitHubHttpClientProvider>(GitHubHttpClientProvider.PlatformKey).GetApiClient();
 
     public async ValueTask DisposeAsync()
     {

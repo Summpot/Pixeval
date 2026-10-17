@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,4 +22,7 @@ public interface IIncrementalLoading
 
     /// <summary>Whether loading stopped temporarily and can be resumed explicitly.</summary>
     bool IsInterrupted => false;
+
+    /// <summary>The most recent load failure, cleared when a new load starts.</summary>
+    Exception? LoadError => null;
 }

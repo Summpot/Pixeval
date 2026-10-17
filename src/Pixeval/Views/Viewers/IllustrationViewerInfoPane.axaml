@@ -1,7 +1,9 @@
 <UserControl
     x:Class="Pixeval.Views.Viewers.IllustrationViewerInfoPane"
     xmlns="https://github.com/avaloniaui"
+    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:common="using:FluentIcons.Common"
     xmlns:capability="using:Pixeval.Views.Works"
     xmlns:controls="using:Pixeval.Controls"
@@ -104,41 +106,41 @@
                     DefaultLabelPosition="Collapsed"
                     IsDynamicOverflowEnabled="False">
                     <CommandBarButton
-                        Command="{x:Static viewModels:WorkCommands.BookmarkCommand}"
+                        Command="{Binding BookmarkCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                         CommandParameter="{Binding CurrentIllustration}"
                         ContextRequested="AddToBookmarkButton_OnRightClick"
                         Icon="{markup1:SymbolIconEx Heart,
                                                     IconVariant={Binding CurrentUiState.BookmarkState,
                                                                          Converter={x:Static converters:PixevalConverters.StateToIconVariant}}}"
                         IsVisible="{Binding IsBookmarkSupported, FallbackValue={x:False}}"
-                        Label="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}" />
+                        Label="{CompiledBinding [EntryItem-AddToBookmark], Source={x:Static loc:LocalizationManager.Instance}}" />
                     <CommandBarButton
-                        Command="{x:Static viewModels:WorkCommands.SaveCommand}"
+                        Command="{Binding SaveCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                         CommandParameter="{Binding CurrentIllustration}"
                         Icon="{markup:SymbolIcon SaveMultiple}"
-                        Label="{I18N {x:Static pixeval:EntryItemResources.Save}}" />
+                        Label="{CompiledBinding [EntryItem-Save], Source={x:Static loc:LocalizationManager.Instance}}" />
                     <CommandBarSeparator />
                     <CommandBarButton
-                        Command="{x:Static viewModels:WorkCommands.AddToWatchLaterCommand}"
+                        Command="{Binding AddToWatchLaterCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                         CommandParameter="{Binding CurrentIllustration}"
                         Icon="{markup1:SymbolIconEx Clock,
                                                     IconVariant={Binding CurrentUiState.IsInWatchLater,
                                                                          Converter={x:Static converters:PixevalConverters.BoolToIconVariant}}}"
-                        Label="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}" />
+                        Label="{CompiledBinding [EntryItem-AddToWatchLater], Source={x:Static loc:LocalizationManager.Instance}}" />
                     <!--<CommandBarButton
                             Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
                             Icon="{markup:SymbolIcon Link}"
-                            Label="{I18N {x:Static pixeval:EntryItemResources.GenerateLink}}"
+                            Label="{CompiledBinding [EntryItem-GenerateLink], Source={x:Static loc:LocalizationManager.Instance}}"
                             Tag="{Binding CurrentIllustration.AppUri, FallbackValue={x:Null}}" />-->
                     <CommandBarButton
                         Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
                         Icon="{markup:SymbolIcon LinkMultiple}"
-                        Label="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
+                        Label="{CompiledBinding [EntryItem-GenerateWebLink], Source={x:Static loc:LocalizationManager.Instance}}"
                         Tag="{Binding WebsiteUri, FallbackValue={x:Null}}" />
                     <CommandBarButton
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                         Icon="{markup:SymbolIcon GlobeArrowUp}"
-                        Label="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
+                        Label="{CompiledBinding [EntryItem-OpenInWebBrowser], Source={x:Static loc:LocalizationManager.Instance}}"
                         Tag="{Binding WebsiteUri, FallbackValue={x:Null}}" />
                 </CommandBar>
             </StackPanel>
@@ -179,12 +181,12 @@
                         <local:CommentsPage
                             controls:TabPageInclusion.IsIncluded="{Binding CurrentIllustration, Converter={x:Static converters:PixevalConverters.IsInteractiveIllustration}}"
                             ParentId="{Binding CurrentIllustration, Converter={x:Static converters:PixevalConverters.IllustrationId}}"
-                            ParentType="{x:Static pixiv:SimpleWorkType.Illustration}" />
+                            ParentType="{x:Static nativeMako:SimpleWorkKind.Illustration}" />
                         <capability:WorkRelatedPage
                             controls:TabPageInclusion.IsIncluded="{Binding CurrentIllustration, Converter={x:Static converters:PixevalConverters.IsInteractiveIllustration}}"
                             IsCommandBarCollapsed="True"
                             WorkId="{Binding CurrentIllustration, Converter={x:Static converters:PixevalConverters.IllustrationId}}"
-                            WorkType="{x:Static pixiv:SimpleWorkType.Illustration}" />
+                            WorkKind="{x:Static nativeMako:SimpleWorkKind.Illustration}" />
                     </TabbedPage>
                 </Panel>
             </DockPanel>
@@ -201,7 +203,7 @@
             IsChecked="{Binding #InfoPaneRoot.IsLocked, Mode=TwoWay}"
             IsVisible="{Binding #InfoPaneRoot.IsDocked, Converter={x:Static BoolConverters.Not}}"
             Theme="{StaticResource TransparentButtonStyle}"
-            ToolTip.Tip="{I18N {x:Static pixeval:EntryViewerPageResources.Pin}}" />
+            ToolTip.Tip="{CompiledBinding [EntryViewerPage-Pin], Source={x:Static loc:LocalizationManager.Instance}}" />
         <Button
             Width="32"
             Height="32"
@@ -214,6 +216,6 @@
                                                                          ChevronDown,
                                                                          x:TypeArguments=common:Symbol}}"
             Theme="{StaticResource TransparentButtonStyle}"
-            ToolTip.Tip="{I18N {x:Static pixeval:EntryViewerPageResources.InfoAndComments}}" />
+            ToolTip.Tip="{CompiledBinding [EntryViewerPage-InfoAndComments], Source={x:Static loc:LocalizationManager.Instance}}" />
     </Grid>
 </UserControl>

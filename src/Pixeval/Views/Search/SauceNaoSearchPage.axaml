@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Search.SauceNaoSearchPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:markup="using:Pixeval.Common.Markup"
@@ -9,13 +10,11 @@
     xmlns:pixeval="using:Pixeval"
     xmlns:viewModels="using:Pixeval.ViewModels.Search"
     x:DataType="{x:Type viewModels:SauceNaoSearchPageViewModel}"
-    Header="{I18N {x:Static pixeval:SearchResources+AdvancedOptions.SauceNaoTab}}"
+    DataContext="{markup:Service Type={x:Type viewModels:SauceNaoSearchPageViewModel}}"
+    Header="{CompiledBinding [Search-AdvancedOptions-SauceNaoTab], Source={x:Static loc:LocalizationManager.Instance}}"
     mc:Ignorable="d"
     d:DesignHeight="450"
     d:DesignWidth="800">
-    <ContentPage.DataContext>
-        <viewModels:SauceNaoSearchPageViewModel />
-    </ContentPage.DataContext>
     <DockPanel
         Margin="12"
         IsEnabled="{Binding IsApiKeyExisted}"
@@ -24,12 +23,12 @@
             DockPanel.Dock="Top"
             IsVisible="{Binding !IsApiKeyExisted}"
             Mode="Warning"
-            Text="{I18N {x:Static pixeval:SearchResources+SauceNAO.ProvideApiKey}}" />
+            Text="{CompiledBinding [Search-SauceNAO-ProvideApiKey], Source={x:Static loc:LocalizationManager.Instance}}" />
         <Button
             HorizontalAlignment="Stretch"
             HorizontalContentAlignment="Center"
             Click="SearchButton_OnClick"
-            Content="{I18N {x:Static pixeval:SearchResources+SauceNAO.Search}}"
+            Content="{CompiledBinding [Search-SauceNAO-Search], Source={x:Static loc:LocalizationManager.Instance}}"
             DockPanel.Dock="Top"
             IsEnabled="{Binding FileSelected}" />
         <Button
@@ -39,7 +38,7 @@
             CommandParameter="{Binding $self}"
             DockPanel.Dock="Bottom">
             <Button.Content>
-                <controls:IconText Symbol="ClipboardPaste" Text="{I18N {x:Static pixeval:SearchResources+SauceNAO.PasteFromClipboard}}" />
+                <controls:IconText Symbol="ClipboardPaste" Text="{CompiledBinding [Search-SauceNAO-PasteFromClipboard], Source={x:Static loc:LocalizationManager.Instance}}" />
             </Button.Content>
         </Button>
         <Button
@@ -54,9 +53,9 @@
                         Height="100"
                         Data="{markup:SvgPath {x:Static pixeval:SvgResources.SauceNAO}}" />
                     <TextBlock FontSize="20" TextAlignment="Center">
-                        <Run Text="{I18N {x:Static pixeval:SearchResources+SauceNAO.ProvideImage}}" />
+                        <Run Text="{CompiledBinding [Search-SauceNAO-ProvideImage], Source={x:Static loc:LocalizationManager.Instance}}" />
                         <LineBreak />
-                        <Run Text="{I18N {x:Static pixeval:SearchResources+SauceNAO.Or}}" />
+                        <Run Text="{CompiledBinding [Search-SauceNAO-Or], Source={x:Static loc:LocalizationManager.Instance}}" />
                     </TextBlock>
                 </StackPanel>
                 <Image Source="{Binding Image}" />

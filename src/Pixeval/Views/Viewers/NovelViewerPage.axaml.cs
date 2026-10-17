@@ -8,7 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 using Pixeval.Utilities;
@@ -65,7 +65,7 @@ public partial class NovelViewerPage : IconContentPage
         if (sender is Control c && ViewModel.CurrentNovel is { Id: var id })
             await BookmarkTagSelectorFlyoutHelper.ShowAsync(
                 c,
-                SimpleWorkType.Novel,
+                SimpleWorkKind.Novel,
                 id,
                 AddToBookmarkAsync,
                 PlacementMode.Bottom);
@@ -75,9 +75,9 @@ public partial class NovelViewerPage : IconContentPage
     {
         if (ViewModel.CurrentNovel is { } current)
         {
-            await WorkCommands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
+            await this.GetRequiredUiService<WorkCommands>().AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(current, e.IsPrivate, e.Tags));
             this.Notifications.ShowSuccess(
-                I18NManager.GetResource(MiscResources.AddedToBookmark));
+                Strings.MiscAddedToBookmark());
         }
     }
 

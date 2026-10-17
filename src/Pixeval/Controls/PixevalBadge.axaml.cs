@@ -2,9 +2,10 @@
 // Licensed under the GPL-3.0 License.
 
 using System.Collections.Generic;
+using System;
 using Avalonia;
 using Avalonia.Controls.Primitives;
-using Pixeval.I18N;
+using Pixeval.Localization;
 
 namespace Pixeval.Controls;
 
@@ -23,7 +24,7 @@ public class PixevalBadge : TemplatedControl
     {
         [BadgeMode.None] = "None",
         [BadgeMode.Premium] = "Premium",
-        [BadgeMode.Following] = I18NManager.GetResource(MiscResources.PixevalBadge.Following),
+        [BadgeMode.Following] = "",
         [BadgeMode.Gif] = "GIF",
         [BadgeMode.R18] = "R18",
         [BadgeMode.R18G] = "R18G",
@@ -38,8 +39,11 @@ public class PixevalBadge : TemplatedControl
         });
     }
 
+    private readonly IDisposable _languageSubscription;
+
     public PixevalBadge()
     {
+        _languageSubscription = AppLocalization.Instance.Subscribe(() => UpdateFromMode(Mode));
         UpdateFromMode(Mode);
     }
 
@@ -68,6 +72,6 @@ public class PixevalBadge : TemplatedControl
             definition = _PropertySet[BadgeMode.None];
         }
 
-        Text = definition;
+        Text = mode == BadgeMode.Following ? Strings.MiscPixevalBadgeFollowing() : definition;
     }
 }

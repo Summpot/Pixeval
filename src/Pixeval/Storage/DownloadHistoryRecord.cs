@@ -5,7 +5,7 @@ using Pixeval.Download;
 
 namespace Pixeval.Storage;
 
-public partial record DownloadHistoryRecord : IDownloadHistoryEntry
+public partial record struct DownloadHistoryRecord : IDownloadHistoryEntry
 {
     private object? _entry;
     private DownloadState? _currentState;
@@ -14,7 +14,7 @@ public partial record DownloadHistoryRecord : IDownloadHistoryEntry
 
     internal object? EntryOverride { get; init; }
 
-    public object? Entry => EntryOverride ?? (_entry ??= ArtworkPayloadHydrator.Hydrate(SerializeKey, PayloadJson));
+    public object? Entry => EntryOverride ?? (_entry ??= ArtworkPayloads.EntryOf(Payload));
 
     public DownloadState DownloadState => _currentState ?? (DownloadState)State;
 

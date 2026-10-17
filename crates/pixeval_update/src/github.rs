@@ -201,3 +201,59 @@ mod tests {
         assert_eq!(converted[1].version, "5.0.12");
     }
 }
+
+pub(crate) async fn fetch_user_profile(client: &MahoHttpClient, url: &str) -> Result<crate::models::GitHubUserProfile, UpdateError> {
+    let response = client.get(url)
+        .header("Accept", "application/vnd.github+json")
+        .header("User-Agent", "Pixeval")
+        .send().await.map_err(UpdateError::from)?;
+    if !response.status().is_success() {
+        return Err(UpdateError::Http { status_code: response.status().as_u16(), message: "GitHub user lookup failed".into() });
+    }
+    response.json().await.map_err(UpdateError::from)
+}
+
+#[cfg(test)]
+mod profile_tests {
+    use super::*;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use std::sync::Arc;
+
+    async fn server(status: u16, body: &'static str) -> String {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/", listener.local_addr().unwrap());
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut request = [0u8; 4096];
+            stream.read(&mut request).await.unwrap();
+            let response = format!("HTTP/1.1 {status} OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len());
+            stream.write_all(response.as_bytes()).await.unwrap();
+        });
+        url
+    }
+
+    #[tokio::test]
+    async fn typed_profile_and_http_errors_use_the_native_transport() {
+        let client = MahoHttpClient::new(Arc::new(pixeval_maho::MahoConfig::default()), None);
+        let url = server(200, r#"{"avatar_url":"https://example.com/a.png","html_url":"https://github.com/user"}"#).await;
+        let profile = fetch_user_profile(&client, &url).await.unwrap();
+        assert_eq!(profile.html_url, "https://github.com/user");
+        let url = server(404, "missing").await;
+        assert!(matches!(fetch_user_profile(&client, &url).await, Err(UpdateError::Http { status_code: 404, .. })));
+    }
+
+    #[tokio::test]
+    async fn configured_proxy_and_timeout_are_used_for_downloads() {
+        let proxy = server(200, "via proxy").await;
+        let client = crate::GithubClient::new(Some(crate::UpdateNetworkOptions {
+            enable_domain_fronting: false, proxy_url: Some(proxy), custom_dns_mappings: HashMap::new(),
+        }));
+        assert_eq!(client.download_text("http://unresolvable.invalid/".into(), None, Some(0.1)).await.unwrap(), "via proxy");
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/", listener.local_addr().unwrap());
+        let direct = crate::GithubClient::new(Some(crate::UpdateNetworkOptions {
+            enable_domain_fronting: false, proxy_url: None, custom_dns_mappings: HashMap::new(),
+        }));
+        assert!(direct.download_text(url, None, Some(0.0001)).await.is_err());
+    }
+}

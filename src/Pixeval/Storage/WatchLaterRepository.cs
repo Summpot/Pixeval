@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Pixeval.Pixiv;
-using Pixeval.Mako;
 
 namespace Pixeval.Storage;
 
@@ -23,27 +22,16 @@ public partial class WatchLaterRepository : IArtworkHistorySource
 
     public bool AddWatchLater(object entry)
     {
-        if (!WatchLaterRecord.TryCreateWorkKey(entry, out var workKey))
+        if (!ArtworkPayloads.TryWrap(entry, out var payload))
             return false;
-        var serializable = entry as IArtworkSerializable;
-        var serializeKey = serializable?.SerializeKey;
-        var payloadJson = serializable?.Serialize();
-        var id = entry switch
-        {
-            Illustration i => i.Id.ToString(),
-            Pixeval.Mako.Novel n => n.Id.ToString(),
-            Booru.BooruPost b => b.Id,
-            SauceNao.SauceNaoItem s => s.RawId,
-            _ => ""
-        };
-        AddOrReplaceWatchLater(id, serializeKey, workKey, payloadJson ?? "");
+        AddWatchLater(payload);
         return true;
     }
 
     public bool RemoveWatchLater(object entry) =>
         WatchLaterRecord.TryCreateWorkKey(entry, out var workKey) && RemoveWatchLater(workKey);
 
-    public async IAsyncEnumerable<object> StreamAsync(SimpleWorkType workType, [EnumeratorCancellation] CancellationToken token = default)
+    public async IAsyncEnumerable<object> StreamAsync(SimpleWorkKind workType, [EnumeratorCancellation] CancellationToken token = default)
     {
         long? cursorId = null;
         const int pageSize = 50;
@@ -57,7 +45,7 @@ public partial class WatchLaterRepository : IArtworkHistorySource
             foreach (var record in batch)
             {
                 token.ThrowIfCancellationRequested();
-                if (record.Entry is { } entry && HistoryRepository.MatchesWorkType(workType, record.SerializeKey, entry))
+                if (record.Entry is { } entry && HistoryRepository.MatchesWorkType(workType, entry))
                 {
                     yield return entry;
                 }

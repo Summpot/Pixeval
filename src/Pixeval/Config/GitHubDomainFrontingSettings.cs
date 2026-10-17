@@ -12,7 +12,7 @@ public record GitHubDomainFrontingSettings
 {
     public bool EnableGitHubDomainFronting { get; set; } = true;
 
-    [SettingsEntry(Symbol.Box, AppSettingsResources.GitHubNameResolverEntry.Header, AppSettingsResources.GitHubNameResolverEntry.Description, Placeholder = GitHubHttpOptions.Host)]
+    [SettingsEntry(Symbol.Box, nameof(Strings.AppSettingsGitHubNameResolverEntryHeader), nameof(Strings.AppSettingsGitHubNameResolverEntryDescription), Placeholder = GitHubHttpOptions.Host)]
     public ObservableCollection<string> GitHubNameResolver { get; set; } =
     [
         "20.205.243.166",

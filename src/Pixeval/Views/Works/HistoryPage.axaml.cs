@@ -23,7 +23,7 @@ public abstract partial class HistoryPage : IconContentPage, IDisposable
         if (!_isSourceInitialized)
             return;
 
-        ResetSource(sender.GetSelectedValue<SimpleWorkType>());
+        ResetSource(sender.GetSelectedValue<SimpleWorkKind>());
     }
 
     private void WorkContainer_OnRefreshRequested(object? sender, RoutedEventArgs e) => ResetSource();
@@ -54,9 +54,11 @@ public abstract partial class HistoryPage : IconContentPage, IDisposable
                 ResetSource();
         });
 
-    private void ResetSource(SimpleWorkType? workType = null) =>
-        WorkContainer.ResetEngine(Source.StreamAsync(
-            workType ?? SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>()));
+    private void ResetSource(SimpleWorkKind? workType = null)
+    {
+        var type = workType ?? SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>();
+        WorkContainer.ResetSource(Source.StreamAsync(type), type);
+    }
 
     /// <inheritdoc />
     public void Dispose()

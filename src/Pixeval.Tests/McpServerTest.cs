@@ -36,9 +36,9 @@ public sealed class McpServerTest
     }
 
     [TestMethod]
-    public void PluginHostEngineLifecycleAndState()
+    public void PluginHostLifecycleAndState()
     {
-        using var engine = new PluginHostEngine("5.0.0");
+        using var engine = new PluginHost("5.0.0");
         Assert.AreEqual("5.0.0", engine.CurrentSdkVersion());
 
         var meta = new PluginMetadata(
@@ -61,7 +61,7 @@ public sealed class McpServerTest
         Assert.IsTrue(engine.SetPluginActive("test-plugin-id", false));
         var updated = engine.GetPlugin("test-plugin-id");
         Assert.IsNotNull(updated);
-        Assert.IsFalse(updated.IsActive);
+        Assert.IsFalse(updated.Value.IsActive);
 
         Assert.IsTrue(engine.UnloadPlugin("test-plugin-id"));
         Assert.AreEqual(0, engine.GetLoadedPlugins().Count);
@@ -88,9 +88,9 @@ public sealed class McpServerTest
                 null
             ));
             using var download = new DownloadManager(3, null, null);
-            using var cache = new CacheEngine(Path.Combine(tempDir, "cache"), 1024 * 1024);
-            using var sub = new SubscriptionSyncEngine(5, null);
-            using var plugin = new PluginHostEngine("5.0.0");
+            using var cache = new ImageCache(Path.Combine(tempDir, "cache"), 1024 * 1024);
+            using var sub = new SubscriptionSync(5, null);
+            using var plugin = new PluginHost("5.0.0");
 
             var config = new McpServerConfig(
                 52197,
@@ -174,9 +174,9 @@ public sealed class McpServerTest
                 null
             ));
             using var download = new DownloadManager(3, null, null);
-            using var cache = new CacheEngine(Path.Combine(tempDir, "cache"), 1024 * 1024);
-            using var sub = new SubscriptionSyncEngine(5, null);
-            using var plugin = new PluginHostEngine("5.0.0");
+            using var cache = new ImageCache(Path.Combine(tempDir, "cache"), 1024 * 1024);
+            using var sub = new SubscriptionSync(5, null);
+            using var plugin = new PluginHost("5.0.0");
 
             var config = new McpServerConfig(
                 52198,

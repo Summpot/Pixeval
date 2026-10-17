@@ -3,14 +3,19 @@
 
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Pixeval.I18N;
+using Pixeval.Localization;
+using Pixeval.Mako;
 
 namespace Pixeval.ViewModels.Search;
 
 public partial class IllustrationSearchFormViewModel : SearchArgumentsFormViewModelBase
 {
+    public IllustrationSearchFormViewModel(IUserSessionService? userSession = null) : base(userSession)
+    {
+    }
+
     [ObservableProperty]
-    public partial SearchIllustrationTagMatchOption MatchOption { get; set; }
+    public partial IllustSearchTarget MatchOption { get; set; } = IllustSearchTarget.PartialMatchForTags;
 
     [ObservableProperty]
     public partial SearchIllustrationContentType ContentType { get; set; } = SearchIllustrationContentType.IllustrationAndMangaAndUgoira;
@@ -40,8 +45,8 @@ public partial class IllustrationSearchFormViewModel : SearchArgumentsFormViewMo
         if (HasInvalidRange(WidthMinOption.NullableInt, WidthMaxOption.NullableInt)
             || HasInvalidRange(HeightMinOption.NullableInt, HeightMaxOption.NullableInt))
         {
-            title = I18NManager.GetResource(SearchResources.Validation.InvalidNumericRange.Title);
-            content = I18NManager.GetResource(SearchResources.Validation.InvalidNumericRange.Content);
+            title = Strings.SearchValidationInvalidNumericRangeTitle();
+            content = Strings.SearchValidationInvalidNumericRangeContent();
             return false;
         }
 
@@ -49,21 +54,22 @@ public partial class IllustrationSearchFormViewModel : SearchArgumentsFormViewMo
         return true;
     }
 
-    public IllustrationSearchArguments BuildArguments(string searchText)
-    {
-        var arguments = new IllustrationSearchArguments(searchText)
-        {
-            MatchOption = MatchOption,
-            ContentType = ContentType,
-            RatioPattern = RatioPattern,
-            WidthMin = WidthMinOption.NullableInt,
-            WidthMax = WidthMaxOption.NullableInt,
-            HeightMin = HeightMinOption.NullableInt,
-            HeightMax = HeightMaxOption.NullableInt,
-            Tool = Tool == CommonUnspecified ? null : Tool
-        };
-
-        ApplyCommonArguments(arguments);
-        return arguments;
-    }
+    public IllustrationSearchParams ToSearchParams(string searchText) =>
+        new(
+            Word: searchText,
+            SearchTarget: MatchOption,
+            Sort: SortOption,
+            SearchAiType: AiType ? 1 : 0,
+            ContentType: ContentType.ToIllustContentType(),
+            RatioPattern: RatioPattern.ToRatioPattern(),
+            MergePlainKeywordResults: MergePlainKeywordResults,
+            IncludeTranslatedTagResults: IncludeTranslatedTagResults,
+            IncludePotentialViolationWorks: IncludePotentialViolationWorks,
+            StartDate: StartDateOption.ToNullableDateTimeOffset().ToQueryDate(),
+            EndDate: EndDateOption.ToNullableDateTimeOffset().ToQueryDate(),
+            WidthMin: WidthMinOption.NullableInt,
+            WidthMax: WidthMaxOption.NullableInt,
+            HeightMin: HeightMinOption.NullableInt,
+            HeightMax: HeightMaxOption.NullableInt,
+            Tool: Tool == CommonUnspecified ? null : Tool);
 }

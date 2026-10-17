@@ -7,7 +7,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 using TabView.Avalonia;
 
@@ -46,11 +46,11 @@ internal static class TabContextMenuHelper
     {
         var item = new MenuItem
         {
-            Header = I18NManager.GetResource(scope switch
+            Header = Strings.GetString(scope switch
             {
-                TabCloseScope.Others => MainPageResources.TabContextMenu.CloseOtherTabs,
-                TabCloseScope.Left => MainPageResources.TabContextMenu.CloseTabsToLeft,
-                TabCloseScope.Right => MainPageResources.TabContextMenu.CloseTabsToRight,
+                TabCloseScope.Others => nameof(Strings.MainPageTabContextMenuCloseOtherTabs),
+                TabCloseScope.Left => nameof(Strings.MainPageTabContextMenuCloseTabsToLeft),
+                TabCloseScope.Right => nameof(Strings.MainPageTabContextMenuCloseTabsToRight),
                 _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, null)
             }),
             IsEnabled = TabClosePlanner.GetTargets(pages, contextPage, scope).Count is not 0
@@ -71,7 +71,10 @@ internal static class TabContextMenuHelper
             var args = new RoutedEventArgs(ViewModelDisposal.RequestDisposeEvent, target);
             target.RaiseEvent(args);
             if (!args.Handled)
+            {
                 ViewModelDisposal.Dispose(target);
+                target.DataContext = null;
+            }
             _ = pages.Remove(target);
         }
     }

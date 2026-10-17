@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+#[boltffi::data]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, uniffi::Record)]
 pub struct HomeCardBounds {
     pub column: i32,
@@ -9,12 +10,14 @@ pub struct HomeCardBounds {
     pub row_span: i32,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, uniffi::Record)]
 pub struct GridPosition {
     pub column: i32,
     pub row: i32,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, uniffi::Record)]
 pub struct GridPlacement {
     pub column: i32,
@@ -23,12 +26,14 @@ pub struct GridPlacement {
     pub row_span: i32,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, uniffi::Record)]
 pub struct CardNormalizationItem {
     pub index: u32,
     pub bounds: HomeCardBounds,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct CardNormalizationResult {
     pub placed_cards: Vec<CardNormalizationItem>,
@@ -36,6 +41,7 @@ pub struct CardNormalizationResult {
     pub changed: bool,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize, uniffi::Enum)]
 pub enum HomePageCardSourceKind {
     WorkRecommended,
@@ -59,6 +65,7 @@ pub enum HomePageCardSourceKind {
     SingleUser,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, uniffi::Enum)]
 pub enum HomeCardEditAction {
     Move,
@@ -85,6 +92,7 @@ pub mod card_param_flags {
     pub const SERIES_ID: u32 = 1 << 9;
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct HomeCardMetadata {
     pub source_kind: HomePageCardSourceKind,
@@ -113,6 +121,7 @@ fn is_zero_i64(val: &i64) -> bool {
     *val == 0
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, uniffi::Record)]
 #[serde(rename_all = "PascalCase")]
 pub struct HomePageCardLayout {

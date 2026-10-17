@@ -3,6 +3,7 @@
 
 use crate::metapath::ast::MacroTextSpan;
 
+#[boltffi::data]
 #[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MacroHighlightKind {
     Delimiter,
@@ -11,6 +12,7 @@ pub enum MacroHighlightKind {
     Separator,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, PartialEq, Eq)]
 pub struct MacroHighlightSpan {
     pub span: MacroTextSpan,
@@ -18,6 +20,7 @@ pub struct MacroHighlightSpan {
     pub nesting_depth: i32,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MacroDiagnosticKind {
     UnexpectedToken,
@@ -33,6 +36,7 @@ pub enum MacroDiagnosticKind {
     MacroShouldBeInLastSegment,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, PartialEq, Eq)]
 pub struct MacroDiagnostic {
     pub kind: MacroDiagnosticKind,
@@ -50,6 +54,7 @@ impl MacroDiagnostic {
     }
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, PartialEq, Eq, Default)]
 pub struct MacroAnalysisResult {
     pub is_success: bool,

@@ -7,6 +7,7 @@ use std::sync::RwLock;
 
 use std::sync::Arc;
 
+#[boltffi::error]
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum DnsError {
     #[error("DNS resolution error: {message}")]
@@ -72,7 +73,10 @@ impl DnsResolver {
 
     pub fn get_static_ips(&self, host: &str) -> Option<Vec<IpAddr>> {
         let map = self.mappings.read().unwrap();
-        map.get(host).cloned()
+        map.get(host).cloned().or_else(|| map.iter()
+            .filter_map(|(pattern, ips)| pattern.strip_prefix("*.").filter(|suffix|
+                host.len() > suffix.len() + 1 && host.ends_with(&format!(".{suffix}"))).map(|suffix| (suffix.len(), ips)))
+            .max_by_key(|(len, _)| *len).map(|(_, ips)| ips.clone()))
     }
 
     pub async fn resolve_host(&self, host: &str) -> std::io::Result<Vec<IpAddr>> {
@@ -94,5 +98,20 @@ impl DnsResolver {
         } else {
             Ok(addrs)
         }
+    }
+}
+
+#[cfg(test)]
+mod mapping_tests {
+    use super::*;
+    #[test]
+    fn wildcard_mappings_respect_label_boundaries_and_exact_overrides() {
+        let resolver = DnsResolver::new();
+        resolver.set_static_ips("*.githubusercontent.com", vec!["127.0.0.1".parse().unwrap()]);
+        resolver.set_static_ips("avatars.githubusercontent.com", vec!["127.0.0.2".parse().unwrap()]);
+        assert_eq!(resolver.get_static_ips("raw.githubusercontent.com").unwrap()[0].to_string(), "127.0.0.1");
+        assert_eq!(resolver.get_static_ips("avatars.githubusercontent.com").unwrap()[0].to_string(), "127.0.0.2");
+        assert!(resolver.get_static_ips("githubusercontent.com").is_none());
+        assert!(resolver.get_static_ips("evilgithubusercontent.com").is_none());
     }
 }

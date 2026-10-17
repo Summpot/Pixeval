@@ -50,6 +50,38 @@ public sealed class SourceLoadLifetimeTest
     }
 
     [TestMethod]
+    public async Task Source_SetCacheBeforeAttach_LoadsWhenAttached()
+    {
+        await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerRenderingTest.ViewerTestApplication));
+        await session.Dispatch(async () =>
+        {
+            var fakeService = new FakeImageProviderService();
+            var window = new Window { Width = 300, Height = 300 };
+            Source.SetImageProvider(window, fakeService);
+
+            var image = new Image();
+            Source.SetCache(image, "https://example.com/before-attach.png");
+            Assert.IsFalse(Source.GetLoaded(image));
+            Assert.IsNull(image.Source);
+
+            window.Content = image;
+            window.Show();
+            window.UpdateLayout();
+
+            for (var i = 0; i < 50 && !Source.GetLoaded(image); i++)
+            {
+                await Task.Delay(20);
+                window.UpdateLayout();
+            }
+
+            Assert.IsTrue(Source.GetLoaded(image));
+            Assert.IsNotNull(image.Source);
+
+            window.Close();
+        }, CancellationToken.None);
+    }
+
+    [TestMethod]
     public async Task Source_WithInheritedImageProvider_LoadsBitmapSuccessfully()
     {
         await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerRenderingTest.ViewerTestApplication));
@@ -166,6 +198,43 @@ public sealed class SourceLoadLifetimeTest
     }
 
     [TestMethod]
+    public async Task Source_DetachFromVisualTree_DoesNotDisposeLoadedBitmap()
+    {
+        await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerRenderingTest.ViewerTestApplication));
+        await session.Dispatch(async () =>
+        {
+            var fakeService = new FakeImageProviderService();
+            var window = new Window { Width = 300, Height = 300 };
+            Source.SetImageProvider(window, fakeService);
+
+            var image = new Image();
+            window.Content = image;
+            window.Show();
+            window.UpdateLayout();
+
+            Source.SetCache(image, "https://example.com/test_loaded.png");
+            for (var i = 0; i < 50 && !Source.GetLoaded(image); i++)
+            {
+                await Task.Delay(20);
+                window.UpdateLayout();
+            }
+
+            Assert.IsTrue(Source.GetLoaded(image));
+            Assert.IsNotNull(image.Source);
+            var loadedBitmap = (Bitmap) image.Source;
+
+            // Detach image from visual tree (simulating tab close / element unload)
+            window.Content = null;
+            window.UpdateLayout();
+
+            // Bitmap should NOT be disposed; accessing Size must not throw ObjectDisposedException
+            Assert.IsTrue(loadedBitmap.Size.Width > 0);
+
+            window.Close();
+        }, CancellationToken.None);
+    }
+
+    [TestMethod]
     public async Task MarkdownBox_ResolvesStreamViaInheritedImageProvider()
     {
         await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerRenderingTest.ViewerTestApplication));
@@ -206,7 +275,7 @@ public sealed class SourceLoadLifetimeTest
         public Func<string, string, CancellationToken, Task<Bitmap>>? OnGetBitmap { get; set; }
         public Func<string, string, CancellationToken, Task<Stream?>>? OnGetImageStream { get; set; }
 
-        public CacheEngine CacheEngine => throw new NotImplementedException();
+        public ImageCache ImageCache => throw new NotImplementedException();
         public Bitmap ImageNotAvailable => throw new NotImplementedException();
         public IAnimatedBitmap AnimatedImageNotAvailable => throw new NotImplementedException();
 

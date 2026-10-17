@@ -1,7 +1,9 @@
 <views:IconContentPage
     x:Class="Pixeval.Views.Search.SearchPage"
     xmlns="https://github.com/avaloniaui"
+    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:enum="using:Pixeval.Pixiv"
@@ -53,7 +55,7 @@
                         ItemTemplate="{StaticResource SearchCompletionTemplate}"
                         KeyDown="SearchAutoCompleteBox_OnKeyDown"
                         MinimumPrefixLength="1"
-                        PlaceholderText="{I18N {x:Static pixeval:SearchResources+SearchBox.PlaceholderText}}"
+                        PlaceholderText="{CompiledBinding [Search-SearchBox-PlaceholderText], Source={x:Static loc:LocalizationManager.Instance}}"
                         Tapped="SearchAutoCompleteBox_OnTapped"
                         TemplateApplied="SearchAutoCompleteBox_OnTemplateApplied"
                         Text="{Binding SearchText, Mode=TwoWay}">
@@ -97,12 +99,12 @@
                                         <MenuItem
                                             Command="{Binding CopyCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
                                             CommandParameter="{Binding}"
-                                            Header="{I18N {x:Static pixeval:SearchResources+SearchHistory.Copy}}"
+                                            Header="{CompiledBinding [Search-SearchHistory-Copy], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Icon="{markup:SymbolIcon Copy}" />
                                         <MenuItem
                                             Command="{Binding UnpinCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
                                             CommandParameter="{Binding}"
-                                            Header="{I18N {x:Static pixeval:SearchResources+SearchHistory.Unpin}}"
+                                            Header="{CompiledBinding [Search-SearchHistory-Unpin], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Icon="{markup:SymbolIcon PinOff}" />
                                     </ContextMenu>
                                 </Button.ContextMenu>
@@ -128,17 +130,17 @@
                                         <MenuItem
                                             Command="{Binding CopyCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
                                             CommandParameter="{Binding}"
-                                            Header="{I18N {x:Static pixeval:SearchResources+SearchHistory.Copy}}"
+                                            Header="{CompiledBinding [Search-SearchHistory-Copy], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Icon="{markup:SymbolIcon Copy}" />
                                         <MenuItem
                                             Command="{Binding AddPinnedTagCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
                                             CommandParameter="{Binding}"
-                                            Header="{I18N {x:Static pixeval:SearchResources+SearchHistory.AddPinnedTag}}"
+                                            Header="{CompiledBinding [Search-SearchHistory-AddPinnedTag], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Icon="{markup:SymbolIcon Pin}" />
                                         <MenuItem
                                             Command="{Binding DeleteHistoryCommand, Source={markup1:Service Type={x:Type viewModels:SearchPageViewModel}}, DataType={x:Type viewModels:SearchPageViewModel}}"
                                             CommandParameter="{Binding}"
-                                            Header="{I18N {x:Static pixeval:SearchResources+SearchHistory.Delete}}"
+                                            Header="{CompiledBinding [Search-SearchHistory-Delete], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Icon="{markup:SymbolIcon Delete}" />
                                     </ContextMenu>
                                 </Button.ContextMenu>
@@ -151,10 +153,10 @@
                 <DockPanel DockPanel.Dock="Top" HorizontalSpacing="10">
                     <TextBlock
                         VerticalAlignment="Center"
-                        Text="{I18N {x:Static pixeval:SearchResources+TrendingHeaderTextBlock.Text}}"
+                        Text="{CompiledBinding [Search-TrendingHeaderTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                         Theme="{StaticResource SubtitleTextBlockStyle}" />
                     <TabStrip
-                        ItemsSource="{markup1:EnumResources x:TypeArguments=enum:SimpleWorkType}"
+                        ItemsSource="{markup1:EnumResources x:TypeArguments=nativeMako:SimpleWorkKind}"
                         SelectedValue="{Binding SelectedTrendingTagsType, Mode=TwoWay}"
                         SelectedValueBinding="{Binding Value}">
                         <TabStrip.ItemTemplate>

@@ -15,16 +15,19 @@ namespace Pixeval.Services.Core;
 
 public static class NavigationPageRegistry
 {
-    static NavigationPageRegistry()
-    {
-        AvaloniaHelper.Init();
-    }
-
     public static List<NavigationPageDefinition> Pages { get; } = [];
 
     // 延迟到构造函数外赋值，确保Pages已赋值
-    public static IReadOnlyDictionary<string, NavigationPageDefinition> PagesByKey => field ??=
-        Pages.ToFrozenDictionary(static definition => definition.Key, StringComparer.OrdinalIgnoreCase);
+    public static IReadOnlyDictionary<string, NavigationPageDefinition> PagesByKey
+    {
+        get
+        {
+            // Finish registration before freezing. Calling back from this type's
+            // static constructor creates a cycle with AvaloniaHelper.Page(...).
+            _ = AvaloniaHelper.PageTypeToHeaderMap;
+            return field ??= Pages.ToFrozenDictionary(static definition => definition.Key, StringComparer.OrdinalIgnoreCase);
+        }
+    }
 
     private static readonly Lazy<IReadOnlyList<Symbol>> _ColorSymbols = new(GetColorSymbols);
 

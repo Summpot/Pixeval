@@ -2,7 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
+using Pixeval.Pixiv;
 using Pixeval.SauceNao;
 using Pixeval.Utilities;
 using Pixeval.Views.Viewers;
@@ -25,7 +26,7 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage
     public async Task PostAsync(string apiKey, ReadOnlyMemory<byte> file)
     {
         var results = GetResults(apiKey, file);
-        WorkContainer.ResetEngine(results);
+        WorkContainer.ResetSource(results, SimpleWorkKind.Illustration);
     }
 
     public async IAsyncEnumerable<object> GetResults(string apiKey, ReadOnlyMemory<byte> file)
@@ -38,7 +39,7 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage
         }
         catch (Exception e)
         {
-            this.Notifications.ShowError(I18NManager.GetResource(MiscResources.ExceptionEncountered), e.Message);
+            this.Notifications.ShowError(Strings.MiscExceptionEncountered(), e.Message);
         }
 
         if (sauceNaoResults is not null)
@@ -46,7 +47,12 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage
             foreach (var result in sauceNaoResults)
             {
                 if (!string.IsNullOrEmpty(result.ArtworkId)
-                    && await ViewerHelper.TryGetArtworkAsync(result.Platform, result.ArtworkId) is { } artwork)
+                    && await ViewerHelper.TryGetArtworkAsync(
+                        result.Platform,
+                        result.ArtworkId,
+                        this.GetRequiredUiService<MakoClient>(),
+                        this.GetRequiredUiService<BooruClient>(),
+                        this.GetUiService<FileLogger>()) is { } artwork)
                 {
                     yield return artwork;
                 }

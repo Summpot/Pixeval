@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
@@ -62,9 +61,6 @@ public static class ProxyHelper
 
         return Uri.IsWellFormedUriString(uri, UriKind.Absolute) ? uri : null;
     }
-
-    public static string? GetEffectiveProxyUrl() =>
-        GetEffectiveProxyUrl(App.Services?.GetService<AppSettings>()?.NetworkSettings);
 
     public static string? GetEffectiveProxyUrl(NetworkSettingsGroup? networkSettings)
     {

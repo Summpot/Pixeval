@@ -4,12 +4,14 @@ uniffi::setup_scaffolding!();
 // Licensed under the GPL-3.0 License.
 
 pub mod auth;
+pub mod catalog;
 pub mod client;
 pub mod models;
 pub mod stream;
 pub mod throttle;
 
 pub use auth::*;
+pub use catalog::*;
 pub use client::*;
 pub use models::*;
 pub use stream::*;
@@ -71,7 +73,7 @@ mod tests {
         assert_eq!(article.id, 10526);
         assert_eq!(article.title, "Sample Spotlight");
         assert_eq!(article.pure_title.as_deref(), Some("Sample Pure Title"));
-        assert_eq!(article.category, "spotlight");
+        assert_eq!(article.category, SpotlightCategory::Spotlight);
         assert_eq!(resp.next_url.as_deref(), Some("https://app-api.pixiv.net/v1/spotlight/articles?category=all&offset=10"));
     }
 
@@ -108,10 +110,46 @@ mod tests {
         let illust: Illustration = serde_json::from_str(json).unwrap();
         assert_eq!(illust.id, 98765432);
         assert_eq!(illust.title, "Sample Art");
+        assert_eq!(illust.illust_type, IllustContentType::Illustration);
         assert_eq!(illust.tags.len(), 2);
         assert_eq!(illust.tags[1].translated_name.as_deref(), Some("猫"));
         assert_eq!(illust.width, 1920);
         assert_eq!(illust.height, 1080);
+    }
+
+    #[test]
+    fn test_bookmark_detail_restrict_enum() {
+        let json = r#"{"is_bookmarked":true,"restrict":"private","tags":[]}"#;
+        let detail: BookmarkDetail = serde_json::from_str(json).unwrap();
+        assert!(detail.is_bookmarked);
+        assert_eq!(detail.restrict, PrivacyRestrict::Private);
+    }
+
+    #[test]
+    fn user_previews_only_require_thumbnail_fields_from_sample_works() {
+        // Recommended-user sample works can have incomplete nested authors/series.
+        // Those fields are irrelevant to the thumbnails and must not reject the whole page.
+        let response: UserResponse = serde_json::from_str(r#"{
+            "user_previews": [{
+                "user": {"id": 123, "name": "Author", "account": "author"},
+                "illusts": [{
+                    "image_urls": {"square_medium": "https://example.test/illust.jpg"},
+                    "user": {}, "series": {}
+                }, {}],
+                "novels": [{
+                    "image_urls": {"medium": "https://example.test/novel.jpg"},
+                    "user": {}, "series": {}
+                }]
+            }],
+            "next_url": "page2"
+        }"#).unwrap();
+
+        assert_eq!(response.user_previews[0].user.id, 123);
+        assert_eq!(response.user_previews[0].illusts[0].image_urls.square_medium.as_deref(),
+                   Some("https://example.test/illust.jpg"));
+        assert_eq!(response.user_previews[0].novels[0].image_urls.medium.as_deref(),
+                   Some("https://example.test/novel.jpg"));
+        assert_eq!(response.next_url.as_deref(), Some("page2"));
     }
 
     #[test]
@@ -170,7 +208,7 @@ mod tests {
         let fetcher = Arc::new(MockMultiPageFetcher {
             call_count: AtomicUsize::new(0),
         });
-        let engine = MakoFetchEngine::new(fetcher, Some("https://api.pixiv.net/page1".to_string()));
+        let engine = MakoFeed::new(fetcher, Some("https://api.pixiv.net/page1".to_string()));
 
         let mut collected = Vec::new();
         while let Some(item) = engine.next().await {
@@ -189,7 +227,7 @@ mod tests {
         let fetcher = Arc::new(MockMultiPageFetcher {
             call_count: AtomicUsize::new(0),
         });
-        let engine = MakoFetchEngine::new(fetcher, Some("https://api.pixiv.net/page1".to_string()));
+        let engine = MakoFeed::new(fetcher, Some("https://api.pixiv.net/page1".to_string()));
 
         assert_eq!(engine.next().await, Some(1));
         assert_eq!(engine.next().await, Some(2));
@@ -447,15 +485,21 @@ mod tests {
         assert!(!max_date.is_empty());
         assert!(chrono::NaiveDate::parse_from_str(&max_date, "%Y-%m-%d").is_ok());
 
-        // 3. Ranking mode validation
-        let invalid_mode = client.work_ranking_unified("illust".to_string(), "invalid_mode".to_string(), None);
-        assert!(invalid_mode.is_err());
-
-        let invalid_date = client.work_ranking_unified("illust".to_string(), "day".to_string(), Some("2026/10/09".to_string()));
+        // 3. Ranking catalog
+        let invalid_date = client.work_ranking_unified(
+            SimpleWorkKind::Illustration,
+            RankMode::Day,
+            Some(QueryDate { year: 2026, month: 13, day: 1 }),
+        );
         assert!(invalid_date.is_err());
 
-        let valid = client.work_ranking_unified("illust".to_string(), "day".to_string(), Some("2026-10-09".to_string()));
+        let valid = client.work_ranking_unified(
+            SimpleWorkKind::Illustration,
+            RankMode::Day,
+            Some(QueryDate { year: 2026, month: 10, day: 9 }),
+        );
         assert!(valid.is_ok());
+        assert_eq!(client.rank_modes_for(SimpleWorkKind::Illustration).len(), 17);
     }
 
     #[tokio::test]
@@ -496,8 +540,8 @@ mod tests {
             }
         }
 
-        let engine = Arc::new(MakoFetchEngine::new(Arc::new(MockCommentFetcher), Some("page1".to_string())));
-        let comment_engine = CommentFetchEngine::new(engine);
+        let engine = Arc::new(MakoFeed::new(Arc::new(MockCommentFetcher), Some("page1".to_string())));
+        let comment_engine = CommentFeed::new(engine);
 
         let first = comment_engine.next().await.unwrap();
         assert_eq!(first.id, 1);
@@ -509,5 +553,38 @@ mod tests {
         assert_eq!(second.comment, "second comment");
 
         assert!(comment_engine.next().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn user_fetch_failure_is_observable_and_can_resume() {
+        struct RecoveringFetcher(AtomicUsize);
+        impl PageFetcher<User> for RecoveringFetcher {
+            fn fetch_page<'a>(
+                &'a self,
+                _next_url: Option<&'a str>,
+            ) -> Pin<Box<dyn Future<Output = PageFetchResult<User>> + Send + 'a>> {
+                Box::pin(async move {
+                    if self.0.fetch_add(1, Ordering::SeqCst) < 3 {
+                        Err("temporary failure".to_string())
+                    } else {
+                        Ok((vec![User { id: 123, ..Default::default() }], None))
+                    }
+                })
+            }
+        }
+
+        let engine = UserFeed::new(Arc::new(MakoFeed::new(
+            Arc::new(RecoveringFetcher(AtomicUsize::new(0))), Some("page1".to_string()),
+        )));
+        assert!(engine.next().await.is_none());
+        assert_eq!(engine.last_error().as_deref(), Some("temporary failure"));
+        assert!(!engine.is_completed());
+        assert_eq!(engine.requested_pages(), 0);
+
+        assert_eq!(engine.next().await.unwrap().id, 123);
+        assert!(engine.last_error().is_none());
+        assert!(engine.next().await.is_none());
+        assert!(engine.is_completed());
+        assert_eq!(engine.requested_pages(), 1);
     }
 }

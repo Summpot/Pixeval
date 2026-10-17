@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -19,7 +20,7 @@ public partial class SeriesContainer : UserControl
     private readonly MakoClient _client;
     private readonly IWorkSubscriptionService _subscriptions;
     private readonly StorageEngine _storage;
-    private readonly SimpleWorkType _workType;
+    private readonly SimpleWorkKind _workType;
     private readonly long _seriesId;
     private readonly Series? _seriesDetail;
     private readonly IWorkEntry? _firstWork;
@@ -29,7 +30,7 @@ public partial class SeriesContainer : UserControl
     public IAsyncRelayCommand RemoveSubscriptionCommand { get; }
 
     public SeriesContainer(
-        SimpleWorkType workType,
+        SimpleWorkKind workType,
         long seriesId,
         MakoClient client,
         IWorkSubscriptionService subscriptions,
@@ -40,7 +41,7 @@ public partial class SeriesContainer : UserControl
     }
 
     public SeriesContainer(
-        SimpleWorkType workType,
+        SimpleWorkKind workType,
         long seriesId,
         IWorkViewViewModel viewModel,
         Series seriesDetail,
@@ -56,9 +57,9 @@ public partial class SeriesContainer : UserControl
     }
 
     public SeriesContainer(
-        SimpleWorkType workType,
+        SimpleWorkKind workType,
         long seriesId,
-        IFetchEngine<IWorkEntry> engine,
+        IAsyncEnumerable<WorkEntry> engine,
         Series seriesDetail,
         IWorkEntry firstWork,
         MakoClient client,
@@ -71,7 +72,7 @@ public partial class SeriesContainer : UserControl
     }
 
     private SeriesContainer(
-        SimpleWorkType workType,
+        SimpleWorkKind workType,
         long seriesId,
         Series? seriesDetail,
         IWorkEntry? firstWork,
@@ -93,16 +94,13 @@ public partial class SeriesContainer : UserControl
 
     private void WorkContainer_OnRefreshRequested(object? sender, RoutedEventArgs e) => ChangeSource();
 
-    private void ChangeSource() => SetEngine(_client.WorkSeries(_workType, _seriesId));
+    private void ChangeSource() => SetEngine(_client.WorkSeriesUnified(_workType, _seriesId));
 
-    private void SetEngine(IFetchEngine<IWorkEntry> engine)
+    private void SetEngine(IAsyncEnumerable<WorkEntry> engine)
     {
-        WorkContainer.ResetEngine(engine);
-        _subscriptions.QueueSyncCurrentSource(
-            _seriesId,
-            WorkSubscriptionType.Series,
-            GetSubscriptionWorkKind(),
-            engine);
+        WorkContainer.ResetSource(engine.AsObjects(), _workType);
+        if (_subscriptions.TryGetSubscription(_seriesId, WorkSubscriptionType.Series, GetSubscriptionWorkKind()) is { } subscription)
+            _subscriptions.QueueSyncSubscription(subscription);
         UpdateSubscriptionButtons();
     }
 
@@ -145,7 +143,7 @@ public partial class SeriesContainer : UserControl
     }
 
     private WorkSubscriptionWorkKind GetSubscriptionWorkKind() =>
-        _workType is SimpleWorkType.Novel
+        _workType is SimpleWorkKind.Novel
             ? WorkSubscriptionWorkKind.Novel
             : WorkSubscriptionWorkKind.Manga;
 }

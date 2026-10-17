@@ -3,7 +3,7 @@
 
 namespace Pixeval.Storage;
 
-public partial record BrowseHistoryRecord
+public partial record struct BrowseHistoryRecord
 {
     private object? _entry;
 
@@ -13,29 +13,8 @@ public partial record BrowseHistoryRecord
         init => _entry = value;
     }
 
-    public object? Entry => _entry ??= ArtworkPayloadHydrator.Hydrate(SerializeKey, PayloadJson);
+    public object? Entry => _entry ??= ArtworkPayloads.EntryOf(Payload);
 
-    public static bool TryCreateWorkKey(object entry, out string key)
-    {
-        key = "";
-        if (entry is not IArtworkSerializable serializable)
-            return false;
-
-        var id = entry switch
-        {
-            Mako.Illustration i => i.Id.ToString(),
-            Mako.Novel n => n.Id.ToString(),
-            Booru.BooruPost b => b.Id,
-            SauceNao.SauceNaoItem s => s.RawId,
-            _ => null
-        };
-
-        if (string.IsNullOrEmpty(id))
-            return false;
-
-        key = CreateWorkKey(serializable.SerializeKey, id);
-        return true;
-    }
-
-    public static string CreateWorkKey(string serializeKey, string id) => $"{serializeKey}:{id}";
+    public static bool TryCreateWorkKey(object entry, out string key) =>
+        ArtworkPayloads.TryCreateWorkKey(entry, out key);
 }

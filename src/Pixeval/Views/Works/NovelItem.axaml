@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Works.NovelItem"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -28,48 +29,48 @@
                     <MenuItem
                         controls:ArtworkStateBehavior.TrackBookmark="True"
                         controls:BookmarkTagSelectorBehavior.IsEnabled="True"
-                        Command="{x:Static novel:WorkCommands.BookmarkCommand}"
+                        Command="{Binding BookmarkCommand, Source={markup1:Service Type={x:Type novel:WorkCommands}}, DataType={x:Type novel:WorkCommands}}"
                         CommandParameter="{Binding}"
-                        Header="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
+                        Header="{CompiledBinding [EntryItem-AddToBookmark], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup1:SymbolIconEx Heart}"
                         IsVisible="{Binding IsBookmarkSupported}" />
                     <MenuItem
                         controls:ArtworkStateBehavior.TrackWatchLater="True"
-                        Command="{x:Static novel:WorkCommands.AddToWatchLaterCommand}"
+                        Command="{Binding AddToWatchLaterCommand, Source={markup1:Service Type={x:Type novel:WorkCommands}}, DataType={x:Type novel:WorkCommands}}"
                         CommandParameter="{Binding}"
-                        Header="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}"
+                        Header="{CompiledBinding [EntryItem-AddToWatchLater], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup1:SymbolIconEx Clock}" />
                     <MenuItem
-                        Command="{x:Static novel:WorkCommands.OpenUserInfoPageCommand}"
+                        Command="{Binding OpenUserInfoPageCommand, Source={markup1:Service Type={x:Type novel:WorkCommands}}, DataType={x:Type novel:WorkCommands}}"
                         CommandParameter="{Binding}"
-                        Header="{I18N {x:Static pixeval:EntryItemResources.OpenUserInfoPage}}"
+                        Header="{CompiledBinding [EntryItem-OpenUserInfoPage], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup:SymbolIcon Person}" />
                     <MenuItem
-                        Command="{x:Static novel:WorkCommands.OpenSeriesPageCommand}"
+                        Command="{Binding OpenSeriesPageCommand, Source={markup1:Service Type={x:Type novel:WorkCommands}}, DataType={x:Type novel:WorkCommands}}"
                         CommandParameter="{Binding}"
-                        Header="{I18N {x:Static pixeval:EntryItemResources.OpenSeries}}"
+                        Header="{CompiledBinding [EntryItem-OpenSeries], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup:SymbolIcon SquareMultiple}"
                         IsVisible="{Binding HasSeries}" />
                     <Separator />
                     <MenuItem
-                        Command="{x:Static novel:WorkCommands.SaveCommand}"
+                        Command="{Binding SaveCommand, Source={markup1:Service Type={x:Type novel:WorkCommands}}, DataType={x:Type novel:WorkCommands}}"
                         CommandParameter="{Binding}"
-                        Header="{I18N {x:Static pixeval:EntryItemResources.Save}}"
+                        Header="{CompiledBinding [EntryItem-Save], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup:SymbolIcon Save}" />
                     <Separator />
                     <MenuItem
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                        Header="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
+                        Header="{CompiledBinding [EntryItem-OpenInWebBrowser], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup:SymbolIcon GlobeArrowUp}"
                         Tag="{Binding WebsiteUri}" />
                     <MenuItem
                         Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                        Header="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
+                        Header="{CompiledBinding [EntryItem-GenerateWebLink], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup:SymbolIcon LinkMultiple}"
                         Tag="{Binding WebsiteUri}" />
                     <MenuItem
                         Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                        Header="{I18N {x:Static pixeval:EntryItemResources.GenerateLink}}"
+                        Header="{CompiledBinding [EntryItem-GenerateLink], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup:SymbolIcon Link}"
                         Tag="{Binding AppUri}" />
                 </ContextMenu>
@@ -118,7 +119,7 @@
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
                 controls:ArtworkStateBehavior.TrackBookmark="True"
-                Command="{x:Static novel:WorkCommands.BookmarkCommand}"
+                Command="{Binding BookmarkCommand, Source={markup1:Service Type={x:Type novel:WorkCommands}}, DataType={x:Type novel:WorkCommands}}"
                 CommandParameter="{Binding}"
                 IsVisible="{Binding IsBookmarkSupported}">
                 
@@ -147,7 +148,7 @@
                         Text="{Binding CreateDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}"
                         TextTrimming="CharacterEllipsis"
                         Theme="{StaticResource BodyTextBlockStyle}" />
-                    <Button Padding="2" Command="{x:Static novel:WorkCommands.OpenUserInfoPageCommand}" CommandParameter="{Binding}">
+                    <Button Padding="2" Command="{Binding OpenUserInfoPageCommand, Source={markup1:Service Type={x:Type novel:WorkCommands}}, DataType={x:Type novel:WorkCommands}}" CommandParameter="{Binding}">
                         <TextBlock
                             x:Name="AuthorTextBlock"
                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"

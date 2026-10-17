@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MacroTextSpan {
     pub start: i32,

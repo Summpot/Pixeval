@@ -26,7 +26,7 @@ public class Versioning
     private UpdateManager? _velopackUpdateManager;
     private UpdateInfo? _velopackUpdateInfo;
     private AppRelease? _velopackUpdateReleaseModel;
-    private UpdateEngine? _updateEngine;
+    private GitHubService? _github;
     private AppSettings? _settings;
     private FileLogger? _logger;
     private readonly SemaphoreSlim _updateCheckLock = new(1, 1);
@@ -58,23 +58,21 @@ public class Versioning
 
     public AppRelease? CurrentAppReleaseModel => AppReleaseModels?.FirstOrDefault(t => t.ParsedVersion == CurrentVersion || t.Version == CurrentVersionShortText);
 
-    internal void Attach(AppSettings settings, FileLogger logger)
+    internal void Attach(AppSettings settings, FileLogger logger, GitHubService github)
     {
         _settings = settings;
         _logger = logger;
-        _updateEngine = null;
+        _github = github;
     }
 
-    public UpdateEngine UpdateEngine => _updateEngine ??= UpdateEngine.CreateFromSettings(_settings?.NetworkSettings ?? new NetworkSettingsGroup());
-
-    public void ResetUpdateEngine() => _updateEngine = null;
+    public GitHubService Github => _github ??= new GitHubService(_settings?.NetworkSettings ?? new NetworkSettingsGroup());
 
     public UpdateState CompareUpdateState(Version currentVersion, Version? newVersion)
     {
         if (newVersion is null)
             return UpdateState.Unknown;
 
-        return UpdateEngine.CompareVersions(currentVersion.ToString(), newVersion.ToString());
+        return Github.CompareVersions(currentVersion.ToString(), newVersion.ToString());
     }
 
     public UpdateState UpdateState { get; private set; } = UpdateState.Unknown;
@@ -100,7 +98,7 @@ public class Versioning
             }
             else
             {
-                var result = await UpdateEngine.CheckForUpdatesAsync(CurrentVersionShortText, includePrereleases: false).ConfigureAwait(false);
+                var result = await Github.CheckForUpdatesAsync(CurrentVersionShortText, includePrereleases: false).ConfigureAwait(false);
                 AppReleaseModels = result.AllReleases;
                 _velopackUpdateInfo = null;
                 _velopackUpdateReleaseModel = result.LatestRelease;
@@ -145,15 +143,14 @@ public class Versioning
             if (NewestAppReleaseModel is not { } release || release.Assets.Count == 0)
                 return false;
 
-            var asset = PickMatchingAsset(release.Assets);
-            if (asset is null)
+            if (PickMatchingAsset(release.Assets) is not { } asset)
                 return false;
 
             var updatesDir = Path.Combine(AppInfo.CacheFolder, "Updates");
             var destinationPath = Path.Combine(updatesDir, asset.Name);
             var progressAdapter = progress != null ? new Progress<int>(progress) : null;
 
-            await UpdateEngine.DownloadAssetWithProgressAsync(asset, destinationPath, progressAdapter, cancelToken).ConfigureAwait(false);
+            await Github.DownloadAssetWithProgressAsync(asset, destinationPath, progressAdapter, cancelToken).ConfigureAwait(false);
             return true;
         }
         finally
@@ -164,27 +161,38 @@ public class Versioning
 
     private static ReleaseAsset? PickMatchingAsset(IReadOnlyList<ReleaseAsset> assets)
     {
+        if (assets.Count == 0) return null;
         if (OperatingSystem.IsWindows())
         {
-            return assets.FirstOrDefault(static a => a.Name.Contains("win-x64", StringComparison.OrdinalIgnoreCase))
-                ?? assets.FirstOrDefault(static a => a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                ?? assets.FirstOrDefault(static a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-                ?? assets.FirstOrDefault();
+            return Find(assets, static a => a.Name.Contains("win-x64", StringComparison.OrdinalIgnoreCase))
+                ?? Find(assets, static a => a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                ?? Find(assets, static a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                ?? assets[0];
         }
         if (OperatingSystem.IsLinux())
         {
-            return assets.FirstOrDefault(static a => a.Name.Contains("linux-x64", StringComparison.OrdinalIgnoreCase))
-                ?? assets.FirstOrDefault(static a => a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
-                ?? assets.FirstOrDefault();
+            return Find(assets, static a => a.Name.Contains("linux-x64", StringComparison.OrdinalIgnoreCase))
+                ?? Find(assets, static a => a.Name.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
+                ?? assets[0];
         }
         if (OperatingSystem.IsMacOS())
         {
-            return assets.FirstOrDefault(static a => a.Name.Contains("osx", StringComparison.OrdinalIgnoreCase) || a.Name.Contains("mac", StringComparison.OrdinalIgnoreCase))
-                ?? assets.FirstOrDefault(static a => a.Name.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase))
-                ?? assets.FirstOrDefault();
+            return Find(assets, static a => a.Name.Contains("osx", StringComparison.OrdinalIgnoreCase) || a.Name.Contains("mac", StringComparison.OrdinalIgnoreCase))
+                ?? Find(assets, static a => a.Name.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase))
+                ?? assets[0];
         }
-        return assets.FirstOrDefault();
+        return assets[0];
+
+        static ReleaseAsset? Find(IReadOnlyList<ReleaseAsset> list, Func<ReleaseAsset, bool> predicate)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (predicate(list[i])) return list[i];
+            }
+            return null;
+        }
     }
+
 
     public void ApplyUpdateAndRestart()
     {
@@ -196,7 +204,8 @@ public class Versioning
         if (manager is null || target is null)
             return;
 
-        AppInfo.SaveContext();
+        if (_settings is { } settings)
+            AppInfo.SaveSettings(settings);
         _updateApplyRequested = true;
         try
         {
@@ -220,7 +229,8 @@ public class Versioning
             if (manager?.UpdatePendingRestart is not { } target)
                 return;
 
-            AppInfo.SaveContext();
+            if (_settings is { } settings)
+                AppInfo.SaveSettings(settings);
             _updateApplyRequested = true;
             manager.WaitExitThenApplyUpdates(target, silent: true, restart: false);
         }
@@ -263,8 +273,8 @@ public class Versioning
                 HtmlUrl: string.Empty,
                 IsPrerelease: false,
                 Assets: []);
-            AppReleaseModels = [_velopackUpdateReleaseModel];
-            UpdateState = UpdateEngine.CompareVersions(CurrentVersionShortText, versionStr);
+            AppReleaseModels = [_velopackUpdateReleaseModel.Value];
+            UpdateState = Github.CompareVersions(CurrentVersionShortText, versionStr);
         }
 
         TouchLastCheckedUpdate();
@@ -295,7 +305,7 @@ public class Versioning
                 return appReleaseModels.FirstOrDefault(t => t.ParsedVersion == CurrentVersion || t.Version == CurrentVersionShortText);
             }
 
-            var releases = await UpdateEngine.GetReleasesAsync(includePrereleases: false).ConfigureAwait(false);
+            var releases = await Github.GetReleasesAsync(includePrereleases: false).ConfigureAwait(false);
             if (releases.Count == 0)
                 return null;
 
@@ -349,7 +359,7 @@ public class Versioning
             GitHubRepositoryUri,
             string.Empty,
             prerelease: false,
-            downloader: new GitHubFileDownloader(() => UpdateEngine));
+            downloader: new GitHubFileDownloader(Github));
 
     private UpdateManager? GetVelopackUpdateManager()
     {

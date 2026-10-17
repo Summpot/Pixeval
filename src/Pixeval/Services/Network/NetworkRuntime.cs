@@ -15,7 +15,8 @@ public sealed class NetworkRuntime(
     MakoClient makoClient,
     MahoClient mahoClient,
     Func<MahoClientOptions> mahoOptions,
-    IImageProviderService images) : INetworkRuntime
+    IImageProviderService images,
+    GitHubService github) : INetworkRuntime
 {
     public void AttachNameResolverHooks()
     {
@@ -27,6 +28,14 @@ public sealed class NetworkRuntime(
         HookResolver(fronting.PixivAccountNameResolver);
         HookResolver(fronting.PixivWebApiNameResolver);
 
+        var github = appSettings.NetworkSettings.GitHubDomainFronting;
+        HookResolver(github.GitHubNameResolver);
+        HookResolver(github.GitHubApiNameResolver);
+        HookResolver(github.GitHubAvatarNameResolver);
+        HookResolver(github.GitHubUserContentNameResolver);
+        HookResolver(github.GitHubAssetsNameResolver);
+        HookResolver(github.GitHubCodeloadNameResolver);
+
         void HookResolver(ObservableCollection<string> ips) =>
             ips.CollectionChanged += OnResolverChanged;
     }
@@ -37,7 +46,7 @@ public sealed class NetworkRuntime(
         makoClient.UpdateConfiguration(config);
         images.UpdateNetworkOptions(config);
         mahoClient.UpdateOptions(mahoOptions());
-        AppInfo.AppVersion.ResetUpdateEngine();
+        github.Reset();
     }
 
     private void OnResolverChanged(object? sender, NotifyCollectionChangedEventArgs e) => UpdateNetworkOptions();

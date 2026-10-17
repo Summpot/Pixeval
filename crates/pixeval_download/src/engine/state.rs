@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
+#[boltffi::data]
 #[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DownloadState {
     Queued,

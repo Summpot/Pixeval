@@ -8,5 +8,5 @@ namespace Pixeval.ViewModels.Works;
 
 public interface IWorkViewViewModel : IOperableViewViewModel, IDisposable
 {
-    void ResetEngine(IAsyncEnumerable<object>? newEngine, int itemsPerPage = 20, int itemLimit = -1);
+    void ResetSource(IAsyncEnumerable<object>? source, int itemsPerPage = 20, int itemLimit = -1);
 }

@@ -3,6 +3,7 @@ use chrono::{DateTime, Datelike, Utc};
 use crate::ast::{FilterLogicalOperator, FilterNode, FilterPredicateNode, FilterQuery};
 use crate::values::FilterValue;
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct ArtworkTag {
     pub name: String,
@@ -18,6 +19,7 @@ impl ArtworkTag {
     }
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
 pub struct ArtworkMetadata {
     pub id: String,

@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Viewers.SingleImageViewer"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:ai="using:AnimatedControls.Avalonia"
     xmlns:common="using:FluentIcons.Common"
     xmlns:converters="using:Pixeval.Common.Converters"
@@ -62,7 +63,7 @@
             <!--  播放/暂停（仅动图可见）  -->
             <MenuItem
                 Command="{Binding PlayPauseCommand}"
-                Header="{I18N {x:Static pixeval:MiscResources.Play}}"
+                Header="{CompiledBinding [Misc-Play], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup1:SymbolIconEx Symbol={markup1:EitherBinding {Binding IsPlaying},
                                                                           Pause,
                                                                           Play,
@@ -74,39 +75,39 @@
             <MenuItem
                 Command="{Binding CopyCommand}"
                 CommandParameter="{Binding $self}"
-                Header="{I18N {x:Static pixeval:EntryViewerPageResources.Copy}}"
+                Header="{CompiledBinding [EntryViewerPage-Copy], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon Copy}"
                 InputGesture="{markup1:PlatformCommandGesture C}"
                 IsVisible="{Binding IsPicGif, Converter={x:Static BoolConverters.Not}}" />
             <MenuItem
                 Command="{Binding SaveAsCommand}"
                 CommandParameter="{Binding $self}"
-                Header="{I18N {x:Static pixeval:EntryViewerPageResources.SaveAs}}"
+                Header="{CompiledBinding [EntryViewerPage-SaveAs], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon SaveEdit}"
                 InputGesture="{markup1:PlatformCommandGesture S,
                                                               AdditionalModifiers=Shift}" />
             <MenuItem
                 Command="{Binding SaveImageCommand}"
                 CommandParameter="{Binding $self}"
-                Header="{I18N {x:Static pixeval:EntryViewerPageResources.SaveImage}}"
+                Header="{CompiledBinding [EntryViewerPage-SaveImage], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon Save}" />
             <MenuItem
                 Command="{Binding ViewOriginalCommand}"
                 CommandParameter="{Binding $self}"
-                Header="{I18N {x:Static pixeval:EntryViewerPageResources.ViewOriginal}}"
+                Header="{CompiledBinding [EntryViewerPage-ViewOriginal], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon ImageGlobe}" />
-            <Separator IsVisible="{x:Static vm:SingleViewerViewModel.HasTransformerExtensions}" />
+            <Separator IsVisible="{Binding HasTransformerExtensions}" />
             <MenuItem
                 Command="{Binding PrimaryTransformerExtensionItem.Command, FallbackValue={x:Null}}"
                 CommandParameter="{Binding $self}"
                 Header="{Binding PrimaryTransformerExtensionItem.Label, FallbackValue={x:Null}}"
                 Icon="{markup1:SymbolIconEx Symbol={Binding PrimaryTransformerExtensionItem.Symbol}}"
-                IsVisible="{x:Static vm:SingleViewerViewModel.HasTransformerExtensions}"
+                IsVisible="{Binding HasTransformerExtensions}"
                 ToolTip.Tip="{Binding PrimaryTransformerExtensionItem.Description, FallbackValue={x:Null}}" />
             <MenuItem
-                Header="{I18N {x:Static pixeval:EntryViewerPageResources.OtherImageTransformerExtensions}}"
+                Header="{CompiledBinding [EntryViewerPage-OtherImageTransformerExtensions], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon ImageMultiple}"
-                IsVisible="{x:Static vm:SingleViewerViewModel.HasTransformerExtensions}"
+                IsVisible="{Binding HasTransformerExtensions}"
                 ItemsSource="{Binding TransformerExtensionItems}">
                 <MenuItem.ItemContainerTheme>
                     <ControlTheme
@@ -125,15 +126,15 @@
             <!--  旋转/镜像  -->
             <MenuItem
                 Command="{Binding RotateClockwiseCommand}"
-                Header="{I18N {x:Static pixeval:EntryViewerPageResources.RotateClockwise}}"
+                Header="{CompiledBinding [EntryViewerPage-RotateClockwise], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon ArrowRotateClockwise}" />
             <MenuItem
                 Command="{Binding RotateCounterclockwiseCommand}"
-                Header="{I18N {x:Static pixeval:EntryViewerPageResources.RotateCounterclockwise}}"
+                Header="{CompiledBinding [EntryViewerPage-RotateCounterclockwise], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon ArrowRotateCounterclockwise}" />
             <MenuItem
                 Command="{Binding MirrorCommand}"
-                Header="{I18N {x:Static pixeval:EntryViewerPageResources.Mirror}}"
+                Header="{CompiledBinding [EntryViewerPage-Mirror], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon FlipHorizontal}"
                 IsChecked="{Binding IsMirrored, Mode=TwoWay}"
                 ToggleType="CheckBox" />

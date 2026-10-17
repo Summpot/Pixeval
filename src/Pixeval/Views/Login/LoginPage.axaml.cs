@@ -10,9 +10,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Services.Background;
 using Pixeval.Mako;
 using Pixeval.Utilities;
@@ -26,8 +25,9 @@ public partial class LoginPage : IconContentPage
 {
     private CancellationTokenSource? _loadUsersCancellationTokenSource;
 
-    public LoginPage()
+    public LoginPage(LoginPageViewModel viewModel)
     {
+        DataContext = viewModel;
         InitializeComponent();
     }
 
@@ -60,7 +60,7 @@ public partial class LoginPage : IconContentPage
                 LoginNavigate();
             }
             else
-                this.Notifications.ShowError(I18NManager.GetResource(MainPageResources.LoggingIn.Failed));
+                this.Notifications.ShowError(Strings.MainPageLoggingInFailed());
         }
         catch (Exception exception)
         {
@@ -69,8 +69,8 @@ public partial class LoginPage : IconContentPage
             {
                 this.Notifications.ShowError(exception.GetType().ToString(), exception.Message);
                 _ = await this.Dialogs.CreateAcknowledgementAsync(
-                    I18NManager.GetResource(LoginPageResources.FetchingSessionFailed.Title),
-                    I18NManager.GetResource(LoginPageResources.FetchingSessionFailed.Content));
+                    Strings.LoginPageFetchingSessionFailedTitle(),
+                    Strings.LoginPageFetchingSessionFailedContent());
             }
         }
         finally
@@ -154,8 +154,8 @@ public partial class LoginPage : IconContentPage
             {
                 this.Notifications.ShowError(exception.GetType().ToString(), exception.Message);
                 _ = await this.Dialogs.CreateAcknowledgementAsync(
-                    I18NManager.GetResource(LoginPageResources.FetchingSessionFailed.Title),
-                    I18NManager.GetResource(LoginPageResources.FetchingSessionFailed.Content));
+                    Strings.LoginPageFetchingSessionFailedTitle(),
+                    Strings.LoginPageFetchingSessionFailedContent());
             }
         }
         finally
@@ -166,7 +166,7 @@ public partial class LoginPage : IconContentPage
 
     public void LoginNavigate()
     {
-        var nav = this.GetUiService<INavigationService>() ?? new NavigationService();
+        var nav = this.GetRequiredUiService<INavigationService>();
         nav.NavigateToHome(removeCurrentPage: true, sourceControl: this);
         this.GetRequiredUiService<IWorkSubscriptionService>().QueueSyncAll();
     }

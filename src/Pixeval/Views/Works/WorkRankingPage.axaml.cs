@@ -22,8 +22,8 @@ public partial class WorkRankingPage : IconContentPage
     }
 
     public WorkRankingPage(
-        SimpleWorkType simpleWorkType,
-        RankOption rankOption,
+        SimpleWorkKind simpleWorkType,
+        RankMode rankOption,
         DateTime rankingDate,
         AppSettings settings,
         MakoClient client,
@@ -54,9 +54,9 @@ public partial class WorkRankingPage : IconContentPage
 
     private void ChangeEnumSource()
     {
-        var selectedWorkType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
-        RankOptionComboBox.ItemsSource = SymbolComboBoxItem.GetValues<RankOption>(selectedWorkType);
-        RankOptionComboBox.SelectedValue = selectedWorkType is SimpleWorkType.Illustration
+        var selectedWorkType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>();
+        RankOptionComboBox.ItemsSource = SymbolComboBoxItem.GetValues<RankMode>(selectedWorkType);
+        RankOptionComboBox.SelectedValue = selectedWorkType is SimpleWorkKind.Illustration
             ? _settings.SearchSettings.RankOptions.IllustrationRankOption
             : _settings.SearchSettings.RankOptions.NovelRankOption;
     }
@@ -81,16 +81,10 @@ public partial class WorkRankingPage : IconContentPage
 
     private void ChangeSource()
     {
-        var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
-        var mode = RankOptionComboBox.GetSelectedValue<RankOption>().ToString().ToLowerInvariant();
-        var date = (RankDateTimeCalendarDatePicker.SelectedDate ?? MaxDate).ToString("yyyy-MM-dd");
-        if (workType is SimpleWorkType.Novel)
-        {
-            WorkContainer.ResetEngine(_client.NovelRanking(mode, date));
-        }
-        else
-        {
-            WorkContainer.ResetEngine(_client.WorkRanking(mode, date));
-        }
+        var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>();
+        var rankOption = RankOptionComboBox.GetSelectedValue<RankMode>();
+        var date = RankDateTimeCalendarDatePicker.SelectedDate ?? MaxDate;
+        WorkContainer.ResetSource(_client.WorkRankingUnified(workType, rankOption, date.ToQueryDate()).AsObjects(), workType);
+
     }
 }

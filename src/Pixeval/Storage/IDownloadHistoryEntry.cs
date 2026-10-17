@@ -3,8 +3,6 @@
 
 using System;
 using Pixeval.Download;
-using Pixeval.Mako;
-using MakoNovel = Pixeval.Mako.Novel;
 
 namespace Pixeval.Storage;
 
@@ -30,32 +28,25 @@ public interface IDownloadHistoryEntry
         object entry,
         int? workSubscriptionId = null)
     {
-        var id = entry switch
-        {
-            Illustration i => i.Id.ToString(),
-            MakoNovel n => n.Id.ToString(),
-            Booru.BooruPost b => b.Id,
-            SauceNao.SauceNaoItem s => s.RawId,
-            _ => ""
-        };
+        if (!ArtworkPayloads.TryWrap(entry, out var payload))
+            throw new ArgumentException("Entry is not a persistable artwork payload.", nameof(entry));
 
-        var serializable = entry as IArtworkSerializable;
-        var serializeKey = serializable?.SerializeKey;
-        var payloadJson = serializable?.Serialize();
+        var id = PixevalStorageMethods.ArtworkPayloadId(payload);
 
         if (workSubscriptionId is > 0 and var subId)
         {
             var record = new SubscriptionDownloadHistoryRecord(
                 0,
                 id,
-                serializeKey,
+                PixevalStorageMethods.ArtworkSerializeKey(payload),
                 destination,
                 (uint)DownloadState.Queued,
                 null,
                 null,
                 subId,
                 id,
-                payloadJson)
+                null,
+                payload)
             {
                 EntryOverride = entry
             };
@@ -65,12 +56,13 @@ public interface IDownloadHistoryEntry
         var dlRecord = new DownloadHistoryRecord(
             0,
             id,
-            serializeKey,
+            PixevalStorageMethods.ArtworkSerializeKey(payload),
             destination,
             (uint)DownloadState.Queued,
             null,
             null,
-            payloadJson)
+            null,
+            payload)
         {
             EntryOverride = entry
         };

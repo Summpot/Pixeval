@@ -33,7 +33,7 @@ public static class WindowHelper
             window.Closing += (o, _) =>
             {
                 if (o is Window w)
-                    AppInfo.SaveWindowContext(w);
+                    AppInfo.SaveWindowContext(w, w.GetUiService<AppSettings>());
             };
             if (Application.Current is App app)
                 app.RegisterWindow(window);

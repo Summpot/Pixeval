@@ -98,7 +98,7 @@ public sealed class PixevalMcpService : IPixevalMcpService, IMcpSessionBridge
                 _appViewModel.MakoClient,
                 storageEngine,
                 downloadManager,
-                images.CacheEngine,
+                images.ImageCache,
                 syncEngine,
                 pluginEngine
             );

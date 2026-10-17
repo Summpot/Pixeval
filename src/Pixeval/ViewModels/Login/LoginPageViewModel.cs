@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Storage;
 
 namespace Pixeval.ViewModels.Login;
@@ -19,9 +18,8 @@ public partial class LoginPageViewModel : ViewModelBase
     private readonly StorageEngine _storageEngine;
     private bool _areUsersLoaded;
 
-    public LoginPageViewModel() : this(
-        App.Services!.GetRequiredService<StorageEngine>(),
-        App.Services!.GetRequiredService<LoginContext>().CurrentKey)
+    public LoginPageViewModel(StorageEngine storageEngine, LoginContext loginContext)
+        : this(storageEngine, loginContext.CurrentKey)
     {
     }
 
@@ -77,13 +75,13 @@ public partial class LoginPageViewModel : ViewModelBase
 
     partial void OnSelectedUserChanged(LoginUserRecord? value)
     {
-        if (value is not null && RefreshToken != value.RefreshToken)
-            RefreshToken = value.RefreshToken;
+        if (value is { } user && RefreshToken != user.RefreshToken)
+            RefreshToken = user.RefreshToken;
     }
 
     partial void OnRefreshTokenChanged(string value)
     {
-        var selected = Users.FirstOrDefault(t => t.RefreshToken == value);
+        var selected = Users.Cast<LoginUserRecord?>().FirstOrDefault(t => t?.RefreshToken == value);
         if (!Equals(SelectedUser, selected))
             SelectedUser = selected;
     }

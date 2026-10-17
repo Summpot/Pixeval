@@ -9,12 +9,12 @@ namespace Pixeval.Config;
 
 public record AutoPlaySettings
 {
-    [SettingsEntry(Symbol.SlideMultipleArrowRight, AppSettingsResources.IllustrationViewerAutoPlayIntervalEntry.Header, AppSettingsResources.IllustrationViewerAutoPlayIntervalEntry.Description)]
+    [SettingsEntry(Symbol.SlideMultipleArrowRight, nameof(Strings.AppSettingsIllustrationViewerAutoPlayIntervalEntryHeader), nameof(Strings.AppSettingsIllustrationViewerAutoPlayIntervalEntryDescription))]
     public int IllustrationViewerAutoPlayInterval { get; set; } = 5;
 
-    [SettingsEntry(Symbol.ArrowShuffle, AppSettingsResources.IllustrationViewerAutoPlayModeEntry.Header, AppSettingsResources.IllustrationViewerAutoPlayModeEntry.Description)]
+    [SettingsEntry(Symbol.ArrowShuffle, nameof(Strings.AppSettingsIllustrationViewerAutoPlayModeEntryHeader), nameof(Strings.AppSettingsIllustrationViewerAutoPlayModeEntryDescription))]
     public IllustrationViewerAutoPlayMode IllustrationViewerAutoPlayMode { get; set; }
 
-    [SettingsEntry(Symbol.ImageMultiple, AppSettingsResources.IllustrationViewerAutoPlayScopeEntry.Header, AppSettingsResources.IllustrationViewerAutoPlayScopeEntry.Description)]
+    [SettingsEntry(Symbol.ImageMultiple, nameof(Strings.AppSettingsIllustrationViewerAutoPlayScopeEntryHeader), nameof(Strings.AppSettingsIllustrationViewerAutoPlayScopeEntryDescription))]
     public IllustrationViewerAutoPlayScope IllustrationViewerAutoPlayScope { get; set; }
 }

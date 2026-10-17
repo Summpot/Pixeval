@@ -6,10 +6,15 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
-use pixeval_mako::{Illustration, Novel, NovelContent};
+use pixeval_mako::{Illustration, Novel, NovelContent, WorkEntry};
 use pixeval_media::{ImageCodecFormat, UgoiraFormat};
-use pixeval_novel::{NovelEngine, NovelEpubMetadataDto, NovelIllustRenderDto, NovelImageRenderDto};
-use pixeval_storage::{DownloadHistoryRecord, StorageEngine, SubscriptionDownloadHistoryRecord};
+use pixeval_novel::{
+    build_epub_from_text, render_export_html_from_text, render_export_markdown_from_text,
+    NovelEpubMetadataDto, NovelIllustRenderDto, NovelImageRenderDto,
+};
+use pixeval_storage::{
+    serialize, ArtworkPayload, DownloadHistoryRecord, StorageEngine, SubscriptionDownloadHistoryRecord,
+};
 use tokio_util::sync::CancellationToken;
 
 use crate::engine::key::DownloadTaskKey;
@@ -19,8 +24,8 @@ use crate::metapath::MacroContext;
 
 use super::book::{Control, NovelAssets, WorkItem, children_from_blueprint};
 use super::kinds::{
-    AfterDownload, NovelBuiltIn, WorkBlueprint, build_external, build_external_from_json, codec_of,
-    fill_novel_images, fill_ugoira_frames, flex_deserialize, original_ugoira_url, plan_pixiv, probe_paths,
+    AfterDownload, NovelBuiltIn, WorkBlueprint, build_external, codec_of,
+    fill_novel_images, fill_ugoira_frames, original_ugoira_url, plan_pixiv, probe_paths,
     replan_stored, ugoira_native_format,
 };
 use super::snapshot::{
@@ -106,6 +111,162 @@ impl DownloadManager {
             return String::new();
         };
         self.install(blueprint, work_subscription_id, true)
+    }
+
+    pub fn enqueue_illustration(
+        &self,
+        illustration: Illustration,
+        page_index: i32,
+        path_macro: String,
+        base_dir: String,
+        work_subscription_id: i64,
+        subscription_type: String,
+    ) -> String {
+        let Ok((_, payload_json)) = serialize(&ArtworkPayload::Work {
+            entry: WorkEntry::Illust { illustration },
+        }) else { return String::new(); };
+        self.enqueue_pixiv(
+            payload_json,
+            false,
+            page_index,
+            path_macro,
+            base_dir,
+            work_subscription_id,
+            subscription_type,
+        )
+    }
+
+    pub fn enqueue_novel(
+        &self,
+        novel: Novel,
+        path_macro: String,
+        base_dir: String,
+        work_subscription_id: i64,
+        subscription_type: String,
+    ) -> String {
+        let Ok((_, payload_json)) = serialize(&ArtworkPayload::Work {
+            entry: WorkEntry::NovelWork { novel },
+        }) else { return String::new(); };
+        self.enqueue_pixiv(
+            payload_json,
+            true,
+            -1,
+            path_macro,
+            base_dir,
+            work_subscription_id,
+            subscription_type,
+        )
+    }
+
+    pub fn enqueue_payload(
+        &self,
+        payload: ArtworkPayload,
+        page_index: i32,
+        path_macro: String,
+        base_dir: String,
+        work_subscription_id: i64,
+        subscription_type: String,
+    ) -> String {
+        match payload {
+            ArtworkPayload::Work {
+                entry: WorkEntry::Illust { illustration },
+            } => self.enqueue_illustration(
+                illustration,
+                page_index,
+                path_macro,
+                base_dir,
+                work_subscription_id,
+                subscription_type,
+            ),
+            ArtworkPayload::Work {
+                entry: WorkEntry::NovelWork { novel },
+            } => self.enqueue_novel(
+                novel,
+                path_macro,
+                base_dir,
+                work_subscription_id,
+                subscription_type,
+            ),
+            ArtworkPayload::Booru { post } => {
+                let Ok((serialize_key, payload_json)) = serialize(&ArtworkPayload::Booru { post: post.clone() }) else { return String::new(); };
+                let original_url = if post.original_url.is_empty() {
+                    post.sample_url.clone().or(post.preview_url.clone()).unwrap_or_default()
+                } else {
+                    post.original_url.clone()
+                };
+                let rating = post.rating.to_ascii_lowercase();
+                let website_uri = match post.platform.as_str() {
+                    "gelbooru" => format!("https://gelbooru.com/index.php?page=post&s=view&id={}", post.id),
+                    "sankaku" => format!("https://chan.sankakucomplex.com/posts/show/{}", post.id),
+                    "yandere" => format!("https://yande.re/post/show/{}", post.id),
+                    "rule34" => format!("https://rule34.xxx/index.php?page=post&s=view&id={}", post.id),
+                    _ => format!("https://danbooru.donmai.us/posts/{}", post.id),
+                };
+                self.enqueue_external_image(ExternalImageRequest {
+                    artwork_id: post.id.clone(),
+                    title: post.source.clone().unwrap_or_default(),
+                    author: post.uploader_name.clone(),
+                    thumbnail_url: post
+                        .preview_url
+                        .clone()
+                        .or(post.sample_url.clone())
+                        .unwrap_or_else(|| post.original_url.clone()),
+                    website_uri,
+                    app_uri: format!("pixeval://{}/{}", post.platform.as_str(), post.id),
+                    original_url,
+                    path_macro,
+                    base_dir,
+                    payload_json,
+                    serialize_key,
+                    work_subscription_id,
+                    subscription_type,
+                    is_r18: rating == "explicit" || rating == "e",
+                    is_r18g: false,
+                    create_date: post.created_at,
+                })
+            }
+            ArtworkPayload::SauceNao { item } => {
+                let Ok((serialize_key, payload_json)) =
+                    serialize(&ArtworkPayload::SauceNao { item: item.clone() }) else { return String::new(); };
+                let artwork_id = item
+                    .artwork_id
+                    .clone()
+                    .filter(|id| !id.is_empty())
+                    .unwrap_or_else(|| item.index_id.to_string());
+                let website_uri = item
+                    .source_url
+                    .clone()
+                    .or_else(|| item.ext_urls.first().cloned())
+                    .unwrap_or_default();
+                let original_url = if website_uri.is_empty() {
+                    item.thumbnail_url.clone()
+                } else {
+                    website_uri.clone()
+                };
+                self.enqueue_external_image(ExternalImageRequest {
+                    artwork_id: artwork_id.clone(),
+                    title: if item.title.is_empty() {
+                        item.index_name.clone()
+                    } else {
+                        item.title.clone()
+                    },
+                    author: item.author_name.clone(),
+                    thumbnail_url: item.thumbnail_url.clone(),
+                    website_uri,
+                    app_uri: format!("pixeval://saucenao/{artwork_id}"),
+                    original_url,
+                    path_macro,
+                    base_dir,
+                    payload_json,
+                    serialize_key,
+                    work_subscription_id,
+                    subscription_type,
+                    is_r18: item.is_nsfw,
+                    is_r18g: false,
+                    create_date: String::new(),
+                })
+            }
+        }
     }
 
     pub fn enqueue_external_image(&self, request: ExternalImageRequest) -> String {
@@ -341,7 +502,7 @@ impl DownloadManager {
             }
         }
         if let Some(storage) = self.storage.read().clone() {
-            let _ = storage.delete_subscription_downloads_by_work_subscription_id(subscription_id);
+            let _ = storage.download().delete_subscription_downloads_by_work_subscription_id(subscription_id);
         }
         let _ = removed;
         self.publish(true);
@@ -377,10 +538,12 @@ impl DownloadManager {
     fn restore_record(&self, row: HistoryRow, subscription_id: i64, artwork_fallback: String) {
         let payload = row.payload_json.clone().unwrap_or_default();
         let format_token = row.format_token.clone().unwrap_or_else(|| "Original".to_string());
-        let mut blueprint = replan_stored(&payload, &row.destination, &format_token, row.serialize_key.as_deref())
-            .unwrap_or_else(|_| {
-                build_external_from_json(&payload, &row.destination, &format_token, row.serialize_key.as_deref().unwrap_or(""))
-            });
+        let planned = replan_stored(&payload, &row.destination, &format_token, row.serialize_key.as_deref());
+        let restore_error = planned.as_ref().err().cloned();
+        let mut blueprint = planned.unwrap_or_else(|_| build_external(
+            row.id.clone(), row.id.clone(), String::new(), String::new(), String::new(),
+            String::new(), String::new(), payload.clone(), row.serialize_key.clone().unwrap_or_default(),
+            row.destination.clone(), format_token.clone()));
         if blueprint.artwork_id.is_empty() {
             blueprint.artwork_id = if artwork_fallback.is_empty() {
                 row.id.clone()
@@ -392,10 +555,10 @@ impl DownloadManager {
             blueprint.title = blueprint.artwork_id.clone();
         }
         let key = work_key(&blueprint.destination, &blueprint.artwork_id, subscription_id);
-        let state = state_from_code(row.state);
+        let state = if restore_error.is_some() { DownloadState::Error } else { state_from_code(row.state) };
         let mut item = WorkItem::fresh(key.clone(), blueprint, subscription_id);
         item.state = state;
-        item.error = row.error_message.clone();
+        item.error = restore_error.or(row.error_message.clone());
         item.control = if state == DownloadState::Paused {
             Control::Pause
         } else {
@@ -473,7 +636,7 @@ impl DownloadManager {
         };
         let state = state_code(persist.state);
         if persist.subscription_id == 0 {
-            let _ = storage.add_or_replace_download_history(
+            let _ = storage.download().add_or_replace_download_history(
                 persist.artwork_id.clone(),
                 Some(persist.serialize_key.clone()),
                 persist.destination.clone(),
@@ -483,7 +646,7 @@ impl DownloadManager {
                 persist.payload_json.clone(),
             );
         } else {
-            let _ = storage.add_or_replace_subscription_download_history(
+            let _ = storage.download().add_or_replace_subscription_download_history(
                 persist.artwork_id.clone(),
                 Some(persist.serialize_key.clone()),
                 persist.destination.clone(),
@@ -503,9 +666,9 @@ impl DownloadManager {
         };
         let state = state_code(persist.state);
         if persist.subscription_id == 0 {
-            let _ = storage.update_download_history_state(persist.destination.clone(), state, persist.error.clone());
+            let _ = storage.download().update_download_history_state(persist.destination.clone(), state, persist.error.clone());
         } else {
-            let _ = storage.update_subscription_download_history_state(
+            let _ = storage.download().update_subscription_download_history_state(
                 persist.subscription_id,
                 persist.artwork_id.clone(),
                 persist.destination.clone(),
@@ -520,9 +683,9 @@ impl DownloadManager {
             return;
         };
         if persist.subscription_id == 0 {
-            let _ = storage.try_delete_download_history_by_destination(persist.destination.clone());
+            let _ = storage.download().try_delete_download_history_by_destination(persist.destination.clone());
         } else {
-            let _ = storage.try_delete_subscription_download_by_identity(
+            let _ = storage.download().try_delete_subscription_download_by_identity(
                 persist.subscription_id,
                 persist.artwork_id.clone(),
                 persist.destination.clone(),
@@ -597,7 +760,7 @@ fn load_history(storage: &StorageEngine) -> Vec<HistoryRow> {
     let mut rows = Vec::new();
     let mut cursor = None;
     loop {
-        let Ok(page) = storage.stream_download_history_cursor(cursor, 200) else {
+        let Ok(page) = storage.download().stream_download_history_cursor(cursor, 200) else {
             break;
         };
         if page.is_empty() {
@@ -617,7 +780,7 @@ fn load_subscription_history(storage: &StorageEngine) -> Vec<(SubscriptionDownlo
     let mut rows = Vec::new();
     let mut cursor = None;
     loop {
-        let Ok(page) = storage.stream_subscription_download_history_cursor(cursor, 200) else {
+        let Ok(page) = storage.download().stream_subscription_download_history_cursor(cursor, 200) else {
             break;
         };
         if page.is_empty() {
@@ -765,7 +928,7 @@ async fn prepare(manager: &DownloadManager, key: &DownloadTaskKey, generation: u
         let mako = manager.mako.read().clone().ok_or_else(|| "Pixiv client is not available".to_string())?;
         let id = artwork_id.parse::<i64>().map_err(|_| "Invalid illustration id".to_string())?;
         let metadata = mako.get_ugoira_metadata(id).await.map_err(|err| err.to_string())?;
-        let illust: Illustration = flex_deserialize(&payload)?;
+        let illust: Illustration = serde_json::from_str(&payload).map_err(|err| format!("Invalid artwork payload: {err}"))?;
         let original = original_ugoira_url(&illust);
         let mut book = manager.book.write();
         let Some(work) = book.works.get_mut(key) else {
@@ -780,7 +943,7 @@ async fn prepare(manager: &DownloadManager, key: &DownloadTaskKey, generation: u
 
     if defer_novel {
         let mako = manager.mako.read().clone().ok_or_else(|| "Pixiv client is not available".to_string())?;
-        let novel: Novel = flex_deserialize(&payload)?;
+        let novel: Novel = serde_json::from_str(&payload).map_err(|err| format!("Invalid artwork payload: {err}"))?;
         let mut content = mako.get_novel_content_structured(novel.id).await.map_err(|err| err.to_string())?;
         if content.title.trim().is_empty() {
             content.title = novel.title.clone();
@@ -1349,14 +1512,12 @@ fn commit_bytes(
 
 fn render_novel_html(job: &AfterJob, content: &NovelContent) -> String {
     let (images, illusts, cover) = novel_names(job, content);
-    let engine = NovelEngine::new();
-    engine.render_export_html_from_text(content.text.clone(), job.novel.title.clone(), cover, images, illusts)
+    render_export_html_from_text(content.text.clone(), job.novel.title.clone(), cover, images, illusts)
 }
 
 fn render_novel_markdown(job: &AfterJob, content: &NovelContent) -> String {
     let (images, illusts, cover) = novel_names(job, content);
-    let engine = NovelEngine::new();
-    engine.render_export_markdown_from_text(content.text.clone(), cover, images, illusts)
+    render_export_markdown_from_text(content.text.clone(), cover, images, illusts)
 }
 
 fn render_novel_epub(job: &AfterJob, content: &NovelContent) -> Result<Vec<u8>, String> {
@@ -1369,7 +1530,6 @@ fn render_novel_epub(job: &AfterJob, content: &NovelContent) -> Result<Vec<u8>, 
             }
         }
     }
-    let engine = NovelEngine::new();
     let metadata = NovelEpubMetadataDto {
         id: job.novel_id,
         title: job.novel.title.clone(),
@@ -1378,8 +1538,7 @@ fn render_novel_epub(job: &AfterJob, content: &NovelContent) -> Result<Vec<u8>, 
         language: job.novel.language.clone(),
         cover_filename: cover,
     };
-    engine
-        .build_epub_from_text(metadata, content.text.clone(), bytes)
+    build_epub_from_text(metadata, content.text.clone(), bytes)
         .map_err(|err| err.to_string())
         .map(|data| {
             let _ = (images, illusts);
@@ -1460,6 +1619,10 @@ mod tests {
     use crate::plan::DownloadPolicy;
 
     fn request(path: &str, title: &str, artwork_id: &str, subscription_id: i64) -> ExternalImageRequest {
+        let (serialize_key, payload_json) = serialize(&ArtworkPayload::Booru { post: pixeval_booru::BooruPost {
+            id: artwork_id.to_string(), source: Some(title.to_string()), uploader_name: "Author".into(),
+            original_url: "http://127.0.0.1:1/missing.jpg".into(), ..Default::default()
+        }}).unwrap();
         ExternalImageRequest {
             artwork_id: artwork_id.to_string(),
             title: title.to_string(),
@@ -1470,8 +1633,8 @@ mod tests {
             original_url: "http://127.0.0.1:1/missing.jpg".to_string(),
             path_macro: path.to_string(),
             base_dir: String::new(),
-            payload_json: format!(r#"{{"id":"{artwork_id}","title":"{title}"}}"#),
-            serialize_key: "test.image".to_string(),
+            payload_json,
+            serialize_key,
             work_subscription_id: subscription_id,
             subscription_type: if subscription_id == 0 { String::new() } else { "Bookmarks".to_string() },
             is_r18: false,
@@ -1569,6 +1732,20 @@ mod tests {
     }
 
     #[test]
+    fn unknown_history_payload_is_not_guessed_or_deleted() {
+        let storage = Arc::new(StorageEngine::new(":memory:".into()).unwrap());
+        storage.download().add_or_replace_download_history("42".into(), Some("UnknownNovel".into()),
+            "invalid.jpg".into(), state_code(DownloadState::Queued), None, None, "{\"id\":42}".into()).unwrap();
+        let manager = DownloadManager::new(1, None, None);
+        manager.bind_storage(storage.clone());
+        manager.restore_histories();
+        let snapshot = manager.current_page_snapshot();
+        assert_eq!(snapshot.ordinary_items[0].state, DownloadState::Error);
+        assert!(snapshot.ordinary_items[0].error_message.is_some());
+        assert_eq!(storage.download().count_download_history().unwrap(), 1);
+    }
+
+    #[test]
     fn history_restore_does_not_restart_completed_work() {
         let dir = tempfile::tempdir().unwrap();
         let storage = Arc::new(StorageEngine::new(":memory:".to_string()).unwrap());
@@ -1581,7 +1758,7 @@ mod tests {
         let destination = manager.enqueue_external_image(request(&path, "Kept", "8", 0));
         let snapshot = wait_completed(&manager, 1);
         assert_eq!(snapshot.ordinary_items[0].state, DownloadState::Completed);
-        let row = storage.get_download_history_by_destination(destination.clone()).unwrap().unwrap();
+        let row = storage.download().get_download_history_by_destination(destination.clone()).unwrap().unwrap();
         assert_eq!(row.state, state_code(DownloadState::Completed));
 
         let restored = DownloadManager::new(1, None, None);

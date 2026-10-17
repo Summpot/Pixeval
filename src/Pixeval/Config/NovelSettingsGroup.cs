@@ -15,26 +15,26 @@ namespace Pixeval.Config;
 public record NovelSettingsGroup
 {
     [JsonConverter(typeof(JsonColorConverter))]
-    [SettingsEntry(Symbol.TextColor, AppSettingsResources.NovelSettingsFontColorEntry.Header, AppSettingsResources.NovelSettingsFontColorEntry.Description)]
+    [SettingsEntry(Symbol.TextColor, nameof(Strings.AppSettingsNovelSettingsFontColorEntryHeader), nameof(Strings.AppSettingsNovelSettingsFontColorEntryDescription))]
     public uint NovelFontColor { get; set; }
 
     [JsonConverter(typeof(JsonColorConverter))]
-    [SettingsEntry(Symbol.ColorBackground, AppSettingsResources.NovelSettingsBackgroundEntry.Header, AppSettingsResources.NovelSettingsBackgroundEntry.Description)]
+    [SettingsEntry(Symbol.ColorBackground, nameof(Strings.AppSettingsNovelSettingsBackgroundEntryHeader), nameof(Strings.AppSettingsNovelSettingsBackgroundEntryDescription))]
     public uint NovelBackground { get; set; }
 
-    [SettingsEntry(Symbol.LineThickness, AppSettingsResources.NovelSettingsFontWeightEntry.Header, AppSettingsResources.NovelSettingsFontWeightEntry.Description, AppSettingsResources.NovelSettingsFontWeightEntry.Placeholder)]
+    [SettingsEntry(Symbol.LineThickness, nameof(Strings.AppSettingsNovelSettingsFontWeightEntryHeader), nameof(Strings.AppSettingsNovelSettingsFontWeightEntryDescription), nameof(Strings.AppSettingsNovelSettingsFontWeightEntryPlaceholder))]
     public FontWeight NovelFontWeight { get; set; } = FontWeight.Normal;
 
-    [SettingsEntry(Symbol.TextFont, AppSettingsResources.NovelSettingsFontFamilyEntry.Header, AppSettingsResources.AppFontFamilyEntry.Description, AppSettingsResources.AppFontFamilyEntry.Placeholder)]
+    [SettingsEntry(Symbol.TextFont, nameof(Strings.AppSettingsNovelSettingsFontFamilyEntryHeader), nameof(Strings.AppSettingsAppFontFamilyEntryDescription), nameof(Strings.AppSettingsAppFontFamilyEntryPlaceholder))]
     public ObservableCollection<string> NovelFontFamily { get; set; } = [];
 
-    [SettingsEntry(Symbol.TextFontSize, AppSettingsResources.NovelSettingsFontSizeEntry.Header, AppSettingsResources.NovelSettingsFontSizeEntry.Description)]
+    [SettingsEntry(Symbol.TextFontSize, nameof(Strings.AppSettingsNovelSettingsFontSizeEntryHeader), nameof(Strings.AppSettingsNovelSettingsFontSizeEntryDescription))]
     public int NovelFontSize { get; set; } = 14;
 
-    [SettingsEntry(Symbol.TextLineSpacing, AppSettingsResources.NovelSettingsLineHeightEntry.Header, AppSettingsResources.NovelSettingsLineHeightEntry.Description)]
+    [SettingsEntry(Symbol.TextLineSpacing, nameof(Strings.AppSettingsNovelSettingsLineHeightEntryHeader), nameof(Strings.AppSettingsNovelSettingsLineHeightEntryDescription))]
     public int NovelLineHeight { get; set; } = 28;
 
-    [SettingsEntry(Symbol.AutoFitWidth, AppSettingsResources.NovelSettingsMaxWidthEntry.Header, AppSettingsResources.NovelSettingsMaxWidthEntry.Description)]
+    [SettingsEntry(Symbol.AutoFitWidth, nameof(Strings.AppSettingsNovelSettingsMaxWidthEntryHeader), nameof(Strings.AppSettingsNovelSettingsMaxWidthEntryDescription))]
     public int NovelMaxWidth { get; set; } = 1000;
 }
 
@@ -42,9 +42,6 @@ public class JsonColorConverter : JsonConverter<uint>
 {
     public override uint Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        if (reader.TokenType == JsonTokenType.Number)
-            return reader.GetUInt32();
-
         var text = reader.GetString();
         if (text is not ['#', .. { Length: 8 } color])
             throw new FormatException("Invalid color format.");

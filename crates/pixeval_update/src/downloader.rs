@@ -122,16 +122,19 @@ pub(crate) async fn apply_timeout<T>(
     operation: impl Future<Output = Result<T, UpdateError>>,
     timeout_minutes: Option<f64>,
 ) -> Result<T, UpdateError> {
-    let Some(duration) = timeout_from_minutes(timeout_minutes) else {
-        return operation.await;
-    };
+    async_compat::Compat::new(async move {
+        let Some(duration) = timeout_from_minutes(timeout_minutes) else {
+            return operation.await;
+        };
 
-    match tokio::time::timeout(duration, operation).await {
-        Ok(result) => result,
-        Err(_) => Err(UpdateError::Network {
-            message: "Update download timed out".to_string(),
-        }),
-    }
+        match tokio::time::timeout(duration, operation).await {
+            Ok(result) => result,
+            Err(_) => Err(UpdateError::Network {
+                message: "Update download timed out".to_string(),
+            }),
+        }
+    })
+    .await
 }
 
 /// 发送支持 HTTP 重定向追踪的 GET 请求

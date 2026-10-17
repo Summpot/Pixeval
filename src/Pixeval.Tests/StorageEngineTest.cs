@@ -15,105 +15,109 @@ public sealed class StorageEngineTest
     public void SearchHistoryLifecycleShouldSucceed()
     {
         using var storage = new StorageEngine(":memory:");
+        var history = storage.HistoryRepository;
 
-        Assert.AreEqual(0, storage.CountSearchHistory());
+        Assert.AreEqual(0, history.CountSearchHistory());
 
-        var inserted = storage.InsertSearchHistory("genshin", "原神", "2026-10-06T00:00:00Z");
+        var inserted = history.InsertSearchHistory("genshin", "原神", "2026-10-06T00:00:00Z");
         Assert.AreEqual("genshin", inserted.Value);
         Assert.AreEqual("原神", inserted.TranslatedName);
-        Assert.AreEqual(1, storage.CountSearchHistory());
+        Assert.AreEqual(1, history.CountSearchHistory());
 
-        var found = storage.GetSearchHistoryByValue("genshin");
+        var found = history.GetSearchHistoryByValue("genshin");
         Assert.IsNotNull(found);
-        Assert.AreEqual("原神", found.TranslatedName);
+        Assert.AreEqual("原神", found.Value.TranslatedName);
 
-        var upserted = storage.UpsertSearchHistory("genshin", "原神冲击", "2026-10-06T01:00:00Z");
+        var upserted = history.UpsertSearchHistory("genshin", "原神冲击", "2026-10-06T01:00:00Z");
         Assert.AreEqual("原神冲击", upserted.TranslatedName);
-        Assert.AreEqual(1, storage.CountSearchHistory());
+        Assert.AreEqual(1, history.CountSearchHistory());
 
-        var stream = storage.StreamSearchHistories(0, 10);
+        var stream = history.StreamSearchHistories(0, 10);
         Assert.AreEqual(1, stream.Count);
         Assert.AreEqual("genshin", stream[0].Value);
 
-        Assert.IsTrue(storage.TryDeleteSearchHistoryByValue("genshin"));
-        Assert.IsFalse(storage.TryDeleteSearchHistoryByValue("genshin"));
-        Assert.AreEqual(0, storage.CountSearchHistory());
+        Assert.IsTrue(history.TryDeleteSearchHistoryByValue("genshin"));
+        Assert.IsFalse(history.TryDeleteSearchHistoryByValue("genshin"));
+        Assert.AreEqual(0, history.CountSearchHistory());
     }
 
     [TestMethod]
     public void BrowseHistoryCascadeAndWorkKeyShouldSucceed()
     {
         using var storage = new StorageEngine(":memory:");
+        var history = storage.HistoryRepository;
 
-        var rec = storage.AddOrReplaceBrowseHistory(
+        var rec = history.AddOrReplaceBrowseHistory(
             "12345",
             "Illustration",
             "Illustration:12345",
             "{\"title\":\"Test Artwork\"}");
 
         Assert.AreEqual("Illustration:12345", rec.WorkKey);
-        Assert.AreEqual(1, storage.CountBrowseHistory());
+        Assert.AreEqual(1, history.CountBrowseHistory());
 
-        var found = storage.GetBrowseHistoryByWorkKey("Illustration:12345");
+        var found = history.GetBrowseHistoryByWorkKey("Illustration:12345");
         Assert.IsNotNull(found);
-        Assert.AreEqual("{\"title\":\"Test Artwork\"}", found.PayloadJson);
+        Assert.AreEqual("{\"title\":\"Test Artwork\"}", found.Value.PayloadJson);
 
         // Replacing should update payload and preserve single entry count
-        var rec2 = storage.AddOrReplaceBrowseHistory(
+        var rec2 = history.AddOrReplaceBrowseHistory(
             "12345",
             "Illustration",
             "Illustration:12345",
             "{\"title\":\"Updated Artwork\"}");
 
-        Assert.AreEqual(1, storage.CountBrowseHistory());
+        Assert.AreEqual(1, history.CountBrowseHistory());
 
-        var stream = storage.StreamBrowseHistory(0, 10);
+        var stream = history.StreamBrowseHistory(0, 10);
         Assert.AreEqual(1, stream.Count);
         Assert.AreEqual("{\"title\":\"Updated Artwork\"}", stream[0].PayloadJson);
 
-        storage.ClearBrowseHistory();
-        Assert.AreEqual(0, storage.CountBrowseHistory());
-        Assert.IsNull(storage.GetBrowseHistoryByWorkKey("Illustration:12345"));
+        history.ClearBrowseHistory();
+        Assert.AreEqual(0, history.CountBrowseHistory());
+        Assert.IsNull(history.GetBrowseHistoryByWorkKey("Illustration:12345"));
     }
 
     [TestMethod]
     public void WatchLaterAddAndRemoveShouldSucceed()
     {
         using var storage = new StorageEngine(":memory:");
+        var watchLater = storage.WatchLaterRepository;
 
-        Assert.IsFalse(storage.ContainsWatchLater("Illustration:999"));
+        Assert.IsFalse(watchLater.ContainsWatchLater("Illustration:999"));
 
-        storage.AddOrReplaceWatchLater(
+        watchLater.AddOrReplaceWatchLater(
             "999",
             "Illustration",
             "Illustration:999",
             "{\"title\":\"Later Artwork\"}");
 
-        Assert.IsTrue(storage.ContainsWatchLater("Illustration:999"));
-        Assert.AreEqual(1, storage.CountWatchLater());
+        Assert.IsTrue(watchLater.ContainsWatchLater("Illustration:999"));
+        Assert.AreEqual(1, watchLater.CountWatchLater());
 
-        var fetched = storage.GetWatchLaterByWorkKey("Illustration:999");
+        var fetched = watchLater.GetWatchLaterByWorkKey("Illustration:999");
         Assert.IsNotNull(fetched);
-        Assert.AreEqual("{\"title\":\"Later Artwork\"}", fetched.PayloadJson);
+        Assert.AreEqual("{\"title\":\"Later Artwork\"}", fetched.Value.PayloadJson);
 
-        var list = storage.StreamWatchLater(0, 5);
+        var list = watchLater.StreamWatchLater(0, 5);
         Assert.AreEqual(1, list.Count);
         Assert.AreEqual("Illustration:999", list[0].WorkKey);
 
-        Assert.IsTrue(storage.RemoveWatchLater("Illustration:999"));
-        Assert.IsFalse(storage.ContainsWatchLater("Illustration:999"));
-        Assert.AreEqual(0, storage.CountWatchLater());
-        Assert.IsNull(storage.GetWatchLaterByWorkKey("Illustration:999"));
+        Assert.IsTrue(watchLater.RemoveWatchLater("Illustration:999"));
+        Assert.IsFalse(watchLater.ContainsWatchLater("Illustration:999"));
+        Assert.AreEqual(0, watchLater.CountWatchLater());
+        Assert.IsNull(watchLater.GetWatchLaterByWorkKey("Illustration:999"));
     }
 
     [TestMethod]
     public void DownloadHistoryAddDeleteAndStreamShouldSucceed()
     {
         using var storage = new StorageEngine(":memory:");
+        var download = storage.DownloadRepository;
 
-        Assert.AreEqual(0, storage.CountDownloadHistory());
+        Assert.AreEqual(0, download.CountDownloadHistory());
 
-        storage.AddOrReplaceDownloadHistory(
+        download.AddOrReplaceDownloadHistory(
             "1001",
             "Illustration",
             "C:/downloads/1001.png",
@@ -122,16 +126,16 @@ public sealed class StorageEngineTest
             null,
             "{\"title\":\"Downloaded 1001\"}");
 
-        Assert.AreEqual(1, storage.CountDownloadHistory());
+        Assert.AreEqual(1, download.CountDownloadHistory());
 
-        var stream = storage.StreamDownloadHistory(0, 10);
+        var stream = download.StreamDownloadHistory(0, 10);
         Assert.AreEqual(1, stream.Count);
         Assert.AreEqual("C:/downloads/1001.png", stream[0].Destination);
         Assert.AreEqual(3u, stream[0].State);
 
-        Assert.IsTrue(storage.TryDeleteDownloadHistoryByDestination("C:/downloads/1001.png"));
-        Assert.IsFalse(storage.TryDeleteDownloadHistoryByDestination("C:/downloads/1001.png"));
-        Assert.AreEqual(0, storage.CountDownloadHistory());
+        Assert.IsTrue(download.TryDeleteDownloadHistoryByDestination("C:/downloads/1001.png"));
+        Assert.IsFalse(download.TryDeleteDownloadHistoryByDestination("C:/downloads/1001.png"));
+        Assert.AreEqual(0, download.CountDownloadHistory());
     }
 
     [TestMethod]
@@ -151,7 +155,8 @@ public sealed class StorageEngineTest
                 null,
                 10,
                 "art1",
-                "{\"title\":\"Sub Art 1\"}"),
+                "{\"title\":\"Sub Art 1\"}",
+                null),
             new(
                 0,
                 "art2",
@@ -162,7 +167,8 @@ public sealed class StorageEngineTest
                 null,
                 20,
                 "art2",
-                "{\"title\":\"Sub Art 2\"}"),
+                "{\"title\":\"Sub Art 2\"}",
+                null),
             new(
                 0,
                 "art3",
@@ -173,24 +179,26 @@ public sealed class StorageEngineTest
                 null,
                 30,
                 "art3",
-                "{\"title\":\"Sub Art 3\"}")
+                "{\"title\":\"Sub Art 3\"}",
+                null)
         };
 
-        storage.AddOrReplaceSubscriptionDownloadHistoryBatch(items);
-        Assert.AreEqual(3, storage.CountSubscriptionDownloadHistory());
+        var download = storage.DownloadRepository;
+        download.AddOrReplaceSubscriptionDownloadHistoryBatch(items);
+        Assert.AreEqual(3, download.CountSubscriptionDownloadHistory());
 
-        Assert.IsTrue(storage.ContainsSubscriptionDownloadIdentity(10, "art1", "C:/sub/art1.jpg"));
-        Assert.IsFalse(storage.ContainsSubscriptionDownloadIdentity(10, "art1", "C:/other.jpg"));
+        Assert.IsTrue(download.ContainsSubscriptionDownloadIdentity(10, "art1", "C:/sub/art1.jpg"));
+        Assert.IsFalse(download.ContainsSubscriptionDownloadIdentity(10, "art1", "C:/other.jpg"));
 
         // Delete subscription 10 downloads
-        var deletedSub10 = storage.DeleteSubscriptionDownloadsByWorkSubscriptionId(10);
+        var deletedSub10 = download.DeleteSubscriptionDownloadsByWorkSubscriptionId(10);
         Assert.AreEqual(1, deletedSub10);
-        Assert.AreEqual(2, storage.CountSubscriptionDownloadHistory());
+        Assert.AreEqual(2, download.CountSubscriptionDownloadHistory());
 
         // Delete orphans: only sub 20 is valid now
-        var deletedOrphans = storage.DeleteOrphanSubscriptionDownloads(new List<long> { 20 });
+        var deletedOrphans = download.DeleteOrphanSubscriptionDownloads(new List<long> { 20 });
         Assert.AreEqual(1, deletedOrphans); // sub 30 was orphan
-        Assert.AreEqual(1, storage.CountSubscriptionDownloadHistory());
+        Assert.AreEqual(1, download.CountSubscriptionDownloadHistory());
     }
 
     [TestMethod]
@@ -204,9 +212,7 @@ public sealed class StorageEngineTest
             0,
             "Artist Alpha",
             "Alpha",
-            "avatar.png",
-            "2026-10-06",
-            "99999");
+            "avatar.png");
 
         Assert.IsTrue(created.HistoryEntryId > 0);
         Assert.AreEqual(123456, created.Id);
@@ -214,9 +220,9 @@ public sealed class StorageEngineTest
 
         var fetched = storage.GetSubscriptionByKey(123456, 1, 0);
         Assert.IsNotNull(fetched);
-        Assert.AreEqual("Artist Alpha", fetched.Title);
-        Assert.AreEqual("Alpha", fetched.Author);
-        Assert.AreEqual("avatar.png", fetched.Avatar);
+        Assert.AreEqual("Artist Alpha", fetched.Value.Title);
+        Assert.AreEqual("Alpha", fetched.Value.Author);
+        Assert.AreEqual("avatar.png", fetched.Value.Avatar);
 
         var updated = storage.UpsertSubscription(
             123456,
@@ -224,9 +230,7 @@ public sealed class StorageEngineTest
             0,
             "Artist Alpha (Updated)",
             "Alpha",
-            "avatar2.png",
-            "2026-10-06T03:00:00Z",
-            "100000");
+            "avatar2.png");
 
         Assert.AreEqual(created.HistoryEntryId, updated.HistoryEntryId);
         Assert.AreEqual("Artist Alpha (Updated)", updated.Title);
@@ -289,10 +293,10 @@ public sealed class StorageEngineTest
 
         var fetched = storage.GetLoginUserByKey(upserted.HistoryEntryId);
         Assert.IsNotNull(fetched);
-        Assert.AreEqual(88888, fetched.UserId);
-        Assert.AreEqual("PixevalUser", fetched.Name);
-        Assert.AreEqual("token_xyz_123", fetched.RefreshToken);
-        Assert.IsTrue(fetched.IsPremium);
+        Assert.AreEqual(88888, fetched.Value.UserId);
+        Assert.AreEqual("PixevalUser", fetched.Value.Name);
+        Assert.AreEqual("token_xyz_123", fetched.Value.RefreshToken);
+        Assert.IsTrue(fetched.Value.IsPremium);
 
         var all = storage.GetAllLoginUsers();
         Assert.AreEqual(1, all.Count);

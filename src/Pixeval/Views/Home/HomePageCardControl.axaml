@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Home.HomePageCardControl"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:cfg="using:Pixeval.Config"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -133,7 +134,7 @@
                             Content="{markup:SymbolIcon Open}"
                             DockPanel.Dock="Right"
                             Theme="{StaticResource TransparentButtonStyle}"
-                            ToolTip.Tip="{I18N {x:Static pixeval:HomePageResources+OpenCardPageButton.ToolTip}}" />
+                            ToolTip.Tip="{CompiledBinding [HomePage-OpenCardPageButton-ToolTip], Source={x:Static loc:LocalizationManager.Instance}}" />
                         <TextBlock
                             VerticalAlignment="Center"
                             FontSize="16"
@@ -249,6 +250,11 @@
                             Text="{Binding PlaceholderText}"
                             TextAlignment="Center"
                             TextTrimming="CharacterEllipsis" />
+                        <Button
+                            HorizontalAlignment="Center"
+                            Command="{Binding RetryCommand}"
+                            Content="{CompiledBinding [DownloadItem-ActionButtonContentRetry], Source={x:Static loc:LocalizationManager.Instance}}"
+                            IsVisible="{Binding CanRetry}" />
                     </StackPanel>
                 </Panel>
             </DockPanel>
@@ -277,6 +283,6 @@
             Click="QuickDeleteButton_OnClick"
             Content="{markup:SymbolIcon Delete}"
             IsVisible="{Binding #Root.IsEditing}"
-            ToolTip.Tip="{I18N {x:Static pixeval:HomePageResources+DeleteSelectedCardButton.Content}}" />
+            ToolTip.Tip="{CompiledBinding [HomePage-DeleteSelectedCardButton-Content], Source={x:Static loc:LocalizationManager.Instance}}" />
     </Panel>
 </UserControl>

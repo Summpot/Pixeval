@@ -11,8 +11,8 @@ public partial class CommentsPage : IconNavigationPage
     public static readonly StyledProperty<long> ParentIdProperty =
         AvaloniaProperty.Register<CommentsPage, long>(nameof(ParentId));
 
-    public static readonly StyledProperty<SimpleWorkType> ParentTypeProperty =
-        AvaloniaProperty.Register<CommentsPage, SimpleWorkType>(nameof(ParentType));
+    public static readonly StyledProperty<SimpleWorkKind> ParentTypeProperty =
+        AvaloniaProperty.Register<CommentsPage, SimpleWorkKind>(nameof(ParentType), SimpleWorkKind.Illustration);
 
     private CommentContainer? _container;
 
@@ -39,7 +39,7 @@ public partial class CommentsPage : IconNavigationPage
         set => SetValue(ParentIdProperty, value);
     }
 
-    public SimpleWorkType ParentType
+    public SimpleWorkKind ParentType
     {
         get => GetValue(ParentTypeProperty);
         set => SetValue(ParentTypeProperty, value);
@@ -68,6 +68,11 @@ public partial class CommentsPage : IconNavigationPage
             && existing.ParentType == ParentType)
             return;
 
-        _container.DataContext = new CommentsViewViewModel(ParentType, ParentId);
+        _container.DataContext = new CommentsViewViewModel(
+            ParentType,
+            ParentId,
+            this.GetRequiredUiService<MakoClient>(),
+            this.GetUiService<IUserSessionService>(),
+            this.GetUiService<IBlockedContentService>());
     }
 }

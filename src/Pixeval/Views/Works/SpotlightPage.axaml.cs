@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System.Collections.Generic;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 using Pixeval.Utilities;
@@ -30,9 +31,9 @@ public partial class SpotlightPage : IconContentPage
 
     private void ChangeSource()
     {
-        ResetEngine(_client.Spotlight().ToFetchEngine());
+        ResetSource(_client.Spotlight(SpotlightCategory.All));
     }
 
-    private void ResetEngine(IFetchEngine<SpotlightArticle> fetchEngine) =>
-        (SpotlightView.DataContext as SpotlightViewViewModel)?.ResetEngine(fetchEngine);
+    private void ResetSource(IAsyncEnumerable<SpotlightArticle> fetchEngine) =>
+        (SpotlightView.DataContext as SpotlightViewViewModel)?.ResetSource(fetchEngine);
 }

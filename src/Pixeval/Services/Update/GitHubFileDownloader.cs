@@ -11,21 +11,21 @@ using Velopack.Sources;
 namespace Pixeval.Services.Update;
 
 /// <summary>
-/// Forwards Velopack update downloads to <see cref="UpdateEngine"/>.
+/// Forwards Velopack update downloads to <see cref="GithubClient"/>.
 /// </summary>
-internal sealed class GitHubFileDownloader(Func<UpdateEngine> engineProvider) : IFileDownloader
+internal sealed class GitHubFileDownloader(GitHubService github) : IFileDownloader
 {
     public Task<string> DownloadString(
         string url,
         IDictionary<string, string>? headers,
         double timeout)
-        => engineProvider().DownloadUpdateTextAsync(url, headers, NormalizeTimeout(timeout));
+        => github.DownloadUpdateTextAsync(url, headers, NormalizeTimeout(timeout));
 
     public Task<byte[]> DownloadBytes(
         string url,
         IDictionary<string, string>? headers,
         double timeout)
-        => engineProvider().DownloadUpdateBytesAsync(url, headers, NormalizeTimeout(timeout));
+        => github.DownloadUpdateBytesAsync(url, headers, NormalizeTimeout(timeout));
 
     public Task DownloadFile(
         string url,
@@ -34,7 +34,7 @@ internal sealed class GitHubFileDownloader(Func<UpdateEngine> engineProvider) : 
         IDictionary<string, string>? headers,
         double timeout,
         CancellationToken cancelToken)
-        => engineProvider().DownloadFileWithProgressAsync(
+        => github.DownloadFileWithProgressAsync(
             url,
             targetFile,
             expectedSha256: null,

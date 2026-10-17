@@ -3,7 +3,7 @@
 
 using Avalonia.Controls;
 #if PIXEVAL_MCP
-using Pixeval.I18N;
+using Pixeval.Localization;
 #endif
 
 namespace Pixeval.Views.Settings;
@@ -14,7 +14,8 @@ public partial class McpHelpSection : UserControl
     {
 #if PIXEVAL_MCP
         InitializeComponent();
-        McpToolsStatus = I18NManager.GetResource(HelpPageResources.McpToolsStatus.Disabled);
+        SetMcpStatus(Strings.HelpPageMcpToolsStatusDisabled);
+        _languageSubscription = AppLocalization.Instance.Subscribe(() => McpToolsStatus = _status());
 #endif
     }
 }

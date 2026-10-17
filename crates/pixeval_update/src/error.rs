@@ -3,6 +3,7 @@
 
 use pixeval_maho::MahoError;
 
+#[boltffi::error]
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum UpdateError {
     #[error("Network error: {message}")]

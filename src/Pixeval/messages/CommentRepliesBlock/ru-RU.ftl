@@ -1,0 +1,3 @@
+EmojiButtonFlyoutEmojiSectionNavigationViewItem-Content = Эмодзи
+
+EmojiButtonFlyoutStickersSectionNavigationViewItem-Content = Стикеры

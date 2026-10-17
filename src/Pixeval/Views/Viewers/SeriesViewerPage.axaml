@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Viewers.SeriesViewerPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -34,12 +35,12 @@
                                 Command="{Binding AddToWatchlistCommand}"
                                 Icon="{markup:SymbolIcon Alert}"
                                 IsVisible="{Binding !IsWatchlistAdded}"
-                                Label="{I18N {x:Static pixeval:SeriesViewerPageResources.AddToWatchlist}}" />
+                                Label="{CompiledBinding [SeriesViewerPage-AddToWatchlist], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <CommandBarButton
                                 Command="{Binding RemoveFromWatchlistCommand}"
                                 Icon="{markup:SymbolIcon AlertOff}"
                                 IsVisible="{Binding IsWatchlistAdded}"
-                                Label="{I18N {x:Static pixeval:SeriesViewerPageResources.RemoveFromWatchlist}}" />
+                                Label="{CompiledBinding [SeriesViewerPage-RemoveFromWatchlist], Source={x:Static loc:LocalizationManager.Instance}}" />
                         </CommandBar>
                         <StackPanel
                             VerticalAlignment="Center"
@@ -52,7 +53,7 @@
                                 Spacing="4">
                                 <TextBlock
                                     MaxLines="1"
-                                    Text="{Binding SeriesDetail?.Title}"
+                                    Text="{Binding SeriesDetail.Value.Title}"
                                     TextTrimming="CharacterEllipsis"
                                     Theme="{StaticResource CaptionStrongTextBlockStyle}" />
                                 <TextBlock
@@ -84,7 +85,7 @@
                             VerticalAlignment="Center"
                             Spacing="8">
                             <TextBlock
-                                Text="{Binding SeriesDetail?.Title}"
+                                Text="{Binding SeriesDetail.Value.Title}"
                                 TextWrapping="Wrap"
                                 Theme="{StaticResource TitleTextBlockStyle}" />
                             <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding AuthorName}" />

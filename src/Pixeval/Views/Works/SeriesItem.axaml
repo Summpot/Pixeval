@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Works.SeriesItem"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -11,6 +12,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
     xmlns:utilities="using:Pixeval.Common"
+    xmlns:di="using:Pixeval.Common.Markup"
     xmlns:viewModels="using:Pixeval.ViewModels.Works"
     x:DataType="{x:Type mako:Series}"
     HorizontalContentAlignment="Stretch"
@@ -26,27 +28,27 @@
             <ContextMenu>
                 <MenuItem
                     Click="LatestContentButton_OnClick"
-                    Header="{I18N {x:Static pixeval:SeriesPageResources.ViewLatestContent}}"
+                    Header="{CompiledBinding [SeriesPage-ViewLatestContent], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup:SymbolIcon ArrowRight}" />
                 <MenuItem
-                    Command="{x:Static viewModels:WorkCommands.OpenUserInfoPageCommand}"
+                    Command="{Binding OpenUserInfoPageCommand, Source={di:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
                     CommandParameter="{Binding}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.OpenUserInfoPage}}"
+                    Header="{CompiledBinding [EntryItem-OpenUserInfoPage], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup:SymbolIcon Person}" />
                 <Separator />
                 <MenuItem
                     Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
+                    Header="{CompiledBinding [EntryItem-OpenInWebBrowser], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup:SymbolIcon GlobeArrowUp}"
                     Tag="{Binding WebsiteUri}" />
                 <MenuItem
                     Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
+                    Header="{CompiledBinding [EntryItem-GenerateWebLink], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup:SymbolIcon LinkMultiple}"
                     Tag="{Binding WebsiteUri}" />
                 <MenuItem
                     Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.GenerateLink}}"
+                    Header="{CompiledBinding [EntryItem-GenerateLink], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup:SymbolIcon Link}"
                     Tag="{Binding AppUri}" />
             </ContextMenu>
@@ -73,11 +75,11 @@
                     Text="{Binding LastPublishedContentDatetime, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}"
                     TextTrimming="CharacterEllipsis"
                     Theme="{StaticResource CaptionTextBlockStyle}" />
-                <Button Padding="2" Command="{x:Static viewModels:WorkCommands.OpenUserInfoPageCommand}" CommandParameter="{Binding}">
+                <Button Padding="2" Command="{Binding OpenUserInfoPageCommand, Source={di:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}" CommandParameter="{Binding}">
                     <TextBlock
                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                         MaxLines="2"
-                        Text="{Binding User.Name}"
+                        Text="{Binding User.Value.Name}"
                         TextTrimming="CharacterEllipsis"
                         TextWrapping="Wrap" />
                 </Button>
@@ -87,7 +89,7 @@
                     HorizontalAlignment="Right"
                     Click="LatestContentButton_OnClick"
                     DockPanel.Dock="Right">
-                    <controls:IconText Symbol="ArrowRight" Text="{I18N {x:Static pixeval:SeriesPageResources.ViewLatestContent}}" />
+                    <controls:IconText Symbol="ArrowRight" Text="{CompiledBinding [SeriesPage-ViewLatestContent], Source={x:Static loc:LocalizationManager.Instance}}" />
                 </Button>
                 <controls:IconText
                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"

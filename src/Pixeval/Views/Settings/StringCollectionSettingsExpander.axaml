@@ -11,7 +11,7 @@
     xmlns:sco="using:System.Collections.ObjectModel"
     x:DataType="{x:Type models:ISingleValueSettingsEntry,
                         x:TypeArguments=sco:ObservableCollection(x:String)}"
-    Description="{Binding Converter={x:Static avalonia:SettingsEntryHelper.DescriptionConverter}}"
+    Description="{avalonia:SettingsDescription}"
     Header="{Binding Header}"
     mc:Ignorable="d"
     d:DesignHeight="450"
