@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Pixeval.Common.Collections;
 using Pixeval.Localization;
 using Pixeval.Config;
@@ -31,6 +32,13 @@ public sealed partial class HomeCardPreviewViewModel(
 
     public IReadOnlyCollection<object> Items => ViewModel?.View ?? [];
 
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RetryCommand))]
+    public partial bool CanRetry { get; private set; }
+
+    [RelayCommand(CanExecute = nameof(CanRetry))]
+    private Task RetryAsync() => LoadAsync();
+
     private string? _placeholder = nameof(Strings.HomePageCardPreviewLoadingTextBlockText);
     public string? PlaceholderText => _placeholder is null ? null : Strings.GetString(_placeholder);
     private void SetPlaceholder(string? key)
@@ -44,7 +52,7 @@ public sealed partial class HomeCardPreviewViewModel(
         if (_isDisposed)
             return;
 
-        if (_loadingTask is { } loadingTask)
+        if (_loadingTask is { } loadingTask && (!loadingTask.IsCompleted || !CanRetry))
         {
             await loadingTask;
             return;
@@ -62,24 +70,33 @@ public sealed partial class HomeCardPreviewViewModel(
     {
         try
         {
+            CanRetry = false;
             SetPlaceholder(nameof(Strings.HomePageCardPreviewLoadingTextBlockText));
-            var oldSource = _source;
-            var source = await previewSourceFactory(Card);
-            if (_isDisposed)
+            for (var attempt = 0; attempt < 2; attempt++)
             {
-                source.Dispose();
-                return;
+                var oldSource = _source;
+                var source = await previewSourceFactory(Card);
+                if (_isDisposed)
+                {
+                    source.Dispose();
+                    return;
+                }
+
+                DetachItems();
+                _source = source;
+                ViewModel = source.ViewModel;
+                OnPropertyChanged(nameof(Items));
+                AttachItems();
+                if (!ReferenceEquals(oldSource, source))
+                    oldSource?.Dispose();
+
+                await LoadInitialItemsAsync();
+                if (attempt is not 0 || Items.Count is not 0 || Items is not IIncrementalLoading { LoadError: not null })
+                    break;
+
+                // An iterator that threw may be permanently closed. Retry with a fresh source.
+                await Task.Delay(TimeSpan.FromSeconds(1), _loadingCts.Token);
             }
-
-            DetachItems();
-            _source = source;
-            ViewModel = source.ViewModel;
-            OnPropertyChanged(nameof(Items));
-            AttachItems();
-            if (!ReferenceEquals(oldSource, source))
-                oldSource?.Dispose();
-
-            await LoadInitialItemsAsync();
             UpdatePlaceholder();
         }
         catch (OperationCanceledException)
@@ -91,14 +108,24 @@ public sealed partial class HomeCardPreviewViewModel(
         catch (Exception)
         {
             if (!_isDisposed)
+            {
+                CanRetry = true;
                 SetPlaceholder(nameof(Strings.HomePageCardPreviewFailedTextBlockText));
+            }
         }
     }
 
     private async Task LoadInitialItemsAsync()
     {
-        if (!_isDisposed && Items is IIncrementalLoading { HasMoreItems: true } incremental)
+        if (_isDisposed || Items is not IIncrementalLoading { HasMoreItems: true } incremental)
+            return;
+
+        await incremental.LoadMoreItemsAsync(0, _loadingCts.Token);
+        if (!_isDisposed && Items.Count is 0 && incremental.LoadError is null && incremental.IsInterrupted)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(1), _loadingCts.Token);
             await incremental.LoadMoreItemsAsync(0, _loadingCts.Token);
+        }
     }
 
     private void AttachItems()
@@ -124,7 +151,12 @@ public sealed partial class HomeCardPreviewViewModel(
 
     private void UpdatePlaceholder()
     {
-        SetPlaceholder(Items.Count is 0 ? nameof(Strings.HomePageCardPreviewEmptyTextBlockText) : null);
+        if (_isDisposed)
+            return;
+        CanRetry = Items is IIncrementalLoading incremental && (incremental.LoadError is not null || incremental.IsInterrupted);
+        SetPlaceholder(Items.Count is not 0 ? null : CanRetry
+            ? nameof(Strings.HomePageCardPreviewFailedTextBlockText)
+            : nameof(Strings.HomePageCardPreviewEmptyTextBlockText));
     }
 
     public void Dispose()
@@ -133,6 +165,7 @@ public sealed partial class HomeCardPreviewViewModel(
             return;
 
         _isDisposed = true;
+        CanRetry = false;
         _loadingCts.Cancel();
         _loadingCts.Dispose();
         DetachItems();

@@ -250,6 +250,11 @@
                             Text="{Binding PlaceholderText}"
                             TextAlignment="Center"
                             TextTrimming="CharacterEllipsis" />
+                        <Button
+                            HorizontalAlignment="Center"
+                            Command="{Binding RetryCommand}"
+                            Content="{CompiledBinding [DownloadItem-ActionButtonContentRetry], Source={x:Static loc:LocalizationManager.Instance}}"
+                            IsVisible="{Binding CanRetry}" />
                     </StackPanel>
                 </Panel>
             </DockPanel>

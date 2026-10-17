@@ -47,6 +47,8 @@ public class IncrementalLoadingCollection<IType> : ObservableCollection<IType>, 
 
     public bool IsInterrupted => !IsLoading && Source.IsInterrupted;
 
+    public Exception? LoadError { get; private set; }
+
     /// <summary>
     /// Gets a value indicating how many items that must be retrieved for each incremental call.
     /// </summary>
@@ -215,6 +217,7 @@ public class IncrementalLoadingCollection<IType> : ObservableCollection<IType>, 
 
     private async Task<int> LoadMoreItemsCoreAsync(CancellationToken token)
     {
+        LoadError = null;
         try
         {
             IReadOnlyCollection<IType> data;
@@ -225,6 +228,7 @@ public class IncrementalLoadingCollection<IType> : ObservableCollection<IType>, 
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
+                LoadError = ex;
                 OnError?.Invoke(ex);
                 HasMoreItems = Source.HasMoreItems;
                 return 0;

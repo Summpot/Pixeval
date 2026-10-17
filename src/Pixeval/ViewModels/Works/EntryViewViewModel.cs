@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Collections;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -96,12 +97,17 @@ public abstract class EntryViewViewModel<T, TViewModel>
     }
 
     private sealed class BoxedReadOnlyCollectionAdapter(ObservableCollection<TViewModel> inner)
-        : IReadOnlyCollection<object>, IIncrementalLoading, INotifyCollectionChanged, INotifyPropertyChanged
+        : IReadOnlyList<object>, IList, IIncrementalLoading, INotifyCollectionChanged, INotifyPropertyChanged
     {
+        private NotifyCollectionChangedEventHandler? _collectionChanged;
+        private PropertyChangedEventHandler? _propertyChanged;
+
         public ObservableCollection<TViewModel> Inner => inner;
         public int Count => inner.Count;
+        public object this[int index] => inner[index];
         public bool HasMoreItems => inner is IIncrementalLoading { HasMoreItems: true };
         public bool IsInterrupted => inner is IIncrementalLoading { IsInterrupted: true };
+        public Exception? LoadError => (inner as IIncrementalLoading)?.LoadError;
 
         public Task<int> LoadMoreItemsAsync(int count, CancellationToken token = default) =>
             inner is IIncrementalLoading incremental
@@ -110,15 +116,61 @@ public abstract class EntryViewViewModel<T, TViewModel>
 
         public event NotifyCollectionChangedEventHandler? CollectionChanged
         {
-            add => inner.CollectionChanged += value;
-            remove => inner.CollectionChanged -= value;
+            add
+            {
+                if (value is null)
+                    return;
+                if (_collectionChanged is null)
+                    inner.CollectionChanged += OnCollectionChanged;
+                _collectionChanged += value;
+            }
+            remove
+            {
+                _collectionChanged -= value;
+                if (_collectionChanged is null)
+                    inner.CollectionChanged -= OnCollectionChanged;
+            }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged
         {
-            add => ((INotifyPropertyChanged) inner).PropertyChanged += value;
-            remove => ((INotifyPropertyChanged) inner).PropertyChanged -= value;
+            add
+            {
+                if (value is null)
+                    return;
+                if (_propertyChanged is null)
+                    ((INotifyPropertyChanged) inner).PropertyChanged += OnPropertyChanged;
+                _propertyChanged += value;
+            }
+            remove
+            {
+                _propertyChanged -= value;
+                if (_propertyChanged is null)
+                    ((INotifyPropertyChanged) inner).PropertyChanged -= OnPropertyChanged;
+            }
         }
+
+        // UI collection listeners identify the observed collection by the event sender.
+        private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => _collectionChanged?.Invoke(this, e);
+        private void OnPropertyChanged(object? sender, PropertyChangedEventArgs e) => _propertyChanged?.Invoke(this, e);
+
+        bool IList.IsReadOnly => true;
+        bool IList.IsFixedSize => true;
+        bool ICollection.IsSynchronized => false;
+        object ICollection.SyncRoot => ((ICollection) inner).SyncRoot;
+        object? IList.this[int index]
+        {
+            get => this[index];
+            set => throw new NotSupportedException();
+        }
+        bool IList.Contains(object? value) => ((IList) inner).Contains(value);
+        int IList.IndexOf(object? value) => ((IList) inner).IndexOf(value);
+        void ICollection.CopyTo(Array array, int index) => ((ICollection) inner).CopyTo(array, index);
+        int IList.Add(object? value) => throw new NotSupportedException();
+        void IList.Clear() => throw new NotSupportedException();
+        void IList.Insert(int index, object? value) => throw new NotSupportedException();
+        void IList.Remove(object? value) => throw new NotSupportedException();
+        void IList.RemoveAt(int index) => throw new NotSupportedException();
 
         public IEnumerator<object> GetEnumerator()
         {

@@ -392,12 +392,18 @@ pub struct TrendingTagResponse {
 }
 
 #[derive(Deserialize, Default)]
+pub struct UserWorkPreview {
+    #[serde(default)]
+    pub image_urls: ImageUrls,
+}
+
+#[derive(Deserialize, Default)]
 pub struct UserPreview {
     pub user: User,
     #[serde(default)]
-    pub illusts: Vec<Illustration>,
+    pub illusts: Vec<UserWorkPreview>,
     #[serde(default)]
-    pub novels: Vec<Novel>,
+    pub novels: Vec<UserWorkPreview>,
 }
 
 #[derive(Deserialize, Default)]

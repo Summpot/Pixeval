@@ -34,19 +34,19 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
         HomePageCardLayout card,
         int rowCount,
         int columnCount,
-        HomeCardDefinitions definitions) : this(card, rowCount, columnCount, definitions, true)
+        HomeCardDefinitions definitions) : this(card, rowCount, columnCount, definitions.Get(card.SourceKind), true)
     {
     }
 
-    private HomePageCardControl(
+    internal HomePageCardControl(
         HomePageCardLayout card,
         int rowCount,
         int columnCount,
-        HomeCardDefinitions definitions,
+        HomeCardDefinition definition,
         bool loadPreview)
     {
         Card = card;
-        Definition = definitions.Get(card.SourceKind);
+        Definition = definition;
         RowCount = rowCount;
         ColumnCount = columnCount;
         PreviewViewModel = new(card, Definition.CreatePreviewSourceAsync);

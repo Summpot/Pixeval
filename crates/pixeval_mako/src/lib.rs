@@ -115,6 +115,33 @@ mod tests {
     }
 
     #[test]
+    fn user_previews_only_require_thumbnail_fields_from_sample_works() {
+        // Recommended-user sample works can have incomplete nested authors/series.
+        // Those fields are irrelevant to the thumbnails and must not reject the whole page.
+        let response: UserResponse = serde_json::from_str(r#"{
+            "user_previews": [{
+                "user": {"id": 123, "name": "Author", "account": "author"},
+                "illusts": [{
+                    "image_urls": {"square_medium": "https://example.test/illust.jpg"},
+                    "user": {}, "series": {}
+                }, {}],
+                "novels": [{
+                    "image_urls": {"medium": "https://example.test/novel.jpg"},
+                    "user": {}, "series": {}
+                }]
+            }],
+            "next_url": "page2"
+        }"#).unwrap();
+
+        assert_eq!(response.user_previews[0].user.id, 123);
+        assert_eq!(response.user_previews[0].illusts[0].image_urls.square_medium.as_deref(),
+                   Some("https://example.test/illust.jpg"));
+        assert_eq!(response.user_previews[0].novels[0].image_urls.medium.as_deref(),
+                   Some("https://example.test/novel.jpg"));
+        assert_eq!(response.next_url.as_deref(), Some("page2"));
+    }
+
+    #[test]
     fn test_user_response_serde() {
         let json = r#"{
             "user_previews": [
@@ -509,5 +536,38 @@ mod tests {
         assert_eq!(second.comment, "second comment");
 
         assert!(comment_engine.next().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn user_fetch_failure_is_observable_and_can_resume() {
+        struct RecoveringFetcher(AtomicUsize);
+        impl PageFetcher<User> for RecoveringFetcher {
+            fn fetch_page<'a>(
+                &'a self,
+                _next_url: Option<&'a str>,
+            ) -> Pin<Box<dyn Future<Output = PageFetchResult<User>> + Send + 'a>> {
+                Box::pin(async move {
+                    if self.0.fetch_add(1, Ordering::SeqCst) < 3 {
+                        Err("temporary failure".to_string())
+                    } else {
+                        Ok((vec![User { id: 123, ..Default::default() }], None))
+                    }
+                })
+            }
+        }
+
+        let engine = UserFetchEngine::new(Arc::new(MakoFetchEngine::new(
+            Arc::new(RecoveringFetcher(AtomicUsize::new(0))), Some("page1".to_string()),
+        )));
+        assert!(engine.next().await.is_none());
+        assert_eq!(engine.last_error().as_deref(), Some("temporary failure"));
+        assert!(!engine.is_completed());
+        assert_eq!(engine.requested_pages(), 0);
+
+        assert_eq!(engine.next().await.unwrap().id, 123);
+        assert!(engine.last_error().is_none());
+        assert!(engine.next().await.is_none());
+        assert!(engine.is_completed());
+        assert_eq!(engine.requested_pages(), 1);
     }
 }

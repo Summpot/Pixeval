@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Config;
@@ -15,6 +16,24 @@ namespace Pixeval.Tests;
 [TestClass]
 public sealed class MakoClientTest
 {
+    [TestMethod]
+    public async Task UserFetchAdapterReportsFailureInsteadOfCompletingAnEmptyPage()
+    {
+        using var client = CreateTestClient(new PixivDomainFrontingSettings());
+        using var native = client.UserRecommended();
+        var engine = native.ToFetchEngine();
+        await using var enumerator = engine.GetAsyncEnumerator();
+
+        // No refresh token: fail deterministically without sending a network request.
+        await Assert.ThrowsExactlyAsync<HttpRequestException>(async () => await enumerator.MoveNextAsync());
+
+        Assert.IsFalse(engine.EngineHandle.IsCompleted);
+        Assert.IsNotNull(native.LastError());
+        engine.EngineHandle.Cancel();
+        Assert.IsTrue(engine.EngineHandle.IsCancelled);
+        Assert.IsFalse(await enumerator.MoveNextAsync());
+    }
+
     private static MakoClient CreateTestClient(PixivDomainFrontingSettings settings)
     {
         var config = ProxyHelper.CreateMakoConfiguration(settings);

@@ -25,6 +25,7 @@ pub struct MakoFetchEngine<T> {
     is_exhausted: AtomicBool,
     is_cancelled: AtomicBool,
     requested_pages: AtomicU32,
+    last_error: parking_lot::RwLock<Option<String>>,
 }
 
 impl<T: Send + Sync + 'static> MakoFetchEngine<T> {
@@ -37,6 +38,7 @@ impl<T: Send + Sync + 'static> MakoFetchEngine<T> {
             is_exhausted: AtomicBool::new(false),
             is_cancelled: AtomicBool::new(false),
             requested_pages: AtomicU32::new(0),
+            last_error: parking_lot::RwLock::new(None),
         }
     }
 
@@ -99,6 +101,7 @@ impl<T: Send + Sync + 'static> MakoFetchEngine<T> {
 
             match fetch_res {
                 Ok((items, new_next_url)) => {
+                    *self.last_error.write() = None;
                     self.requested_pages.fetch_add(1, Ordering::Relaxed);
                     {
                         let mut guard = self.next_url.lock().await;
@@ -123,7 +126,8 @@ impl<T: Send + Sync + 'static> MakoFetchEngine<T> {
                     }
                     // If intermediate page had 0 items but has next_url, loop continues!
                 }
-                Err(_err) => {
+                Err(err) => {
+                    *self.last_error.write() = Some(err);
                     // Do not mark exhausted on transient error so callers can retry
                     return None;
                 }
@@ -227,6 +231,14 @@ impl UserFetchEngine {
 impl UserFetchEngine {
     pub async fn next(&self) -> Option<User> {
         self.inner.next().await
+    }
+
+    pub fn last_error(&self) -> Option<String> {
+        self.inner.last_error.read().clone()
+    }
+
+    pub fn is_completed(&self) -> bool {
+        self.inner.is_exhausted.load(Ordering::SeqCst)
     }
 
     pub fn cancel(&self) {
