@@ -36,7 +36,8 @@ public sealed partial class WorkView : UserControl, IDisposable
 
     private bool _isDisposed;
     private ISimpleViewViewModel? _ownedViewModel;
-    private IAsyncEnumerable<object>? _pendingEngine;
+    private IAsyncEnumerable<object>? _pendingSource;
+    private SimpleWorkType _pendingWorkType;
 
     public static FuncValueConverter<bool, SelectionMode> SelectionModeConverter { get; } =
         new(b => b ? SelectionMode.Multiple : SelectionMode.Single);
@@ -56,9 +57,9 @@ public sealed partial class WorkView : UserControl, IDisposable
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (!_isDisposed && change.Property == UiServices.ProviderProperty && _pendingEngine is { } engine
+        if (!_isDisposed && change.Property == UiServices.ProviderProperty && _pendingSource is { } source
             && this.GetUiService<AppSettings>() is not null)
-            ResetEngine(engine);
+            ResetSource(source, _pendingWorkType);
     }
 
     private void UpdateLayoutPseudoClasses()
@@ -140,33 +141,34 @@ public sealed partial class WorkView : UserControl, IDisposable
     /// <summary>
     /// Resets the source of the model owned by this view, creating it if necessary.
     /// </summary>
-    public void ResetEngine(IAsyncEnumerable<object> newEngine)
+    public void ResetSource(IAsyncEnumerable<object> source, SimpleWorkType workType)
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
         // Pages configure their source in their constructors, before inheriting UI services
         // from the shell. Create the owned model once those services reach this control.
         if (this.GetUiService<AppSettings>() is null)
         {
-            _pendingEngine = newEngine;
+            _pendingSource = source;
+            _pendingWorkType = workType;
             return;
         }
 
-        _pendingEngine = null;
-        var isNovelEngine = newEngine is IAsyncEnumerable<Mako.Novel>;
+        _pendingSource = null;
+        var isNovel = workType is SimpleWorkType.Novel;
         var viewModel = _ownedViewModel as IWorkViewViewModel;
         switch (viewModel)
         {
-            case NovelViewViewModel when isNovelEngine:
-            case IllustrationViewViewModel when !isNovelEngine:
-                viewModel.ResetEngine(newEngine);
+            case NovelViewViewModel when isNovel:
+            case IllustrationViewViewModel when !isNovel:
+                viewModel.ResetSource(source);
                 break;
             default:
                 var settings = this.GetRequiredUiService<AppSettings>();
                 var blocked = this.GetUiService<IBlockedContentService>();
-                IWorkViewViewModel newViewModel = isNovelEngine
+                IWorkViewViewModel newViewModel = isNovel
                     ? new NovelViewViewModel(settings, blocked)
                     : new IllustrationViewViewModel(settings, blocked);
-                newViewModel.ResetEngine(newEngine);
+                newViewModel.ResetSource(source);
                 SetOwnedViewModel(newViewModel);
                 break;
         }
@@ -193,7 +195,7 @@ public sealed partial class WorkView : UserControl, IDisposable
 
     private void SetOwnedViewModel(ISimpleViewViewModel viewModel)
     {
-        _pendingEngine = null;
+        _pendingSource = null;
         var oldViewModel = _ownedViewModel;
         _ownedViewModel = viewModel;
         DataContext = viewModel;
@@ -234,7 +236,7 @@ public sealed partial class WorkView : UserControl, IDisposable
             return;
 
         _isDisposed = true;
-        _pendingEngine = null;
+        _pendingSource = null;
         WorkListBox.ItemsSource = null;
         var viewModel = _ownedViewModel;
         _ownedViewModel = null;

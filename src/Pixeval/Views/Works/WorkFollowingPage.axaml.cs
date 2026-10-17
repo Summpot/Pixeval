@@ -46,6 +46,6 @@ public partial class WorkFollowingPage : IconContentPage
         var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
         var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>();
         var engine = _client.WorkFollowing(workType, privacy);
-        WorkContainer.ResetEngine(engine);
+        WorkContainer.ResetSource(engine, workType);
     }
 }

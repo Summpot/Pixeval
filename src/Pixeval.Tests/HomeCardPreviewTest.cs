@@ -35,7 +35,7 @@ public sealed class HomeCardPreviewTest
     {
         var engine = new InterruptedUsers();
         var model = new UserViewViewModel();
-        model.ResetEngine(engine);
+        model.ResetSource(engine);
         using var preview = new HomeCardPreviewViewModel(new HomePageCardLayout(),
             _ => Task.FromResult(new HomeCardPreviewSource(model)));
 
@@ -54,7 +54,7 @@ public sealed class HomeCardPreviewTest
         using var preview = new HomeCardPreviewViewModel(new HomePageCardLayout(), _ =>
         {
             var model = new UserViewViewModel();
-            model.ResetEngine(++factories <= 2 ? Fail() : Single(new User { Id = 1 }));
+            model.ResetSource(++factories <= 2 ? Fail() : Single(new User { Id = 1 }));
             return Task.FromResult(new HomeCardPreviewSource(model));
         });
 
@@ -90,7 +90,7 @@ public sealed class HomeCardPreviewTest
     {
         var engine = new InterruptedUsers();
         var model = new UserViewViewModel();
-        model.ResetEngine(engine);
+        model.ResetSource(engine);
         var preview = new HomeCardPreviewViewModel(new HomePageCardLayout(),
             _ => Task.FromResult(new HomeCardPreviewSource(model)));
 
@@ -131,7 +131,7 @@ public sealed class HomeCardPreviewTest
 
     private static async Task AssertPreviewLoadsAsync<T>(EntryViewViewModel<T, T> model, T item) where T : notnull
     {
-        model.ResetEngine(Single(item));
+        model.ResetSource(Single(item));
         using var preview = new HomeCardPreviewViewModel(new HomePageCardLayout(),
             _ => Task.FromResult(new HomeCardPreviewSource(model)));
         var notifications = 0;

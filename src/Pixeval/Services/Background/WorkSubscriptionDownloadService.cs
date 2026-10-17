@@ -148,14 +148,14 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
 
     public void QueueInitialSync(
         WorkSubscriptionRecord subscription,
-        IFetchEngine<IWorkEntry>? sourceEngine = null) =>
+        IAsyncEnumerable<IWorkEntry>? source = null) =>
         QueueSyncSubscription(subscription);
 
     public void QueueSyncCurrentSource(
         long targetId,
         WorkSubscriptionType subscriptionType,
         WorkSubscriptionWorkKind workKind,
-        IFetchEngine<IWorkEntry> engine)
+        IAsyncEnumerable<IWorkEntry> source)
     {
         if (TryGetSubscription(targetId, subscriptionType, workKind) is { } subscription)
             QueueSyncSubscription(subscription);

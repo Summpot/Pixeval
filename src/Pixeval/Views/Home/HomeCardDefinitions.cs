@@ -102,10 +102,10 @@ public sealed class HomeCardDefinitions
                 CreateWorkPreviewSourceFactory(card => card.SimpleWorkType is SimpleWorkType.Novel
                     ? string.IsNullOrWhiteSpace(card.SearchText)
                         ? _makoClient.Computed(AsyncEnumerable.Empty<object>())
-                        : _makoClient.NovelSearch(new NovelSearchArguments(card.SearchText)).AsObjects().ToFetchEngine()
+                        : _makoClient.NovelSearch(new NovelSearchArguments(card.SearchText)).AsObjects()
                     : string.IsNullOrWhiteSpace(card.SearchText)
                         ? _makoClient.Computed(AsyncEnumerable.Empty<object>())
-                        : _makoClient.IllustrationSearch(new IllustrationSearchArguments(card.SearchText)).AsObjects().ToFetchEngine()),
+                        : _makoClient.IllustrationSearch(new IllustrationSearchArguments(card.SearchText)).AsObjects()),
                 OpenWorkSearchPage,
                 card => [GetDescription(card.SimpleWorkType), card.SearchText ?? ""]),
             new(
@@ -210,7 +210,7 @@ public sealed class HomeCardDefinitions
         IWorkViewViewModel viewModel = card.SimpleWorkType is SimpleWorkType.Novel
             ? new NovelViewViewModel(_appSettings, _blockedContent)
             : new IllustrationViewViewModel(_appSettings, _blockedContent);
-        viewModel.ResetEngine(engine.AsObjects());
+        viewModel.ResetSource(engine.AsObjects());
         return new(viewModel, new SingleSeriesOpeningContext(detail, firstWork));
     }
 
@@ -218,7 +218,7 @@ public sealed class HomeCardDefinitions
     {
         var engine = _makoClient.Computed(Single(await _makoClient.GetIllustrationFromIdAsync(card.EntryId)));
         var viewModel = new IllustrationViewViewModel(_appSettings, _blockedContent);
-        viewModel.ResetEngine(engine.AsObjects());
+        viewModel.ResetSource(engine.AsObjects());
         return new(viewModel);
     }
 
@@ -226,7 +226,7 @@ public sealed class HomeCardDefinitions
     {
         var engine = _makoClient.Computed(Single(await _makoClient.GetNovelFromIdAsync(card.EntryId)));
         var viewModel = new NovelViewViewModel(_appSettings, _blockedContent);
-        viewModel.ResetEngine(engine);
+        viewModel.ResetSource(engine);
         return new(viewModel);
     }
 
@@ -242,7 +242,7 @@ public sealed class HomeCardDefinitions
         IWorkViewViewModel viewModel = card.SimpleWorkType is SimpleWorkType.Novel || card.WorkType is WorkType.Novel
             ? new NovelViewViewModel(_appSettings, _blockedContent)
             : new IllustrationViewViewModel(_appSettings, _blockedContent);
-        viewModel.ResetEngine(engine);
+        viewModel.ResetSource(engine);
         return new(viewModel);
     }
 
@@ -252,14 +252,14 @@ public sealed class HomeCardDefinitions
     private UserViewViewModel CreateUserViewModel(IAsyncEnumerable<User> engine)
     {
         var viewModel = new UserViewViewModel(_blockedContent);
-        viewModel.ResetEngine(engine);
+        viewModel.ResetSource(engine);
         return viewModel;
     }
 
     private SpotlightViewViewModel CreateSpotlightViewModel(IAsyncEnumerable<SpotlightArticle> engine)
     {
         var viewModel = new SpotlightViewViewModel(_blockedContent);
-        viewModel.ResetEngine(engine);
+        viewModel.ResetSource(engine);
         return viewModel;
     }
 

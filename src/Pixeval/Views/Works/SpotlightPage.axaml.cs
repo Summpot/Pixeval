@@ -31,9 +31,9 @@ public partial class SpotlightPage : IconContentPage
 
     private void ChangeSource()
     {
-        ResetEngine(_client.Spotlight());
+        ResetSource(_client.Spotlight());
     }
 
-    private void ResetEngine(IAsyncEnumerable<SpotlightArticle> fetchEngine) =>
-        (SpotlightView.DataContext as SpotlightViewViewModel)?.ResetEngine(fetchEngine);
+    private void ResetSource(IAsyncEnumerable<SpotlightArticle> fetchEngine) =>
+        (SpotlightView.DataContext as SpotlightViewViewModel)?.ResetSource(fetchEngine);
 }

@@ -57,14 +57,14 @@ public sealed class HomeCardRenderingTest
             Source.SetImageProvider(window, images);
             try
             {
-                model.ResetEngine(Many(item));
+                model.ResetSource(Many(item));
                 var factories = 0;
                 Task<HomeCardPreviewSource> CreateSourceAsync(HomePageCardLayout _)
                 {
                     if (failInitialPages && ++factories <= 2)
                     {
                         var failed = new UserViewViewModel();
-                        failed.ResetEngine(FailUsers());
+                        failed.ResetSource(FailUsers());
                         return Task.FromResult(new HomeCardPreviewSource(failed));
                     }
                     return Task.FromResult(new HomeCardPreviewSource(model));

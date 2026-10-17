@@ -30,7 +30,7 @@ public partial class SeriesPage : IconContentPage
     private void ChangeSource()
     {
         var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
-        (SeriesView.DataContext as SeriesViewViewModel)?.ResetEngine(
+        (SeriesView.DataContext as SeriesViewViewModel)?.ResetSource(
             _client.WorkSeriesWatchlist(workType is SimpleWorkType.Novel),
             workType);
     }

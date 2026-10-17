@@ -21,7 +21,7 @@ public partial class CommentView : UserControl
     private void CommentItem_OnDeleteButtonClick(CommentRecord comment) =>
         (DataContext as CommentsViewViewModel)?.RemoveComment(comment.Id);
 
-    private void CommentView_OnDataContextChanged(object? sender, EventArgs e) => (DataContext as CommentsViewViewModel)?.RefreshEngine();
+    private void CommentView_OnDataContextChanged(object? sender, EventArgs e) => (DataContext as CommentsViewViewModel)?.RefreshSource();
 
     #region Disposal
 

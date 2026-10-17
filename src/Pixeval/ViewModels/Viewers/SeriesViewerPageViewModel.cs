@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -35,7 +36,7 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
     public partial IWorkEntry? FirstWork { get; private set; }
 
     [ObservableProperty]
-    public partial IFetchEngine<IWorkEntry>? WorksEngine { get; private set; }
+    public partial IAsyncEnumerable<IWorkEntry>? WorksEngine { get; private set; }
 
     [ObservableProperty]
     public partial bool IsWatchlistAdded { get; private set; }
@@ -108,10 +109,7 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
             var (detail, first, engine) = await _makoClient.GetWorkSeriesAsync(WorkType, Id, token);
 
             if (_disposed)
-            {
-                engine.EngineHandle.Cancel();
                 return;
-            }
 
             FirstWork = first;
             SeriesDetail = detail;
@@ -169,9 +167,7 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
         IsLoading = false;
         _loadingCts.Cancel();
         _loadingCts.Dispose();
-        var worksEngine = WorksEngine;
         WorksEngine = null;
-        worksEngine?.EngineHandle.Cancel();
         _worksViewModel?.Dispose();
         _worksViewModel = null;
     }

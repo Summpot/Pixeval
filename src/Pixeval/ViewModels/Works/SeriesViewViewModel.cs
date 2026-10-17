@@ -17,6 +17,6 @@ public sealed class SeriesViewViewModel : EntryViewViewModel<Series, Series>
     {
     }
 
-    public void ResetEngine(IAsyncEnumerable<Series> fetchEngine, SimpleWorkType workType) =>
-        base.ResetEngine(fetchEngine, (series, _) => series with { WorkType = workType });
+    public void ResetSource(IAsyncEnumerable<Series> source, SimpleWorkType workType) =>
+        base.ResetSource(source, (series, _) => series with { WorkType = workType });
 }

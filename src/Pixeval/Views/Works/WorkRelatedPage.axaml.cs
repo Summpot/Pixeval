@@ -109,6 +109,6 @@ public partial class WorkRelatedPage : IconContentPage
         var engine = !IsVisible || _id is 0 || _client is null
             ? (IAsyncEnumerable<object>) AsyncEnumerable.Empty<object>()
             : _client.WorkRelated(_id, _simpleWorkType);
-        WorkContainer.ResetEngine(engine);
+        WorkContainer.ResetSource(engine, _simpleWorkType);
     }
 }

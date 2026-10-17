@@ -122,16 +122,16 @@ public partial class UserFollowingPage : IconContentPage
     {
         if (_userId <= 0)
         {
-            ResetEngine(AsyncEnumerable.Empty<Pixeval.Mako.User>());
+            ResetSource(AsyncEnumerable.Empty<Pixeval.Mako.User>());
             return;
         }
         _client ??= this.GetUiService<MakoClient>();
         if (_sourcePending = _client is null)
             return;
         var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>();
-        ResetEngine(_client!.UserFollowing(_userId, privacy));
+        ResetSource(_client!.UserFollowing(_userId, privacy));
     }
 
-    private void ResetEngine(IAsyncEnumerable<Pixeval.Mako.User> fetchEngine) =>
-        (UserContainer.UserView.DataContext as UserViewViewModel)?.ResetEngine(fetchEngine);
+    private void ResetSource(IAsyncEnumerable<Pixeval.Mako.User> fetchEngine) =>
+        (UserContainer.UserView.DataContext as UserViewViewModel)?.ResetSource(fetchEngine);
 }

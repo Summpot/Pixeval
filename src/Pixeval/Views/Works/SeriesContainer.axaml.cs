@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -58,7 +59,7 @@ public partial class SeriesContainer : UserControl
     public SeriesContainer(
         SimpleWorkType workType,
         long seriesId,
-        IFetchEngine<IWorkEntry> engine,
+        IAsyncEnumerable<IWorkEntry> engine,
         Series seriesDetail,
         IWorkEntry firstWork,
         MakoClient client,
@@ -95,9 +96,9 @@ public partial class SeriesContainer : UserControl
 
     private void ChangeSource() => SetEngine(_client.WorkSeries(_workType, _seriesId));
 
-    private void SetEngine(IFetchEngine<IWorkEntry> engine)
+    private void SetEngine(IAsyncEnumerable<IWorkEntry> engine)
     {
-        WorkContainer.ResetEngine(engine);
+        WorkContainer.ResetSource(engine, _workType);
         _subscriptions.QueueSyncCurrentSource(
             _seriesId,
             WorkSubscriptionType.Series,

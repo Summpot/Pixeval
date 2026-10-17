@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System.Collections.Generic;
 using System.ComponentModel;
 using Avalonia.Interactivity;
 using Pixeval.Pixiv;
@@ -64,7 +65,7 @@ public partial class SeriesViewerPage : IconContentPage
 
     private void SetWorksEngine(
         SeriesViewerPageViewModel viewModel,
-        IFetchEngine<IWorkEntry>? engine)
+        IAsyncEnumerable<IWorkEntry>? engine)
     {
         SeriesContainerHost.Content = engine is not null
                                       && viewModel is { SeriesDetail: { } seriesDetail, FirstWork: { } firstWork }

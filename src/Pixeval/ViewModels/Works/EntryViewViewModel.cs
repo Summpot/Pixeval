@@ -48,7 +48,7 @@ public abstract class EntryViewViewModel<T, TViewModel>
         _source = null;
     }
 
-    public virtual void ResetEngine(IAsyncEnumerable<T>? newEngine, Func<T, int, TViewModel>? factory = null, int itemsPerPage = 20, int itemLimit = -1)
+    public virtual void ResetSource(IAsyncEnumerable<T>? source, Func<T, int, TViewModel>? factory = null, int itemsPerPage = 20, int itemLimit = -1)
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
         _source?.Dispose();
@@ -61,8 +61,8 @@ public abstract class EntryViewViewModel<T, TViewModel>
             return factory is not null ? factory(replaced, index) : (TViewModel) (object) replaced;
         };
 
-        var engine = newEngine ?? EmptyAsyncEnumerable();
-        var incrementalSource = new IncrementalSource<T, TViewModel>(engine, effectiveFactory, itemLimit);
+        var feed = source ?? EmptyAsyncEnumerable();
+        var incrementalSource = new IncrementalSource<T, TViewModel>(feed, effectiveFactory, itemLimit);
         _source = new IncrementalLoadingCollection<TViewModel>(incrementalSource, itemsPerPage);
 
         OnPropertyChanged(nameof(Source));

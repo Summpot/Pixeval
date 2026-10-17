@@ -102,48 +102,8 @@ public class RateLimitEventArgs(DateTimeOffset retryAt) : EventArgs
     public DateTimeOffset RetryAt { get; } = retryAt;
 }
 
-public interface IFetchEngine<out T> : IAsyncEnumerable<T>
-{
-    IFetchEngineHandle EngineHandle { get; }
-}
-
-public interface IFetchEngineHandle
-{
-    void Cancel();
-    bool IsCancelled => false;
-    bool IsCompleted { get => false; set { } }
-}
-
-public sealed class AsyncFetchEngine<T>(IAsyncEnumerable<T> source, Action? onCancel = null) : IFetchEngine<T>
-{
-    public IFetchEngineHandle EngineHandle { get; } = new ActionEngineHandle(onCancel);
-
-    public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
-        => source.GetAsyncEnumerator(cancellationToken);
-}
-
-public sealed class ActionEngineHandle(Action? onCancel) : IFetchEngineHandle
-{
-    private int _cancelled;
-    public bool IsCancelled => _cancelled != 0;
-    public bool IsCompleted { get; set; }
-
-    public void Cancel()
-    {
-        if (Interlocked.Exchange(ref _cancelled, 1) == 0)
-            onCancel?.Invoke();
-    }
-}
-
 public static class FetchEngineExtensions
 {
-    public static IFetchEngine<T> ToFetchEngine<T>(this IAsyncEnumerable<T> source, Action? onCancel = null)
-    {
-        if (source is IFetchEngine<T> existing && onCancel is null)
-            return existing;
-        return new AsyncFetchEngine<T>(source, onCancel ?? (source is IFetchEngine<T> e ? e.EngineHandle.Cancel : null));
-    }
-
     public static IAsyncEnumerable<IWorkEntry> AsWorkEntries<T>(this IAsyncEnumerable<T> source) where T : IWorkEntry
     {
         return System.Linq.AsyncEnumerable.Select(source, static x => (IWorkEntry)x);
@@ -152,15 +112,5 @@ public static class FetchEngineExtensions
     public static IAsyncEnumerable<object> AsObjects<T>(this IAsyncEnumerable<T> source)
     {
         return System.Linq.AsyncEnumerable.Select(source, static x => (object)x!);
-    }
-
-    public static IFetchEngine<IWorkEntry> AsWorkEntries<T>(this IFetchEngine<T> source) where T : IWorkEntry
-    {
-        return new AsyncFetchEngine<IWorkEntry>(System.Linq.AsyncEnumerable.Select(source, static x => (IWorkEntry)x), () => source.EngineHandle.Cancel());
-    }
-
-    public static IFetchEngine<object> AsObjects<T>(this IFetchEngine<T> source)
-    {
-        return new AsyncFetchEngine<object>(System.Linq.AsyncEnumerable.Select(source, static x => (object)x!), () => source.EngineHandle.Cancel());
     }
 }

@@ -81,12 +81,12 @@ public abstract partial class WorkTypeWorksPage : IconContentPage
         if (_sourcePending = !EnsureServices())
             return;
         var workType = WorkTypeComboBox.GetSelectedValue<WorkType>();
-        var engine = GetFetchEngine(_client!, workType);
-        WorkContainer.ResetEngine(engine);
+        var engine = GetSource(_client!, workType);
+        WorkContainer.ResetSource(engine, workType is WorkType.Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration);
         OnSourceChanged(engine, workType);
     }
 
-    protected abstract IAsyncEnumerable<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType);
+    protected abstract IAsyncEnumerable<IWorkEntry> GetSource(MakoClient makoClient, WorkType workType);
 
     protected virtual void OnSourceChanged(IAsyncEnumerable<IWorkEntry> engine, WorkType workType)
     {
@@ -141,7 +141,7 @@ public class WorkRecommendedPage : WorkTypeWorksPage
         InitializeSource(workType, viewModel);
     }
 
-    protected override IAsyncEnumerable<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType)
+    protected override IAsyncEnumerable<IWorkEntry> GetSource(MakoClient makoClient, WorkType workType)
     {
         return workType switch
         {
@@ -169,7 +169,7 @@ public class WorkNewPage : WorkTypeWorksPage
         InitializeSource(workType, viewModel);
     }
 
-    protected override IAsyncEnumerable<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType)
+    protected override IAsyncEnumerable<IWorkEntry> GetSource(MakoClient makoClient, WorkType workType)
     {
         return workType is WorkType.Novel
             ? makoClient.NovelNew(null).AsWorkEntries()
@@ -252,7 +252,7 @@ public class WorkPostsPage : WorkTypeWorksPage
         ChangeSource();
     }
 
-    protected override IAsyncEnumerable<IWorkEntry> GetFetchEngine(MakoClient makoClient, WorkType workType)
+    protected override IAsyncEnumerable<IWorkEntry> GetSource(MakoClient makoClient, WorkType workType)
     {
         if (_user.Id <= 0)
             return AsyncEnumerable.Empty<IWorkEntry>();
@@ -275,7 +275,7 @@ public class WorkPostsPage : WorkTypeWorksPage
             _user.Id,
             WorkSubscriptionType.Posts,
             workKind,
-            engine.ToFetchEngine());
+            engine);
         UpdateSubscriptionButtons(_user.Id, WorkSubscriptionType.Posts, workKind);
     }
 

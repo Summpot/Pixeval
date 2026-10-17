@@ -27,7 +27,7 @@ public sealed class WorkViewOwnershipTest
         await RunAsync(() =>
         {
             using var view = new WorkView();
-            view.ResetEngine(AsyncEnumerable.Empty<object>());
+            view.ResetSource(AsyncEnumerable.Empty<object>(), SimpleWorkType.Illustration);
             Assert.IsNull(view.DataContext);
 
             var parent = new Border { Child = view };
@@ -42,7 +42,7 @@ public sealed class WorkViewOwnershipTest
         await RunAsync(() =>
         {
             using var view = new WorkView();
-            view.ResetEngine(AsyncEnumerable.Empty<object>());
+            view.ResetSource(AsyncEnumerable.Empty<object>(), SimpleWorkType.Illustration);
             var model = new IllustrationViewViewModel(new AppSettings());
             view.SetViewModel(model);
             var parent = new Border { Child = view };
@@ -65,7 +65,7 @@ public sealed class WorkViewOwnershipTest
             Assert.AreSame(parentModel, view.DataContext);
 
             if (incremental)
-                view.ResetEngine(AsyncEnumerable.Empty<object>());
+                view.ResetSource(AsyncEnumerable.Empty<object>(), SimpleWorkType.Illustration);
             else
                 view.SetSource([], SimpleWorkType.Illustration);
 
@@ -86,16 +86,16 @@ public sealed class WorkViewOwnershipTest
             var first = new IllustrationViewViewModel(settings);
             view.SetViewModel(first);
             view.SetViewModel(first);
-            first.ResetEngine(AsyncEnumerable.Empty<object>());
+            first.ResetSource(AsyncEnumerable.Empty<object>());
 
             var second = new IllustrationViewViewModel(settings);
             view.SetViewModel(second);
-            Assert.ThrowsExactly<ObjectDisposedException>(() => first.ResetEngine(AsyncEnumerable.Empty<object>()));
-            second.ResetEngine(AsyncEnumerable.Empty<object>());
+            Assert.ThrowsExactly<ObjectDisposedException>(() => first.ResetSource(AsyncEnumerable.Empty<object>()));
+            second.ResetSource(AsyncEnumerable.Empty<object>());
 
             view.Dispose();
             view.Dispose();
-            Assert.ThrowsExactly<ObjectDisposedException>(() => second.ResetEngine(AsyncEnumerable.Empty<object>()));
+            Assert.ThrowsExactly<ObjectDisposedException>(() => second.ResetSource(AsyncEnumerable.Empty<object>()));
         });
     }
 

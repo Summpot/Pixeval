@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Pixeval.Mako;
 
 namespace Pixeval.Services.Network;
 
@@ -63,8 +64,7 @@ public static class FetchEngineRetryHelper
 
         if (token.IsCancellationRequested)
         {
-            if (cancelEngineOnCancellation && engine is IFetchEngine<TResult> fetchEngine)
-                fetchEngine.EngineHandle.Cancel();
+            TryCancel(engine, cancelEngineOnCancellation);
             token.ThrowIfCancellationRequested();
         }
 
@@ -74,8 +74,7 @@ public static class FetchEngineRetryHelper
         {
             if (token.IsCancellationRequested)
             {
-                if (cancelEngineOnCancellation && engine is IFetchEngine<TResult> fetchEngine)
-                    fetchEngine.EngineHandle.Cancel();
+                TryCancel(engine, cancelEngineOnCancellation);
                 token.ThrowIfCancellationRequested();
             }
 
@@ -93,8 +92,7 @@ public static class FetchEngineRetryHelper
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
-                if (cancelEngineOnCancellation && engine is IFetchEngine<TResult> fetchEngine)
-                    fetchEngine.EngineHandle.Cancel();
+                TryCancel(engine, cancelEngineOnCancellation);
                 throw;
             }
 
@@ -105,11 +103,15 @@ public static class FetchEngineRetryHelper
             }
             else
             {
-                if (engine is IFetchEngine<TResult> fetchEngine)
-                    fetchEngine.EngineHandle.IsCompleted = true;
                 yield break;
             }
         }
+    }
+
+    private static void TryCancel<TResult>(IAsyncEnumerable<TResult> engine, bool cancelEngineOnCancellation)
+    {
+        if (cancelEngineOnCancellation && engine is IPageFeed<TResult> feed)
+            feed.Cancel();
     }
 
     private static TimeSpan GetRetryDelay(int retryCount) =>

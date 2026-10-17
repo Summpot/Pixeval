@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Pixeval.Localization;
+using Pixeval.Pixiv;
 using Pixeval.SauceNao;
 using Pixeval.Utilities;
 using Pixeval.Views.Viewers;
@@ -25,7 +26,7 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage
     public async Task PostAsync(string apiKey, ReadOnlyMemory<byte> file)
     {
         var results = GetResults(apiKey, file);
-        WorkContainer.ResetEngine(results);
+        WorkContainer.ResetSource(results, SimpleWorkType.Illustration);
     }
 
     public async IAsyncEnumerable<object> GetResults(string apiKey, ReadOnlyMemory<byte> file)

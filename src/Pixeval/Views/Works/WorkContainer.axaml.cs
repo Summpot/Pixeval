@@ -166,7 +166,8 @@ public partial class WorkContainer : UserControl
     private FilterAnalysisResult AnalyzeFilter(string? text, int caret) =>
         FilterCoordinator.AnalyzeFilter(DataContext as IOperableViewViewModel, text, caret);
 
-    public void ResetEngine(IAsyncEnumerable<object> newEngine) => WorkView.ResetEngine(newEngine);
+    public void ResetSource(IAsyncEnumerable<object> source, SimpleWorkType workType) =>
+        WorkView.ResetSource(source, workType);
 
     public void SetViewModel(IWorkViewViewModel viewModel) => WorkView.SetViewModel(viewModel);
 

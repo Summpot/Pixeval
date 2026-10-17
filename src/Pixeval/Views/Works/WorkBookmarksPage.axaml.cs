@@ -227,7 +227,7 @@ public partial class WorkBookmarksPage : IconContentPage
     {
         if (_user.Id <= 0)
         {
-            WorkContainer.ResetEngine(AsyncEnumerable.Empty<object>());
+            WorkContainer.ResetSource(AsyncEnumerable.Empty<object>(), SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>());
             UpdateSubscriptionButtons();
             return;
         }
@@ -238,13 +238,12 @@ public partial class WorkBookmarksPage : IconContentPage
         var workEntries = workType is SimpleWorkType.Novel
             ? _client!.NovelBookmarks(_user.Id, privacy, tag).AsWorkEntries()
             : _client!.WorkBookmarks(_user.Id, privacy, tag).AsWorkEntries();
-        var engine = workEntries.ToFetchEngine();
-        WorkContainer.ResetEngine(engine.AsObjects());
+        WorkContainer.ResetSource(workEntries, workType);
         _subscriptions!.QueueSyncCurrentSource(
             _user.Id,
             WorkSubscriptionType.Bookmarks,
             GetSubscriptionWorkKind(),
-            engine);
+            workEntries);
         UpdateSubscriptionButtons();
     }
 

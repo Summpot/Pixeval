@@ -123,19 +123,21 @@ public partial class WorkSearchResultPage : IconContentPage
 
     private void ChangeSource()
     {
-        IAsyncEnumerable<object> engine = (_illustrationArguments, _novelArguments) switch
+        var workType = (_illustrationArguments, _novelArguments) switch
         {
-            (null, null) => this.GetRequiredUiService<MakoClient>().Computed(AsyncEnumerable.Empty<object>()),
-            (_, null) => this.GetRequiredUiService<MakoClient>().IllustrationSearch(_illustrationArguments!).AsObjects(),
-            (null, _) => this.GetRequiredUiService<MakoClient>().NovelSearch(_novelArguments!).AsObjects(),
-            _ => SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>() switch
-            {
-                SimpleWorkType.Novel => this.GetRequiredUiService<MakoClient>().NovelSearch(_novelArguments!).AsObjects(),
-                _ => this.GetRequiredUiService<MakoClient>().IllustrationSearch(_illustrationArguments!).AsObjects(),
-            }
+            (_, null) => SimpleWorkType.Illustration,
+            (null, _) => SimpleWorkType.Novel,
+            _ => SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>()
         };
+        IAsyncEnumerable<object> engine = workType is SimpleWorkType.Novel
+            ? _novelArguments is null
+                ? this.GetRequiredUiService<MakoClient>().Computed(AsyncEnumerable.Empty<object>())
+                : this.GetRequiredUiService<MakoClient>().NovelSearch(_novelArguments).AsObjects()
+            : _illustrationArguments is null
+                ? this.GetRequiredUiService<MakoClient>().Computed(AsyncEnumerable.Empty<object>())
+                : this.GetRequiredUiService<MakoClient>().IllustrationSearch(_illustrationArguments).AsObjects();
 
-        WorkContainer.ResetEngine(engine);
+        WorkContainer.ResetSource(engine, workType);
     }
 
     private readonly IllustrationSearchArguments? _illustrationArguments;

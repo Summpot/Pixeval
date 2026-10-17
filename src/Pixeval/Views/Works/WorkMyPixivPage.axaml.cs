@@ -45,6 +45,6 @@ public partial class WorkMyPixivPage : IconContentPage
     {
         var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
         var engine = _client.WorkMyPixiv(workType);
-        WorkContainer.ResetEngine(engine);
+        WorkContainer.ResetSource(engine, workType);
     }
 }

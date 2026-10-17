@@ -259,11 +259,11 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
     public void QueueWorkSubscriptionSync(WorkSubscriptionRecord subscription) =>
         AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().QueueSyncSubscription(subscription);
 
-    public void QueueWorkSubscriptionInitialSync(WorkSubscriptionRecord subscription, IFetchEngine<IWorkEntry>? sourceEngine = null) =>
-        AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().QueueInitialSync(subscription, sourceEngine);
+    public void QueueWorkSubscriptionInitialSync(WorkSubscriptionRecord subscription, IAsyncEnumerable<IWorkEntry>? source = null) =>
+        AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().QueueInitialSync(subscription, source);
 
-    public void QueueWorkSubscriptionSyncCurrentSource(long uid, WorkSubscriptionType subscriptionType, WorkSubscriptionWorkKind workKind, IFetchEngine<IWorkEntry> engine) =>
-        AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().QueueSyncCurrentSource(uid, subscriptionType, workKind, engine);
+    public void QueueWorkSubscriptionSyncCurrentSource(long uid, WorkSubscriptionType subscriptionType, WorkSubscriptionWorkKind workKind, IAsyncEnumerable<IWorkEntry> source) =>
+        AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().QueueSyncCurrentSource(uid, subscriptionType, workKind, source);
 
     public void SetNameResolvers() => NetworkRuntime.AttachNameResolverHooks();
 

@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Pixeval.Common.Collections;
 using Pixeval.Mako;
-using Pixeval.Pixiv;
 
 namespace Pixeval.ViewModels.Works;
 
@@ -194,10 +193,7 @@ public class IncrementalSource<T, TViewModel> : IIncrementalSource<TViewModel>, 
         }
 
         _lifetimeCts.Cancel();
-        if (_pageFeed is { } feed)
-            feed.Cancel();
-        else if (_asyncEnumerable is IFetchEngine<T> { EngineHandle: { } engineHandle })
-            engineHandle.Cancel();
+        _pageFeed?.Cancel();
 
         if (disposeResources)
             DisposeResources();

@@ -105,11 +105,11 @@ public class CommentsViewViewModel : EntryViewViewModel<CommentRecord, CommentRe
         }
     }
 
-    public void RefreshEngine()
+    public void RefreshSource()
     {
         var engine = ReplyToCommentId is long commentId
             ? _makoClient.WorkCommentReplies(ParentType, commentId)
             : _makoClient.WorkComments(ParentType, ParentId);
-        ResetEngine(engine);
+        ResetSource(engine);
     }
 }
