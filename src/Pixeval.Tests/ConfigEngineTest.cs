@@ -14,8 +14,6 @@ public sealed class ConfigEngineTest
     [TestMethod]
     public void MigrateYamlShouldNestLegacyFlatKeys()
     {
-        using var engine = new ConfigEngine();
-
         const string legacyYaml = """
             ApplicationSettings:
               LimitFileCacheSize: true
@@ -30,7 +28,7 @@ public sealed class ConfigEngineTest
               Proxy: http://127.0.0.1:7890
             """;
 
-        var migrated = engine.MigrateYaml(legacyYaml);
+        var migrated = PixevalConfigMethods.MigrateYaml(legacyYaml);
 
         Assert.IsTrue(migrated.Contains("FileCache:"), "Should contain FileCache group");
         Assert.IsTrue(migrated.Contains("HomePage:"), "Should contain HomePage group");
@@ -43,14 +41,12 @@ public sealed class ConfigEngineTest
     [TestMethod]
     public void ValidateAndNormalizeYamlShouldSucceedForValidYaml()
     {
-        using var engine = new ConfigEngine();
-
         const string yaml = """
             Theme: 1
             Language: zh-CN
             """;
 
-        var normalized = engine.ValidateAndNormalizeYaml(yaml);
+        var normalized = PixevalConfigMethods.ValidateAndNormalizeYaml(yaml);
         Assert.IsTrue(normalized.Contains("Theme: 1"));
         Assert.IsTrue(normalized.Contains("Language: zh-CN"));
     }
@@ -58,7 +54,6 @@ public sealed class ConfigEngineTest
     [TestMethod]
     public void SaveAndLoadFromFileShouldPersistAtomically()
     {
-        using var engine = new ConfigEngine();
         var tempFile = Path.Combine(Path.GetTempPath(), "pixeval_test_config_" + Guid.NewGuid().ToString("N") + ".yaml");
 
         try
@@ -68,10 +63,10 @@ public sealed class ConfigEngineTest
                 StoragePath: D:\PixevalData
                 """;
 
-            engine.SaveToFile(tempFile, content);
+            PixevalConfigMethods.SaveToFile(tempFile, content);
             Assert.IsTrue(File.Exists(tempFile));
 
-            var loaded = engine.LoadFromFile(tempFile);
+            var loaded = PixevalConfigMethods.LoadFromFile(tempFile);
             Assert.AreEqual(content.Trim().Replace("\r\n", "\n"), loaded.Trim().Replace("\r\n", "\n"));
 
             // Overwrite atomically
@@ -80,8 +75,8 @@ public sealed class ConfigEngineTest
                 StoragePath: D:\PixevalData\Updated
                 """;
 
-            engine.SaveToFile(tempFile, updated);
-            var loadedUpdated = engine.LoadFromFile(tempFile);
+            PixevalConfigMethods.SaveToFile(tempFile, updated);
+            var loadedUpdated = PixevalConfigMethods.LoadFromFile(tempFile);
             Assert.AreEqual(updated.Trim().Replace("\r\n", "\n"), loadedUpdated.Trim().Replace("\r\n", "\n"));
         }
         finally

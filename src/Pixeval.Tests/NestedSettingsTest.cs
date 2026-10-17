@@ -156,10 +156,9 @@ public sealed class NestedSettingsTest
         settings.NetworkSettings.ProxySettings.Proxy = "http://localhost:1234";
         settings.NetworkSettings.ProxySettings.ProxyType = ProxyType.Custom;
 
-        var engine = new ConfigEngine();
         var json = JsonSerializer.Serialize(settings, SettingsSerializerContext.Default.AppSettings);
-        var yaml = engine.JsonToYaml(json);
-        var backJson = engine.YamlToJson(yaml);
+        var yaml = PixevalConfigMethods.JsonToYaml(json);
+        var backJson = PixevalConfigMethods.YamlToJson(yaml);
         var restored = JsonSerializer.Deserialize(backJson, SettingsSerializerContext.Default.AppSettings)!;
 
         Assert.AreEqual(settings.ApplicationSettings.FileCache, restored.ApplicationSettings.FileCache);

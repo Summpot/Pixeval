@@ -19,9 +19,7 @@ public sealed class HomeCardDefinition(
     Action<HomePageCardLayout, HomeCardPreviewSource> pageOpener,
     Func<HomePageCardLayout, IReadOnlyList<string>>? titleParameterFactory = null)
 {
-    private static readonly ConfigEngine ConfigEngine = new();
-
-    private readonly HomeCardMetadata _metadata = ConfigEngine.GetCardMetadata(sourceKind);
+    private readonly HomeCardMetadata _metadata = PixevalConfigMethods.GetCardMetadata(sourceKind);
 
     public HomePageCardSourceKind SourceKind { get; } = sourceKind;
 

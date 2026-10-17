@@ -97,7 +97,7 @@ public sealed class LegacyAppSettingsMigrationTest
         Assert.AreEqual("http://localhost:4321", settings.NetworkSettings.ProxySettings.Proxy);
 
         var saved = Save(settings);
-        var savedJson = Engine.YamlToJson(saved);
+        var savedJson = PixevalConfigMethods.YamlToJson(saved);
         var root = JsonNode.Parse(savedJson)!.AsObject();
         Assert.IsFalse(root["NetworkSettings"]!.AsObject().ContainsKey("Proxy"));
         Assert.IsFalse(root["ApplicationSettings"]!.AsObject().ContainsKey("LimitFileCacheSize"));
@@ -135,18 +135,16 @@ public sealed class LegacyAppSettingsMigrationTest
         Assert.AreEqual(new RankOptionsSettings(), settings.SearchSettings.RankOptions);
     }
 
-    private static readonly ConfigEngine Engine = new();
-
     private static AppSettings Read(string yaml)
     {
-        var migratedYaml = Engine.MigrateYaml(yaml);
-        var json = Engine.YamlToJson(migratedYaml);
+        var migratedYaml = PixevalConfigMethods.MigrateYaml(yaml);
+        var json = PixevalConfigMethods.YamlToJson(migratedYaml);
         return JsonSerializer.Deserialize(json, SettingsSerializerContext.Default.AppSettings)!;
     }
 
     private static string Save(AppSettings settings)
     {
         var json = JsonSerializer.Serialize(settings, SettingsSerializerContext.Default.AppSettings);
-        return Engine.JsonToYaml(json);
+        return PixevalConfigMethods.JsonToYaml(json);
     }
 }

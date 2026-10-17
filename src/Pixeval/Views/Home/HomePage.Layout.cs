@@ -195,7 +195,7 @@ public sealed partial class HomePage
         out int row)
     {
         var boundsList = _cards.Select(HomeCardBounds.From).ToList();
-        var placement = new ConfigEngine().LayoutTryFindBestFittingFreePosition(
+        var placement = PixevalConfigMethods.LayoutTryFindBestFittingFreePosition(
             boundsList,
             preferredColumnSpan,
             preferredRowSpan,
@@ -217,24 +217,24 @@ public sealed partial class HomePage
     }
 
     private bool TryFindFreePosition(int columnSpan, int rowSpan, IReadOnlyCollection<HomePageCardLayout> occupiedCards, out int column, out int row)
-        => HomeCardLayoutEngine.TryFindFreePosition(occupiedCards, columnSpan, rowSpan, RowCount, ColumnCount, out column, out row);
+        => HomeCardLayout.TryFindFreePosition(occupiedCards, columnSpan, rowSpan, RowCount, ColumnCount, out column, out row);
 
     private bool CanPlace(HomePageCardLayout? movingCard, int column, int row, int columnSpan, int rowSpan)
-        => HomeCardLayoutEngine.CanPlace(_cards, movingCard, new(column, row, columnSpan, rowSpan), RowCount, ColumnCount);
+        => HomeCardLayout.CanPlace(_cards, movingCard, new(column, row, columnSpan, rowSpan), RowCount, ColumnCount);
 
     private bool CanPlace(HomePageCardLayout movingCard, HomeCardBounds bounds) =>
         CanPlace(movingCard, bounds.Column, bounds.Row, bounds.ColumnSpan, bounds.RowSpan);
 
     private bool CanResizeGrid(int rowCount, int columnCount) =>
-        HomeCardLayoutEngine.CanResizeGrid(_cards, rowCount, columnCount);
+        HomeCardLayout.CanResizeGrid(_cards, rowCount, columnCount);
 
     private bool CanPlace(IReadOnlyCollection<HomePageCardLayout> occupiedCards, int column, int row, int columnSpan, int rowSpan)
-        => HomeCardLayoutEngine.CanPlace(occupiedCards, null, new(column, row, columnSpan, rowSpan), RowCount, ColumnCount);
+        => HomeCardLayout.CanPlace(occupiedCards, null, new(column, row, columnSpan, rowSpan), RowCount, ColumnCount);
 
     private bool ClampCard(HomePageCardLayout card)
     {
         var oldBounds = HomeCardBounds.From(card);
-        var newBounds = HomeCardLayoutEngine.Clamp(oldBounds, RowCount, ColumnCount);
+        var newBounds = HomeCardLayout.Clamp(oldBounds, RowCount, ColumnCount);
         if (oldBounds != newBounds)
         {
             var idx = _cards.IndexOf(card);
@@ -251,7 +251,7 @@ public sealed partial class HomePage
     private void NormalizeCards()
     {
         var boundsList = _cards.Select(HomeCardBounds.From).ToList();
-        var result = new ConfigEngine().LayoutNormalizeCards(boundsList, RowCount, ColumnCount);
+        var result = PixevalConfigMethods.LayoutNormalizeCards(boundsList, RowCount, ColumnCount);
 
         if (!result.Changed)
             return;

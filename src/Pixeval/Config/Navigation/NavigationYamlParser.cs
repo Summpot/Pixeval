@@ -14,15 +14,13 @@ namespace Pixeval.Config;
 
 public static class NavigationYamlParser
 {
-    private static readonly ConfigEngine Engine = new();
-
     public static NavigationParseResult Parse(string? yaml)
     {
         var text = string.IsNullOrWhiteSpace(yaml) ? NavigationMenuYaml.DefaultYaml : yaml;
         var knownPages = NavigationPageRegistry.PagesByKey.Keys.ToList();
         var knownIcons = Enum.GetNames<Symbol>().ToList();
 
-        var rawResult = Engine.ParseNavigationYaml(text, knownPages, knownIcons, null);
+        var rawResult = PixevalConfigMethods.ParseNavigationYaml(text, knownPages, knownIcons, null);
 
         var diagnostics = rawResult.Diagnostics
             .Select(static d => d with { Message = FormatDiagnosticMessage(d) })

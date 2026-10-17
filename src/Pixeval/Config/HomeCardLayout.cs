@@ -4,14 +4,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Pixeval.Config;
 
 namespace Pixeval.Config;
 
-public static class HomeCardLayoutEngine
+public static class HomeCardLayout
 {
-    private static readonly ConfigEngine Engine = new();
-
     public static bool CanPlace(
         IReadOnlyCollection<HomePageCardLayout> cards,
         HomePageCardLayout? movingCard,
@@ -30,7 +27,7 @@ public static class HomeCardLayoutEngine
             i++;
         }
 
-        return Engine.LayoutCanPlace(
+        return PixevalConfigMethods.LayoutCanPlace(
             boundsList,
             movingIndex >= 0 ? (uint)movingIndex : null,
             bounds,
@@ -48,7 +45,7 @@ public static class HomeCardLayoutEngine
         out int row)
     {
         var boundsList = cards.Select(HomeCardBounds.From).ToList();
-        var pos = Engine.LayoutTryFindFreePosition(boundsList, columnSpan, rowSpan, rowCount, columnCount);
+        var pos = PixevalConfigMethods.LayoutTryFindFreePosition(boundsList, columnSpan, rowSpan, rowCount, columnCount);
         if (pos is { } p)
         {
             column = p.Column;
@@ -64,15 +61,9 @@ public static class HomeCardLayoutEngine
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(rowCount, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(columnCount, 1);
-        return Engine.LayoutClamp(bounds, rowCount, columnCount);
+        return PixevalConfigMethods.LayoutClamp(bounds, rowCount, columnCount);
     }
 
     public static bool CanResizeGrid(IReadOnlyCollection<HomePageCardLayout> cards, int rowCount, int columnCount) =>
-        Engine.LayoutCanResizeGrid(cards.Select(HomeCardBounds.From).ToList(), rowCount, columnCount);
-
-    public static bool IsWithinGrid(HomeCardBounds bounds, int rowCount, int columnCount) =>
-        Engine.LayoutIsWithinGrid(bounds, rowCount, columnCount);
-
-    public static bool Overlaps(HomeCardBounds first, HomeCardBounds second) =>
-        Engine.LayoutOverlaps(first, second);
+        PixevalConfigMethods.LayoutCanResizeGrid(cards.Select(HomeCardBounds.From).ToList(), rowCount, columnCount);
 }

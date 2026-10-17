@@ -359,7 +359,7 @@ public partial class SettingsPageViewModel : ViewModelBase
                 return;
             await using var stream = await file.OpenWriteAsync();
             var json = JsonSerializer.Serialize(_appSettings, SettingsSerializerContext.Default.AppSettings);
-            var yaml = new ConfigEngine().JsonToYaml(json);
+            var yaml = PixevalConfigMethods.JsonToYaml(json);
             await using var writer = new StreamWriter(stream);
             await writer.WriteAsync(yaml);
 
@@ -386,8 +386,7 @@ public partial class SettingsPageViewModel : ViewModelBase
             await using var stream = await file.OpenReadAsync();
             using var reader = new StreamReader(stream);
             var rawYaml = await reader.ReadToEndAsync();
-            var engine = new ConfigEngine();
-            var json = engine.YamlToJson(engine.MigrateYaml(rawYaml));
+            var json = PixevalConfigMethods.YamlToJson(PixevalConfigMethods.MigrateYaml(rawYaml));
 
             if (JsonSerializer.Deserialize(json, SettingsSerializerContext.Default.AppSettings) is { } appSettings)
             {
