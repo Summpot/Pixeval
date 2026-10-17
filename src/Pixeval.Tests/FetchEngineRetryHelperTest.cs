@@ -69,7 +69,7 @@ public sealed class FetchEngineRetryHelperTest
 
     private sealed class InterruptingFetchEngine : IFetchEngine<int>
     {
-        public IFetchEngineHandle EngineHandle { get; } = new DummyEngineHandle();
+        public IFetchEngineHandle EngineHandle { get; } = new ActionEngineHandle(null);
 
         public int EnumeratorCount { get; private set; }
 

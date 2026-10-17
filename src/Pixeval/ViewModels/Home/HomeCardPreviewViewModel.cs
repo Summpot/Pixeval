@@ -91,7 +91,17 @@ public sealed partial class HomeCardPreviewViewModel(
                     oldSource?.Dispose();
 
                 await LoadInitialItemsAsync();
-                if (attempt is not 0 || Items.Count is not 0 || Items is not IIncrementalLoading { LoadError: not null })
+                if (attempt is not 0 || Items.Count is not 0)
+                    break;
+
+                if (Items is IIncrementalLoading { IsInterrupted: true, HasMoreItems: true })
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1), _loadingCts.Token);
+                    await LoadInitialItemsAsync();
+                    break;
+                }
+
+                if (Items is not IIncrementalLoading { LoadError: not null })
                     break;
 
                 // An iterator that threw may be permanently closed. Retry with a fresh source.
@@ -121,11 +131,6 @@ public sealed partial class HomeCardPreviewViewModel(
             return;
 
         await incremental.LoadMoreItemsAsync(0, _loadingCts.Token);
-        if (!_isDisposed && Items.Count is 0 && incremental.LoadError is null && incremental.IsInterrupted)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(1), _loadingCts.Token);
-            await incremental.LoadMoreItemsAsync(0, _loadingCts.Token);
-        }
     }
 
     private void AttachItems()

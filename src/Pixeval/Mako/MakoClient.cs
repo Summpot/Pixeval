@@ -253,26 +253,20 @@ public partial class MakoClient
             ? NovelRelated(id).AsObjects()
             : WorkRelated(id).AsObjects()).ToFetchEngine();
 
-    public IFetchEngine<User> UserFollowing(long userId, PrivacyPolicy privacy)
+    public UserFetchEngine UserFollowing(long userId, PrivacyPolicy privacy)
     {
         var restrict = privacy is PrivacyPolicy.Private ? "private" : "public";
-        return UserFollowing(userId, restrict).ToFetchEngine();
+        return UserFollowing(userId, restrict);
     }
 
-    public IFetchEngine<User> UserMyPixiv(long userId) =>
-        UserMypixiv(userId).ToFetchEngine();
+    public UserFetchEngine UserMyPixiv(long userId) =>
+        UserMypixiv(userId);
 
-    public IAsyncEnumerable<CommentRecord> WorkComments(SimpleWorkType type, long id) =>
-        EnumerateCommentsAsync(WorkComments(type is SimpleWorkType.Novel, id));
+    public CommentFetchEngine WorkComments(SimpleWorkType type, long id) =>
+        WorkComments(type is SimpleWorkType.Novel, id);
 
-    public IAsyncEnumerable<CommentRecord> WorkCommentReplies(SimpleWorkType type, long id) =>
-        EnumerateCommentsAsync(WorkCommentReplies(type is SimpleWorkType.Novel, id));
-
-    private static async IAsyncEnumerable<CommentRecord> EnumerateCommentsAsync(CommentFetchEngine engine)
-    {
-        while (await engine.NextAsync() is { } item)
-            yield return item;
-    }
+    public CommentFetchEngine WorkCommentReplies(SimpleWorkType type, long id) =>
+        WorkCommentReplies(type is SimpleWorkType.Novel, id);
 
     public Task<CommentRecord> AddWorkCommentAsync(SimpleWorkType type, long parentId, string content) =>
         AddWorkCommentUnifiedAsync(type is SimpleWorkType.Novel, parentId, content, null, null);
@@ -322,11 +316,8 @@ public partial class MakoClient
     public IAsyncEnumerable<Series> WorkSeriesWatchlist(SimpleWorkType type) =>
         WorkSeriesWatchlist(type is SimpleWorkType.Novel);
 
-    public IFetchEngine<SpotlightArticle> Spotlight(string category = "all")
-    {
-        var engine = SpotlightArticles(category);
-        return engine.ToFetchEngine(engine.Cancel);
-    }
+    public SpotlightFetchEngine Spotlight(string category = "all") =>
+        SpotlightArticles(category);
 
     public IFetchEngine<T> Computed<T>(IAsyncEnumerable<T> source) =>
         source.ToFetchEngine();

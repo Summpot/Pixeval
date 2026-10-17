@@ -2,14 +2,15 @@
 // Licensed under the GPL-3.0 License.
 
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Pixeval.Common.Collections;
 using Pixeval.Config;
 using Pixeval.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.Services.Network;
 using Pixeval.Mako;
+using Pixeval.ViewModels.Works;
 
 namespace Pixeval.Tests;
 
@@ -17,21 +18,22 @@ namespace Pixeval.Tests;
 public sealed class MakoClientTest
 {
     [TestMethod]
-    public async Task UserFetchAdapterReportsFailureInsteadOfCompletingAnEmptyPage()
+    public async Task UserFeedNextPageReportsFailureInsteadOfCompletingAnEmptyPage()
     {
         using var client = CreateTestClient(new PixivDomainFrontingSettings());
         using var native = client.UserRecommended();
-        var engine = native.ToFetchEngine();
-        await using var enumerator = engine.GetAsyncEnumerator();
+        using var source = new IncrementalSource<User, User>(native, static (user, _) => user);
+        using var collection = new IncrementalLoadingCollection<User>(source);
 
         // No refresh token: fail deterministically without sending a network request.
-        await Assert.ThrowsExactlyAsync<HttpRequestException>(async () => await enumerator.MoveNextAsync());
-
-        Assert.IsFalse(engine.EngineHandle.IsCompleted);
+        Assert.AreEqual(0, await collection.LoadMoreItemsAsync(0));
+        Assert.IsInstanceOfType<MakoError>(collection.LoadError);
+        Assert.IsTrue(source.IsInterrupted);
+        Assert.IsTrue(collection.HasMoreItems);
+        Assert.IsFalse(native.IsCompleted());
         Assert.IsNotNull(native.LastError());
-        engine.EngineHandle.Cancel();
-        Assert.IsTrue(engine.EngineHandle.IsCancelled);
-        Assert.IsFalse(await enumerator.MoveNextAsync());
+        native.Cancel();
+        await Assert.ThrowsExactlyAsync<MakoError.InvalidParameter>(async () => await native.NextPageAsync());
     }
 
     private static MakoClient CreateTestClient(PixivDomainFrontingSettings settings)
@@ -245,7 +247,8 @@ public sealed class MakoClientTest
         using var client = CreateTestClient(settings);
 
         var spotlightStream = client.Spotlight("all");
-        Assert.IsInstanceOfType<Pixeval.Pixiv.IFetchEngine<SpotlightArticle>>(spotlightStream);
+        Assert.IsInstanceOfType<SpotlightFetchEngine>(spotlightStream);
+        Assert.IsInstanceOfType<IPageFeed<SpotlightArticle>>(spotlightStream);
 
         // Verify native SpotlightArticle extensions
         var article = new SpotlightArticle(

@@ -110,13 +110,13 @@ public sealed class HomeCardDefinitions
                 card => [GetDescription(card.SimpleWorkType), card.SearchText ?? ""]),
             new(
                 HomePageCardSourceKind.UserRecommended,
-                CreateUserPreviewSourceFactory(_ => _makoClient.UserRecommended().ToFetchEngine()),
+                CreateUserPreviewSourceFactory(_ => _makoClient.UserRecommended()),
                 OpenUserRecommendedPage),
             new(
                 HomePageCardSourceKind.UserSearch,
                 CreateUserPreviewSourceFactory(card => string.IsNullOrWhiteSpace(card.SearchText)
                     ? _makoClient.Computed(AsyncEnumerable.Empty<User>())
-                    : _makoClient.UserSearch(card.SearchText).ToFetchEngine()),
+                    : _makoClient.UserSearch(card.SearchText)),
                 OpenUserSearchPage,
                 card => [card.SearchText ?? ""]),
             new(
@@ -131,7 +131,7 @@ public sealed class HomeCardDefinitions
                     var userId = _session.CurrentUserId;
                     if (userId <= 0)
                         throw new InvalidOperationException("User is not logged in");
-                    return _makoClient.UserFollower(userId).ToFetchEngine();
+                    return _makoClient.UserFollower(userId);
                 }),
                 OpenUserFollowerPage),
             new(
@@ -195,12 +195,12 @@ public sealed class HomeCardDefinitions
         card => Task.FromResult(CreateWorkPreviewSource(card, engineFactory(card)));
 
     private Func<HomePageCardLayout, Task<HomeCardPreviewSource>> CreateUserPreviewSourceFactory(
-        Func<HomePageCardLayout, IFetchEngine<User>> engineFactory) =>
+        Func<HomePageCardLayout, IAsyncEnumerable<User>> engineFactory) =>
         card => Task.FromResult(CreateUserPreviewSource(engineFactory(card)));
 
     private Task<HomeCardPreviewSource> CreateSpotlightViewModelAsync(HomePageCardLayout card)
     {
-        var engine = _makoClient.Spotlight().ToFetchEngine();
+        var engine = _makoClient.Spotlight();
         return Task.FromResult(new HomeCardPreviewSource(CreateSpotlightViewModel(engine)));
     }
 
@@ -246,17 +246,17 @@ public sealed class HomeCardDefinitions
         return new(viewModel);
     }
 
-    private HomeCardPreviewSource CreateUserPreviewSource(IFetchEngine<User> engine) =>
+    private HomeCardPreviewSource CreateUserPreviewSource(IAsyncEnumerable<User> engine) =>
         new(CreateUserViewModel(engine));
 
-    private UserViewViewModel CreateUserViewModel(IFetchEngine<User> engine)
+    private UserViewViewModel CreateUserViewModel(IAsyncEnumerable<User> engine)
     {
         var viewModel = new UserViewViewModel(_blockedContent);
         viewModel.ResetEngine(engine);
         return viewModel;
     }
 
-    private SpotlightViewViewModel CreateSpotlightViewModel(IFetchEngine<SpotlightArticle> engine)
+    private SpotlightViewViewModel CreateSpotlightViewModel(IAsyncEnumerable<SpotlightArticle> engine)
     {
         var viewModel = new SpotlightViewViewModel(_blockedContent);
         viewModel.ResetEngine(engine);

@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System.Collections.Generic;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 
@@ -16,6 +17,6 @@ public sealed class SeriesViewViewModel : EntryViewViewModel<Series, Series>
     {
     }
 
-    public void ResetEngine(IFetchEngine<Series> fetchEngine, SimpleWorkType workType) =>
+    public void ResetEngine(IAsyncEnumerable<Series> fetchEngine, SimpleWorkType workType) =>
         base.ResetEngine(fetchEngine, (series, _) => series with { WorkType = workType });
 }

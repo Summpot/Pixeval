@@ -104,7 +104,7 @@ public class RateLimitEventArgs(DateTimeOffset retryAt) : EventArgs
 
 public interface IFetchEngine<out T> : IAsyncEnumerable<T>
 {
-    IFetchEngineHandle EngineHandle => DummyEngineHandle.Instance;
+    IFetchEngineHandle EngineHandle { get; }
 }
 
 public interface IFetchEngineHandle
@@ -112,15 +112,6 @@ public interface IFetchEngineHandle
     void Cancel();
     bool IsCancelled => false;
     bool IsCompleted { get => false; set { } }
-}
-
-public sealed class DummyEngineHandle : IFetchEngineHandle
-{
-    private int _cancelled;
-    public static readonly DummyEngineHandle Instance = new();
-    public void Cancel() => Interlocked.Exchange(ref _cancelled, 1);
-    public bool IsCancelled => _cancelled != 0;
-    public bool IsCompleted { get; set; }
 }
 
 public sealed class AsyncFetchEngine<T>(IAsyncEnumerable<T> source, Action? onCancel = null) : IFetchEngine<T>

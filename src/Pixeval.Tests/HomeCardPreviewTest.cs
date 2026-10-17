@@ -31,7 +31,7 @@ public sealed class HomeCardPreviewTest
     public Task SpotlightLoadsInitialPreview() => AssertPreviewLoadsAsync(new SpotlightViewViewModel(), default(SpotlightArticle));
 
     [TestMethod]
-    public async Task InterruptedInitialPageRetriesTheSameEnumerator()
+    public async Task InterruptedInitialPageRetriesTheSameFeed()
     {
         var engine = new InterruptedUsers();
         var model = new UserViewViewModel();
@@ -42,7 +42,7 @@ public sealed class HomeCardPreviewTest
         await preview.LoadAsync();
 
         Assert.HasCount(1, preview.Items);
-        Assert.AreEqual(1, engine.EnumeratorCount);
+        Assert.AreEqual(2, engine.FetchCount);
         Assert.IsFalse(preview.CanRetry);
         Assert.IsNull(preview.PlaceholderText);
     }
@@ -98,7 +98,7 @@ public sealed class HomeCardPreviewTest
         preview.Dispose();
         await loading;
 
-        Assert.AreEqual(1, engine.MoveNextCount);
+        Assert.AreEqual(1, engine.FetchCount);
         Assert.IsFalse(preview.CanRetry);
         Assert.IsNull(preview.ViewModel);
     }
@@ -109,30 +109,24 @@ public sealed class HomeCardPreviewTest
         yield return await Task.FromException<User>(new HttpRequestException("unavailable"));
     }
 
-    private sealed class InterruptedUsers : IFetchEngine<User>
+    private sealed class InterruptedUsers : IPageFeed<User>, IAsyncEnumerable<User>
     {
-        public IFetchEngineHandle EngineHandle { get; } = new DummyEngineHandle();
-        public int EnumeratorCount { get; private set; }
-        public int MoveNextCount { get; private set; }
+        public int FetchCount { get; private set; }
 
-        public IAsyncEnumerator<User> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+        public Task<(IReadOnlyList<User> Items, bool Exhausted)> FetchPageAsync(CancellationToken cancellationToken = default)
         {
-            EnumeratorCount++;
-            return new Enumerator(this);
+            FetchCount++;
+            if (FetchCount is 1)
+                return Task.FromException<(IReadOnlyList<User>, bool)>(new HttpRequestException("interrupted"));
+            return Task.FromResult<(IReadOnlyList<User>, bool)>(([new User { Id = 1 }], true));
         }
 
-        private sealed class Enumerator(InterruptedUsers engine) : IAsyncEnumerator<User>
+        public void Cancel()
         {
-            public User Current => new() { Id = 1 };
-            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-            public ValueTask<bool> MoveNextAsync()
-            {
-                var count = ++engine.MoveNextCount;
-                if (count > 2)
-                    engine.EngineHandle.IsCompleted = true;
-                return ValueTask.FromResult(count is 2);
-            }
         }
+
+        public IAsyncEnumerator<User> GetAsyncEnumerator(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     private static async Task AssertPreviewLoadsAsync<T>(EntryViewViewModel<T, T> model, T item) where T : notnull
