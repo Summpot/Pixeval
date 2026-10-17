@@ -67,7 +67,7 @@ public partial class TagSelector : UserControl
 
     private void OnConfirmClick(object? sender, RoutedEventArgs e)
     {
-        TagsSelected?.Invoke(this, (IsPrivate, [.. SelectedTags.Select(t => t.Name)]));
+        TagsSelected?.Invoke(this, (IsPrivate, [.. SelectedTags.Select(static t => t.Name).OfType<string>()]));
     }
 
     private void OnListBoxSelectionChanged(object? sender, SelectionChangedEventArgs e)

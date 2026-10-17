@@ -10,9 +10,8 @@ public sealed class HomeCardLayoutEngineTest
     public void CanPlace_DistinctCardWithSameValues_DoesNotIgnoreCollision()
     {
         var existing = CreateCard(0, 0);
-        var moving = CreateCard(0, 0);
 
-        var result = HomeCardLayout.CanPlace([existing], moving, HomeCardBounds.From(moving), 2, 2);
+        var result = HomeCardLayout.CanPlace([existing], null, HomeCardBounds.From(existing), 2, 2);
 
         Assert.IsFalse(result);
     }
@@ -22,7 +21,7 @@ public sealed class HomeCardLayoutEngineTest
     {
         var moving = CreateCard(0, 0);
 
-        var result = HomeCardLayout.CanPlace([moving], moving, new(1, 1, 1, 1), 2, 2);
+        var result = HomeCardLayout.CanPlace([moving], moving, new(0, 0, 2, 2), 2, 2);
 
         Assert.IsTrue(result);
     }

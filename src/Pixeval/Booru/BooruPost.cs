@@ -130,9 +130,7 @@ public partial record struct BooruPost : IArtworkSerializable
                 return DeserializeLegacyPost(root);
             }
 
-            var post = JsonSerializer.Deserialize<BooruPost>(data, s_jsonOptions);
-            if (post != null)
-                return post;
+            return JsonSerializer.Deserialize<BooruPost>(data, s_jsonOptions);
         }
         catch
         {

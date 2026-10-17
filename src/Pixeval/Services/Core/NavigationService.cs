@@ -195,9 +195,9 @@ public class NavigationService : INavigationService
         (Page) ActivatorUtilities.CreateInstance(_serviceProvider, pageType, arguments);
 
     private TViewModel CreateViewModel<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TViewModel>(
-        params object[] arguments)
+        params object?[] arguments)
         where TViewModel : class =>
-        ActivatorUtilities.CreateInstance<TViewModel>(_serviceProvider, arguments);
+        ActivatorUtilities.CreateInstance<TViewModel>(_serviceProvider, arguments!);
 
     private TPage CreateServicePage<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TPage>(params object[] arguments)
         where TPage : Page =>

@@ -157,7 +157,7 @@ public partial class HomePageViewModel : ViewModelBase
 
     public void SetSelectedCard(HomePageCardLayout? card)
     {
-        if (ReferenceEquals(_selectedCard, card))
+        if (_selectedCard == card)
             return;
 
         _selectedCard = card;

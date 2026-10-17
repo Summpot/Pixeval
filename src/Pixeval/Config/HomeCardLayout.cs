@@ -21,7 +21,7 @@ public static class HomeCardLayout
         var i = 0;
         foreach (var c in cards)
         {
-            if (movingCard is not null && ReferenceEquals(c, movingCard))
+            if (movingCard is { } moving && c == moving)
                 movingIndex = i;
             boundsList.Add(HomeCardBounds.From(c));
             i++;

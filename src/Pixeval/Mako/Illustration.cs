@@ -165,7 +165,7 @@ public partial record struct Illustration : IWorkEntry, IArtworkSerializable
         try
         {
             var res = System.Text.Json.JsonSerializer.Deserialize<Illustration>(data, s_snakeCaseOptions);
-            if (res != null && (res.Id != 0 || res.ImageUrls != null))
+            if (HasPayload(res))
                 return res;
         }
         catch
@@ -176,8 +176,7 @@ public partial record struct Illustration : IWorkEntry, IArtworkSerializable
         try
         {
             var res = System.Text.Json.JsonSerializer.Deserialize<Illustration>(data, s_caseInsensitiveOptions);
-            if (res != null)
-                return res;
+            return res;
         }
         catch
         {
@@ -186,4 +185,11 @@ public partial record struct Illustration : IWorkEntry, IArtworkSerializable
 
         return System.Text.Json.JsonSerializer.Deserialize<Illustration>(data)!;
     }
+
+    internal static bool HasPayload(Illustration value) =>
+        value.Id != 0
+        || value.ImageUrls.SquareMedium is not null
+        || value.ImageUrls.Medium is not null
+        || value.ImageUrls.Large is not null
+        || value.ImageUrls.Original is not null;
 }

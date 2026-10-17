@@ -57,7 +57,7 @@ public static class ArtworkPayloadHydrator
             try
             {
                 var illust = MakoIllustration.Deserialize(payloadJson);
-                if (illust.Id != 0 || illust.ImageUrls != null)
+                if (MakoIllustration.HasPayload(illust))
                     return illust;
             }
             catch

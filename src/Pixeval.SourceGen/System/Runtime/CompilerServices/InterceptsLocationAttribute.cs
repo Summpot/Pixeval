@@ -22,4 +22,12 @@
 namespace System.Runtime.CompilerServices;
 
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-public sealed class InterceptsLocationAttribute(string filePath, int line, int column) : Attribute;
+public sealed class InterceptsLocationAttribute : Attribute
+{
+    public InterceptsLocationAttribute(string filePath, int line, int column)
+    {
+        _ = filePath;
+        _ = line;
+        _ = column;
+    }
+}
