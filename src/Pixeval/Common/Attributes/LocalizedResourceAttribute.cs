@@ -3,7 +3,7 @@
 
 using System;
 using FluentIcons.Common;
-using Pixeval.I18N;
+using Pixeval.Localization;
 
 // ReSharper disable once CheckNamespace
 namespace Pixeval.Attributes;
@@ -14,13 +14,13 @@ public class LocalizedResourceAttribute(Symbol symbol = default) : Attribute
     public LocalizedResourceAttribute(Symbol symbol, string resource)
         : this(symbol)
     {
-        Resource = I18NManager.GetResource(resource);
+        Resource = resource;
     }
     
     public LocalizedResourceAttribute(string resource)
         : this()
     {
-        Resource = I18NManager.GetResource(resource);
+        Resource = resource;
     }
     
     public Symbol Symbol { get; } = symbol;

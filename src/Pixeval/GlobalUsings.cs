@@ -39,3 +39,5 @@ global using Pixeval.ViewModels.Download;
 global using Pixeval.ViewModels.Comments;
 global using Pixeval.ViewModels.Settings;
 global using Pixeval.ViewModels.Login;
+
+global using Pixeval.Localization;

@@ -3,14 +3,14 @@
 namespace Pixeval.ViewModels.Viewers;
 
 public sealed record WorkSeriesInfoViewModel(
-    SimpleWorkType WorkType,
+    SimpleWorkKind WorkKind,
     long Id,
     string Title,
     WorkSeriesNavigationViewModel? Previous = null,
     WorkSeriesNavigationViewModel? Next = null,
     string? PositionText = null)
 {
-    public static WorkSeriesInfoViewModel? Create(object? work, SimpleWorkType workType)
+    public static WorkSeriesInfoViewModel? Create(object? work, SimpleWorkKind workType)
     {
         var series = work switch
         {
@@ -21,19 +21,19 @@ public sealed record WorkSeriesInfoViewModel(
         return series is { Id: > 0 } s ? new(workType, s.Id, s.Title) : null;
     }
 
-    public static WorkSeriesInfoViewModel Create(MangaSeriesContextResponse response)
+    public static WorkSeriesInfoViewModel Create(MangaSeriesContextResult response)
     {
         return new(
-            SimpleWorkType.Illustration,
-            response.Detail.Id,
-            response.Detail.Title,
-            CreateNavigation(response.Context.Previous),
-            CreateNavigation(response.Context.Next),
-            $"{response.Context.ContentOrder}/{response.Detail.PublishedContentCount ?? 0}");
+            SimpleWorkKind.Illustration,
+            response.Series?.Id ?? 0,
+            response.Series?.Title ?? "",
+            CreateNavigation(response.Context.PrevIllust),
+            CreateNavigation(response.Context.NextIllust),
+            $"{response.Context.ContentOrder}/{response.Series?.PublishedContentCount ?? 0}");
 
         static WorkSeriesNavigationViewModel? CreateNavigation(Illustration? work) =>
-            work is { Id: > 0, Visible: true }
-                ? new(work.Id, work.Title, work)
+            work is { Id: > 0, Visible: true } w
+                ? new(w.Id, w.Title, w)
                 : null;
     }
 
@@ -47,17 +47,18 @@ public sealed record WorkSeriesInfoViewModel(
             ? fallback?.Title ?? ""
             : content.SeriesTitle;
         return new(
-            SimpleWorkType.Novel,
+            SimpleWorkKind.Novel,
             id.Value,
             title,
             CreateNavigation(content.SeriesNavigation?.PrevNovel),
             CreateNavigation(content.SeriesNavigation?.NextNovel));
 
         static WorkSeriesNavigationViewModel? CreateNavigation(NovelNavigation? work) =>
-            work is { Id: > 0, Viewable: true }
-                ? new(work.Id, work.Title)
+            work is { Id: > 0, Viewable: true } w
+                ? new(w.Id, w.Title)
                 : null;
     }
+
 }
 
 public sealed record WorkSeriesNavigationViewModel(

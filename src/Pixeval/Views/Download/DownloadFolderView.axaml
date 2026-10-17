@@ -2,10 +2,11 @@
     x:Class="Pixeval.Views.Download.DownloadFolderView"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
-    Header="{I18N {x:Static pixeval:DownloadPageResources+SubscriptionDownloadsButton.Label}}"
+    Header="{CompiledBinding [DownloadPage-SubscriptionDownloadsButton-Label], Source={x:Static loc:LocalizationManager.Instance}}"
     mc:Ignorable="d"
     d:DesignHeight="450"
     d:DesignWidth="800" />

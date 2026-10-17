@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Works.SeriesContainer"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -17,14 +18,14 @@
                 VerticalAlignment="Stretch"
                 Command="{Binding $parent[work:SeriesContainer].AddSubscriptionCommand}"
                 Icon="{markup:SymbolIcon Alert}"
-                Label="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+AddSubscriptionButton.Label}}" />
+                Label="{CompiledBinding [WorkSubscriptionsSettingsExpander-AddSubscriptionButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
             <CommandBarButton
                 x:Name="RemoveSubscriptionButton"
                 VerticalAlignment="Stretch"
                 Command="{Binding $parent[work:SeriesContainer].RemoveSubscriptionCommand}"
                 Icon="{markup:SymbolIcon AlertOff}"
                 IsVisible="False"
-                Label="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+RemoveSubscriptionButton.Label}}" />
+                Label="{CompiledBinding [WorkSubscriptionsSettingsExpander-RemoveSubscriptionButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
         </work:WorkContainer.CommandBarSubElements>
     </work:WorkContainer>
 </UserControl>

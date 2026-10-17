@@ -85,7 +85,19 @@ impl HistoryRepository {
             serialize_key,
             work_key,
             payload_json: Some(payload_json),
-        })
+            payload: None,
+        }
+        .hydrate())
+    }
+
+    pub fn add_browse_history(
+        &self,
+        payload: crate::payload::ArtworkPayload,
+    ) -> Result<BrowseHistoryRecord, StorageError> {
+        let (serialize_key, payload_json) = crate::payload::serialize(&payload)?;
+        let id = crate::payload::artwork_id(&payload);
+        let work_key = crate::payload::work_key(&payload);
+        self.add_or_replace_browse_history(id, Some(serialize_key), work_key, payload_json)
     }
 
     pub fn get_browse_history_by_work_key(
@@ -107,7 +119,9 @@ impl HistoryRepository {
                     serialize_key: row.get(2)?,
                     work_key: row.get(3)?,
                     payload_json: row.get(4)?,
-                })
+                    payload: None,
+                }
+                .hydrate())
             })
             .optional()?;
 
@@ -145,7 +159,9 @@ impl HistoryRepository {
                 serialize_key: row.get(2)?,
                 work_key: row.get(3)?,
                 payload_json: row.get(4)?,
-            })
+                payload: None,
+            }
+            .hydrate())
         })?;
         let mut results = Vec::new();
         let mut broken_ids = Vec::new();
@@ -193,7 +209,9 @@ impl HistoryRepository {
                     serialize_key: row.get(2)?,
                     work_key: row.get(3)?,
                     payload_json: row.get(4)?,
-                })
+                    payload: None,
+                }
+                .hydrate())
             })?;
             for r in rows {
                 let record = r?;
@@ -218,7 +236,9 @@ impl HistoryRepository {
                     serialize_key: row.get(2)?,
                     work_key: row.get(3)?,
                     payload_json: row.get(4)?,
-                })
+                    payload: None,
+                }
+                .hydrate())
             })?;
             for r in rows {
                 let record = r?;
@@ -586,7 +606,19 @@ impl WatchLaterRepository {
             serialize_key,
             work_key,
             payload_json: Some(payload_json),
-        })
+            payload: None,
+        }
+        .hydrate())
+    }
+
+    pub fn add_watch_later(
+        &self,
+        payload: crate::payload::ArtworkPayload,
+    ) -> Result<WatchLaterRecord, StorageError> {
+        let (serialize_key, payload_json) = crate::payload::serialize(&payload)?;
+        let id = crate::payload::artwork_id(&payload);
+        let work_key = crate::payload::work_key(&payload);
+        self.add_or_replace_watch_later(id, Some(serialize_key), work_key, payload_json)
     }
 
     pub fn contains_watch_later(&self, work_key: String) -> Result<bool, StorageError> {
@@ -630,7 +662,9 @@ impl WatchLaterRepository {
                     serialize_key: row.get(2)?,
                     work_key: row.get(3)?,
                     payload_json: row.get(4)?,
-                })
+                    payload: None,
+                }
+                .hydrate())
             })
             .optional()?;
 
@@ -715,7 +749,9 @@ impl WatchLaterRepository {
                 serialize_key: row.get(2)?,
                 work_key: row.get(3)?,
                 payload_json: row.get(4)?,
-            })
+                payload: None,
+            }
+            .hydrate())
         })?;
         let mut results = Vec::new();
         let mut broken_ids = Vec::new();
@@ -763,7 +799,9 @@ impl WatchLaterRepository {
                     serialize_key: row.get(2)?,
                     work_key: row.get(3)?,
                     payload_json: row.get(4)?,
-                })
+                    payload: None,
+                }
+                .hydrate())
             })?;
             for r in rows {
                 let record = r?;
@@ -788,7 +826,9 @@ impl WatchLaterRepository {
                     serialize_key: row.get(2)?,
                     work_key: row.get(3)?,
                     payload_json: row.get(4)?,
-                })
+                    payload: None,
+                }
+                .hydrate())
             })?;
             for r in rows {
                 let record = r?;
@@ -887,7 +927,30 @@ impl DownloadRepository {
             format_token,
             error_message,
             payload_json: Some(payload_json),
-        })
+            payload: None,
+        }
+        .hydrate())
+    }
+
+    pub fn add_download_history(
+        &self,
+        payload: crate::payload::ArtworkPayload,
+        destination: String,
+        state: u32,
+        format_token: Option<String>,
+        error_message: Option<String>,
+    ) -> Result<DownloadHistoryRecord, StorageError> {
+        let (serialize_key, payload_json) = crate::payload::serialize(&payload)?;
+        let id = crate::payload::artwork_id(&payload);
+        self.add_or_replace_download_history(
+            id,
+            Some(serialize_key),
+            destination,
+            state,
+            format_token,
+            error_message,
+            payload_json,
+        )
     }
 
     pub fn update_download_history_state(
@@ -961,7 +1024,9 @@ impl DownloadRepository {
                 format_token: row.get(4)?,
                 error_message: row.get(5)?,
                 payload_json: row.get(6)?,
-            })
+                payload: None,
+            }
+            .hydrate())
         })?;
         let mut results = Vec::new();
         let mut broken_ids = Vec::new();
@@ -1012,7 +1077,9 @@ impl DownloadRepository {
                     format_token: row.get(4)?,
                     error_message: row.get(5)?,
                     payload_json: row.get(6)?,
-                })
+                    payload: None,
+                }
+                .hydrate())
             })?;
             for r in rows {
                 let record = r?;
@@ -1040,7 +1107,9 @@ impl DownloadRepository {
                     format_token: row.get(4)?,
                     error_message: row.get(5)?,
                     payload_json: row.get(6)?,
-                })
+                    payload: None,
+                }
+                .hydrate())
             })?;
             for r in rows {
                 let record = r?;
@@ -1104,7 +1173,9 @@ impl DownloadRepository {
                     format_token: row.get(4)?,
                     error_message: row.get(5)?,
                     payload_json: row.get(6)?,
-                })
+                    payload: None,
+                }
+                .hydrate())
             })
             .optional()?;
 
@@ -1185,7 +1256,33 @@ impl DownloadRepository {
             work_subscription_id,
             artwork_id,
             payload_json: Some(payload_json),
-        })
+            payload: None,
+        }
+        .hydrate())
+    }
+
+    pub fn add_subscription_download_history(
+        &self,
+        payload: crate::payload::ArtworkPayload,
+        destination: String,
+        state: u32,
+        format_token: Option<String>,
+        error_message: Option<String>,
+        work_subscription_id: i64,
+    ) -> Result<SubscriptionDownloadHistoryRecord, StorageError> {
+        let (serialize_key, payload_json) = crate::payload::serialize(&payload)?;
+        let id = crate::payload::artwork_id(&payload);
+        self.add_or_replace_subscription_download_history(
+            id.clone(),
+            Some(serialize_key),
+            destination,
+            state,
+            format_token,
+            error_message,
+            work_subscription_id,
+            id,
+            payload_json,
+        )
     }
 
     pub fn add_or_replace_subscription_download_history_batch(
@@ -1411,7 +1508,9 @@ impl DownloadRepository {
                 format_token: row.get(6)?,
                 error_message: row.get(7)?,
                 payload_json: row.get(8)?,
-            })
+                payload: None,
+            }
+            .hydrate())
         })?;
         let mut results = Vec::new();
         let mut broken_ids = Vec::new();
@@ -1464,7 +1563,9 @@ impl DownloadRepository {
                     format_token: row.get(6)?,
                     error_message: row.get(7)?,
                     payload_json: row.get(8)?,
-                })
+                    payload: None,
+                }
+                .hydrate())
             })?;
             for r in rows {
                 let record = r?;
@@ -1494,7 +1595,9 @@ impl DownloadRepository {
                     format_token: row.get(6)?,
                     error_message: row.get(7)?,
                     payload_json: row.get(8)?,
-                })
+                    payload: None,
+                }
+                .hydrate())
             })?;
             for r in rows {
                 let record = r?;

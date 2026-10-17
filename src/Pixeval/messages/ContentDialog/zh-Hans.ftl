@@ -1,0 +1,3 @@
+CancelButtonContent = 取消
+
+OkButtonContent = 确认

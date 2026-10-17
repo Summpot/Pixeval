@@ -12,7 +12,6 @@ using Avalonia.Platform;
 using Pixeval.Config;
 using Pixeval.Utilities;
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Pixeval.Services.Core;
 
@@ -110,9 +109,8 @@ public static class AppInfo
         return await reader.ReadToEndAsync();
     }
 
-    public static void SaveWindowContext(Window window, AppSettings? settings = null)
+    public static void SaveWindowContext(Window window, AppSettings? settings)
     {
-        settings ??= App.Services?.GetService<AppSettings>();
         if (settings is null)
             return;
         var applicationSettings = settings.ApplicationSettings;
@@ -126,12 +124,11 @@ public static class AppInfo
     }
 
     public static void SaveContext(
-        LoginContext? loginContext = null,
-        AppSettings? appSettings = null,
-        ObservableCollection<HomePageCardLayout>? cards = null,
-        string? navYaml = null)
+        LoginContext loginContext,
+        AppSettings appSettings,
+        ObservableCollection<HomePageCardLayout>? cards,
+        string? navYaml)
     {
-        loginContext ??= App.Services?.GetService<LoginContext>();
         SaveLoginContext(loginContext);
         SaveSettings(appSettings, cards, navYaml);
     }
@@ -144,9 +141,7 @@ public static class AppInfo
         return TryLoad(() =>
         {
             var rawYaml = File.ReadAllText(AppSettingsPath);
-            var engine = new ConfigEngine();
-            var migratedYaml = engine.MigrateYaml(rawYaml);
-            var json = engine.YamlToJson(migratedYaml);
+            var json = PixevalConfigMethods.YamlToJson(rawYaml);
             return JsonSerializer.Deserialize(json, SettingsSerializerContext.Default.AppSettings);
         }, logger);
     }
@@ -159,7 +154,7 @@ public static class AppInfo
         return TryLoad(() =>
         {
             var rawYaml = File.ReadAllText(LoginContextPath);
-            var json = new ConfigEngine().YamlToJson(rawYaml);
+            var json = PixevalConfigMethods.YamlToJson(rawYaml);
             return JsonSerializer.Deserialize(json, SettingsSerializerContext.Default.LoginContext);
         }, logger);
     }
@@ -171,7 +166,7 @@ public static class AppInfo
 
         return TryLoad(() =>
         {
-            var cards = new ConfigEngine().LoadHomePageCardsFromFile(HomePageCardsPath);
+            var cards = PixevalConfigMethods.LoadHomePageCardsFromFile(HomePageCardsPath);
             return new ObservableCollection<HomePageCardLayout>(cards);
         }, logger);
     }
@@ -185,14 +180,10 @@ public static class AppInfo
     }
 
     public static void SaveSettings(
-        AppSettings? appSettings = null,
+        AppSettings? appSettings,
         ObservableCollection<HomePageCardLayout>? cards = null,
         string? navYaml = null)
     {
-        appSettings ??= App.Services?.GetService<AppSettings>();
-        cards ??= App.Services?.GetService<Pixeval.Services.Core.HomePageCardSession>()?.Cards;
-        navYaml ??= App.Services?.GetService<Pixeval.Services.Core.NavigationMenuDocument>()?.Text;
-
         SaveAppSettings(appSettings);
         if (cards is not null)
             SaveHomePageCards(cards);
@@ -208,9 +199,8 @@ public static class AppInfo
         _ = TrySave(() =>
         {
             var json = JsonSerializer.Serialize(appSettings, SettingsSerializerContext.Default.AppSettings);
-            var engine = new ConfigEngine();
-            var yaml = engine.JsonToYaml(json);
-            engine.SaveToFile(AppSettingsPath, yaml);
+            var yaml = PixevalConfigMethods.JsonToYaml(json);
+            PixevalConfigMethods.SaveToFile(AppSettingsPath, yaml);
         });
     }
 
@@ -222,9 +212,8 @@ public static class AppInfo
         _ = TrySave(() =>
         {
             var json = JsonSerializer.Serialize(loginContext, SettingsSerializerContext.Default.LoginContext);
-            var engine = new ConfigEngine();
-            var yaml = engine.JsonToYaml(json);
-            engine.SaveToFile(LoginContextPath, yaml);
+            var yaml = PixevalConfigMethods.JsonToYaml(json);
+            PixevalConfigMethods.SaveToFile(LoginContextPath, yaml);
         });
     }
 
@@ -235,7 +224,7 @@ public static class AppInfo
 
         _ = TrySave(() =>
         {
-            new ConfigEngine().SaveHomePageCardsToFile(HomePageCardsPath, [.. cards]);
+            PixevalConfigMethods.SaveHomePageCardsToFile(HomePageCardsPath, [.. cards]);
         });
     }
 

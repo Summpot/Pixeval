@@ -243,6 +243,13 @@ public class VirtualizingWrapPanel : CachedVirtualizingPanel, IOrientationBasedM
             if (_naturalSizes[i] is not null)
                 continue;
 
+            if (ItemNaturalSize.TryGet(items[i], out var declared) && IsUsableSize(declared))
+            {
+                _naturalSizes[i] = declared;
+                _unmeasuredCount--;
+                continue;
+            }
+
             var wasRealized = Realized.TryGetValue(i, out var child);
             child ??= GetOrCreateElement(items[i], i);
             child.Measure(constraint);

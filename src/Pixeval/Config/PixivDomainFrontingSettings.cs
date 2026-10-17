@@ -12,10 +12,10 @@ public record PixivDomainFrontingSettings
 {
     public bool EnablePixivDomainFronting { get; set; } = true;
 
-    [SettingsEntry(Symbol.ShieldSettings, AppSettingsResources.PixivDomainFrontingTypeEntry.Header, AppSettingsResources.PixivDomainFrontingTypeEntry.Description)]
+    [SettingsEntry(Symbol.ShieldSettings, nameof(Strings.AppSettingsPixivDomainFrontingTypeEntryHeader), nameof(Strings.AppSettingsPixivDomainFrontingTypeEntryDescription))]
     public DomainFrontingType PixivDomainFrontingType { get; set; } = DomainFrontingType.Fragmentation;
 
-    [SettingsEntry(Symbol.Box, AppSettingsResources.PixivNameResolverEntry.Header, AppSettingsResources.PixivNameResolverEntry.Description, Placeholder = MakoHttpOptions.AppApiHost)]
+    [SettingsEntry(Symbol.Box, nameof(Strings.AppSettingsPixivNameResolverEntryHeader), nameof(Strings.AppSettingsPixivNameResolverEntryDescription), Placeholder = MakoHttpOptions.AppApiHost)]
     public ObservableCollection<string> PixivAppApiNameResolver { get; set; } =
     [
         "104.18.42.239",

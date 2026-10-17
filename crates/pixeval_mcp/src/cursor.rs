@@ -7,8 +7,8 @@ use std::time::{Duration, Instant};
 use parking_lot::RwLock;
 use pixeval_mako::models::{BookmarkTag, CommentRecord, Illustration, Novel, Series, SpotlightArticle, User};
 use pixeval_mako::stream::{
-    IllustrationFetchEngine, NovelFetchEngine, SeriesFetchEngine, SpotlightFetchEngine,
-    UserFetchEngine,
+    IllustrationFeed, NovelFeed, SeriesFeed, SpotlightFeed,
+    UserFeed,
 };
 use serde_json::json;
 use uuid::Uuid;
@@ -53,11 +53,11 @@ impl CursorKind {
 }
 
 pub enum CursorSource {
-    Illustration(std::sync::Arc<IllustrationFetchEngine>),
-    Novel(std::sync::Arc<NovelFetchEngine>),
-    User(std::sync::Arc<UserFetchEngine>),
-    Series(std::sync::Arc<SeriesFetchEngine>),
-    Spotlight(std::sync::Arc<SpotlightFetchEngine>),
+    Illustration(std::sync::Arc<IllustrationFeed>),
+    Novel(std::sync::Arc<NovelFeed>),
+    User(std::sync::Arc<UserFeed>),
+    Series(std::sync::Arc<SeriesFeed>),
+    Spotlight(std::sync::Arc<SpotlightFeed>),
     JsonItems(CursorKind, VecDeque<serde_json::Value>),
 }
 
@@ -77,41 +77,61 @@ impl CursorEntry {
 
         while self.buffer.len() < target_plus_one && !self.is_exhausted {
             match &self.source {
-                CursorSource::Illustration(engine) => {
-                    if let Some(item) = engine.next().await {
-                        self.buffer.push_back(illustration_to_json(&item));
-                    } else {
-                        self.is_exhausted = true;
+                CursorSource::Illustration(engine) => match engine.next_page().await {
+                    Ok(page) => {
+                        for item in page.items {
+                            self.buffer.push_back(illustration_to_json(&item));
+                        }
+                        if page.exhausted {
+                            self.is_exhausted = true;
+                        }
                     }
-                }
-                CursorSource::Novel(engine) => {
-                    if let Some(item) = engine.next().await {
-                        self.buffer.push_back(novel_to_json(&item));
-                    } else {
-                        self.is_exhausted = true;
+                    Err(_) => break,
+                },
+                CursorSource::Novel(engine) => match engine.next_page().await {
+                    Ok(page) => {
+                        for item in page.items {
+                            self.buffer.push_back(novel_to_json(&item));
+                        }
+                        if page.exhausted {
+                            self.is_exhausted = true;
+                        }
                     }
-                }
-                CursorSource::User(engine) => {
-                    if let Some(item) = engine.next().await {
-                        self.buffer.push_back(user_to_json(&item));
-                    } else {
-                        self.is_exhausted = true;
+                    Err(_) => break,
+                },
+                CursorSource::User(engine) => match engine.next_page().await {
+                    Ok(page) => {
+                        for item in page.items {
+                            self.buffer.push_back(user_to_json(&item));
+                        }
+                        if page.exhausted {
+                            self.is_exhausted = true;
+                        }
                     }
-                }
-                CursorSource::Series(engine) => {
-                    if let Some(item) = engine.next().await {
-                        self.buffer.push_back(series_to_json(&item));
-                    } else {
-                        self.is_exhausted = true;
+                    Err(_) => break,
+                },
+                CursorSource::Series(engine) => match engine.next_page().await {
+                    Ok(page) => {
+                        for item in page.items {
+                            self.buffer.push_back(series_to_json(&item));
+                        }
+                        if page.exhausted {
+                            self.is_exhausted = true;
+                        }
                     }
-                }
-                CursorSource::Spotlight(engine) => {
-                    if let Some(item) = engine.next().await {
-                        self.buffer.push_back(spotlight_to_json(&item));
-                    } else {
-                        self.is_exhausted = true;
+                    Err(_) => break,
+                },
+                CursorSource::Spotlight(engine) => match engine.next_page().await {
+                    Ok(page) => {
+                        for item in page.items {
+                            self.buffer.push_back(spotlight_to_json(&item));
+                        }
+                        if page.exhausted {
+                            self.is_exhausted = true;
+                        }
                     }
-                }
+                    Err(_) => break,
+                },
                 CursorSource::JsonItems(_, queue) => {
                     let mut q = queue.clone();
                     if let Some(item) = q.pop_front() {
@@ -309,7 +329,7 @@ pub fn illustration_to_json(illust: &Illustration) -> serde_json::Value {
 
     json!({
         "id": illust.id,
-        "type": illust.illust_type,
+        "type": illust.illust_type.as_str(),
         "title": illust.title,
         "description": illust.caption,
         "author": {
@@ -328,7 +348,7 @@ pub fn illustration_to_json(illust: &Illustration) -> serde_json::Value {
         "thumbnailResourceUri": format!("pixeval-resource://illust/{}/medium", illust.id),
         "websiteUrl": format!("https://www.pixiv.net/artworks/{}", illust.id),
         "pixevalUri": format!("pixeval://illust/{}", illust.id),
-        "xRestrict": illust.x_restrict,
+        "xRestrict": illust.x_restrict.as_i32(),
         "isBookmarked": illust.is_bookmarked,
         "isAiGenerated": illust.illust_ai_type == 2,
         "totalBookmarks": illust.total_bookmarks,
@@ -337,10 +357,10 @@ pub fn illustration_to_json(illust: &Illustration) -> serde_json::Value {
         "width": illust.width,
         "height": illust.height,
         "createDate": illust.create_date,
-        "safeRating": if illust.x_restrict > 0 { "R18" } else { "General" },
-        "imageType": if illust.illust_type == "ugoira" { "SingleAnimatedImage" } else { "SingleStaticImage" },
+        "safeRating": if illust.x_restrict.is_r18() { "R18" } else { "General" },
+        "imageType": if illust.illust_type.is_ugoira() { "SingleAnimatedImage" } else { "SingleStaticImage" },
         "aspectRatio": aspect_ratio,
-        "isAnimated": illust.illust_type == "ugoira"
+        "isAnimated": illust.illust_type.is_ugoira()
     })
 }
 
@@ -374,7 +394,7 @@ pub fn novel_to_json(novel: &Novel) -> serde_json::Value {
         "thumbnailResourceUri": format!("pixeval-resource://novel/{}/medium", novel.id),
         "websiteUrl": format!("https://www.pixiv.net/novel/show.php?id={}", novel.id),
         "pixevalUri": format!("pixeval://novel/{}", novel.id),
-        "xRestrict": novel.x_restrict,
+        "xRestrict": novel.x_restrict.as_i32(),
         "isBookmarked": novel.is_bookmarked,
         "isAiGenerated": novel.novel_ai_type == 2,
         "totalBookmarks": novel.total_bookmarks,
@@ -383,7 +403,7 @@ pub fn novel_to_json(novel: &Novel) -> serde_json::Value {
         "width": serde_json::Value::Null,
         "height": serde_json::Value::Null,
         "createDate": novel.create_date,
-        "safeRating": if novel.x_restrict > 0 { "R18" } else { "General" },
+        "safeRating": if novel.x_restrict.is_r18() { "R18" } else { "General" },
         "imageType": "None",
         "aspectRatio": serde_json::Value::Null,
         "isAnimated": false,

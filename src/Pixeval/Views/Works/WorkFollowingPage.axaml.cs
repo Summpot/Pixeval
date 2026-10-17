@@ -15,11 +15,11 @@ public partial class WorkFollowingPage : IconContentPage
     private readonly MakoClient _client;
 
     public WorkFollowingPage(AppSettings settings, MakoClient client)
-        : this(settings.SearchSettings.DefaultSimpleWorkType, PrivacyPolicy.Public, client)
+        : this(settings.SearchSettings.DefaultSimpleWorkType, PrivacyRestrict.Public, client)
     {
     }
 
-    public WorkFollowingPage(SimpleWorkType simpleWorkType, PrivacyPolicy privacyPolicy, MakoClient client, IWorkViewViewModel? viewModel = null)
+    public WorkFollowingPage(SimpleWorkKind simpleWorkType, PrivacyRestrict privacyPolicy, MakoClient client, IWorkViewViewModel? viewModel = null)
     {
         _client = client;
         InitializeComponent();
@@ -43,9 +43,9 @@ public partial class WorkFollowingPage : IconContentPage
 
     private void ChangeSource()
     {
-        var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
-        var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>();
-        var engine = _client.WorkFollowing(workType, privacy);
-        WorkContainer.ResetEngine(engine);
+        var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>();
+        var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyRestrict>();
+        var engine = _client.WorkFollowingUnified(workType, privacy);
+        WorkContainer.ResetSource(engine.AsObjects(), workType);
     }
 }

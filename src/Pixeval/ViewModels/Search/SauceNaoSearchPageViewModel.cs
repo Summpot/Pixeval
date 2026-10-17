@@ -10,7 +10,6 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.Utilities;
 
@@ -30,9 +29,18 @@ public sealed partial class SauceNaoSearchPageViewModel : ViewModelBase, IDispos
     [NotifyPropertyChangedFor(nameof(CanSearch))]
     public partial bool FileSelected { get; private set; }
 
-    public static string ApiKey => App.Services!.GetRequiredService<AppSettings>().SearchSettings.SauceNaoApiKey;
+    private readonly AppSettings _appSettings;
+    private readonly IClipboardService _clipboard;
 
-    public static bool IsApiKeyExisted => !string.IsNullOrWhiteSpace(ApiKey);
+    public SauceNaoSearchPageViewModel(AppSettings appSettings, IClipboardService clipboard)
+    {
+        _appSettings = appSettings;
+        _clipboard = clipboard;
+    }
+
+    public string ApiKey => _appSettings.SearchSettings.SauceNaoApiKey;
+
+    public bool IsApiKeyExisted => !string.IsNullOrWhiteSpace(ApiKey);
 
     public Task LoadAsync(Stream stream) => LoadImageAsync(token => ReadImageAsync(stream, token));
 
@@ -99,8 +107,7 @@ public sealed partial class SauceNaoSearchPageViewModel : ViewModelBase, IDispos
         _ = control;
         ObjectDisposedException.ThrowIf(_isDisposed, this);
 
-        var clipboard = App.Services?.GetService<IClipboardService>() ?? NullClipboardService.Instance;
-        if (await clipboard.TryGetBitmapAsync() is { } bitmap)
+        if (await _clipboard.TryGetBitmapAsync() is { } bitmap)
             try
             {
                 Image?.Dispose();

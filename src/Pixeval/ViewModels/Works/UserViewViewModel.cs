@@ -7,4 +7,11 @@ namespace Pixeval.ViewModels.Works;
 
 public sealed class UserViewViewModel : EntryViewViewModel<User, User>
 {
+    public UserViewViewModel() : this(null)
+    {
+    }
+
+    public UserViewViewModel(IBlockedContentService? blockedContent) : base(blockedContent)
+    {
+    }
 }

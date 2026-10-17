@@ -12,14 +12,14 @@ using FluentIcons.Avalonia;
 using FluentIcons.Common;
 using Microsoft.Win32.SafeHandles;
 using Pixeval.Extensions.Common;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 
 namespace Pixeval.Services.Background;
 
 public sealed partial class ExtensionsHostModel(
     IExtensionsHost host,
-    Dictionary<string, object?> values) : ObservableObject, IDisposable
+    Dictionary<string, object?> values) : Pixeval.ViewModels.ViewModelBase, IDisposable
 {
     private IExtensionsHost? _host = host;
 
@@ -31,3 +31,96 @@ public sealed partial class ExtensionsHostModel(
         set
         {
             if (Values.TryGetTargetOrAddDefault(nameof(IsActive), true) == value)
+                return;
+            Values[nameof(IsActive)] = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public int Priority
+    {
+        get => Values.TryGetTargetOrAddDefault(nameof(Priority), 0);
+        set => Values[nameof(Priority)] = value;
+    }
+
+    public string Name { get; } = host.ExtensionName;
+
+    public string Description { get; } = host.Description;
+
+    public string Author { get; } = host.AuthorName;
+
+    public string Version { get; } = host.Version;
+
+    public Uri? Link { get; } = Uri.TryCreate(host.ExtensionLink, UriKind.RelativeOrAbsolute, out var uri) ? uri : null;
+
+    public Uri? HelpLink { get; } = Uri.TryCreate(host.HelpLink, UriKind.RelativeOrAbsolute, out var uri) ? uri : null;
+
+    public string HostLibraryPath { get; init; } = "";
+
+    public string UninstallTargetRelativePath { get; init; } = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UninstallCommandLabel))]
+    [NotifyPropertyChangedFor(nameof(UninstallCommandIcon))]
+    public partial bool IsPendingUninstall { get; set; }
+
+    public string UninstallCommandLabel => Strings.GetString(IsPendingUninstall
+        ? nameof(Strings.ExtensionsPageCancelPendingUninstallExtensionsButtonLabel)
+        : nameof(Strings.ExtensionsPageUninstallExtensionsButtonLabel));
+
+    public Symbol UninstallCommandIcon => IsPendingUninstall ? Symbol.Dismiss : Symbol.Delete;
+
+    internal NativeLibrarySafeHandle Handle { get; init; } = null!;
+
+    private bool _isDisposed;
+
+    /// <summary>
+    /// 不能缓存<see cref="ExtensionsHostModel.Icon"/>
+    /// </summary>
+    public Control Icon
+    {
+        get
+        {
+            try
+            {
+                if (Host.Icon is { Length: > 0 } icon)
+                    return new Image { Source = new Bitmap(Streams.RentStream(icon)) };
+            }
+            catch
+            {
+                // ignored
+            }
+
+            return CreateFallbackIcon();
+        }
+    }
+
+    public Dictionary<string, object?> Values { get; } = values;
+
+    public IReadOnlyList<IExtension> Extensions { get; } = host.Extensions;
+
+    private static SymbolIcon CreateFallbackIcon() => new() { Symbol = Symbol.PuzzlePiece };
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+            return;
+
+        _isDisposed = true;
+        Handle.Dispose();
+    }
+}
+
+internal sealed class NativeLibrarySafeHandle : SafeHandleZeroOrMinusOneIsInvalid
+{
+    public NativeLibrarySafeHandle(nint handle) : base(true)
+    {
+        SetHandle(handle);
+    }
+
+    protected override bool ReleaseHandle()
+    {
+        NativeLibrary.Free(handle);
+        return true;
+    }
+}

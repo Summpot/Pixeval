@@ -10,12 +10,33 @@ using Pixeval.Utilities;
 namespace Pixeval.Config;
 
 public abstract record NavigationMenuItem(
-    string Header,
+    string InitialHeader,
     string? HeaderSource,
     Symbol Icon,
     bool NeedLogin,
-    IReadOnlyList<NavigationMenuItem> Children)
+    IReadOnlyList<NavigationMenuItem> Children) : System.ComponentModel.INotifyPropertyChanged
 {
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    public string Header
+    {
+        get
+        {
+            if (HeaderSource is { } source)
+            {
+                if (source.StartsWith("$$", StringComparison.Ordinal)) return source[1..];
+                if (source.StartsWith('$') && MessageKeys.TryGet(source[1..].Trim(), out var translated)) return translated;
+                return InitialHeader;
+            }
+            return this is NavigationPageItem page && NavigationPageRegistry.TryGetPage(page.PageKey, out var definition)
+                ? definition.Header : InitialHeader;
+        }
+    }
+    public void RefreshLocalization()
+    {
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Header)));
+        foreach (var child in Children) child.RefreshLocalization();
+    }
+
     public NavigationYamlItem ToYamlItem()
     {
         return this switch
@@ -53,14 +74,14 @@ public abstract record NavigationMenuItem(
 public sealed record NavigationPageItem(
     Type PageType,
     string PageKey,
-    string Header,
+    string InitialHeader,
     string? HeaderSource,
     Symbol Icon,
-    bool NeedLogin) : NavigationMenuItem(Header, HeaderSource, Icon, NeedLogin, []);
+    bool NeedLogin) : NavigationMenuItem(InitialHeader, HeaderSource, Icon, NeedLogin, []);
 
 public sealed record NavigationFolderItem(
-    string Header,
+    string InitialHeader,
     string? HeaderSource,
     Symbol Icon,
     bool NeedLogin,
-    IReadOnlyList<NavigationMenuItem> Children) : NavigationMenuItem(Header, HeaderSource, Icon, NeedLogin, Children);
+    IReadOnlyList<NavigationMenuItem> Children) : NavigationMenuItem(InitialHeader, HeaderSource, Icon, NeedLogin, Children);

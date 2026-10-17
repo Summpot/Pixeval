@@ -9,7 +9,6 @@ using AnimatedControls.Avalonia;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Pixiv;
 using Pixeval.Config;
 using Pixeval.Mako;
@@ -18,6 +17,17 @@ namespace Pixeval.ViewModels.Shell;
 
 public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
 {
+    protected override void OnLanguageChanged()
+    {
+        if (!_isDisposed)
+        {
+            _navigationConfiguration = NavigationYamlParser.ParseOrDefault(_navigationMenu.Text);
+            foreach (var item in HeaderNavigationItems) item.RefreshLocalization();
+            foreach (var item in FooterNavigationItems) item.RefreshLocalization();
+        }
+        base.OnLanguageChanged();
+    }
+
     private readonly IUserSessionService _sessionService;
     private readonly MakoClient _makoClient;
     private readonly INavigationService _navigationService;
@@ -33,15 +43,6 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     public partial bool CanCreateNewTab { get; private set; }
-
-    public TabViewContainerViewModel() : this(
-        App.Services!.GetRequiredService<IUserSessionService>(),
-        App.Services!.GetRequiredService<MakoClient>(),
-        App.Services!.GetRequiredService<INavigationService>(),
-        App.Services!.GetRequiredService<NavigationMenuDocument>(),
-        App.Services!.GetRequiredService<IImageProviderService>())
-    {
-    }
 
     public TabViewContainerViewModel(
         IUserSessionService sessionService,
@@ -189,9 +190,9 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty] public partial IAnimatedBitmap? Avatar { get; private set; }
 
-    public string? IdText => User?.Id;
+    public string? IdText => User is { } u ? u.Id : null;
 
-    public Uri? Url => User is not null ? new Uri($"https://www.pixiv.net/users/{User.Id}") : null;
+    public Uri? Url => User is { } u ? new Uri($"https://www.pixiv.net/users/{u.Id}") : null;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ToggleRestrictedModeCommand))]

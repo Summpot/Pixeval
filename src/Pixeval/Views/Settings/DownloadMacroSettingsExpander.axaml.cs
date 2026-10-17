@@ -4,7 +4,7 @@
 using System;
 using AutoSettingsPage.Avalonia;
 using CommunityToolkit.Avalonia.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Download;
 using Pixeval.Config;
 using Pixeval.Mako;
@@ -15,6 +15,7 @@ namespace Pixeval.Views.Settings;
 
 public partial class DownloadMacroSettingsExpander : SettingsExpander, IEntryControl<DownloadMacroSettingsEntry>
 {
+    private readonly IDisposable _languageSubscription;
     private readonly MacroEditorColorizer _colorizer = new();
     private DownloadMacroSettingsEntry? _entry;
     private bool _isSynchronizingText;
@@ -38,6 +39,7 @@ public partial class DownloadMacroSettingsExpander : SettingsExpander, IEntryCon
     public DownloadMacroSettingsExpander()
     {
         InitializeComponent();
+        _languageSubscription = AppLocalization.Instance.Subscribe(() => RefreshDiagnostic());
         DownloadPathMacroTextBox.TextArea.TextView.LineTransformers.Add(_colorizer);
     }
 
@@ -49,6 +51,16 @@ public partial class DownloadMacroSettingsExpander : SettingsExpander, IEntryCon
         ApplyText(DownloadPathMacroTextBox.Text?.ReplaceLineEndings("")?.Trim());
     }
 
+    private void RefreshDiagnostic()
+    {
+        var text = DownloadPathMacroTextBox.Text ?? "";
+        var analysis = DownloadPathMacroParser.Analyze(text);
+        if (string.IsNullOrWhiteSpace(text))
+            DownloadMacroInvalidInfoBar.Text = Strings.SettingsMainViewDownloadMacroInvalidInfoBarInputCannotBeBlank();
+        else if (analysis.Diagnostics.Count > 0)
+            DownloadMacroInvalidInfoBar.Text = FormatDiagnostic(analysis.Diagnostics[0]);
+    }
+
     private void ApplyText(string? text)
     {
         var normalized = text ?? "";
@@ -58,7 +70,7 @@ public partial class DownloadMacroSettingsExpander : SettingsExpander, IEntryCon
 
         if (string.IsNullOrWhiteSpace(normalized))
         {
-            DownloadMacroInvalidInfoBar.Text = SettingsMainViewResources.DownloadMacroInvalidInfoBarInputCannotBeBlank;
+            DownloadMacroInvalidInfoBar.Text = Strings.SettingsMainViewDownloadMacroInvalidInfoBarInputCannotBeBlank();
             DownloadMacroInvalidInfoBar.IsVisible = true;
             return;
         }
@@ -72,7 +84,7 @@ public partial class DownloadMacroSettingsExpander : SettingsExpander, IEntryCon
 
         if (string.IsNullOrWhiteSpace(normalized))
         {
-            DownloadMacroInvalidInfoBar.Text = SettingsMainViewResources.DownloadMacroInvalidInfoBarInputCannotBeBlank;
+            DownloadMacroInvalidInfoBar.Text = Strings.SettingsMainViewDownloadMacroInvalidInfoBarInputCannotBeBlank();
             DownloadMacroInvalidInfoBar.IsVisible = true;
             return;
         }
@@ -85,8 +97,7 @@ public partial class DownloadMacroSettingsExpander : SettingsExpander, IEntryCon
         }
         catch (Exception exception)
         {
-            DownloadMacroInvalidInfoBar.Text = I18NManager.GetResource(
-                SettingsMainViewResources.DownloadMacroInvalidInfoBarMacroInvalidFormatted, exception.Message);
+            DownloadMacroInvalidInfoBar.Text = Strings.SettingsMainViewDownloadMacroInvalidInfoBarMacroInvalidFormatted(message: exception.Message);
             DownloadMacroInvalidInfoBar.IsVisible = true;
         }
     }
@@ -123,17 +134,23 @@ public partial class DownloadMacroSettingsExpander : SettingsExpander, IEntryCon
 
     private static string FormatDiagnostic(MacroDiagnostic diagnostic)
     {
-        var arguments = diagnostic.Arguments;
-        var formattedDiagnostic = arguments.Count > 0
-            ? I18NManager.GetResource(GetFilterDiagnosticResourceKey(diagnostic.Kind), [.. arguments])
-            : I18NManager.GetResource(GetFilterDiagnosticResourceKey(diagnostic.Kind));
-        return I18NManager.GetResource(
-            MacroParserResources.MessageWithPositionFormatted,
-            formattedDiagnostic,
-            diagnostic.Span.Start + 1);
+        var message = diagnostic.Kind switch
+        {
+            MacroDiagnosticKind.UnexpectedToken => Strings.MacroParserUnexpectedToken(token: diagnostic.Arguments[0]),
+            MacroDiagnosticKind.ExpectedLeftBraceAfterAt => Strings.MacroParserExpectedLeftBraceAfterAt(),
+            MacroDiagnosticKind.ExpectedMacroName => Strings.MacroParserExpectedMacroName(),
+            MacroDiagnosticKind.MissingRightBrace => Strings.MacroParserMissingRightBrace(),
+            MacroDiagnosticKind.MissingConditionalSeparator => Strings.MacroParserMissingConditionalSeparator(),
+            MacroDiagnosticKind.UnknownMacroName => Strings.MacroParserUnknownMacroName(macroName: diagnostic.Arguments[0]),
+            MacroDiagnosticKind.NonParameterizedMacroBearingParameter => Strings.MacroParserNonParameterizedMacroBearingParameter(macroName: diagnostic.Arguments[0]),
+            MacroDiagnosticKind.ConditionalBranchesMissing => Strings.MacroParserConditionalBranchesMissing(macroName: diagnostic.Arguments[0]),
+            MacroDiagnosticKind.InvalidFormatter => Strings.MacroParserInvalidFormatter(macroName: diagnostic.Arguments[0], formatter: diagnostic.Arguments[1]),
+            MacroDiagnosticKind.MacroShouldBeInLastSegment => Strings.MacroParserMacroShouldBeInLastSegment(macroName: diagnostic.Arguments[0]),
+            MacroDiagnosticKind.MacroContextRestrictionNotSatisfied => Strings.MacroParserMacroContextRestrictionNotSatisfied(macroName: diagnostic.Arguments[0]),
+            _ => diagnostic.Kind.ToString()
+        };
+        return Strings.MacroParserMessageWithPositionFormatted(message: message, position: diagnostic.Span.Start + 1);
     }
 
-    private static string GetFilterDiagnosticResourceKey(MacroDiagnosticKind kind) => FilterDiagnosticResourcePrefix + kind;
 
-    private const string FilterDiagnosticResourcePrefix = "MacroParser.";
 }

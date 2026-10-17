@@ -11,9 +11,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
 using FluentIcons.Common;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Config;
 using Pixeval.Views.Works;
 using Pixeval.Views.Download;
@@ -82,39 +81,39 @@ public static class AvaloniaHelper
 
     public static Dictionary<Type, (Symbol Symbol, string Header)> PageTypeToHeaderMap { get; } =
     [
-        Page<HomePage>(Symbol.Home, MainPageResources.Tab.Home),
-        Page<LoginPage>(Symbol.PersonKey, MainPageResources.Tab.Login, false),
-        Page<SearchPage>(Symbol.SearchSparkle, MainPageResources.Tab.Search),
-        Page<WorkRecommendedPage>(Symbol.Calendar, MainPageResources.Tab.WorkRecommended),
-        Page<WorkRankingPage>(Symbol.ArrowTrendingLines, MainPageResources.Tab.WorkRanking),
-        Page<WorkBookmarksPage>(Symbol.Library, MainPageResources.Tab.WorkBookmarks),
-        Page<WorkRelatedPage>(Symbol.LightbulbFilament, MainPageResources.Tab.WorkRelated, true, false),
-        Page<SeriesPage>(Symbol.LayerDiagonalPerson, MainPageResources.Tab.Series),
-        Page<WorkPostsPage>(Symbol.Image, MainPageResources.Tab.WorkPosts),
-        Page<WorkSearchResultPage>(Symbol.SearchSparkle, MainPageResources.Tab.WorkSearchResult, true, false),
-        Page<UserFollowingPage>(Symbol.PersonHeart, MainPageResources.Tab.UserFollowing),
-        Page<SpotlightPage>(Symbol.SlideTextSparkle, MainPageResources.Tab.Spotlight),
-        Page<UserRecommendedPage>(Symbol.PeopleCommunity, MainPageResources.Tab.UserRecommended),
-        Page<UserSearchResultPage>(Symbol.Person, MainPageResources.Tab.UserSearchResult, true, false),
-        Page<UserFollowerPage>(Symbol.People, MainPageResources.Tab.UserFollower),
-        Page<UserMyPixivPage>(Symbol.PeopleInterwoven, MainPageResources.Tab.UserMyPixiv),
-        Page<RelatedUsersPage>(Symbol.PeopleCommunity, MainPageResources.Tab.RelatedUser),
-        Page<WorkFollowingPage>(Symbol.AlertUrgent, MainPageResources.Tab.WorkFollowing),
-        Page<WorkMyPixivPage>(Symbol.Molecule, MainPageResources.Tab.WorkMyPixiv),
-        Page<WorkNewPage>(Symbol.ArrowSync, MainPageResources.Tab.WorkNew),
-        Page<BrowsingHistoryPage>(Symbol.History, MainPageResources.Tab.BrowsingHistory),
-        Page<WatchLaterPage>(Symbol.Clock, MainPageResources.Tab.WatchLater),
-        Page<DownloadPage>(Symbol.ArrowSquareDown, MainPageResources.Tab.Download),
-        Page<ExtensionsPage>(Symbol.PuzzlePiece, MainPageResources.Tab.Extensions, false),
-        Page<SettingsPage>(Symbol.Settings, MainPageResources.Tab.Settings, false),
-        Page<AboutPage>(Symbol.PersonStarburst, MainPageResources.Tab.About, false, false),
-        Page<HelpPage>(Symbol.ChatBubblesQuestion, MainPageResources.Tab.Help, false, false),
-        Page<IllustrationViewerPage>(Symbol.Image, MainPageResources.Tab.SingleImage, true, false),
-        Page<NovelViewerPage>(Symbol.BookOpen, MainPageResources.Tab.SingleNovel, true, false),
-        Page<UserViewerPage>(Symbol.Person, MainPageResources.Tab.SingleUser, true, false),
-        Page<SeriesViewerPage>(Symbol.ListBar, MainPageResources.Tab.SingleSeries, true, false),
-        Page<WorkInfoPage>(Symbol.BookContacts, MainPageResources.Tab.WorkInfo, true, false),
-        Page<CommentsPage>(Symbol.ChatMultiple, MainPageResources.Tab.Comments, true, false)
+        Page<HomePage>(Symbol.Home, nameof(Strings.MainPageTabHome)),
+        Page<LoginPage>(Symbol.PersonKey, nameof(Strings.MainPageTabLogin), false),
+        Page<SearchPage>(Symbol.SearchSparkle, nameof(Strings.MainPageTabSearch)),
+        Page<WorkRecommendedPage>(Symbol.Calendar, nameof(Strings.MainPageTabWorkRecommended)),
+        Page<WorkRankingPage>(Symbol.ArrowTrendingLines, nameof(Strings.MainPageTabWorkRanking)),
+        Page<WorkBookmarksPage>(Symbol.Library, nameof(Strings.MainPageTabWorkBookmarks)),
+        Page<WorkRelatedPage>(Symbol.LightbulbFilament, nameof(Strings.MainPageTabWorkRelated), true, false),
+        Page<SeriesPage>(Symbol.LayerDiagonalPerson, nameof(Strings.MainPageTabSeries)),
+        Page<WorkPostsPage>(Symbol.Image, nameof(Strings.MainPageTabWorkPosts)),
+        Page<WorkSearchResultPage>(Symbol.SearchSparkle, nameof(Strings.MainPageTabWorkSearchResult), true, false),
+        Page<UserFollowingPage>(Symbol.PersonHeart, nameof(Strings.MainPageTabUserFollowing)),
+        Page<SpotlightPage>(Symbol.SlideTextSparkle, nameof(Strings.MainPageTabSpotlight)),
+        Page<UserRecommendedPage>(Symbol.PeopleCommunity, nameof(Strings.MainPageTabUserRecommended)),
+        Page<UserSearchResultPage>(Symbol.Person, nameof(Strings.MainPageTabUserSearchResult), true, false),
+        Page<UserFollowerPage>(Symbol.People, nameof(Strings.MainPageTabUserFollower)),
+        Page<UserMyPixivPage>(Symbol.PeopleInterwoven, nameof(Strings.MainPageTabUserMyPixiv)),
+        Page<RelatedUsersPage>(Symbol.PeopleCommunity, nameof(Strings.MainPageTabRelatedUser)),
+        Page<WorkFollowingPage>(Symbol.AlertUrgent, nameof(Strings.MainPageTabWorkFollowing)),
+        Page<WorkMyPixivPage>(Symbol.Molecule, nameof(Strings.MainPageTabWorkMyPixiv)),
+        Page<WorkNewPage>(Symbol.ArrowSync, nameof(Strings.MainPageTabWorkNew)),
+        Page<BrowsingHistoryPage>(Symbol.History, nameof(Strings.MainPageTabBrowsingHistory)),
+        Page<WatchLaterPage>(Symbol.Clock, nameof(Strings.MainPageTabWatchLater)),
+        Page<DownloadPage>(Symbol.ArrowSquareDown, nameof(Strings.MainPageTabDownload)),
+        Page<ExtensionsPage>(Symbol.PuzzlePiece, nameof(Strings.MainPageTabExtensions), false),
+        Page<SettingsPage>(Symbol.Settings, nameof(Strings.MainPageTabSettings), false),
+        Page<AboutPage>(Symbol.PersonStarburst, nameof(Strings.MainPageTabAbout), false, false),
+        Page<HelpPage>(Symbol.ChatBubblesQuestion, nameof(Strings.MainPageTabHelp), false, false),
+        Page<IllustrationViewerPage>(Symbol.Image, nameof(Strings.MainPageTabSingleImage), true, false),
+        Page<NovelViewerPage>(Symbol.BookOpen, nameof(Strings.MainPageTabSingleNovel), true, false),
+        Page<UserViewerPage>(Symbol.Person, nameof(Strings.MainPageTabSingleUser), true, false),
+        Page<SeriesViewerPage>(Symbol.ListBar, nameof(Strings.MainPageTabSingleSeries), true, false),
+        Page<WorkInfoPage>(Symbol.BookContacts, nameof(Strings.MainPageTabWorkInfo), true, false),
+        Page<CommentsPage>(Symbol.ChatMultiple, nameof(Strings.MainPageTabComments), true, false)
     ];
 
     public static Dictionary<HomePageCardSourceKind, (Symbol Symbol, string Header)> HomeCardSourceKindToHeaderMap { get; } =
@@ -141,9 +140,17 @@ public static class AvaloniaHelper
             [HomePageCardSourceKind.SingleUser] = PageTypeToHeaderMap[typeof(UserViewerPage)]
         };
 
-    public static (Symbol Symbol, string Header) GetPageHeader(Type pageType) => PageTypeToHeaderMap[pageType];
+    public static (Symbol Symbol, string Header) GetPageHeader(Type pageType)
+    {
+        var value = PageTypeToHeaderMap[pageType];
+        return (value.Symbol, Strings.GetString(value.Header));
+    }
 
-    public static (Symbol Symbol, string Header) GetHomeCardHeader(HomePageCardSourceKind sourceKind) => HomeCardSourceKindToHeaderMap[sourceKind];
+    public static (Symbol Symbol, string Header) GetHomeCardHeader(HomePageCardSourceKind sourceKind)
+    {
+        var value = HomeCardSourceKindToHeaderMap[sourceKind];
+        return (value.Symbol, Strings.GetString(value.Header));
+    }
 
     public static EventHandler<RoutedEventArgs>? LaunchUriTagInWebBrowser { get; }
         = (sender, e) =>
@@ -186,7 +193,7 @@ public static class AvaloniaHelper
 
             var notifications = control.Notifications;
             _ = clipboard.SetTextAsync(str)
-                .ContinueWith(_ => notifications.ShowSuccess(I18NManager.GetResource(MiscResources.Copied)),
+                .ContinueWith(_ => notifications.ShowSuccess(Strings.MiscCopied()),
                     TaskScheduler.FromCurrentSynchronizationContext());
         };
 
@@ -214,7 +221,7 @@ public static class AvaloniaHelper
         bool inNavigation = true)
         where TPage : Page
     {
-        var header = I18NManager.GetResource(headerResource);
+        var header = headerResource;
         if (inNavigation)
         {
             var navigation = new NavigationPageDefinition(

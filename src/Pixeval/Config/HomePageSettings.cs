@@ -8,15 +8,15 @@ namespace Pixeval.Config;
 
 public record HomePageSettings
 {
-    [SettingsEntry(Symbol.Table, AppSettingsResources.HomePageRowsEntry.Header, AppSettingsResources.HomePageRowsEntry.Description)]
+    [SettingsEntry(Symbol.Table, nameof(Strings.AppSettingsHomePageRowsEntryHeader), nameof(Strings.AppSettingsHomePageRowsEntryDescription))]
     public int HomePageRows { get; set; } = 7;
 
-    [SettingsEntry(Symbol.Table, AppSettingsResources.HomePageColumnsEntry.Header, AppSettingsResources.HomePageColumnsEntry.Description)]
+    [SettingsEntry(Symbol.Table, nameof(Strings.AppSettingsHomePageColumnsEntryHeader), nameof(Strings.AppSettingsHomePageColumnsEntryDescription))]
     public int HomePageColumns { get; set; } = 1;
 
-    [SettingsEntry(Symbol.WindowHeaderHorizontal, AppSettingsResources.HideHomePageToolbarEntry.Header, AppSettingsResources.HideHomePageToolbarEntry.Description)]
+    [SettingsEntry(Symbol.WindowHeaderHorizontal, nameof(Strings.AppSettingsHideHomePageToolbarEntryHeader), nameof(Strings.AppSettingsHideHomePageToolbarEntryDescription))]
     public bool HideHomePageToolbar { get; set; }
 
-    [SettingsEntry(Symbol.AppTitle, AppSettingsResources.HideHomePageCardTitleEntry.Header, AppSettingsResources.HideHomePageCardTitleEntry.Description)]
+    [SettingsEntry(Symbol.AppTitle, nameof(Strings.AppSettingsHideHomePageCardTitleEntryHeader), nameof(Strings.AppSettingsHideHomePageCardTitleEntryDescription))]
     public bool HideHomePageCardTitle { get; set; }
 }

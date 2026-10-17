@@ -115,7 +115,7 @@ public sealed partial class HomePageCardControl
         var deltaRow = GetGridDelta(pointerPosition.Y - state.StartPoint.Y, state.LayoutGrid.Bounds.Height, state.LayoutGrid.RowSpacing, RowCount);
 
         var startBounds = new HomeCardBounds(state.StartColumn, state.StartRow, state.StartColumnSpan, state.StartRowSpan);
-        return new ConfigEngine().LayoutCalculateEditCandidate(
+        return PixevalConfigMethods.LayoutCalculateEditCandidate(
             state.Action,
             startBounds,
             deltaColumn,

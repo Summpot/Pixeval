@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Home.HomePageCardControl"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:cfg="using:Pixeval.Config"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -136,8 +137,8 @@
                             AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+OpenCardPageButton.ToolTip}}"
                             Command="{Binding $parent[local:HomePageCardControl].OpenCardPageCommand}"
                             DockPanel.Dock="Right"
-                            Symbol="OpenInNew"
-                            ToolTip.Tip="{I18N {x:Static pixeval:HomePageResources+OpenCardPageButton.ToolTip}}" />
+                            Theme="{StaticResource TransparentButtonStyle}"
+                            ToolTip.Tip="{CompiledBinding [HomePage-OpenCardPageButton-ToolTip], Source={x:Static loc:LocalizationManager.Instance}}" />
                         <TextBlock
                             VerticalAlignment="Center"
                             FontSize="16"
@@ -255,22 +256,25 @@
                         CornerRadius="8"
                         DataContext="{Binding #Root.PreviewViewModel}"
                         IsHitTestVisible="{Binding !#Root.IsEditing}"
-                        IsVisible="{Binding !Items.Count}">
-                        <StackPanel Spacing="8">
-                            <fluent:SymbolIcon
-                                HorizontalAlignment="Center"
-                                FontSize="32"
-                                IconVariant="Color"
-                                Opacity="0.92"
-                                Symbol="{Binding #Root.CardSymbol}" />
-                            <TextBlock
-                                x:Name="PlaceholderTextBlock"
-                                Foreground="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OnSurface}}"
-                                Text="{Binding PlaceholderText}"
-                                TextAlignment="Center"
-                                TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
+                        IsVisible="{Binding !Items.Count}"
+                        Spacing="8">
+                        <fluent:SymbolIcon
+                            HorizontalAlignment="Center"
+                            FontSize="32"
+                            IconVariant="Color"
+                            Opacity="0.92"
+                            Symbol="{Binding #Root.CardSymbol}" />
+                        <TextBlock
+                            Opacity="0.84"
+                            Text="{Binding PlaceholderText}"
+                            TextAlignment="Center"
+                            TextTrimming="CharacterEllipsis" />
+                        <Button
+                            HorizontalAlignment="Center"
+                            Command="{Binding RetryCommand}"
+                            Content="{CompiledBinding [DownloadItem-ActionButtonContentRetry], Source={x:Static loc:LocalizationManager.Instance}}"
+                            IsVisible="{Binding CanRetry}" />
+                    </StackPanel>
                 </Panel>
             </DockPanel>
         </Border>
@@ -298,6 +302,6 @@
             Click="QuickDeleteButton_OnClick"
             IsVisible="{Binding #Root.IsEditing}"
             Symbol="Delete"
-            ToolTip.Tip="{I18N {x:Static pixeval:HomePageResources+DeleteSelectedCardButton.Content}}" />
+            ToolTip.Tip="{CompiledBinding [HomePage-DeleteSelectedCardButton-Content], Source={x:Static loc:LocalizationManager.Instance}}" />
     </Panel>
 </UserControl>

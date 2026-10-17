@@ -8,12 +8,12 @@ namespace Pixeval.Config;
 [LocalizationMetadata]
 public enum ApplicationTheme
 {
-    [LocalizedResource(EnumResources.ApplicationTheme.Default)]
+    [LocalizedResource(nameof(Strings.EnumApplicationThemeDefault))]
     Default,
 
-    [LocalizedResource(EnumResources.ApplicationTheme.Light)]
+    [LocalizedResource(nameof(Strings.EnumApplicationThemeLight))]
     Light,
 
-    [LocalizedResource(EnumResources.ApplicationTheme.Dark)]
+    [LocalizedResource(nameof(Strings.EnumApplicationThemeDark))]
     Dark
 }

@@ -1,6 +1,0 @@
-{
-  "InvalidDate": {
-    "Title": "Date du classement non valide",
-    "Content": "Saisissez une date valide au plus tard le {0}. Votre date précédente a été conservée."
-  }
-}

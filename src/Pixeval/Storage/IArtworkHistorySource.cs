@@ -12,7 +12,7 @@ public interface IArtworkHistorySource
 {
     event EventHandler? Changed;
 
-    IAsyncEnumerable<object> StreamAsync(SimpleWorkType workType, CancellationToken token = default);
+    IAsyncEnumerable<object> StreamAsync(SimpleWorkKind workType, CancellationToken token = default);
 
     void Clear();
 }

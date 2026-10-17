@@ -20,7 +20,7 @@ public sealed partial class ExtensionService : IDisposable
         OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
     public static string CurrentVersion { get; } = ExtensionsHostStatics.CurrentSdkVersion.ToString();
-    public PluginHostEngine PluginEngine { get; } = new(CurrentVersion);
+    public PluginHost PluginEngine { get; } = new(CurrentVersion);
 
     public static string? NativeLibraryExtension =>
         OperatingSystem.IsWindows() ? ".dll"
@@ -85,7 +85,7 @@ public sealed partial class ExtensionService : IDisposable
     }
 
     public static IEnumerable<LocalExtensionHost> EnumerateLocalExtensionHosts(string directory) =>
-        Directory.Exists(directory) ? new PluginHostEngine(CurrentVersion).EnumerateExtensionHosts(directory) : [];
+        Directory.Exists(directory) ? new PluginHost(CurrentVersion).EnumerateExtensionHosts(directory) : [];
 
     public void UnloadHost(ExtensionsHostModel model)
     {

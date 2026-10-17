@@ -1,7 +1,7 @@
 [submodule "src/lib/AutoSettingsPage"]
 	path = src/lib/AutoSettingsPage
-	url = https://github.com/Pixeval/AutoSettingsPage.git
-	branch = master
+	url = https://github.com/Summpot/AutoSettingsPage.git
+	branch = codex/zeroi18n-live-localization
 [submodule "src/lib/AnimatedControls.Avalonia"]
 	path = src/lib/AnimatedControls.Avalonia
 	url = https://github.com/Pixeval/AnimatedControls.Avalonia.git

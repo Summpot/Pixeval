@@ -1,6 +1,7 @@
 <ResourceDictionary
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
@@ -19,16 +20,9 @@
                         <StackPanel
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
-                            Spacing="16">
-                            <ProgressBar
-                                Width="160"
-                                AutomationProperties.Name="{I18N {x:Static pixeval:EntryViewerPageResources+LoadingTextBlock.Text}}"
-                                IsIndeterminate="{TemplateBinding IsLoading}" />
-                            <TextBlock
-                                m3:MaterialText.Style="{m3:Typography BodyMedium}"
-                                Text="{I18N {x:Static pixeval:EntryViewerPageResources+LoadingTextBlock.Text}}"
-                                TextAlignment="Center"
-                                TextWrapping="Wrap" />
+                            Spacing="10">
+                            <ProgressBar Width="160" IsIndeterminate="{TemplateBinding IsLoading}" />
+                            <TextBlock Text="{CompiledBinding [EntryViewerPage-LoadingTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                         </StackPanel>
                     </Border>
                     <Border Background="{TemplateBinding Background}" IsVisible="{TemplateBinding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">

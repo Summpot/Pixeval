@@ -10,7 +10,7 @@ namespace Pixeval.Tests;
 [DoNotParallelize]
 public sealed class WorkFilterNodeTest
 {
-    private static readonly FilterCompletionEngine _Language = WorkFilterLanguage.Instance;
+    private static readonly FilterSession _Language = FilterSession.CreateDefault();
 
     [TestMethod]
     public void WorkFilterNodesShouldSupportAllPredicatesAndGroups()

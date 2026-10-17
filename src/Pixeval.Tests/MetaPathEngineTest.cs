@@ -16,8 +16,7 @@ public sealed class MetaPathEngineTest
     [TestMethod]
     public void ValidMacroShouldProduceHighlightsAndSuccess()
     {
-        using var engine = new MetaPathEngine();
-        var result = engine.Analyze("@{id}");
+        var result = PixevalDownloadMethods.AnalyzeMetaPath("@{id}");
 
         Assert.IsTrue(result.IsSuccess);
         Assert.AreEqual(0, result.Diagnostics.Count);
@@ -28,8 +27,7 @@ public sealed class MetaPathEngineTest
     [TestMethod]
     public void FormattedTransducerShouldProduceFormatterHighlight()
     {
-        using var engine = new MetaPathEngine();
-        var result = engine.Analyze("@{ext:u}");
+        var result = PixevalDownloadMethods.AnalyzeMetaPath("@{ext:u}");
 
         Assert.IsTrue(result.IsSuccess);
         Assert.AreEqual(0, result.Diagnostics.Count);
@@ -40,8 +38,7 @@ public sealed class MetaPathEngineTest
     [TestMethod]
     public void MissingRightBraceShouldProduceDiagnostic()
     {
-        using var engine = new MetaPathEngine();
-        var result = engine.Analyze("@{id");
+        var result = PixevalDownloadMethods.AnalyzeMetaPath("@{id");
 
         Assert.IsFalse(result.IsSuccess);
         Assert.IsTrue(result.Diagnostics.Count > 0);
@@ -51,8 +48,7 @@ public sealed class MetaPathEngineTest
     [TestMethod]
     public void UnknownMacroShouldProduceDiagnostic()
     {
-        using var engine = new MetaPathEngine();
-        var result = engine.Analyze("@{non_existent_macro}");
+        var result = PixevalDownloadMethods.AnalyzeMetaPath("@{non_existent_macro}");
 
         Assert.IsFalse(result.IsSuccess);
         Assert.AreEqual(MacroDiagnosticKind.UnknownMacroName, result.Diagnostics[0].Kind);
@@ -62,8 +58,7 @@ public sealed class MetaPathEngineTest
     [TestMethod]
     public void PredicateWithoutBranchesShouldProduceDiagnostic()
     {
-        using var engine = new MetaPathEngine();
-        var result = engine.Analyze("@{is_pic_set}");
+        var result = PixevalDownloadMethods.AnalyzeMetaPath("@{is_pic_set}");
 
         Assert.IsFalse(result.IsSuccess);
         Assert.AreEqual(MacroDiagnosticKind.ConditionalBranchesMissing, result.Diagnostics[0].Kind);
@@ -72,36 +67,33 @@ public sealed class MetaPathEngineTest
     [TestMethod]
     public void ReduceShouldFormatIdAndDateTime()
     {
-        using var engine = new MetaPathEngine();
         var sample = DesignHelper.DownloadParserSampleSingleIllustration;
         var context = new ParserContext(sample).ToMacroContext();
 
-        var idPath = engine.Reduce("@{id}", context);
+        var idPath = PixevalDownloadMethods.ReduceMetaPath("@{id}", context);
         Assert.AreEqual("123456", idPath);
 
-        var datePath = engine.Reduce("@{publish_time:yyyy-MM-dd}", context);
+        var datePath = PixevalDownloadMethods.ReduceMetaPath("@{publish_time:yyyy-MM-dd}", context);
         Assert.AreEqual(DateTimeOffset.UtcNow.ToString("yyyy-MM-dd"), datePath);
 
-        var extPath = engine.Reduce("@{ext}", context);
+        var extPath = PixevalDownloadMethods.ReduceMetaPath("@{ext}", context);
         Assert.AreEqual("<ext>", extPath);
 
-        var formattedExtPath = engine.Reduce("@{ext:u}", context);
+        var formattedExtPath = PixevalDownloadMethods.ReduceMetaPath("@{ext:u}", context);
         Assert.AreEqual("<ext:u>", formattedExtPath);
     }
 
     [TestMethod]
     public void ReduceShouldHandleConditionals()
     {
-        using var engine = new MetaPathEngine();
-
         var singleSample = DesignHelper.DownloadParserSampleSingleIllustration;
         var singleContext = new ParserContext(singleSample).ToMacroContext();
-        var singleResult = engine.Reduce("@{is_pic_set?set:single}", singleContext);
+        var singleResult = PixevalDownloadMethods.ReduceMetaPath("@{is_pic_set?set:single}", singleContext);
         Assert.AreEqual("single", singleResult);
 
         var setSample = DesignHelper.DownloadParserSampleImageSetIllustration;
         var setContext = new ParserContext(setSample).ToMacroContext();
-        var setResult = engine.Reduce("@{is_pic_set?set:single}", setContext);
+        var setResult = PixevalDownloadMethods.ReduceMetaPath("@{is_pic_set?set:single}", setContext);
         Assert.AreEqual("set", setResult);
     }
 }

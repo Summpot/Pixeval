@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Login.LoginPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:markup1="using:Pixeval.Common.Markup"
@@ -14,97 +15,60 @@
     mc:Ignorable="d"
     d:DesignHeight="450"
     d:DesignWidth="800">
-    <views:IconContentPage.DataContext>
-        <viewModels:LoginPageViewModel />
-    </views:IconContentPage.DataContext>
     <views:IconContentPage.Resources>
         <DataTemplate x:DataType="{x:Type storage:LoginUserRecord}" x:Key="LoginUserTemplate">
             <controls:UserBasicInfoPresenter Margin="20,5" User="{Binding TokenUser}" />
         </DataTemplate>
     </views:IconContentPage.Resources>
-    <views:IconContentPage.Styles>
-        <Style Selector="AutoCompleteBox /template/ TextBox">
-            <Setter Property="PasswordChar" Value="•" />
-            <Setter Property="RevealPassword" Value="False" />
-        </Style>
-        <Style Selector="Button.loginAction /template/ ContentPresenter">
-            <Setter Property="TextWrapping" Value="Wrap" />
-        </Style>
-    </views:IconContentPage.Styles>
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <m3:MaterialSurface
-            MaxWidth="440"
-            Margin="16"
-            Padding="24"
+    <StackPanel
+        Width="300"
+        Margin="50"
+        VerticalAlignment="Center"
+        DockPanel.Dock="Right"
+        Spacing="10">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+            <PathIcon
+                Width="82"
+                Height="29"
+                HorizontalAlignment="Left"
+                Data="{markup1:SvgPath {x:Static pixeval:SvgResources.Pixiv}}"
+                Foreground="{DynamicResource PixivLogo}" />
+            <TextBlock
+                VerticalAlignment="Center"
+                Text="{CompiledBinding [LoginPage-LoginHeader], Source={x:Static loc:LocalizationManager.Instance}}"
+                Theme="{StaticResource SubtitleTextBlockStyle}" />
+        </StackPanel>
+        <ContentControl
+            Content="{Binding SelectedUser}"
+            ContentTemplate="{StaticResource LoginUserTemplate}"
+            IsVisible="{Binding HasSelectedUser}" />
+        <AutoCompleteBox
             HorizontalAlignment="Stretch"
-            VerticalAlignment="Center"
-            Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerLow}}"
-            CornerRadius="24">
-            <StackPanel Spacing="16">
-                <WrapPanel ItemSpacing="12" LineSpacing="8">
-                    <PathIcon
-                        Width="82"
-                        Height="29"
-                        HorizontalAlignment="Left"
-                        Data="{markup1:SvgPath {x:Static pixeval:SvgResources.Pixiv}}"
-                        Foreground="{DynamicResource PixivLogo}" />
-                    <TextBlock
-                        VerticalAlignment="Center"
-                        m3:MaterialText.Style="{m3:Typography HeadlineSmall}"
-                        Text="{I18N {x:Static pixeval:LoginPageResources.LoginHeader}}"
-                        TextWrapping="Wrap" />
-                </WrapPanel>
-                <ContentControl
-                    AutomationProperties.Name="{Binding SelectedUser, Converter={x:Static login:TokenAutoCompleteBox.AccountNameConverter}}"
-                    Content="{Binding SelectedUser}"
-                    ContentTemplate="{StaticResource LoginUserTemplate}"
-                    IsVisible="{Binding HasSelectedUser}" />
-                <!--
-                    The editor owns selection while typing. Feeding model deselection back here
-                    restores AutoCompleteBox's previous SearchText and loses the new token.
-                -->
-                <login:TokenAutoCompleteBox
-                    HorizontalAlignment="Stretch"
-                    AutomationProperties.Name="{I18N {x:Static pixeval:LoginPageResources+RefreshTokenBox.PlaceholderText}}"
-                    FilterMode="Custom"
-                    IsEnabled="{Binding !IsLoginInProgress}"
-                    IsTextCompletionEnabled="False"
-                    ItemFilter="{x:Static viewModels:LoginPageViewModel.LoginUserFilter}"
-                    ItemSelector="{x:Static viewModels:LoginPageViewModel.LoginUserTextSelector}"
-                    ItemTemplate="{StaticResource LoginUserTemplate}"
-                    ItemsSource="{Binding Users}"
-                    MinimumPrefixLength="0"
-                    PlaceholderText="{I18N {x:Static pixeval:LoginPageResources+RefreshTokenBox.PlaceholderText}}"
-                    SelectedItem="{Binding SelectedUser, Mode=OneWayToSource}"
-                    Tapped="RefreshTokenBox_OnTapped"
-                    Text="{Binding RefreshToken, Mode=TwoWay}">
-                    <login:TokenAutoCompleteBox.Styles>
-                        <Style x:DataType="{x:Type database:LoginUserEntry}" Selector="ListBoxItem">
-                            <Setter Property="AutomationProperties.Name" Value="{Binding Converter={x:Static login:TokenAutoCompleteBox.AccountNameConverter}}" />
-                        </Style>
-                    </login:TokenAutoCompleteBox.Styles>
-                </login:TokenAutoCompleteBox>
-                <Button
-                    HorizontalAlignment="Stretch"
-                    Classes="loginAction"
-                    Click="LoginButton_OnClick"
-                    Content="{I18N {x:Static pixeval:LoginPageResources+RefreshTokenButton.Content}}"
-                    IsEnabled="{Binding !IsLoginInProgress}" />
-                <Button
-                    HorizontalAlignment="Stretch"
-                    Classes="loginAction"
-                    Click="OpenWebView_OnClick"
-                    Content="{I18N {x:Static pixeval:LoginPageResources+WebViewButton.Content}}"
-                    IsEnabled="{Binding !IsLoginInProgress}"
-                    Theme="{StaticResource MaterialOutlinedButtonTheme}" />
-                <StackPanel IsVisible="{Binding IsLoginInProgress}" Spacing="8">
-                    <ProgressBar AutomationProperties.Name="{I18N {x:Static pixeval:MainPageResources+LoggingIn.Header}}" IsIndeterminate="{Binding IsLoginInProgress}" />
-                    <TextBlock
-                        m3:MaterialText.Style="{m3:Typography BodyMedium}"
-                        Text="{I18N {x:Static pixeval:MainPageResources+LoggingIn.Header}}"
-                        TextWrapping="Wrap" />
-                </StackPanel>
-            </StackPanel>
-        </m3:MaterialSurface>
-    </ScrollViewer>
+            FilterMode="Custom"
+            IsEnabled="{Binding !IsLoginInProgress}"
+            IsTextCompletionEnabled="False"
+            ItemFilter="{x:Static viewModels:LoginPageViewModel.LoginUserFilter}"
+            ItemSelector="{x:Static viewModels:LoginPageViewModel.LoginUserTextSelector}"
+            ItemTemplate="{StaticResource LoginUserTemplate}"
+            ItemsSource="{Binding Users}"
+            MinimumPrefixLength="0"
+            PlaceholderText="{CompiledBinding [LoginPage-RefreshTokenBox-PlaceholderText], Source={x:Static loc:LocalizationManager.Instance}}"
+            SelectedItem="{Binding SelectedUser, Mode=TwoWay}"
+            Tapped="RefreshTokenBox_OnTapped"
+            Text="{Binding RefreshToken, Mode=TwoWay}" />
+        <Button
+            HorizontalAlignment="Stretch"
+            Click="LoginButton_OnClick"
+            Content="{CompiledBinding [LoginPage-RefreshTokenButton-Content], Source={x:Static loc:LocalizationManager.Instance}}"
+            IsEnabled="{Binding !IsLoginInProgress}" />
+        <Button
+            HorizontalAlignment="Stretch"
+            Click="OpenWebView_OnClick"
+            Content="{CompiledBinding [LoginPage-WebViewButton-Content], Source={x:Static loc:LocalizationManager.Instance}}"
+            IsEnabled="{Binding !IsLoginInProgress}" />
+        <ProgressBar
+            HorizontalAlignment="Stretch"
+            IsIndeterminate="True"
+            IsVisible="{Binding IsLoginInProgress}" />
+    </StackPanel>
 </views:IconContentPage>

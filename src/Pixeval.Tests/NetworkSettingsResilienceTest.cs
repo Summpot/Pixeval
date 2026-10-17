@@ -13,13 +13,10 @@ public sealed class NetworkSettingsResilienceTest
     {
         var settings = new NetworkSettingsGroup { GitHubDomainFronting = new() { GitHubNameResolver = ["not-an-ip-address", IPAddress.Loopback.ToString()] } };
 
-        var configured = GitHubHttpOptions.TryGetConfiguredAddresses(
-            settings,
-            GitHubHttpOptions.Host,
-            out var addresses);
-
-        Assert.IsTrue(configured);
+        using var resolver = new Pixeval.Maho.DnsResolver();
+        resolver.SetMapping("github.com", [.. settings.GitHubDomainFronting.GitHubNameResolver]);
+        var addresses = resolver.GetMapping("github.com");
         Assert.HasCount(1, addresses);
-        Assert.AreEqual(IPAddress.Loopback, addresses[0]);
+        Assert.AreEqual(IPAddress.Loopback.ToString(), addresses[0]);
     }
 }

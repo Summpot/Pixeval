@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Viewers.SeriesViewerPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -36,13 +37,13 @@
                                 DataContext="{Binding #SeriesPage.DataContext}"
                                 Icon="{markup:SymbolIcon Alert}"
                                 IsVisible="{Binding !IsWatchlistAdded}"
-                                Label="{I18N {x:Static pixeval:SeriesViewerPageResources.AddToWatchlist}}" />
+                                Label="{CompiledBinding [SeriesViewerPage-AddToWatchlist], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <CommandBarButton
                                 Command="{Binding RemoveFromWatchlistCommand}"
                                 DataContext="{Binding #SeriesPage.DataContext}"
                                 Icon="{markup:SymbolIcon AlertOff}"
                                 IsVisible="{Binding IsWatchlistAdded}"
-                                Label="{I18N {x:Static pixeval:SeriesViewerPageResources.RemoveFromWatchlist}}" />
+                                Label="{CompiledBinding [SeriesViewerPage-RemoveFromWatchlist], Source={x:Static loc:LocalizationManager.Instance}}" />
                         </CommandBar>
                         <StackPanel
                             Grid.Row="1"
@@ -55,7 +56,7 @@
                                 Spacing="4">
                                 <TextBlock
                                     MaxLines="1"
-                                    Text="{Binding SeriesDetail?.Title}"
+                                    Text="{Binding SeriesDetail.Value.Title}"
                                     TextTrimming="CharacterEllipsis"
                                     Theme="{StaticResource CaptionStrongTextBlockStyle}"
                                     ToolTip.Tip="{Binding SeriesDetail?.Title}" />
@@ -69,12 +70,34 @@
                                 Symbol="SquareMultiple"
                                 Text="{Binding ContentCountText}" />
                         </StackPanel>
-                        <ProgressBar
-                            Grid.Row="2"
-                            Height="4"
-                            AutomationProperties.Name="{I18N {x:Static pixeval:EntryViewerPageResources+LoadingTextBlock.Text}}"
-                            IsIndeterminate="True"
-                            IsVisible="{Binding IsChangingWatchlist}" />
+                    </DockPanel>
+                </Expander.Header>
+                <Border MinHeight="190" Background="{DynamicResource PixevalTranslucentBackground}">
+                    <Grid
+                        Margin="40,20"
+                        ColumnDefinitions="Auto,*"
+                        ColumnSpacing="30">
+                        <Image
+                            Height="180"
+                            VerticalAlignment="Stretch"
+                            controls:Source.Cache="{Binding CoverUrl}"
+                            Stretch="UniformToFill" />
+                        <StackPanel
+                            Grid.Column="1"
+                            MaxWidth="650"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Spacing="8">
+                            <TextBlock
+                                Text="{Binding SeriesDetail.Value.Title}"
+                                TextWrapping="Wrap"
+                                Theme="{StaticResource TitleTextBlockStyle}" />
+                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding AuthorName}" />
+                            <TextBlock
+                                MaxHeight="72"
+                                Text="{Binding Caption, Converter={x:Static converters:PixevalConverters.HtmlToPlainText}}"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
                     </Grid>
                 </Expander.Header>
                 <Border

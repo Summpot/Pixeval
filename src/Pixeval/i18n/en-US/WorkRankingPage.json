@@ -1,6 +1,0 @@
-{
-  "InvalidDate": {
-    "Title": "Invalid ranking date",
-    "Content": "Enter a valid date on or before {0}. Your previous date has been kept."
-  }
-}

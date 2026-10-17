@@ -2,6 +2,8 @@
     x:Class="Pixeval.Views.Settings.AboutPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
+    xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Pixeval.Controls"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
@@ -24,11 +26,11 @@
 
                 <TextBlock
                     DockPanel.Dock="Top"
-                    Text="{I18N {x:Static pixeval:AboutPageResources+AppDescriptionTextBlock.Text}}"
+                    Text="{CompiledBinding [AboutPage-AppDescriptionTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                     TextWrapping="Wrap" />
 
                 <!--  Special Thanks  -->
-                <TextBlock Text="{I18N {x:Static pixeval:AboutPageResources+SpecialThanksSubtitleTextBlock.Text}}" Theme="{StaticResource SubtitleTextBlockStyle}" />
+                <TextBlock Text="{CompiledBinding [AboutPage-SpecialThanksSubtitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" Theme="{StaticResource SubtitleTextBlockStyle}" />
                 <ItemsControl ItemsSource="{Binding $parent[settings:AboutPage].Supporters}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -75,7 +77,7 @@
                 </ItemsControl>
 
                 <!--  Dependencies  -->
-                <TextBlock Text="{I18N {x:Static pixeval:AboutPageResources+DependenciesSubtitleTextBlock.Text}}" Theme="{StaticResource SubtitleTextBlockStyle}" />
+                <TextBlock Text="{CompiledBinding [AboutPage-DependenciesSubtitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" Theme="{StaticResource SubtitleTextBlockStyle}" />
                 <ItemsControl ItemsSource="{x:Static settings:DependencyViewModel.DependencyViewModels}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -115,7 +117,7 @@
                 </ItemsControl>
 
                 <!--  Open Source License  -->
-                <TextBlock Text="{I18N {x:Static pixeval:AboutPageResources+OpenSourceLicenseSubtitleTextBlock.Text}}" Theme="{StaticResource SubtitleTextBlockStyle}" />
+                <TextBlock Text="{CompiledBinding [AboutPage-OpenSourceLicenseSubtitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" Theme="{StaticResource SubtitleTextBlockStyle}" />
                 <local:MarkdownBox x:Name="LicenseTextBlock" />
             </StackPanel>
         </StackPanel>

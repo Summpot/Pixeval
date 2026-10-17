@@ -15,15 +15,18 @@ public sealed class PixivArtworkService(MakoClient makoClient)
     public async Task<Illustration> GetArtworkAsync(string id, CancellationToken token = default)
     {
         var rawId = long.Parse(id);
-        return await makoClient.GetIllustrationAsync(rawId);
+        return await makoClient.GetIllustrationAsync(rawId, token);
     }
 
     public async Task<bool> PostFavoriteAsync(string id, bool favorite, CancellationToken token = default)
     {
         var rawId = long.Parse(id);
-        var result = favorite
-            ? await makoClient.PostBookmarkAsync(false, rawId, "public", null)
-            : await makoClient.RemoveBookmarkAsync(false, rawId);
+        var result = await makoClient.SetBookmarkAsync(
+            SimpleWorkKind.Illustration,
+            rawId,
+            favorite,
+            PrivacyRestrict.Public,
+            null, token);
         return result.Success;
     }
 }

@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct WorkMetadata {
     pub id: String,
@@ -29,6 +30,7 @@ pub trait StorageObserver: Send + Sync {
     fn on_search_history_changed(&self);
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct SearchHistoryRecord {
     pub history_entry_id: i64,
@@ -37,25 +39,50 @@ pub struct SearchHistoryRecord {
     pub time: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+#[boltffi::data]
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct BrowseHistoryRecord {
     pub history_entry_id: i64,
     pub id: String,
     pub serialize_key: Option<String>,
     pub work_key: String,
     pub payload_json: Option<String>,
+    pub payload: Option<crate::payload::ArtworkPayload>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+impl BrowseHistoryRecord {
+    pub(crate) fn hydrate(mut self) -> Self {
+        self.payload = crate::payload::hydrate(
+            self.serialize_key.as_deref(),
+            self.payload_json.as_deref().unwrap_or(""),
+        );
+        self
+    }
+}
+
+#[boltffi::data]
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct WatchLaterRecord {
     pub history_entry_id: i64,
     pub id: String,
     pub serialize_key: Option<String>,
     pub work_key: String,
     pub payload_json: Option<String>,
+    pub payload: Option<crate::payload::ArtworkPayload>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+impl WatchLaterRecord {
+    pub(crate) fn hydrate(mut self) -> Self {
+        self.payload = crate::payload::hydrate(
+            self.serialize_key.as_deref(),
+            self.payload_json.as_deref().unwrap_or(""),
+        );
+        self
+    }
+}
+
+#[boltffi::data]
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct DownloadHistoryRecord {
     pub history_entry_id: i64,
     pub id: String,
@@ -65,9 +92,21 @@ pub struct DownloadHistoryRecord {
     pub format_token: Option<String>,
     pub error_message: Option<String>,
     pub payload_json: Option<String>,
+    pub payload: Option<crate::payload::ArtworkPayload>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+impl DownloadHistoryRecord {
+    pub(crate) fn hydrate(mut self) -> Self {
+        self.payload = crate::payload::hydrate(
+            self.serialize_key.as_deref(),
+            self.payload_json.as_deref().unwrap_or(""),
+        );
+        self
+    }
+}
+
+#[boltffi::data]
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct SubscriptionDownloadHistoryRecord {
     pub history_entry_id: i64,
     pub id: String,
@@ -79,8 +118,20 @@ pub struct SubscriptionDownloadHistoryRecord {
     pub work_subscription_id: i64,
     pub artwork_id: String,
     pub payload_json: Option<String>,
+    pub payload: Option<crate::payload::ArtworkPayload>,
 }
 
+impl SubscriptionDownloadHistoryRecord {
+    pub(crate) fn hydrate(mut self) -> Self {
+        self.payload = crate::payload::hydrate(
+            self.serialize_key.as_deref(),
+            self.payload_json.as_deref().unwrap_or(""),
+        );
+        self
+    }
+}
+
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct WorkSubscriptionRecord {
     pub history_entry_id: i64,
@@ -90,10 +141,11 @@ pub struct WorkSubscriptionRecord {
     pub title: String,
     pub author: String,
     pub avatar: String,
-    pub last_check_time: String,
-    pub last_work_id: Option<String>,
+
+
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct BlockedUserRecord {
     pub history_entry_id: i64,
@@ -103,6 +155,7 @@ pub struct BlockedUserRecord {
     pub account: String,
 }
 
+#[boltffi::data]
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct LoginUserRecord {
     pub history_entry_id: i64,

@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Pixeval.Config;
 using Pixeval.Mako;
@@ -44,11 +45,5 @@ public interface IWorkSubscriptionService
 
     void QueueSyncSubscription(WorkSubscriptionRecord subscription);
 
-    void QueueInitialSync(WorkSubscriptionRecord subscription, IFetchEngine<IWorkEntry>? sourceEngine = null);
 
-    void QueueSyncCurrentSource(
-        long targetId,
-        WorkSubscriptionType subscriptionType,
-        WorkSubscriptionWorkKind workKind,
-        IFetchEngine<IWorkEntry> engine);
 }

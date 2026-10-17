@@ -2,7 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
+using Pixeval.Pixiv;
 using Pixeval.SauceNao;
 using Pixeval.Utilities;
 using Pixeval.Views.Viewers;
@@ -25,20 +26,8 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage, IDisposable
 
     public Task PostAsync(string apiKey, ReadOnlyMemory<byte> file)
     {
-        ObjectDisposedException.ThrowIf(_isDisposed, this);
-        _requestCancellation?.Cancel();
-        _requestCancellation?.Dispose();
-        _requestCancellation = new();
-        ++_requestVersion;
-        _apiKey = apiKey;
-        _file = file;
-        _reloadOnAttach = false;
-        // Include a source whose first incremental-load callback has not run yet.
-        _isSearching = true;
-        FailurePanel.IsVisible = false;
-        WorkContainer.IsVisible = true;
-        WorkContainer.ResetEngine(GetResults(apiKey, file, _requestCancellation.Token));
-        return Task.CompletedTask;
+        var results = GetResults(apiKey, file);
+        WorkContainer.ResetSource(results, SimpleWorkKind.Illustration);
     }
 
     public async IAsyncEnumerable<object> GetResults(string apiKey, ReadOnlyMemory<byte> file)
@@ -51,7 +40,7 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage, IDisposable
         }
         catch (Exception e)
         {
-            this.Notifications.ShowError(I18NManager.GetResource(MiscResources.ExceptionEncountered), e.Message);
+            this.Notifications.ShowError(Strings.MiscExceptionEncountered(), e.Message);
         }
 
         if (sauceNaoResults is not null)
@@ -59,7 +48,12 @@ public partial class ArtworkSauceNaoSearchResultPage : ContentPage, IDisposable
             foreach (var result in sauceNaoResults)
             {
                 if (!string.IsNullOrEmpty(result.ArtworkId)
-                    && await ViewerHelper.TryGetArtworkAsync(result.Platform, result.ArtworkId) is { } artwork)
+                    && await ViewerHelper.TryGetArtworkAsync(
+                        result.Platform,
+                        result.ArtworkId,
+                        this.GetRequiredUiService<MakoClient>(),
+                        this.GetRequiredUiService<BooruClient>(),
+                        this.GetUiService<FileLogger>()) is { } artwork)
                 {
                     yield return artwork;
                 }

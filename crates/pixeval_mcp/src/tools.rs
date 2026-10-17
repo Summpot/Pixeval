@@ -2,12 +2,15 @@ use std::sync::Arc;
 
 use serde_json::json;
 
-use pixeval_cache::CacheEngine;
+use pixeval_cache::ImageCache;
 use pixeval_download::DownloadManager;
-use pixeval_mako::MakoClient;
-use pixeval_plugin::PluginHostEngine;
+use pixeval_mako::{
+    IllustSearchTarget, IllustrationSearchParams, MakoClient, NovelSearchParams, NovelSearchTarget,
+    SortOrder,
+};
+use pixeval_plugin::PluginHost;
 use pixeval_storage::StorageEngine;
-use pixeval_subscription::SubscriptionSyncEngine;
+use pixeval_subscription::SubscriptionSync;
 
 use crate::cursor::{
     bookmark_tag_to_json, comment_to_json, illustration_to_json, novel_to_json,
@@ -23,9 +26,9 @@ pub struct McpToolRegistry {
     pub mako: Arc<MakoClient>,
     pub storage: Arc<StorageEngine>,
     pub download: Arc<DownloadManager>,
-    pub cache: Arc<CacheEngine>,
-    pub subscription: Arc<SubscriptionSyncEngine>,
-    pub plugin: Option<Arc<PluginHostEngine>>,
+    pub cache: Arc<ImageCache>,
+    pub subscription: Arc<SubscriptionSync>,
+    pub plugin: Option<Arc<PluginHost>>,
     pub cursor_store: Arc<CursorStore>,
 }
 
@@ -36,9 +39,9 @@ impl McpToolRegistry {
         mako: Arc<MakoClient>,
         storage: Arc<StorageEngine>,
         download: Arc<DownloadManager>,
-        cache: Arc<CacheEngine>,
-        subscription: Arc<SubscriptionSyncEngine>,
-        plugin: Option<Arc<PluginHostEngine>>,
+        cache: Arc<ImageCache>,
+        subscription: Arc<SubscriptionSync>,
+        plugin: Option<Arc<PluginHost>>,
     ) -> Self {
         Self {
             config,
@@ -732,8 +735,7 @@ impl McpToolRegistry {
                     .get("text")
                     .and_then(|v| v.as_str())
                     .unwrap_or_default();
-                let engine = pixeval_download::MetaPathEngine::new();
-                let analysis = engine.analyze(text.to_string());
+                let analysis = pixeval_download::analyze_meta_path(text.to_string());
                 let res = json!({
                     "isSuccess": analysis.is_success,
                     "diagnosticsCount": analysis.diagnostics.len(),
@@ -772,7 +774,7 @@ impl McpToolRegistry {
 
                 match hist_type {
                     "Search" => {
-                        let entries = self.storage.stream_search_histories(skip, count).unwrap_or_default();
+                        let entries = self.storage.history().stream_search_histories(skip, count).unwrap_or_default();
                         let list: Vec<_> = entries
                             .into_iter()
                             .map(|e| {
@@ -787,7 +789,7 @@ impl McpToolRegistry {
                         CallToolResult::json(&list)
                     }
                     _ => {
-                        let entries = self.storage.stream_browse_history(skip, count).unwrap_or_default();
+                        let entries = self.storage.history().stream_browse_history(skip, count).unwrap_or_default();
                         let list: Vec<_> = entries
                             .into_iter()
                             .map(|e| {
@@ -837,8 +839,12 @@ impl McpToolRegistry {
                 match self.mako.get_novel_content(id).await {
                     Ok(raw_text) => {
                         let markdown = if include_markdown {
-                            let engine = pixeval_novel::NovelEngine::new();
-                            Some(engine.render_export_markdown_from_text(raw_text.clone(), None, vec![], vec![]))
+                            Some(pixeval_novel::render_export_markdown_from_text(
+                                raw_text.clone(),
+                                None,
+                                vec![],
+                                vec![],
+                            ))
                         } else {
                             None
                         };
@@ -920,11 +926,21 @@ impl McpToolRegistry {
                 let sort = arguments.get("sort").and_then(|v| v.as_str()).unwrap_or("date_desc");
                 let _include_ai = arguments.get("includeAi").and_then(|v| v.as_bool()).unwrap_or(true);
 
-                let engine = self.mako.illustration_search(
-                    query.to_string(),
-                    Some(match_opt.to_string()),
-                    Some(sort.to_string()),
-                );
+                let engine = self.mako.illustration_search_advanced(IllustrationSearchParams {
+                    word: query.to_string(),
+                    search_target: match match_opt {
+                        "exact_match_for_tags" => IllustSearchTarget::ExactMatchForTags,
+                        "title_and_caption" => IllustSearchTarget::TitleAndCaption,
+                        "keyword" => IllustSearchTarget::Keyword,
+                        _ => IllustSearchTarget::PartialMatchForTags,
+                    },
+                    sort: match sort {
+                        "date_asc" => SortOrder::DateAsc,
+                        "popular_desc" => SortOrder::PopularDesc,
+                        _ => SortOrder::DateDesc,
+                    },
+                    ..Default::default()
+                });
 
                 let (items, has_more, next_cursor) = self
                     .cursor_store
@@ -949,11 +965,21 @@ impl McpToolRegistry {
                 let match_opt = arguments.get("match").and_then(|v| v.as_str()).unwrap_or("partial_match_for_tags");
                 let sort = arguments.get("sort").and_then(|v| v.as_str()).unwrap_or("date_desc");
 
-                let engine = self.mako.novel_search(
-                    query.to_string(),
-                    Some(match_opt.to_string()),
-                    Some(sort.to_string()),
-                );
+                let engine = self.mako.novel_search_advanced(NovelSearchParams {
+                    word: query.to_string(),
+                    search_target: match match_opt {
+                        "exact_match_for_tags" => NovelSearchTarget::ExactMatchForTags,
+                        "text" => NovelSearchTarget::Text,
+                        "keyword" => NovelSearchTarget::Keyword,
+                        _ => NovelSearchTarget::PartialMatchForTags,
+                    },
+                    sort: match sort {
+                        "date_asc" => SortOrder::DateAsc,
+                        "popular_desc" => SortOrder::PopularDesc,
+                        _ => SortOrder::DateDesc,
+                    },
+                    ..Default::default()
+                });
 
                 let (items, has_more, next_cursor) = self
                     .cursor_store
@@ -1259,7 +1285,7 @@ impl McpToolRegistry {
                         Ok(ill) => {
                             let res = json!({
                                 "id": id,
-                                "workType": ill.illust_type,
+                                "workType": ill.illust_type.as_str(),
                                 "squareMedium": ill.image_urls.square_medium,
                                 "medium": ill.image_urls.medium,
                                 "large": ill.image_urls.large,
@@ -1656,12 +1682,12 @@ impl McpToolRegistry {
                 let work_key = format!("{work_type}:{id}");
 
                 if watch_later {
-                    match self.storage.add_or_replace_watch_later(id.to_string(), None, work_key.clone(), "{}".to_string()) {
+                    match self.storage.watch_later().add_or_replace_watch_later(id.to_string(), None, work_key.clone(), "{}".to_string()) {
                         Ok(_) => CallToolResult::text(format!("Work {id} added to watch-later list.")),
                         Err(e) => CallToolResult::error(format!("Failed to update watch-later: {e}")),
                     }
                 } else {
-                    match self.storage.remove_watch_later(work_key) {
+                    match self.storage.watch_later().remove_watch_later(work_key) {
                         Ok(_) => CallToolResult::text(format!("Work {id} removed from watch-later list.")),
                         Err(e) => CallToolResult::error(format!("Failed to remove from watch-later: {e}")),
                     }
@@ -1815,8 +1841,7 @@ impl McpToolRegistry {
                     (format!("Subscription {target_id}"), "".to_string(), "".to_string())
                 };
 
-                let now = chrono::Utc::now().to_rfc3339();
-                match self.storage.upsert_subscription(target_id, sub_type, work_kind, title, author, avatar, now, None) {
+                match self.storage.upsert_subscription(target_id, sub_type, work_kind, title, author, avatar) {
                     Ok(entry) => CallToolResult::json(&json!({
                         "success": true,
                         "historyEntryId": entry.history_entry_id,

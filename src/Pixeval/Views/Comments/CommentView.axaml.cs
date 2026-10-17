@@ -44,28 +44,7 @@ public partial class CommentView : UserControl
     private void CommentItem_OnDeleteButtonClick(CommentRecord comment) =>
         (DataContext as CommentsViewViewModel)?.RemoveComment(comment.Id);
 
-    private void CommentView_OnDataContextChanged(object? sender, EventArgs e)
-    {
-        var model = DataContext as CommentsViewViewModel;
-        // Navigation temporarily detaches a retained page and clears its inherited
-        // context. Keep that page's source until an actual replacement arrives.
-        if (model is null)
-            return;
-        if (ReferenceEquals(_viewModel, model))
-            return;
-        _viewModel?.Dispose();
-        _viewModel = model;
-        IsLoadInterrupted = false;
-        model.RefreshEngine();
-        if (IsLoaded)
-            RaiseEvent(new ViewModelDisposalEventArgs(ViewModelDisposal.ViewModelDisposalEvent, model));
-    }
-
-    private void RefreshButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        IsLoadInterrupted = false;
-        _viewModel?.RefreshEngine();
-    }
+    private void CommentView_OnDataContextChanged(object? sender, EventArgs e) => (DataContext as CommentsViewViewModel)?.RefreshSource();
 
     #region Disposal
 

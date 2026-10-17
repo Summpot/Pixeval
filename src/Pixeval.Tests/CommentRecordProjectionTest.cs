@@ -57,7 +57,7 @@ public sealed class CommentRecordProjectionTest
     public void ReplyDraftIsIndexedByCommentIdAndOwnershipUsesSession()
     {
         using var client = new MakoClient(ProxyHelper.CreateMakoConfiguration(new PixivDomainFrontingSettings()));
-        var list = new CommentsViewViewModel(SimpleWorkType.Illustration, 10, client, new StubSession(7));
+        var list = new CommentsViewViewModel(SimpleWorkKind.Illustration, 10, client, new StubSession(7));
 
         Assert.IsTrue(list.AllowsReplies);
         list.ReplyDraft = "top";
@@ -77,7 +77,7 @@ public sealed class CommentRecordProjectionTest
         Assert.IsTrue(list.IsOwnComment(mine));
         Assert.IsFalse(list.IsOwnComment(other));
 
-        var loggedOut = new CommentsViewViewModel(SimpleWorkType.Illustration, 10, client, new StubSession(0));
+        var loggedOut = new CommentsViewViewModel(SimpleWorkKind.Illustration, 10, client, new StubSession(0));
         Assert.IsFalse(loggedOut.IsOwnComment(mine));
     }
 

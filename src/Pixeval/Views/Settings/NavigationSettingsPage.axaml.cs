@@ -6,8 +6,7 @@ using System.Text;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Config;
 using Pixeval.Utilities;
 
@@ -15,16 +14,18 @@ namespace Pixeval.Views.Settings;
 
 public sealed partial class NavigationSettingsPage : ContentPage
 {
+    private readonly IDisposable _languageSubscription;
     private readonly NavigationYamlEditorColorizer _colorizer = new();
     private bool _isSynchronizingText;
 
-    public NavigationSettingsPage()
+    public NavigationSettingsPage(NavigationMenuDocument document)
     {
         InitializeComponent();
         DataContext = this;
         YamlEditor.TextArea.TextView.LineTransformers.Add(_colorizer);
-        SetEditorText(App.Services!.GetRequiredService<NavigationMenuDocument>().Text);
+        SetEditorText(document.Text);
         ValidateCurrentText();
+        _languageSubscription = AppLocalization.Instance.Subscribe(() => ValidateCurrentText());
     }
 
     private void EditorLayout_OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -57,7 +58,7 @@ public sealed partial class NavigationSettingsPage : ContentPage
         this.GetRequiredUiService<NavigationMenuDocument>().Text = YamlEditor.Text ?? "";
         AppInfo.SaveNavigationMenuYaml(this.GetRequiredUiService<NavigationMenuDocument>().Text);
         this.Notifications.ShowSuccess(
-            I18NManager.GetResource(NavigationSettingsPageResources.Applied));
+            Strings.NavigationSettingsPageApplied());
 
         this.AppNavigation?.ReloadNavigation();
 
@@ -85,7 +86,7 @@ public sealed partial class NavigationSettingsPage : ContentPage
         InsertYaml(
             $"""
 
-               - folder: "${NavigationSettingsPageResources.DefaultFolderTitle}"
+               - folder: "$NavigationSettingsPage.DefaultFolderTitle"
                  icon: DocumentFolder
                  children:
                    - page: Home
@@ -141,7 +142,7 @@ public sealed partial class NavigationSettingsPage : ContentPage
         if (result.IsValid)
             return null;
 
-        var text = I18NManager.GetResource(NavigationSettingsPageResources.StatusInvalidFormatted, result.Diagnostics.Count);
+        var text = Strings.NavigationSettingsPageStatusInvalidFormatted(count: result.Diagnostics.Count);
 
         var builder = new StringBuilder(text);
         foreach (var diagnostic in result.Diagnostics)

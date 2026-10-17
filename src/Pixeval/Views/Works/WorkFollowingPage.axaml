@@ -1,6 +1,7 @@
 <views:IconContentPage
     x:Class="Pixeval.Views.Works.WorkFollowingPage"
     xmlns="https://github.com/avaloniaui"
+    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:di="using:Pixeval.Common.Markup"
     xmlns:settings="using:Pixeval.Config"
@@ -18,27 +19,11 @@
         <work:WorkContainer.CommandBarElements>
             <controls:SymbolComboBox
                 x:Name="PrivacyPolicyComboBox"
-                Width="180"
-                MinWidth="0"
-                MaxWidth="{Binding $parent[WrapPanel].Bounds.Width}"
-                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+Source+PrivacyPolicyTextBlock.Text}}"
-                IconMode="False"
-                ItemsSource="{markup1:EnumResources x:TypeArguments=enum:PrivacyPolicy}"
-                SelectionChanged="WorkTypeComboBox_OnSelectionChanged">
-                <controls:SymbolComboBox.TextItemTemplate>
-                    <DataTemplate x:DataType="{x:Type controls:SymbolComboBoxItem}">
-                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
-                    </DataTemplate>
-                </controls:SymbolComboBox.TextItemTemplate>
-            </controls:SymbolComboBox>
+                ItemsSource="{markup1:EnumResources x:TypeArguments=nativeMako:PrivacyRestrict}"
+                SelectionChanged="WorkTypeComboBox_OnSelectionChanged" />
             <controls:SymbolComboBox
                 x:Name="SimpleWorkTypeComboBox"
-                Width="180"
-                MinWidth="0"
-                MaxWidth="{Binding $parent[WrapPanel].Bounds.Width}"
-                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+Source+SimpleWorkTypeTextBlock.Text}}"
-                IconMode="False"
-                ItemsSource="{markup1:EnumResources x:TypeArguments=enum:SimpleWorkType}"
+                ItemsSource="{markup1:EnumResources x:TypeArguments=nativeMako:SimpleWorkKind}"
                 SelectedValue="{Binding SearchSettings.DefaultSimpleWorkType, Source={di:Service Type={x:Type settings:AppSettings}}, DataType={x:Type settings:AppSettings}, Mode=OneTime}"
                 SelectionChanged="WorkTypeComboBox_OnSelectionChanged" />
         </work:WorkContainer.CommandBarElements>

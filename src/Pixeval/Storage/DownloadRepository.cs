@@ -36,6 +36,14 @@ public partial class DownloadRepository
     {
         switch (entry)
         {
+            case DownloadHistoryRecord downloadRecord when ArtworkPayloads.TryGet(downloadRecord.Payload, out var payload):
+                AddDownloadHistory(
+                    payload,
+                    downloadRecord.Destination,
+                    (uint)downloadRecord.State,
+                    downloadRecord.FormatToken,
+                    downloadRecord.ErrorMessage);
+                break;
             case DownloadHistoryRecord downloadRecord:
                 AddOrReplaceDownloadHistory(
                     downloadRecord.Id,
@@ -45,6 +53,15 @@ public partial class DownloadRepository
                     downloadRecord.FormatToken,
                     downloadRecord.ErrorMessage,
                     downloadRecord.PayloadJson ?? "");
+                break;
+            case SubscriptionDownloadHistoryRecord subscriptionRecord when ArtworkPayloads.TryGet(subscriptionRecord.Payload, out var payload):
+                AddSubscriptionDownloadHistory(
+                    payload,
+                    subscriptionRecord.Destination,
+                    (uint)subscriptionRecord.State,
+                    subscriptionRecord.FormatToken,
+                    subscriptionRecord.ErrorMessage,
+                    subscriptionRecord.WorkSubscriptionId);
                 break;
             case SubscriptionDownloadHistoryRecord subscriptionRecord:
                 AddOrReplaceSubscriptionDownloadHistory(

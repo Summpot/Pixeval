@@ -52,7 +52,7 @@ public partial class SearchPage : IconContentPage
                     DataContext: SauceNaoSearchPageViewModel viewModel
                 } page
             }
-            || !SauceNaoSearchPageViewModel.IsApiKeyExisted)
+            || !viewModel.IsApiKeyExisted)
             return;
 
         _ = KeyboardShortcut.TryExecutePaste(e, viewModel.PasteCommand, page);

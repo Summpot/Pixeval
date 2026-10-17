@@ -7,7 +7,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
-using MakoNovel = Pixeval.Mako.Novel;
 
 namespace Pixeval.Storage;
 
@@ -21,20 +20,9 @@ public partial class HistoryRepository : IArtworkHistorySource
 
     public void AddBrowseHistory(object entry)
     {
-        if (!BrowseHistoryRecord.TryCreateWorkKey(entry, out var workKey))
+        if (!ArtworkPayloads.TryWrap(entry, out var payload))
             return;
-        var serializable = entry as IArtworkSerializable;
-        var serializeKey = serializable?.SerializeKey;
-        var payloadJson = serializable?.Serialize();
-        var id = entry switch
-        {
-            Illustration i => i.Id.ToString(),
-            MakoNovel n => n.Id.ToString(),
-            Booru.BooruPost b => b.Id,
-            SauceNao.SauceNaoItem s => s.RawId,
-            _ => ""
-        };
-        AddOrReplaceBrowseHistory(id, serializeKey, workKey, payloadJson ?? "");
+        AddBrowseHistory(payload);
     }
 
     public void AddSearchHistory(string text, string? translatedName = null)
@@ -44,7 +32,7 @@ public partial class HistoryRepository : IArtworkHistorySource
         UpsertSearchHistory(text, translatedName, DateTimeOffset.UtcNow.ToString("O"));
     }
 
-    public async IAsyncEnumerable<object> StreamAsync(SimpleWorkType workType, [EnumeratorCancellation] CancellationToken token = default)
+    public async IAsyncEnumerable<object> StreamAsync(SimpleWorkKind workType, [EnumeratorCancellation] CancellationToken token = default)
     {
         long? cursorId = null;
         const int pageSize = 50;
@@ -58,7 +46,7 @@ public partial class HistoryRepository : IArtworkHistorySource
             foreach (var record in batch)
             {
                 token.ThrowIfCancellationRequested();
-                if (record.Entry is { } entry && MatchesWorkType(workType, record.SerializeKey, entry))
+                if (record.Entry is { } entry && MatchesWorkType(workType, entry))
                 {
                     yield return entry;
                 }
@@ -70,18 +58,13 @@ public partial class HistoryRepository : IArtworkHistorySource
         }
     }
 
-    internal static bool MatchesWorkType(SimpleWorkType workType, string? serializeKey, object entry)
+    internal static bool MatchesWorkType(SimpleWorkKind workType, object entry)
     {
-        var isNovel = entry is MakoNovel
-            || string.Equals(serializeKey, MakoNovel.LegacyNovelToken, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(serializeKey, typeof(MakoNovel).FullName, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(serializeKey, "Pixeval.Pixiv.PixivNovel", StringComparison.OrdinalIgnoreCase)
-            || serializeKey?.StartsWith("Novel", StringComparison.OrdinalIgnoreCase) == true;
-
+        var isNovel = ArtworkPayloads.Unwrap(entry) is Mako.Novel;
         return workType switch
         {
-            SimpleWorkType.Novel => isNovel,
-            SimpleWorkType.Illustration => !isNovel,
+            SimpleWorkKind.Novel => isNovel,
+            SimpleWorkKind.Illustration => !isNovel,
             _ => true
         };
     }

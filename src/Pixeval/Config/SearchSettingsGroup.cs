@@ -7,24 +7,25 @@ using FluentIcons.Common;
 
 namespace Pixeval.Config;
 
+[System.Text.Json.Serialization.JsonConverter(typeof(SearchSettingsGroupJsonConverter))]
 public record SearchSettingsGroup
 {
-    [SettingsEntry(Symbol.ArrowTrending, AppSettingsResources.RankOptionEntry.Header, AppSettingsResources.RankOptionEntry.Description)]
+    [SettingsEntry(Symbol.ArrowTrending, nameof(Strings.AppSettingsRankOptionEntryHeader), nameof(Strings.AppSettingsRankOptionEntryDescription))]
     public RankOptionsSettings RankOptions { get; set; } = new();
 
     [SettingsEntry(
         Symbol.Key,
-        AppSettingsResources.SauceNaoApiKeyEntry.Header,
-        AppSettingsResources.SauceNaoApiKeyEntry.Description,
-        AppSettingsResources.SauceNaoApiKeyEntry.Placeholder,
+        nameof(Strings.AppSettingsSauceNaoApiKeyEntryHeader),
+        nameof(Strings.AppSettingsSauceNaoApiKeyEntryDescription),
+        nameof(Strings.AppSettingsSauceNaoApiKeyEntryPlaceholder),
         DescriptionLink = "https://saucenao.com/user.php?page=search-api")]
     public string SauceNaoApiKey { get; set; } = "";
 
-    [SettingsEntry(Symbol.Grid, AppSettingsResources.SimpleWorkTypeEntry.Header, AppSettingsResources.SimpleWorkTypeEntry.Description)]
-    public SimpleWorkType DefaultSimpleWorkType { get; set; }
+    [SettingsEntry(Symbol.Grid, nameof(Strings.AppSettingsSimpleWorkTypeEntryHeader), nameof(Strings.AppSettingsSimpleWorkTypeEntryDescription))]
+    public SimpleWorkKind DefaultSimpleWorkType { get; set; } = SimpleWorkKind.Illustration;
 
     [JsonIgnore]
-    public WorkType WorkType => DefaultSimpleWorkType is SimpleWorkType.Illustration
-        ? WorkType.Illustration
-        : WorkType.Novel;
+    public WorkKind WorkKind => DefaultSimpleWorkType is SimpleWorkKind.Illustration
+        ? WorkKind.Illustration
+        : WorkKind.Novel;
 }

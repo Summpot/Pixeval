@@ -1,0 +1,3 @@
+InvalidIPFormat = 无效的IP格式
+
+DuplicatesWithExistingIP = 与现有IP重复

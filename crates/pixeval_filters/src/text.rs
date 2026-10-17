@@ -1,3 +1,4 @@
+#[boltffi::data]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, uniffi::Record)]
 pub struct FilterTextSpan {
     pub start: i32,

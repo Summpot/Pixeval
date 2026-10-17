@@ -48,7 +48,7 @@ mod tests {
 
     #[test]
     fn test_plugin_engine_lifecycle_and_registration() {
-        let engine = PluginHostEngine::new("5.0.0".to_string());
+        let engine = PluginHost::new("5.0.0".to_string());
         assert_eq!(engine.current_sdk_version(), "5.0.0");
 
         let meta = PluginMetadata {
@@ -107,7 +107,7 @@ mod tests {
         fs::write(sub.join(format!("plugin2.{ext}")), b"dummy").unwrap();
         fs::write(dir.path().join("ignore.txt"), b"dummy").unwrap();
 
-        let engine = PluginHostEngine::new("5.0.0".to_string());
+        let engine = PluginHost::new("5.0.0".to_string());
         let discovered = engine.enumerate_plugins(dir.path().to_string_lossy().to_string());
         assert_eq!(discovered.len(), 2);
     }
@@ -147,7 +147,7 @@ mod tests {
             fs::write(curr.join(format!("plugin_d{i}.{ext}")), b"dummy").unwrap();
         }
 
-        let engine = PluginHostEngine::new("5.0.0".to_string());
+        let engine = PluginHost::new("5.0.0".to_string());
         let discovered = engine.enumerate_plugins(dir.path().to_string_lossy().to_string());
         // base = 0:
         // d1 (depth 1) -> plugin_d1 found

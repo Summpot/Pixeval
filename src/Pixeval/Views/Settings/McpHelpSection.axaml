@@ -2,6 +2,8 @@
     x:Class="Pixeval.Views.Settings.McpHelpSection"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
+    xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:local="using:Pixeval.Controls"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
@@ -10,43 +12,25 @@
     xmlns:pixeval="using:Pixeval"
     xmlns:settings="using:Pixeval.Views.Settings">
     <StackPanel Spacing="10">
-        <Expander Classes="documentation-section">
-            <Expander.Header>
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                    <m3:MaterialSymbol Symbol="SmartToy" />
-                    <TextBlock
-                        Grid.Column="1"
-                        Text="{I18N {x:Static pixeval:HelpPageResources+McpHelpExpander.Header}}"
-                        TextWrapping="Wrap" />
-                </Grid>
-            </Expander.Header>
-            <local:MarkdownBox Markdown="{I18N {x:Static pixeval:MarkdownResources.McpHelp}}" />
-        </Expander>
-        <m3:MaterialSurface Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" CornerRadius="16">
-            <Grid ColumnDefinitions="*,Auto">
-                <m3:IconButton
-                    x:Name="RefreshMcpToolsButton"
-                    Grid.Column="1"
-                    Margin="4"
-                    VerticalAlignment="Top"
-                    AutomationProperties.Name="{Binding (ToolTip.Tip), RelativeSource={RelativeSource Self}}"
-                    Click="RefreshMcpToolsButton_OnClicked"
-                    Symbol="Sync"
-                    ToolTip.Tip="{I18N {x:Static pixeval:HelpPageResources+McpToolsRefreshButton.ToolTip}}" />
-                <Expander x:Name="ToolsExpander">
-                    <Expander.Header>
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                            <PathIcon Data="{markup1:SvgPath {x:Static pixeval:SvgResources.MCP}}" />
-                            <StackPanel Grid.Column="1" Spacing="4">
-                                <TextBlock Text="{I18N {x:Static pixeval:HelpPageResources+McpToolsExpander.Header}}" TextWrapping="Wrap" />
-                                <TextBlock
-                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                    Text="{I18N {x:Static pixeval:HelpPageResources+McpToolsExpander.Description}}"
-                                    TextWrapping="Wrap"
-                                    Theme="{StaticResource CaptionTextBlockStyle}" />
-                            </StackPanel>
-                        </Grid>
-                    </Expander.Header>
+        <controls:SettingsExpander Header="{CompiledBinding [HelpPage-McpHelpExpander-Header], Source={x:Static loc:LocalizationManager.Instance}}" HeaderIcon="{markup:SymbolIcon Bot}">
+            <controls:SettingsExpander.Items>
+                <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Left">
+                    <local:MarkdownBox Markdown="{CompiledBinding [McpHelp], Source={x:Static loc:LocalizedHelp.Instance}}" />
+                </controls:SettingsCard>
+            </controls:SettingsExpander.Items>
+        </controls:SettingsExpander>
+        <controls:SettingsExpander Description="{CompiledBinding [HelpPage-McpToolsExpander-Description], Source={x:Static loc:LocalizationManager.Instance}}" Header="{CompiledBinding [HelpPage-McpToolsExpander-Header], Source={x:Static loc:LocalizationManager.Instance}}">
+            <controls:SettingsExpander.HeaderIcon>
+                <PathIcon Data="{markup1:SvgPath {x:Static pixeval:SvgResources.MCP}}" />
+            </controls:SettingsExpander.HeaderIcon>
+            <m3:IconButton
+                x:Name="RefreshMcpToolsButton"
+                AutomationProperties.Name="{Binding (ToolTip.Tip), RelativeSource={RelativeSource Self}}"
+                Click="RefreshMcpToolsButton_OnClicked"
+                Symbol="Sync"
+                ToolTip.Tip="{CompiledBinding [HelpPage-McpToolsRefreshButton-ToolTip], Source={x:Static loc:LocalizationManager.Instance}}" />
+            <controls:SettingsExpander.Items>
+                <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
                     <StackPanel Spacing="10">
                         <TextBlock
                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"
@@ -109,7 +93,7 @@
                                                 <TextBlock
                                                     Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                                     IsVisible="{Binding HasNoParameters}"
-                                                    Text="{I18N {x:Static pixeval:HelpPageResources+McpToolsParameters.Empty}}"
+                                                    Text="{CompiledBinding [HelpPage-McpToolsParameters-Empty], Source={x:Static loc:LocalizationManager.Instance}}"
                                                     TextWrapping="Wrap" />
                                             </StackPanel>
                                         </Grid>

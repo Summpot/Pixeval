@@ -11,6 +11,7 @@
     xmlns:markup1="using:Pixeval.Common.Markup"
     xmlns:mako="using:Pixeval.Mako"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:services="using:Pixeval.Services.Core"
     x:DataType="{x:Type mako:CommentRecord}"
     mc:Ignorable="d"
     d:DesignHeight="120"
@@ -83,8 +84,14 @@
                 BorderThickness="0"
                 Click="DeleteReplyButton_OnClicked"
                 Content="{markup:SymbolIcon Delete}"
-                IsVisible="{Binding User.Id, Converter={x:Static converters:PixevalConverters.IsCurrentUserId}}"
-                Theme="{StaticResource TransparentButtonStyle}" />
+                Theme="{StaticResource TransparentButtonStyle}">
+                <Button.IsVisible>
+                    <MultiBinding Converter="{x:Static converters:PixevalConverters.LongEquals}">
+                        <Binding Path="User.Id" />
+                        <Binding Path="CurrentUserId" DataType="{x:Type services:IUserSessionService}" Source="{markup1:Service Type={x:Type services:IUserSessionService}}" />
+                    </MultiBinding>
+                </Button.IsVisible>
+            </Button>
             <Button
                 x:Name="OpenRepliesButton"
                 Padding="6"

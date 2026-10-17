@@ -5,7 +5,7 @@ using Pixeval.Config;
 
 namespace Pixeval.Storage;
 
-public partial record WorkSubscriptionRecord
+public partial record struct WorkSubscriptionRecord
 {
     public WorkSubscriptionType Type => (WorkSubscriptionType)SubscriptionType;
 
@@ -25,10 +25,8 @@ public partial record WorkSubscriptionRecord
         WorkSubscriptionWorkKind workKind = WorkSubscriptionWorkKind.Illustration,
         string name = "",
         string account = "",
-        string avatarUrl = "",
-        string lastCheckTime = "",
-        string? lastWorkId = null)
-        : this(0, id, (uint)subscriptionType, (uint)workKind, name, account, avatarUrl, lastCheckTime, lastWorkId)
+        string avatarUrl = "")
+        : this(0, id, (uint)subscriptionType, (uint)workKind, name, account, avatarUrl)
     {
     }
 }

@@ -11,6 +11,7 @@ pub enum MacroImageType {
     Other,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MacroContext {
     pub artwork_id: String,

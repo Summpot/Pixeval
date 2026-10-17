@@ -8,6 +8,7 @@ namespace Pixeval.Config;
 
 [JsonSourceGenerationOptions(
     WriteIndented = true,
+    Converters = [typeof(RankModeJsonConverter), typeof(WorkKindJsonConverter), typeof(SimpleWorkKindJsonConverter), typeof(PrivacyRestrictJsonConverter)],
     UseStringEnumConverter = true,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(AppSettings))]

@@ -8,12 +8,12 @@ namespace Pixeval.Config;
 [LocalizationMetadata]
 public enum WorkSubscriptionType
 {
-    [LocalizedResource(EnumResources.WorkSubscriptionType.Bookmarks)]
+    [LocalizedResource(nameof(Strings.EnumWorkSubscriptionTypeBookmarks))]
     Bookmarks,
 
-    [LocalizedResource(EnumResources.WorkSubscriptionType.Posts)]
+    [LocalizedResource(nameof(Strings.EnumWorkSubscriptionTypePosts))]
     Posts,
 
-    [LocalizedResource(EnumResources.WorkSubscriptionType.Series)]
+    [LocalizedResource(nameof(Strings.EnumWorkSubscriptionTypeSeries))]
     Series
 }

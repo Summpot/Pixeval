@@ -80,9 +80,12 @@ public static class UserStateBehavior
 
         var state = UserUiStateStore.GetOrCreate(user);
 
+        if (control.GetUiService<WorkCommands>() is not { } commands)
+            return;
+
         if (control is MenuItem menuItem)
         {
-            menuItem.Command = WorkCommands.FollowUserCommand;
+            menuItem.Command = commands.FollowUserCommand;
             menuItem.CommandParameter = user;
             UpdateFollowIcon(menuItem, state.FollowState);
 

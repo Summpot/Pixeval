@@ -12,7 +12,7 @@
     x:DataType="{x:Type models:IMultiValuesWithMainValueSettingsEntry}"
     Content="{Binding MainValue}"
     ContentTemplate="{Binding MainValue, Converter={x:Static avalonia:SettingsEntryHelper.ValueTemplateConverter}}"
-    Description="{Binding Converter={x:Static avalonia:SettingsEntryHelper.DescriptionConverter}}"
+    Description="{avalonia:SettingsDescription}"
     Header="{Binding Header}"
     Tag="{Binding Token}"
     mc:Ignorable="d"

@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Download.DownloadItem"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Pixeval"
@@ -31,50 +32,42 @@
                 controls:Source.Cache="{Binding ThumbnailUrl}"
                 Stretch="UniformToFill" />
 
-            <CommandBar
-                x:Name="ItemCommands"
-                Grid.Row="1"
-                Grid.ColumnSpan="2"
-                HorizontalAlignment="Stretch"
-                DefaultLabelPosition="Right"
-                IsDynamicOverflowEnabled="True">
+        <CommandBar
+            Grid.Column="2"
+            VerticalAlignment="Center"
+            DefaultLabelPosition="Right"
+            IsDynamicOverflowEnabled="True">
+            <CommandBarButton
+                Click="ActionButton_OnClicked"
+                Icon="{markup1:SymbolIconEx Symbol={Binding ActionButtonSymbol}}"
+                IsEnabled="{Binding IsItemEnabled}"
+                Label="{loc:LocalizedDownloadText ActionButtonContent}" />
+            <CommandBar.SecondaryCommands>
                 <CommandBarButton
-                    x:Name="PrimaryActionButton"
-                    Click="ActionButton_OnClicked"
-                    Icon="{markup1:SymbolIconEx Symbol={Binding ActionButtonSymbol}}"
-                    IsEnabled="{Binding IsItemEnabled}"
-                    Label="{Binding ActionButtonContent}" />
-                <CommandBar.SecondaryCommands>
-                    <CommandBarButton
-                        Click="ResetItem_OnClicked"
-                        DataContext="{Binding #Root.DataContext}"
-                        Icon="{markup:SymbolIcon ArrowRepeatAll}"
-                        IsEnabled="{Binding IsResetItemEnabled}"
-                        Label="{I18N {x:Static local:DownloadItemResources+ResetItem.Label}}" />
-                    <CommandBarButton
-                        Click="CancelDownloadItem_OnClicked"
-                        DataContext="{Binding #Root.DataContext}"
-                        Icon="{markup:SymbolIcon Dismiss}"
-                        IsEnabled="{Binding IsCancelItemEnabled}"
-                        Label="{I18N {x:Static local:DownloadItemResources+CancelDownloadItem.Label}}" />
-                    <CommandBarButton
-                        Click="OpenDownloadLocationItem_OnClicked"
-                        DataContext="{Binding #Root.DataContext}"
-                        Icon="{markup:SymbolIcon FolderArrowRight}"
-                        Label="{I18N {x:Static local:DownloadItemResources+OpenDownloadLocationItem.Label}}" />
-                    <CommandBarButton
-                        Click="GoToPageItem_OnClicked"
-                        DataContext="{Binding #Root.DataContext}"
-                        Icon="{markup:SymbolIcon Open}"
-                        Label="{I18N {x:Static local:DownloadItemResources+GoToPageItem.Label}}" />
-                    <CommandBarButton
-                        Click="CheckErrorMessageInDetail_OnClicked"
-                        DataContext="{Binding #Root.DataContext}"
-                        Icon="{markup:SymbolIcon ErrorCircle}"
-                        IsEnabled="{Binding IsError}"
-                        Label="{I18N {x:Static local:DownloadItemResources+CheckErrorMessageInDetailItem.Label}}" />
-                </CommandBar.SecondaryCommands>
-            </CommandBar>
+                    Click="ResetItem_OnClicked"
+                    Icon="{markup:SymbolIcon ArrowRepeatAll}"
+                    IsEnabled="{Binding IsResetItemEnabled}"
+                    Label="{CompiledBinding [DownloadItem-ResetItem-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
+                <CommandBarButton
+                    Click="CancelDownloadItem_OnClicked"
+                    Icon="{markup:SymbolIcon Dismiss}"
+                    IsEnabled="{Binding IsCancelItemEnabled}"
+                    Label="{CompiledBinding [DownloadItem-CancelDownloadItem-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
+                <CommandBarButton
+                    Click="OpenDownloadLocationItem_OnClicked"
+                    Icon="{markup:SymbolIcon FolderArrowRight}"
+                    Label="{CompiledBinding [DownloadItem-OpenDownloadLocationItem-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
+                <CommandBarButton
+                    Click="GoToPageItem_OnClicked"
+                    Icon="{markup:SymbolIcon Open}"
+                    Label="{CompiledBinding [DownloadItem-GoToPageItem-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
+                <CommandBarButton
+                    Click="CheckErrorMessageInDetail_OnClicked"
+                    Icon="{markup:SymbolIcon ErrorCircle}"
+                    IsEnabled="{Binding IsError}"
+                    Label="{CompiledBinding [DownloadItem-CheckErrorMessageInDetailItem-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
+            </CommandBar.SecondaryCommands>
+        </CommandBar>
 
         <StackPanel Grid.Column="1" Spacing="4">
             <TextBlock
@@ -116,7 +109,7 @@
                     x:Name="ProgressText"
                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                     MaxLines="1"
-                    Text="{Binding ProgressMessage}"
+                    Text="{loc:LocalizedDownloadText ProgressMessage}"
                     TextTrimming="CharacterEllipsis"
                     ToolTip.Tip="{Binding ProgressMessage}" />
                 <TextBlock

@@ -29,9 +29,9 @@ public partial class SeriesPage : IconContentPage
 
     private void ChangeSource()
     {
-        var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
-        (SeriesView.DataContext as SeriesViewViewModel)?.ResetEngine(
-            _client.WorkSeriesWatchlist(workType is SimpleWorkType.Novel).ToFetchEngine(),
+        var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>();
+        (SeriesView.DataContext as SeriesViewViewModel)?.ResetSource(
+            _client.WorkSeriesWatchlistUnified(workType),
             workType);
     }
 }

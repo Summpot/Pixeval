@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Settings.WorkSubscriptionsSettingsExpander"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:avalonia="using:AutoSettingsPage.Avalonia"
     xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:controls1="using:Pixeval.Controls"
@@ -18,8 +19,7 @@
     xmlns:pixeval="using:Pixeval"
     xmlns:storage="using:Pixeval.Storage"
     x:DataType="{x:Type entries:WorkSubscriptionsSettingsEntry}"
-    x:Name="Root"
-    Description="{Binding Converter={x:Static avalonia:SettingsEntryHelper.DescriptionConverter}}"
+    Description="{avalonia:SettingsDescription}"
     Header="{Binding Header}"
     Tag="{Binding Token}"
     mc:Ignorable="d"
@@ -34,7 +34,7 @@
             AutomationProperties.Name="{Binding (ToolTip.Tip), RelativeSource={RelativeSource Self}}"
             Click="SyncAllButton_OnClicked"
             Symbol="Sync"
-            ToolTip.Tip="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+SyncAllSubscriptionsButton.Label}}" />
+            ToolTip.Tip="{CompiledBinding [WorkSubscriptionsSettingsExpander-SyncAllSubscriptionsButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
     </controls:SettingsExpander.Content>
     <controls:SettingsExpander.Items>
         <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Left">
@@ -42,13 +42,9 @@
                 x:Name="EditorGrid"
                 ColumnDefinitions="180,*,*,Auto"
                 ColumnSpacing="8"
-                RowDefinitions="Auto,Auto,Auto,Auto,Auto"
-                RowSpacing="8"
-                SizeChanged="EditorGrid_OnSizeChanged">
-                <TextBox
-                    x:Name="TargetIdTextBox"
-                    AutomationProperties.Name="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+TargetIdTextBox.PlaceholderText}}"
-                    PlaceholderText="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+TargetIdTextBox.PlaceholderText}}" />
+                RowDefinitions="Auto,Auto"
+                RowSpacing="8">
+                <TextBox x:Name="TargetIdTextBox" PlaceholderText="{CompiledBinding [WorkSubscriptionsSettingsExpander-TargetIdTextBox-PlaceholderText], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <controls1:SymbolComboBox
                     x:Name="SubscriptionTypeComboBox"
                     Grid.Row="0"
@@ -120,7 +116,7 @@
                                 Click="SyncSubscriptionButton_OnClicked"
                                 Symbol="Sync"
                                 Tag="{Binding}"
-                                ToolTip.Tip="{I18N {x:Static pixeval:DownloadPageResources+SyncSubscriptionButton.Label}}" />
+                                ToolTip.Tip="{CompiledBinding [DownloadPage-SyncSubscriptionButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <m3:IconButton
                                 x:Name="DeleteSubscriptionButton"
                                 Grid.Column="2"

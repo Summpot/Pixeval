@@ -3,14 +3,14 @@
 
 namespace Pixeval.Config;
 
-public partial record NavigationYamlSettings
+public partial record struct NavigationYamlSettings
 {
     public NavigationYamlSettings() : this(null, null, null)
     {
     }
 }
 
-public partial record NavigationYamlItem
+public partial record struct NavigationYamlItem
 {
     public NavigationYamlItem() : this(null, null, null, null, null)
     {

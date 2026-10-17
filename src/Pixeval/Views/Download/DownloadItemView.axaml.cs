@@ -13,7 +13,7 @@ using Avalonia.Controls.Selection;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Config;
 using Pixeval.Download;
@@ -82,10 +82,18 @@ public partial class DownloadItemView : ContentPage, IDisposable
         set => SetAndRaise(DeleteLocalFilesProperty, ref field, value);
     }
 
-    public static FuncValueConverter<int, string> SelectionCountLabelConverter { get; } =
-        new(count => I18NManager.GetResource(DownloadPageResources.SelectedCountFormatted, count));
+    public static FuncValueConverter<int, string> SelectionCountLabelConverter { get; } = new(count =>
+        count > 0
+            ? Strings.DownloadPageCancelSelectionButtonFormatted(count: count)
+            : Strings.DownloadPageCancelSelectionButtonDefaultLabel());
 
-    public DownloadItemView() => InitializeComponent();
+    private readonly IDisposable _languageSubscription;
+
+    public DownloadItemView()
+    {
+        InitializeComponent();
+        _languageSubscription = AppLocalization.Instance.Subscribe(() => RaisePropertyChanged(SelectedCountProperty, -1, SelectedCount));
+    }
 
     public DownloadItemView(DownloadItemPageViewModel viewModel)
         : this()
@@ -181,7 +189,7 @@ public partial class DownloadItemView : ContentPage, IDisposable
         UnselectAll();
         _selectedKeys.Clear();
         this.Notifications.ShowSuccess(
-            I18NManager.GetResource(DownloadPageResources.DeleteDownloadHistoryRecordsFormatted, count));
+            Strings.DownloadPageDeleteDownloadHistoryRecordsFormatted(count: count));
     }
 
     private void SelectAllButton_OnClicked(object? sender, RoutedEventArgs e) => SelectAll();
@@ -342,6 +350,7 @@ public partial class DownloadItemView : ContentPage, IDisposable
             return;
 
         _isDisposed = true;
+        _languageSubscription.Dispose();
         UnsubscribeFromItemsSource();
         DetachItemPage();
         if (DataContext is IDisposable disposable)

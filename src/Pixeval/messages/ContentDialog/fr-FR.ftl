@@ -1,0 +1,3 @@
+CancelButtonContent = Annuler
+
+OkButtonContent = Confirmer

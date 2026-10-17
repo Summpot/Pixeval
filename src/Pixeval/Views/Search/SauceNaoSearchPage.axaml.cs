@@ -2,7 +2,6 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Search;
 using Pixeval.Views.Works;
@@ -24,35 +23,12 @@ public partial class SauceNaoSearchPage : ContentPage
 
     private async Task OpenFileButton_OnClickAsync(object? sender, RoutedEventArgs e)
     {
-        if (_isPicking || !SauceNaoSearchPageViewModel.IsApiKeyExisted
-            || DataContext is not SauceNaoSearchPageViewModel viewModel
-            || TopLevel.GetTopLevel(this) is not { StorageProvider: { } provider })
+        if (DataContext is not SauceNaoSearchPageViewModel viewModel)
             return;
-        var attachmentVersion = _attachmentVersion;
-        _isPicking = true;
-        try
-        {
-            if (await provider.OpenFilePickerAsync(new FilePickerOpenOptions
-            {
-                AllowMultiple = false,
-                FileTypeFilter = [FilePickerFileTypes.ImageAll, FilePickerFileTypes.All]
-            }) is not [{ } file])
-                return;
-            using (file)
-                if (attachmentVersion == _attachmentVersion && ReferenceEquals(DataContext, viewModel))
-                    await viewModel.LoadFileAsync(file);
-        }
-        catch (Exception)
-        {
-            if (attachmentVersion == _attachmentVersion)
-                TopLevel.GetTopLevel(this)?.ViewContainer?.ShowError(
-                    I18NManager.GetResource(MiscResources.ExceptionEncountered),
-                    I18NManager.GetResource(SearchResources.SauceNAO.ImageLoadFailed));
-        }
-        finally
-        {
-            _isPicking = false;
-        }
+        if (await this.StoragePicker.OpenFilesAsync(new FilePickerOpenOptions { AllowMultiple = false }) is not [{ } file])
+            return;
+        await using var stream = await file.OpenReadAsync();
+        await viewModel.LoadAsync(stream);
     }
 
     private void SearchButton_OnClick(object? sender, RoutedEventArgs e)
@@ -60,8 +36,8 @@ public partial class SauceNaoSearchPage : ContentPage
         if (DataContext is not SauceNaoSearchPageViewModel viewModel)
             return;
 
-        var nav = this.GetUiService<INavigationService>() ?? new NavigationService();
-        nav.NavigateTo<ArtworkSauceNaoSearchResultPage>((SauceNaoSearchPageViewModel.ApiKey, viewModel.File), sourceControl: this);
+        var nav = this.GetRequiredUiService<INavigationService>();
+        nav.NavigateTo<ArtworkSauceNaoSearchResultPage>((viewModel.ApiKey, viewModel.File), sourceControl: this);
     }
 
     #region Disposal

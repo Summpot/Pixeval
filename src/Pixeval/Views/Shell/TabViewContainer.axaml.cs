@@ -66,6 +66,7 @@ public partial class TabViewContainer : ViewContainerBase
         _navigation = navigation;
         Host = uiHost;
         Navigation = navigation;
+        DataContext = ActivatorUtilities.CreateInstance<TabViewContainerViewModel>(services);
         InitializeComponent();
 
         AddHandler(ViewModelDisposal.ViewModelDisposalEvent, OnViewModelDisposal, RoutingStrategies.Bubble, handledEventsToo: true);
@@ -121,6 +122,7 @@ public partial class TabViewContainer : ViewContainerBase
         if (removeCurrentPage && selected is not null)
         {
             ViewModelDisposal.Dispose(selected);
+            selected.DataContext = null;
             _ = pages.Remove(selected);
         }
     }
@@ -207,7 +209,10 @@ public partial class TabViewContainer : ViewContainerBase
         var args = new RoutedEventArgs(ViewModelDisposal.RequestDisposeEvent, control);
         control.RaiseEvent(args);
         if (!args.Handled)
+        {
             ViewModelDisposal.Dispose(control);
+            control.DataContext = null;
+        }
     }
 
     private void OnViewModelDisposal(object? sender, ViewModelDisposalEventArgs e)

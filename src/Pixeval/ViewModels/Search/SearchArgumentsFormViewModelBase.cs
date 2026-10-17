@@ -3,21 +3,27 @@
 
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.DependencyInjection;
-using Pixeval.I18N;
+using Pixeval.Localization;
 
 namespace Pixeval.ViewModels.Search;
 
 public abstract partial class SearchArgumentsFormViewModelBase : ViewModelBase
 {
-    public static readonly string CommonUnspecified = I18NManager.GetResource(SearchResources.Common.Unspecified);
+    public static string CommonUnspecified => Strings.SearchCommonUnspecified();
+
+    private readonly IUserSessionService? _userSession;
+
+    protected SearchArgumentsFormViewModelBase(IUserSessionService? userSession = null)
+    {
+        _userSession = userSession;
+    }
 
     public OptionalDateSearchOptionViewModel StartDateOption { get; } = new();
 
     public OptionalDateSearchOptionViewModel EndDateOption { get; } = new();
 
     [ObservableProperty]
-    public partial WorkSortOption SortOption { get; set; } = WorkSortOption.PublishDateDescending;
+    public partial SortOrder SortOption { get; set; } = SortOrder.DateDesc;
 
     [ObservableProperty]
     public partial bool AiType { get; set; }
@@ -39,33 +45,22 @@ public abstract partial class SearchArgumentsFormViewModelBase : ViewModelBase
 
         if (startDate > endDate || startDate > japanToday || endDate > japanToday)
         {
-            title = I18NManager.GetResource(SearchResources.Validation.InvalidDateRange.Title);
-            content = I18NManager.GetResource(SearchResources.Validation.InvalidDateRange.Content);
+            title = Strings.SearchValidationInvalidDateRangeTitle();
+            content = Strings.SearchValidationInvalidDateRangeContent();
             return false;
         }
 
-        var isPremium = App.Services?.GetService<Pixeval.Services.Core.IUserSessionService>()?.CurrentUser?.IsPremium ?? false;
+        var isPremium = _userSession?.CurrentUser?.IsPremium ?? false;
         if (!isPremium
-            && SortOption is WorkSortOption.PopularityDescending)
+            && SortOption is SortOrder.PopularDesc)
         {
-            title = I18NManager.GetResource(SearchResources.Validation.PremiumSort.Title);
-            content = I18NManager.GetResource(SearchResources.Validation.PremiumSort.Content);
+            title = Strings.SearchValidationPremiumSortTitle();
+            content = Strings.SearchValidationPremiumSortContent();
             return false;
         }
 
         title = content = "";
         return true;
-    }
-
-    protected void ApplyCommonArguments(SearchArgumentsBase arguments)
-    {
-        arguments.SortOption = SortOption;
-        arguments.StartDate = StartDateOption.ToNullableDateTimeOffset();
-        arguments.EndDate = EndDateOption.ToNullableDateTimeOffset();
-        arguments.AiType = AiType;
-        arguments.MergePlainKeywordResults = MergePlainKeywordResults;
-        arguments.IncludeTranslatedTagResults = IncludeTranslatedTagResults;
-        arguments.IncludePotentialViolationWorks = IncludePotentialViolationWorks;
     }
 
     protected static bool HasInvalidRange(int? min, int? max) => min is { } minValue && max is { } maxValue && minValue > maxValue;

@@ -1,0 +1,3 @@
+InvalidIPFormat = Invalid IP Format
+
+DuplicatesWithExistingIP = Same IP already present

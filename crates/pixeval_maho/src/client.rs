@@ -23,6 +23,7 @@ use url::form_urlencoded;
 use crate::config::MahoConfig;
 use crate::connector::MahoConnector;
 
+#[boltffi::error]
 #[derive(thiserror::Error, Debug, uniffi::Error)]
 pub enum MahoError {
     #[error("Network error: {message}")]
@@ -323,6 +324,7 @@ impl MahoRequestBuilder {
     }
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Default)]
 pub struct MahoClientOptions {
     pub domain_fronting_enabled: bool,
@@ -331,6 +333,7 @@ pub struct MahoClientOptions {
     pub proxy_url: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug)]
 pub struct MahoResponseData {
     pub status: u16,

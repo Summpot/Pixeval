@@ -93,9 +93,12 @@ public static class ArtworkStateBehavior
 
         var state = ArtworkUiStateStore.GetOrCreate(artwork);
 
+        if (control.GetUiService<WorkCommands>() is not { } commands)
+            return;
+
         if (control is HeartButton heartButton)
         {
-            heartButton.Command = WorkCommands.BookmarkCommand;
+            heartButton.Command = commands.BookmarkCommand;
             heartButton.CommandParameter = artwork;
             heartButton.State = state.BookmarkState;
 
@@ -110,7 +113,7 @@ public static class ArtworkStateBehavior
         }
         else if (control is MenuItem menuItem)
         {
-            menuItem.Command = WorkCommands.BookmarkCommand;
+            menuItem.Command = commands.BookmarkCommand;
             menuItem.CommandParameter = artwork;
             UpdateBookmarkIcon(menuItem, state.BookmarkState);
 
@@ -189,9 +192,12 @@ public static class ArtworkStateBehavior
 
         var state = ArtworkUiStateStore.GetOrCreate(artwork);
 
+        if (control.GetUiService<WorkCommands>() is not { } commands)
+            return;
+
         if (control is MenuItem menuItem)
         {
-            menuItem.Command = WorkCommands.AddToWatchLaterCommand;
+            menuItem.Command = commands.AddToWatchLaterCommand;
             menuItem.CommandParameter = artwork;
             UpdateWatchLaterIcon(menuItem, state.IsInWatchLater);
 

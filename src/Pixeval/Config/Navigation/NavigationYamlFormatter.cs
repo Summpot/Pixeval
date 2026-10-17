@@ -8,8 +8,6 @@ namespace Pixeval.Config;
 
 public static class NavigationYamlFormatter
 {
-    private static readonly ConfigEngine Engine = new();
-
     public static string Format(NavigationConfiguration configuration) =>
-        Engine.FormatNavigationYaml(configuration.ToYamlSettings()).ReplaceLineEndings(Environment.NewLine);
+        PixevalConfigMethods.FormatNavigationYaml(configuration.ToYamlSettings()).ReplaceLineEndings(Environment.NewLine);
 }

@@ -1,3 +1,4 @@
+using Pixeval.Mako;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,7 +18,7 @@ public sealed class DownloadManagerTest
     [TestMethod]
     public void ApplyPageSnapshot_KeepsEqualItemsAndReplacesChanges()
     {
-        using var manager = new DownloadManager(null, 1);
+        using var manager = new DownloadManager(1);
         var kept = Item("kept", "1", DownloadState.Running, 10);
         var removed = Item("removed", "2", DownloadState.Queued);
         manager.ApplyPageSnapshot(Page([kept, removed], []));
@@ -27,21 +28,21 @@ public sealed class DownloadManagerTest
         manager.ApplyPageSnapshot(Page([inserted, keptAgain], []));
 
         Assert.HasCount(2, manager.OrdinaryItems);
-        Assert.AreSame(inserted, manager.OrdinaryItems[0]);
-        Assert.AreSame(kept, manager.OrdinaryItems[1]);
+        Assert.AreEqual(inserted, manager.OrdinaryItems[0]);
+        Assert.AreEqual(kept, manager.OrdinaryItems[1]);
 
         var progressed = Item("kept", "1", DownloadState.Running, 40);
         manager.ApplyPageSnapshot(Page([inserted, progressed], []));
 
-        Assert.AreSame(inserted, manager.OrdinaryItems[0]);
-        Assert.AreNotSame(kept, manager.OrdinaryItems[1]);
+        Assert.AreEqual(inserted, manager.OrdinaryItems[0]);
+        Assert.AreNotEqual(kept, manager.OrdinaryItems[1]);
         Assert.AreEqual(40, manager.OrdinaryItems[1].ProgressPercentage, 0.001);
     }
 
     [TestMethod]
     public void ApplyPageSnapshot_PutsSubscriptionItemsInTheirFolder()
     {
-        using var manager = new DownloadManager(null, 1);
+        using var manager = new DownloadManager(1);
         var ordinary = Item("ordinary", "ordinary", DownloadState.Queued);
         var subscriptionItem = Item("subscription", "subscription", DownloadState.Completed, 100, 7);
         var folder = Folder(7, [subscriptionItem], "Subscription");
@@ -49,17 +50,17 @@ public sealed class DownloadManagerTest
         manager.ApplyPageSnapshot(Page([ordinary], [folder]));
 
         Assert.HasCount(1, manager.OrdinaryItems);
-        Assert.AreSame(ordinary, manager.OrdinaryItems[0]);
+        Assert.AreEqual(ordinary, manager.OrdinaryItems[0]);
         Assert.HasCount(1, manager.Folders);
         Assert.AreEqual(7, manager.Folders[0].SubscriptionId);
         Assert.HasCount(1, manager.Folders[0].Items);
-        Assert.AreSame(subscriptionItem, manager.Folders[0].Items[0]);
+        Assert.AreEqual(subscriptionItem, manager.Folders[0].Items[0]);
     }
 
     [TestMethod]
     public void Page_FiltersByStateAndSearchAndFollowsSnapshotChanges()
     {
-        using var manager = new DownloadManager(null, 1);
+        using var manager = new DownloadManager(1);
         using var page = new DownloadPageViewModel(manager);
         var running = Item("running", "1", DownloadState.Running, 10, title: "Alpha");
         var completed = Item("completed", "2", DownloadState.Completed, 100, title: "Beta");
@@ -70,12 +71,12 @@ public sealed class DownloadManagerTest
 
         items.CurrentOption = DownloadListOption.Running;
         Assert.HasCount(1, items.View);
-        Assert.AreSame(running, items.View[0]);
+        Assert.AreEqual(running, items.View[0]);
 
         var progressed = Item("running", "1", DownloadState.Running, 40, title: "Alpha");
         manager.ApplyPageSnapshot(Page([progressed, completed], []));
         Assert.HasCount(1, items.View);
-        Assert.AreSame(progressed, items.View[0]);
+        Assert.AreEqual(progressed, items.View[0]);
         Assert.AreEqual(40, items.View[0].ProgressPercentage, 0.001);
 
         items.CurrentOption = DownloadListOption.CustomSearch;
@@ -90,7 +91,7 @@ public sealed class DownloadManagerTest
     [TestMethod]
     public void FolderPage_ShowsOnlyThatSubscription()
     {
-        using var manager = new DownloadManager(null, 1);
+        using var manager = new DownloadManager(1);
         using var page = new DownloadPageViewModel(manager);
         var first = Item("first", "1", DownloadState.Completed, 100, 4, "First");
         var second = Item("second", "2", DownloadState.Queued, subscriptionId: 9, title: "Second");
@@ -98,12 +99,12 @@ public sealed class DownloadManagerTest
 
         using var items = new DownloadItemPageViewModel(page, 4);
         Assert.HasCount(1, items.View);
-        Assert.AreSame(first, items.View[0]);
+        Assert.AreEqual(first, items.View[0]);
 
         var replacement = Item("first", "1", DownloadState.Error, 100, 4, "First");
         manager.ApplyPageSnapshot(Page([], [Folder(4, [replacement], "First"), Folder(9, [second], "Second")]));
         Assert.HasCount(1, items.View);
-        Assert.AreSame(replacement, items.View[0]);
+        Assert.AreEqual(replacement, items.View[0]);
         Assert.AreEqual(DownloadState.Error, items.View[0].State);
     }
 
@@ -117,18 +118,14 @@ public sealed class DownloadManagerTest
             (uint)WorkSubscriptionWorkKind.Illustration,
             "",
             "author",
-            "avatar",
-            "",
-            null);
+            "avatar");
         var named = storage.UpsertSubscription(
             9,
             (uint)WorkSubscriptionType.Bookmarks,
             (uint)WorkSubscriptionWorkKind.Novel,
             "Named",
             "author",
-            "named-avatar",
-            "",
-            null);
+            "named-avatar");
         var metas = WorkSubscriptionDownloadService.CreateFolderMetas(storage);
         Assert.HasCount(2, metas);
         Assert.AreEqual(named.HistoryEntryId, metas[0].SubscriptionId);
@@ -139,7 +136,7 @@ public sealed class DownloadManagerTest
         Assert.AreEqual(unnamed.HistoryEntryId, metas[1].SubscriptionId);
         Assert.AreEqual("8", metas[1].DisplayName);
 
-        using var manager = new DownloadManager(null, 1);
+        using var manager = new DownloadManager(1);
         manager.SetSubscriptions(metas);
         manager.SetFolderFetch(named.HistoryEntryId, true, 42u, null);
         manager.ApplyPageSnapshot(manager.CurrentPageSnapshot());
@@ -168,10 +165,8 @@ public sealed class DownloadManagerTest
             (uint)WorkSubscriptionWorkKind.Illustration,
             "Subscription",
             "author",
-            "",
-            "",
-            null);
-        using var manager = new DownloadManager(null, 1);
+            "");
+        using var manager = new DownloadManager(1);
         manager.BindStorage(storage);
         manager.SetSubscriptions(WorkSubscriptionDownloadService.CreateFolderMetas(storage));
 
@@ -264,14 +259,14 @@ public sealed class DownloadManagerTest
     private static string IllustrationJson(long id, string title) =>
         $$"""
         {
-          "Id": {{id}},
-          "Title": "{{title}}",
-          "IllustType": "illust",
-          "ImageUrls": { "Large": "https://127.0.0.1:1/{{id}}.jpg" },
-          "User": { "Id": 9, "Name": "Author", "Account": "author" },
-          "CreateDate": "2020-01-02T03:04:05+00:00",
-          "PageCount": 1,
-          "MetaSinglePage": { "OriginalImageUrl": "https://127.0.0.1:1/{{id}}.jpg" }
+          "id": {{id}},
+          "title": "{{title}}",
+          "type": "illust",
+          "image_urls": { "large": "https://127.0.0.1:1/{{id}}.jpg" },
+          "user": { "id": 9, "name": "Author", "account": "author" },
+          "create_date": "2020-01-02T03:04:05+00:00",
+          "page_count": 1,
+          "meta_single_page": { "original_image_url": "https://127.0.0.1:1/{{id}}.jpg" }
         }
         """;
 }

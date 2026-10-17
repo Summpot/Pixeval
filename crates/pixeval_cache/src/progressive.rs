@@ -13,6 +13,7 @@ pub const DEFAULT_PREVIEW_DIMENSION: u32 = 1024;
 pub const DEFAULT_MAXIMUM_PIXEL_COUNT: u64 = 4 * 1024 * 1024;
 pub const MAXIMUM_IMAGE_DIMENSION_AREA: u64 = 64 * 1024 * 1024;
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct DecodedPreviewFrame {
     pub width: u32,

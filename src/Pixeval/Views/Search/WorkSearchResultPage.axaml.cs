@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
+using Pixeval.Mako;
 using Pixeval.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -22,37 +22,39 @@ public partial class WorkSearchResultPage : IconContentPage
     {
     }
 
-    public WorkSearchResultPage(string searchText, SimpleWorkType preferredType) : this(
+    public WorkSearchResultPage(string searchText, SimpleWorkKind preferredType) : this(
         searchText,
-        new IllustrationSearchArguments(searchText),
-        new NovelSearchArguments(searchText),
+        QueryEnums.IllustrationKeyword(searchText),
+        QueryEnums.NovelKeyword(searchText),
         preferredType)
     {
     }
 
-    public WorkSearchResultPage(IllustrationSearchArguments illustrationSearchArguments)
-        : this(illustrationSearchArguments.SearchText, illustrationSearchArguments)
+    public WorkSearchResultPage(IllustrationSearchParams illustrationSearchParams)
+        : this(illustrationSearchParams.Word, illustrationSearchParams)
     {
     }
 
-    public WorkSearchResultPage(NovelSearchArguments novelSearchArguments)
-        : this(novelSearchArguments.SearchText, null, novelSearchArguments, SimpleWorkType.Novel)
+    public WorkSearchResultPage(NovelSearchParams novelSearchParams)
+        : this(novelSearchParams.Word, null, novelSearchParams, SimpleWorkKind.Novel)
     {
     }
 
     public WorkSearchResultPage(
         string searchText,
-        IllustrationSearchArguments? illustrationSearchArguments = null,
-        NovelSearchArguments? novelSearchArguments = null,
-        SimpleWorkType preferredType = default,
+        IllustrationSearchParams? illustrationSearchParams = null,
+        NovelSearchParams? novelSearchParams = null,
+        SimpleWorkKind preferredType = default,
         IWorkViewViewModel? viewModel = null)
     {
         InitializeComponent();
         _searchText = searchText;
-        Header = I18NManager.GetResource(MainPageResources.SearchResultFormatted, searchText);
+        Header = Strings.MainPageSearchResultFormatted(searchText: searchText);
+        var languageSubscription = AppLocalization.Instance.Subscribe(() => Header = Strings.MainPageSearchResultFormatted(searchText: searchText));
+        Pixeval.ViewModels.ViewModelDisposal.Register(this, languageSubscription);
         SimpleWorkTypeComboBox.SelectedValue = preferredType;
-        _illustrationArguments = illustrationSearchArguments;
-        _novelArguments = novelSearchArguments;
+        _illustrationParams = illustrationSearchParams;
+        _novelParams = novelSearchParams;
         SetIsSwitchEnabled();
         if (viewModel is not null)
             WorkContainer.SetViewModel(viewModel);
@@ -65,10 +67,10 @@ public partial class WorkSearchResultPage : IconContentPage
     private void WorkTypeComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
     {
         ChangeSource();
-        _ = LoadPopularPreviewAsync(_searchText, SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>());
+        _ = LoadPopularPreviewAsync(_searchText, SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>());
     }
 
-    private async Task LoadPopularPreviewAsync(string word, SimpleWorkType type)
+    private async Task LoadPopularPreviewAsync(string word, SimpleWorkKind type)
     {
         if (string.IsNullOrWhiteSpace(word))
         {
@@ -78,7 +80,7 @@ public partial class WorkSearchResultPage : IconContentPage
 
         try
         {
-            if (type is SimpleWorkType.Novel)
+            if (type is SimpleWorkKind.Novel)
             {
                 var novels = await this.GetRequiredUiService<MakoClient>().PopularPreviewNovelAsync(word, null, null, null, null);
                 if (novels.Count > 0)
@@ -122,28 +124,30 @@ public partial class WorkSearchResultPage : IconContentPage
 
     private void ChangeSource()
     {
-        IAsyncEnumerable<object> engine = (_illustrationArguments, _novelArguments) switch
+        var workType = (_illustrationParams, _novelParams) switch
         {
-            (null, null) => this.GetRequiredUiService<MakoClient>().Computed(AsyncEnumerable.Empty<object>()),
-            (_, null) => this.GetRequiredUiService<MakoClient>().IllustrationSearch(_illustrationArguments!),
-            (null, _) => this.GetRequiredUiService<MakoClient>().NovelSearch(_novelArguments!),
-            _ => SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>() switch
-            {
-                SimpleWorkType.Novel => this.GetRequiredUiService<MakoClient>().NovelSearch(_novelArguments!),
-                _ => this.GetRequiredUiService<MakoClient>().IllustrationSearch(_illustrationArguments!),
-            }
+            (_, null) => SimpleWorkKind.Illustration,
+            (null, _) => SimpleWorkKind.Novel,
+            _ => SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>()
         };
+        IAsyncEnumerable<object> engine = workType is SimpleWorkKind.Novel
+            ? _novelParams is null
+                ? AsyncEnumerable.Empty<object>()
+                : this.GetRequiredUiService<MakoClient>().NovelSearchAdvanced(_novelParams.Value).AsObjects()
+            : _illustrationParams is null
+                ? AsyncEnumerable.Empty<object>()
+                : this.GetRequiredUiService<MakoClient>().IllustrationSearchAdvanced(_illustrationParams.Value).AsObjects();
 
-        WorkContainer.ResetEngine(engine);
+        WorkContainer.ResetSource(engine, workType);
     }
 
-    private readonly IllustrationSearchArguments? _illustrationArguments;
+    private readonly IllustrationSearchParams? _illustrationParams;
 
-    private readonly NovelSearchArguments? _novelArguments;
+    private readonly NovelSearchParams? _novelParams;
 
     private void SetIsSwitchEnabled()
     {
-        if (_illustrationArguments is null || _novelArguments is null)
+        if (_illustrationParams is null || _novelParams is null)
             return;
         SimpleWorkTypeComboBox.IsEnabled = true;
         SimpleWorkTypeComboBox.IsVisible = true;

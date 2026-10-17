@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Search.SauceNaoSearchPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
@@ -10,78 +11,55 @@
     xmlns:pixeval="using:Pixeval"
     xmlns:viewModels="using:Pixeval.ViewModels.Search"
     x:DataType="{x:Type viewModels:SauceNaoSearchPageViewModel}"
-    Header="{I18N {x:Static pixeval:SearchResources+AdvancedOptions.SauceNaoTab}}"
+    DataContext="{markup:Service Type={x:Type viewModels:SauceNaoSearchPageViewModel}}"
+    Header="{CompiledBinding [Search-AdvancedOptions-SauceNaoTab], Source={x:Static loc:LocalizationManager.Instance}}"
     mc:Ignorable="d"
     d:DesignHeight="450"
     d:DesignWidth="800">
-    <ContentPage.DataContext>
-        <viewModels:SauceNaoSearchPageViewModel />
-    </ContentPage.DataContext>
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-        <StackPanel
-            MaxWidth="720"
-            Margin="16"
-            Spacing="16">
-            <controls:InfoBar
-                IsVisible="{Binding !IsApiKeyExisted}"
-                Mode="Warning"
-                Text="{I18N {x:Static pixeval:SearchResources+SauceNAO.ProvideApiKey}}" />
-            <controls:InfoBar
-                x:Name="ImageError"
-                IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                Mode="Error"
-                Text="{Binding ErrorMessage}" />
-            <StackPanel IsEnabled="{Binding IsApiKeyExisted}" Spacing="12">
-                <Button
-                    x:Name="SearchButton"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center"
-                    Click="SearchButton_OnClick"
-                    Content="{I18N {x:Static pixeval:SearchResources+SauceNAO.Search}}"
-                    IsEnabled="{Binding CanSearch}" />
-                <m3:Card
-                    x:Name="ImagePicker"
-                    Height="320"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+SauceNAO.ProvideImage}}"
-                    Click="OpenFileButton_OnClick"
-                    Theme="{StaticResource ContentCardTheme}">
-                    <Panel Margin="20">
-                        <StackPanel
-                            VerticalAlignment="Center"
-                            IsVisible="{Binding !FileSelected}"
-                            Spacing="20">
-                            <PathIcon
-                                Width="100"
-                                Height="100"
-                                Data="{markup:SvgPath {x:Static pixeval:SvgResources.SauceNAO}}" />
-                            <TextBlock
-                                m3:MaterialText.Style="{m3:Typography TitleLarge}"
-                                Text="{I18N {x:Static pixeval:SearchResources+SauceNAO.ProvideImage}}"
-                                TextAlignment="Center"
-                                TextWrapping="Wrap" />
-                        </StackPanel>
-                        <Image Source="{Binding Image}" Stretch="Uniform" />
-                    </Panel>
-                </m3:Card>
-                <ProgressBar
-                    AutomationProperties.Name="{I18N {x:Static pixeval:EntryViewerPageResources+LoadingTextBlock.Text}}"
-                    IsIndeterminate="True"
-                    IsVisible="{Binding IsLoading}" />
-                <Button
-                    x:Name="PasteButton"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center"
-                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+SauceNAO.PasteFromClipboard}}"
-                    Command="{Binding PasteCommand}"
-                    CommandParameter="{Binding $self}">
-                    <TextBlock
-                        Text="{I18N {x:Static pixeval:SearchResources+SauceNAO.PasteFromClipboard}}"
-                        TextAlignment="Center"
-                        TextWrapping="Wrap" />
-                </Button>
-            </StackPanel>
-        </StackPanel>
-    </ScrollViewer>
+    <DockPanel
+        Margin="12"
+        IsEnabled="{Binding IsApiKeyExisted}"
+        VerticalSpacing="12">
+        <controls:InfoBar
+            DockPanel.Dock="Top"
+            IsVisible="{Binding !IsApiKeyExisted}"
+            Mode="Warning"
+            Text="{CompiledBinding [Search-SauceNAO-ProvideApiKey], Source={x:Static loc:LocalizationManager.Instance}}" />
+        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="{m3:Token {x:Static m3:MaterialTokens+Comp+ButtonGroup.Spacing}}">
+            <Button
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Click="SearchButton_OnClick"
+                Content="{CompiledBinding [Search-SauceNAO-Search], Source={x:Static loc:LocalizationManager.Instance}}"
+                IsEnabled="{Binding FileSelected}" />
+            <m3:Card
+                Grid.Row="1"
+                MaxHeight="600"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Click="OpenFileButton_OnClick"
+                Theme="{StaticResource ContentCardTheme}">
+                <Panel Margin="20">
+                    <StackPanel VerticalAlignment="Center" Spacing="20">
+                        <PathIcon
+                            Width="100"
+                            Height="100"
+                            Data="{markup:SvgPath {x:Static pixeval:SvgResources.SauceNAO}}" />
+                        <TextBlock
+                            m3:MaterialText.Style="{m3:Typography TitleLarge}"
+                            Text="{CompiledBinding [Search-SauceNAO-ProvideImage], Source={x:Static loc:LocalizationManager.Instance}}"
+                            TextAlignment="Center" />
+                    </StackPanel>
+                    <Image Source="{Binding Image}" />
+                </Panel>
+            </m3:Card>
+            <Button
+                Grid.Row="2"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Command="{Binding PasteCommand}"
+                CommandParameter="{Binding $self}"
+                Content="{CompiledBinding [Search-SauceNAO-PasteFromClipboard], Source={x:Static loc:LocalizationManager.Instance}}" />
+        </Grid>
+    </DockPanel>
 </ContentPage>

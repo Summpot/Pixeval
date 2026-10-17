@@ -4,12 +4,12 @@
 using System;
 using System.Collections.Generic;
 using FluentIcons.Common;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Config;
 
 namespace Pixeval.Download;
 
-public partial record DownloadItemSnapshot
+public partial record struct DownloadItemSnapshot
 {
     public string AuthorsText => Author;
 
@@ -21,13 +21,13 @@ public partial record DownloadItemSnapshot
 
     public string ProgressMessage => State switch
     {
-        DownloadState.Queued => I18NManager.GetResource(DownloadItemResources.DownloadQueued),
-        DownloadState.Running => I18NManager.GetResource(DownloadItemResources.DownloadRunningFormatted, (int)ProgressPercentage),
-        DownloadState.Error => I18NManager.GetResource(DownloadItemResources.DownloadErrorMessageFormatted, ErrorMessage),
-        DownloadState.Completed => I18NManager.GetResource(DownloadItemResources.DownloadCompleted),
-        DownloadState.Cancelled => I18NManager.GetResource(DownloadItemResources.DownloadCancelled),
-        DownloadState.Pending => I18NManager.GetResource(DownloadItemResources.DownloadPending),
-        DownloadState.Paused => I18NManager.GetResource(DownloadItemResources.DownloadPaused),
+        DownloadState.Queued => Strings.DownloadItemDownloadQueued(),
+        DownloadState.Running => Strings.DownloadItemDownloadRunningFormatted(progress: (int)ProgressPercentage),
+        DownloadState.Error => Strings.DownloadItemDownloadErrorMessageFormatted(error: ErrorMessage),
+        DownloadState.Completed => Strings.DownloadItemDownloadCompleted(),
+        DownloadState.Cancelled => Strings.DownloadItemDownloadCancelled(),
+        DownloadState.Pending => Strings.DownloadItemDownloadPending(),
+        DownloadState.Paused => Strings.DownloadItemDownloadPaused(),
         _ => ""
     };
 
@@ -43,11 +43,11 @@ public partial record DownloadItemSnapshot
 
     public string ActionButtonContent => ActionButtonSymbol switch
     {
-        Symbol.Dismiss => I18NManager.GetResource(DownloadItemResources.ActionDownloadCancelled),
-        Symbol.Pause => I18NManager.GetResource(DownloadItemResources.ActionButtonContentPause),
-        Symbol.ArrowRepeatAll => I18NManager.GetResource(DownloadItemResources.ActionButtonContentRetry),
-        Symbol.Open => I18NManager.GetResource(DownloadItemResources.ActionButtonContentOpen),
-        Symbol.Play => I18NManager.GetResource(DownloadItemResources.ActionButtonContentResume),
+        Symbol.Dismiss => Strings.DownloadItemActionDownloadCancelled(),
+        Symbol.Pause => Strings.DownloadItemActionButtonContentPause(),
+        Symbol.ArrowRepeatAll => Strings.DownloadItemActionButtonContentRetry(),
+        Symbol.Open => Strings.DownloadItemActionButtonContentOpen(),
+        Symbol.Play => Strings.DownloadItemActionButtonContentResume(),
         _ => ""
     };
 

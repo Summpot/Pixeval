@@ -2,8 +2,8 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Threading;
@@ -11,8 +11,8 @@ using System.Threading.Tasks;
 
 namespace Pixeval.Common.Collections;
 
-public class FilteredIncrementalCollection<T> : ObservableCollection<T>, IIncrementalLoading, IDisposable
-    where T : class
+public class FilteredIncrementalCollection<T> : ObservableRangeCollection<T>, IIncrementalLoading, IDisposable
+    where T : notnull
 {
     private readonly IncrementalLoadingCollection<T> _source;
     private Predicate<object>? _filter;
@@ -70,16 +70,7 @@ public class FilteredIncrementalCollection<T> : ObservableCollection<T>, IIncrem
         switch (e.Action)
         {
             case NotifyCollectionChangedAction.Add when e.NewItems is not null:
-                foreach (T item in e.NewItems)
-                {
-                    if (_filter is null || _filter(item))
-                    {
-                        if (_comparer is not null)
-                            InsertSorted(item);
-                        else
-                            Add(item);
-                    }
-                }
+                AppendAddedItems(e.NewItems);
                 break;
 
             case NotifyCollectionChangedAction.Remove when e.OldItems is not null:
@@ -92,6 +83,48 @@ public class FilteredIncrementalCollection<T> : ObservableCollection<T>, IIncrem
                 Rebuild();
                 break;
         }
+    }
+
+    private void AppendAddedItems(IList newItems)
+    {
+        if (_comparer is not null)
+        {
+            foreach (T item in newItems)
+            {
+                if (_filter is null || _filter(item))
+                    InsertSorted(item);
+            }
+
+            return;
+        }
+
+        if (_filter is null)
+        {
+            AddRange(CopyItems(newItems));
+            return;
+        }
+
+        List<T>? matches = null;
+        foreach (T item in newItems)
+        {
+            if (!_filter(item))
+                continue;
+            matches ??= new List<T>(newItems.Count);
+            matches.Add(item);
+        }
+
+        if (matches is not null)
+            AddRange(matches);
+    }
+
+    private static IReadOnlyList<T> CopyItems(IList newItems)
+    {
+        if (newItems.Count is 1)
+            return [(T) newItems[0]!];
+
+        var copy = new T[newItems.Count];
+        newItems.CopyTo(copy, 0);
+        return copy;
     }
 
     private void InsertSorted(T item)

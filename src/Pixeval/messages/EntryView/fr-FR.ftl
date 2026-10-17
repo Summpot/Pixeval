@@ -1,0 +1,1 @@
+ResultIsEmptyTextBlock = Il n'y a rien sauf nos poulets

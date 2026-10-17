@@ -3,7 +3,7 @@
 
 namespace Pixeval.Config;
 
-public partial record NavigationDiagnostic
+public partial record struct NavigationDiagnostic
 {
     public string PositionText => Line > 0 && Column > 0
         ? $"{Line}:{Column}"

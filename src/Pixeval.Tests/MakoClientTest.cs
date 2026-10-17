@@ -4,17 +4,40 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Pixeval.Common;
+using Pixeval.Common.Collections;
 using Pixeval.Config;
 using Pixeval.Pixiv;
 using Pixeval.Utilities;
 using Pixeval.Services.Network;
 using Pixeval.Mako;
+using Pixeval.ViewModels;
+using Pixeval.ViewModels.Works;
 
 namespace Pixeval.Tests;
 
 [TestClass]
 public sealed class MakoClientTest
 {
+    [TestMethod]
+    public async Task UserFeedNextPageReportsFailureInsteadOfCompletingAnEmptyPage()
+    {
+        using var client = CreateTestClient(new PixivDomainFrontingSettings());
+        using var native = client.UserRecommended();
+        using var source = new IncrementalSource<User, User>(native, static (user, _) => user);
+        using var collection = new IncrementalLoadingCollection<User>(source);
+
+        // No refresh token: fail deterministically without sending a network request.
+        Assert.AreEqual(0, await collection.LoadMoreItemsAsync(0));
+        Assert.IsInstanceOfType<MakoError>(collection.LoadError);
+        Assert.IsTrue(source.IsInterrupted);
+        Assert.IsTrue(collection.HasMoreItems);
+        Assert.IsFalse(native.IsCompleted());
+        Assert.IsNotNull(native.LastError());
+        native.Cancel();
+        await Assert.ThrowsExactlyAsync<MakoError.InvalidParameter>(async () => await native.NextPageAsync());
+    }
+
     private static MakoClient CreateTestClient(PixivDomainFrontingSettings settings)
     {
         var config = ProxyHelper.CreateMakoConfiguration(settings);
@@ -43,7 +66,7 @@ public sealed class MakoClientTest
 
         using var engine = client.WorkRecommended(includeRanking: true, includePrivacy: true);
 
-        // Verify that IllustrationFetchEngine implements IAsyncEnumerable<Illustration>
+        // Verify that IllustrationFeed implements IAsyncEnumerable<Illustration>
         Assert.IsInstanceOfType<IAsyncEnumerable<Illustration>>(engine);
 
         // Engine starts with 0 requested pages
@@ -69,7 +92,7 @@ public sealed class MakoClientTest
 
         using var engine = client.NovelRecommended(includeRanking: true, includePrivacy: true);
 
-        // Verify that NovelFetchEngine implements IAsyncEnumerable<Novel>
+        // Verify that NovelFeed implements IAsyncEnumerable<Novel>
         Assert.IsInstanceOfType<IAsyncEnumerable<Mako.Novel>>(engine);
 
         Assert.AreEqual(0u, engine.RequestedPages());
@@ -91,9 +114,9 @@ public sealed class MakoClientTest
         var settings = new PixivDomainFrontingSettings();
         using var client = CreateTestClient(settings);
 
-        using var engine = client.WorkSearch("illust", "test", null, null);
+        using var engine = client.WorkSearch(SimpleWorkKind.Illustration, "test");
 
-        // Verify that WorkFetchEngine implements IAsyncEnumerable<WorkEntry>
+        // Verify that WorkFeed implements IAsyncEnumerable<WorkEntry>
         Assert.IsInstanceOfType<IAsyncEnumerable<WorkEntry>>(engine);
 
         Assert.AreEqual(0u, engine.RequestedPages());
@@ -117,7 +140,7 @@ public sealed class MakoClientTest
 
         using var engine = client.UserRecommended();
 
-        // Verify that UserFetchEngine implements IAsyncEnumerable<User>
+        // Verify that UserFeed implements IAsyncEnumerable<User>
         Assert.IsInstanceOfType<IAsyncEnumerable<User>>(engine);
 
         Assert.AreEqual(0u, engine.RequestedPages());
@@ -180,15 +203,15 @@ public sealed class MakoClientTest
 
         var retrievedUser = client.GetUser();
         Assert.IsNotNull(retrievedUser);
-        Assert.AreEqual("123456", retrievedUser.Id);
-        Assert.AreEqual("Test User", retrievedUser.Name);
+        Assert.AreEqual("123456", retrievedUser.Value.Id);
+        Assert.AreEqual("Test User", retrievedUser.Value.Name);
         Assert.AreEqual("test_refresh_token", client.GetRefreshToken());
 
         var tokenResp = client.GetTokenResponse();
         Assert.IsNotNull(tokenResp);
-        Assert.AreEqual("test_refresh_token", tokenResp.RefreshToken);
-        Assert.IsNotNull(tokenResp.User);
-        Assert.AreEqual("Test User", tokenResp.User.Name);
+        Assert.AreEqual("test_refresh_token", tokenResp.Value.RefreshToken);
+        Assert.IsNotNull(tokenResp.Value.User);
+        Assert.AreEqual("Test User", tokenResp.Value.User.Value.Name);
 
         client.ClearToken();
         Assert.IsNull(client.GetUser());
@@ -203,7 +226,7 @@ public sealed class MakoClientTest
 
         using var engine = client.SpotlightArticles("all");
 
-        // Verify that SpotlightFetchEngine implements IAsyncEnumerable<SpotlightArticle>
+        // Verify that SpotlightFeed implements IAsyncEnumerable<SpotlightArticle>
         Assert.IsInstanceOfType<IAsyncEnumerable<SpotlightArticle>>(engine);
 
         Assert.AreEqual(0u, engine.RequestedPages());
@@ -220,13 +243,36 @@ public sealed class MakoClientTest
     }
 
     [TestMethod]
+    public void CatalogQueryApisExposeTypedEnums()
+    {
+        var settings = new PixivDomainFrontingSettings();
+        using var client = CreateTestClient(settings);
+
+        var modes = client.RankModesFor(SimpleWorkKind.Illustration);
+        Assert.AreEqual(17, modes.Count);
+        Assert.IsFalse(modes.Contains(RankMode.WeekAi));
+
+        var novelModes = client.RankModesFor(SimpleWorkKind.Novel);
+        Assert.IsTrue(novelModes.Contains(RankMode.WeekAi));
+        Assert.IsFalse(novelModes.Contains(RankMode.Month));
+
+        var date = client.RankingMaxQueryDate();
+        Assert.IsTrue(date.Year >= 1970);
+
+        using var ranking = client.WorkRankingUnified(SimpleWorkKind.Illustration, RankMode.Day, date);
+        Assert.IsInstanceOfType<IAsyncEnumerable<WorkEntry>>(ranking);
+        ranking.Cancel();
+    }
+
+    [TestMethod]
     public void MakoSpotlightShouldReturnFetchEngineWithMapping()
     {
         var settings = new PixivDomainFrontingSettings();
         using var client = CreateTestClient(settings);
 
-        var spotlightStream = client.Spotlight("all");
-        Assert.IsInstanceOfType<Pixeval.Pixiv.IFetchEngine<SpotlightArticle>>(spotlightStream);
+        var spotlightStream = client.Spotlight(Pixeval.Mako.SpotlightCategory.All);
+        Assert.IsInstanceOfType<SpotlightFeed>(spotlightStream);
+        Assert.IsInstanceOfType<IPageFeed<SpotlightArticle>>(spotlightStream);
 
         // Verify native SpotlightArticle extensions
         var article = new SpotlightArticle(
@@ -236,7 +282,7 @@ public sealed class MakoClientTest
             "https://example.com/thumb.jpg",
             "https://example.com/article",
             "2026-10-06T10:00:00+09:00",
-            "spotlight",
+            Mako.SpotlightCategory.Spotlight,
             "Subcategory"
         );
         Assert.AreEqual(12345L, article.Id);
@@ -244,9 +290,27 @@ public sealed class MakoClientTest
         Assert.AreEqual("Pure Title", article.PureTitle);
         Assert.AreEqual("https://example.com/thumb.jpg", article.Thumbnail);
         Assert.AreEqual("https://example.com/article", article.ArticleUrl);
-        Assert.AreEqual(Pixeval.Pixiv.SpotlightCategory.Spotlight, article.CategoryEnum);
+        Assert.AreEqual(Pixeval.Mako.SpotlightCategory.Spotlight, article.CategoryEnum);
         Assert.AreEqual("Subcategory", article.SubcategoryLabel);
         Assert.AreEqual(new System.Uri("https://www.pixivision.net/a/12345"), article.WebsiteUri);
         Assert.AreEqual(new System.Uri("pixeval://spotlight/12345"), article.AppUri);
+    }
+
+    [TestMethod]
+    public void NativeRecordsExposeProtocolEnums()
+    {
+        var ugoira = DesignHelper.DesignIllustration with { IllustType = IllustContentType.Ugoira };
+        Assert.AreEqual(IllustContentType.Ugoira, ugoira.IllustType);
+        Assert.IsTrue(ugoira.IsPicGif);
+        Assert.AreEqual(IllustContentType.Ugoira, ugoira.Type);
+
+        var detail = new BookmarkDetail(true, [], PrivacyRestrict.Private);
+        Assert.AreEqual(PrivacyRestrict.Private, detail.Restrict);
+        Assert.IsTrue(detail.IsBookmarked);
+
+        Assert.AreEqual(SafeRating.Explicit, Mako.XRestrict.R18.ToSafeRating());
+        Assert.AreEqual(SafeRating.Guro, Mako.XRestrict.Ordinary.ToSafeRating([RestrictionFlag.R18G]));
+        Assert.AreEqual(SafeRating.Questionable, Mako.XRestrict.Ordinary.ToSafeRating(sanityLevel: 6));
+        Assert.AreEqual(SafeRating.Guro, Mako.XRestrict.R18G.ToSafeRating());
     }
 }

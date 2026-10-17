@@ -1,2 +1,6 @@
 [env]
 CC_x86_64_pc_windows_msvc = "clang-cl"
+BOLTFFI_BINDING_EXPANSION = "1"
+BOLTFFI_BINDING_EXPANSION_ROOT = { value = "crates/pixeval_native", relative = true }
+BOLTFFI_BINDING_EXPANSION_SOURCE = { value = "crates/pixeval_native/src/lib.rs", relative = true }
+BOLTFFI_BINDING_EXPANSION_SURFACE = "native"

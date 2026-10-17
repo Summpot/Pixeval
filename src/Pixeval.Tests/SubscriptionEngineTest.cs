@@ -1,6 +1,8 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Subscription;
@@ -12,6 +14,8 @@ public sealed class SubscriptionEngineTest
 {
     private sealed class TestProgressCallback : ISubscriptionProgressCallback
     {
+        public SubscriptionSync? Engine { get; set; }
+
         public List<SubscriptionFetchState> StateChanges { get; } = [];
         public List<(long SubId, uint DuplicateCount)> DuplicateStoppedEvents { get; } = [];
         public List<SubscriptionDownloadItem> FetchedItems { get; } = [];
@@ -20,11 +24,13 @@ public sealed class SubscriptionEngineTest
 
         public void OnFetchStateChanged(SubscriptionFetchState state)
         {
+            _ = Engine?.GetFetchState(state.SubscriptionId);
             StateChanges.Add(state);
         }
 
         public void OnDuplicateStopped(long subscriptionId, uint duplicateCount)
         {
+            _ = Engine?.GetPendingCount();
             DuplicateStoppedEvents.Add((subscriptionId, duplicateCount));
         }
 
@@ -33,7 +39,7 @@ public sealed class SubscriptionEngineTest
             FetchedItems.Add(item);
         }
 
-        public void OnSubscriptionUpdated(long subscriptionId, string name, string account, string avatarUrl)
+        public void OnSubscriptionUpdated(Pixeval.Storage.WorkSubscriptionRecord record)
         {
         }
 
@@ -48,14 +54,33 @@ public sealed class SubscriptionEngineTest
 
         public void OnDaemonStateChanged(bool isRunning)
         {
+            _ = Engine?.IsDaemonRunning();
             DaemonStateChanges.Add(isRunning);
         }
     }
 
     [TestMethod]
+    public async Task ProgressCallbacksCanReenterNativeStateWithoutHoldingItsLock()
+    {
+        var callback = new TestProgressCallback();
+        using var engine = new SubscriptionSync(1, callback);
+        callback.Engine = engine;
+        await Task.Run(() =>
+        {
+            engine.SetFetchState(42, 1, 1, SubscriptionStatus.Fetching);
+            engine.RecordWorkProcessed(42, true);
+            engine.StartDaemon(600);
+            engine.StopDaemon();
+        }).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.HasCount(1, callback.StateChanges);
+        Assert.HasCount(1, callback.DuplicateStoppedEvents);
+        callback.Engine = null;
+    }
+
+    [TestMethod]
     public void DuplicateFuseBreakerShouldTriggerAtThresholdFive()
     {
-        using var engine = new SubscriptionSyncEngine(5, null);
+        using var engine = new SubscriptionSync(5, null);
 
         // 1 to 4 duplicates should return false
         for (var i = 0; i < 4; i++)
@@ -72,7 +97,7 @@ public sealed class SubscriptionEngineTest
     [TestMethod]
     public void NonDuplicateWorkShouldResetDuplicateCounter()
     {
-        using var engine = new SubscriptionSyncEngine(5, null);
+        using var engine = new SubscriptionSync(5, null);
 
         // 4 duplicates
         for (var i = 0; i < 4; i++)
@@ -96,7 +121,7 @@ public sealed class SubscriptionEngineTest
     [TestMethod]
     public void ResetDuplicateCounterExplicitlyShouldSucceed()
     {
-        using var engine = new SubscriptionSyncEngine(5, null);
+        using var engine = new SubscriptionSync(5, null);
 
         for (var i = 0; i < 4; i++)
         {
@@ -117,7 +142,7 @@ public sealed class SubscriptionEngineTest
     public void FetchStateTransitionAndCallbackShouldWork()
     {
         var callback = new TestProgressCallback();
-        using var engine = new SubscriptionSyncEngine(5, callback);
+        using var engine = new SubscriptionSync(5, callback);
 
         var initialState = engine.GetFetchState(400);
         Assert.IsNull(initialState);
@@ -125,14 +150,14 @@ public sealed class SubscriptionEngineTest
         engine.SetFetchState(400, 1, 10, SubscriptionStatus.Fetching);
         var runningState = engine.GetFetchState(400);
         Assert.IsNotNull(runningState);
-        Assert.AreEqual(SubscriptionStatus.Fetching, runningState.Status);
-        Assert.AreEqual(1u, runningState.Page);
-        Assert.AreEqual(10u, runningState.TotalFetched);
+        Assert.AreEqual(SubscriptionStatus.Fetching, runningState.Value.Status);
+        Assert.AreEqual(1u, runningState.Value.Page);
+        Assert.AreEqual(10u, runningState.Value.TotalFetched);
 
         engine.SetFetchState(400, 2, 20, SubscriptionStatus.Completed);
         var completedState = engine.GetFetchState(400);
         Assert.IsNotNull(completedState);
-        Assert.AreEqual(SubscriptionStatus.Completed, completedState.Status);
+        Assert.AreEqual(SubscriptionStatus.Completed, completedState.Value.Status);
 
         Assert.AreEqual(2, callback.StateChanges.Count);
         Assert.AreEqual(SubscriptionStatus.Fetching, callback.StateChanges[0].Status);
@@ -142,7 +167,7 @@ public sealed class SubscriptionEngineTest
     [TestMethod]
     public void QueueArbitrationSyncAllShouldSupersedeIndividual()
     {
-        using var engine = new SubscriptionSyncEngine(null, null);
+        using var engine = new SubscriptionSync(null, null);
 
         Assert.IsTrue(engine.QueueSyncSubscription(1));
         Assert.IsTrue(engine.QueueSyncSubscription(2));
@@ -166,7 +191,7 @@ public sealed class SubscriptionEngineTest
     public void DaemonLifecycleAndIntervalControlShouldWork()
     {
         var callback = new TestProgressCallback();
-        using var engine = new SubscriptionSyncEngine(5, callback);
+        using var engine = new SubscriptionSync(5, callback);
 
         Assert.IsFalse(engine.IsDaemonRunning());
         Assert.AreEqual(1800UL, engine.GetDaemonInterval());

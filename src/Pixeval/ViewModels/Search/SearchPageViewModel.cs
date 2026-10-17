@@ -11,7 +11,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Pixeval.Config;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Mako;
 using Pixeval.Pixiv;
 using Pixeval.Services.Core;
@@ -43,7 +43,8 @@ public partial class SearchPageViewModel : ViewModelBase
         AppSettings appSettings,
         INotificationService notificationService,
         IClipboardService clipboardService,
-        INavigationService navigationService)
+        INavigationService navigationService,
+        IUserSessionService userSession)
     {
         _makoClient = makoClient;
         _searchHistory = searchHistory;
@@ -51,6 +52,8 @@ public partial class SearchPageViewModel : ViewModelBase
         _notificationService = notificationService;
         _clipboardService = clipboardService;
         _navigationService = navigationService;
+        IllustrationForm = new IllustrationSearchFormViewModel(userSession);
+        NovelForm = new NovelSearchFormViewModel(userSession);
 
         SelectedTrendingTagsType = appSettings.SearchSettings.DefaultSimpleWorkType;
         SelectedAdvancedOptionsType = appSettings.SearchSettings.DefaultSimpleWorkType;
@@ -68,17 +71,17 @@ public partial class SearchPageViewModel : ViewModelBase
 
     private async Task RefreshIllustrationTagsAsync()
     {
-        IllustrationTrendingTags = await _makoClient.GetWorkTrendingTagsAsync(SimpleWorkType.Illustration);
+        IllustrationTrendingTags = await _makoClient.WorkTrendingTagsUnifiedAsync(SimpleWorkKind.Illustration);
     }
 
     private async Task RefreshNovelTagsAsync()
     {
-        NovelTrendingTags = await _makoClient.GetWorkTrendingTagsAsync(SimpleWorkType.Novel);
+        NovelTrendingTags = await _makoClient.WorkTrendingTagsUnifiedAsync(SimpleWorkKind.Novel);
     }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TrendingTags))]
-    public partial SimpleWorkType SelectedTrendingTagsType { get; set; }
+    public partial SimpleWorkKind SelectedTrendingTagsType { get; set; }
 
     [ObservableProperty]
     public partial string SearchText { get; set; } = "";
@@ -90,9 +93,9 @@ public partial class SearchPageViewModel : ViewModelBase
     }
 
     [ObservableProperty]
-    public partial SimpleWorkType SelectedAdvancedOptionsType { get; set; }
+    public partial SimpleWorkKind SelectedAdvancedOptionsType { get; set; }
 
-    public IReadOnlyList<TrendingTag> TrendingTags => SelectedTrendingTagsType is SimpleWorkType.Novel ? NovelTrendingTags : IllustrationTrendingTags;
+    public IReadOnlyList<TrendingTag> TrendingTags => SelectedTrendingTagsType is SimpleWorkKind.Novel ? NovelTrendingTags : IllustrationTrendingTags;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TrendingTags))]
@@ -108,9 +111,9 @@ public partial class SearchPageViewModel : ViewModelBase
     [ObservableProperty]
     public partial SearchCompletionItem? SelectedSearchCompletion { get; set; }
 
-    public IllustrationSearchFormViewModel IllustrationForm { get; } = new();
+    public IllustrationSearchFormViewModel IllustrationForm { get; }
 
-    public NovelSearchFormViewModel NovelForm { get; } = new();
+    public NovelSearchFormViewModel NovelForm { get; }
 
     private ObservableCollection<SearchHistoryRecord> SearchHistories => _searchHistory.Entries;
 
@@ -175,21 +178,21 @@ public partial class SearchPageViewModel : ViewModelBase
         {
             suggestions.Add(new(
                 SearchCompletionKind.OpenIllustration,
-                I18NManager.GetResource(SearchResources.OpenId.Illustration),
+                Strings.SearchOpenIdIllustration(),
                 normalized));
             suggestions.Add(new(
                 SearchCompletionKind.OpenNovel,
-                I18NManager.GetResource(SearchResources.OpenId.Novel),
+                Strings.SearchOpenIdNovel(),
                 normalized));
             suggestions.Add(new(
                 SearchCompletionKind.OpenUser,
-                I18NManager.GetResource(SearchResources.OpenId.User),
+                Strings.SearchOpenIdUser(),
                 normalized));
         }
 
         suggestions.Add(new(
             SearchCompletionKind.SearchUser,
-            I18NManager.GetResource(SearchResources.SearchUser),
+            Strings.SearchSearchUser(),
             normalized));
 
         return suggestions;
@@ -208,7 +211,7 @@ public partial class SearchPageViewModel : ViewModelBase
                 return;
 
             await Task.Delay(SearchTagCompletionDelay, token).ConfigureAwait(false);
-            var tags = await _makoClient.GetAutoCompletionForKeyword(keyword, true, token).ConfigureAwait(false);
+            var tags = await _makoClient.SearchAutocompleteAsync(keyword, token).ConfigureAwait(false);
             token.ThrowIfCancellationRequested();
             if (version != _searchCompletionUpdateVersion)
                 return;
@@ -328,8 +331,8 @@ public partial class SearchPageViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(searchText))
         {
             _notificationService.ShowWarning(
-                I18NManager.GetResource(MainPageResources.SearchKeywordCannotBeBlank.Title),
-                I18NManager.GetResource(MainPageResources.SearchKeywordCannotBeBlank.Content));
+                Strings.MainPageSearchKeywordCannotBeBlankTitle(),
+                Strings.MainPageSearchKeywordCannotBeBlankContent());
             return;
         }
 
@@ -342,7 +345,7 @@ public partial class SearchPageViewModel : ViewModelBase
                 return;
             }
 
-            if (SelectedAdvancedOptionsType is SimpleWorkType.Novel)
+            if (SelectedAdvancedOptionsType is SimpleWorkKind.Novel)
             {
                 if (!NovelForm.TryValidate(out var title, out var content))
                 {
@@ -350,7 +353,7 @@ public partial class SearchPageViewModel : ViewModelBase
                     return;
                 }
 
-                var arguments = NovelForm.BuildArguments(searchText);
+                var arguments = NovelForm.ToSearchParams(searchText);
                 _searchHistory.Add(searchText);
                 _navigationService.NavigateToWorkSearch(arguments);
             }
@@ -362,14 +365,14 @@ public partial class SearchPageViewModel : ViewModelBase
                     return;
                 }
 
-                var arguments = IllustrationForm.BuildArguments(searchText);
+                var arguments = IllustrationForm.ToSearchParams(searchText);
                 _searchHistory.Add(searchText);
                 _navigationService.NavigateToWorkSearch(arguments);
             }
         }
         catch (Exception ex)
         {
-            _notificationService.ShowError(I18NManager.GetResource(SearchResources.Validation.SearchFailed.Title), ex.Message);
+            _notificationService.ShowError(Strings.SearchValidationSearchFailedTitle(), ex.Message);
         }
     }
 
@@ -386,19 +389,19 @@ public partial class SearchPageViewModel : ViewModelBase
             return;
 
         await _clipboardService.SetTextAsync(value);
-        _notificationService.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+        _notificationService.ShowSuccess(Strings.MiscCopied());
     }
 
     [RelayCommand]
     public void AddPinnedTag(SearchHistoryRecord? entry)
     {
-        if (entry is null)
+        if (entry is not { } record)
             return;
 
         var pinnedTags = _appSettings.BrowsingExperienceSettings.PinnedTags;
-        if (!pinnedTags.Contains(entry.Value))
-            pinnedTags.Add(entry.Value);
-        _ = _searchHistory.Entries.Remove(entry);
+        if (!pinnedTags.Contains(record.Value))
+            pinnedTags.Add(record.Value);
+        _ = _searchHistory.Entries.Remove(record);
     }
 
     [RelayCommand]
@@ -414,28 +417,28 @@ public partial class SearchPageViewModel : ViewModelBase
     [RelayCommand]
     public void DeleteHistory(SearchHistoryRecord? entry)
     {
-        if (entry is null)
+        if (entry is not { } record)
             return;
 
-        _ = _searchHistory.Entries.Remove(entry);
+        _ = _searchHistory.Entries.Remove(record);
     }
 
     [RelayCommand]
     public void OpenTrendingTag(TrendingTag? tag)
     {
-        if (tag is null)
+        if (tag is not { } t)
             return;
 
-        _navigationService.NavigateToWorkSearch(tag.Tag, SelectedTrendingTagsType);
+        _navigationService.NavigateToWorkSearch(t.Tag, SelectedTrendingTagsType);
     }
 
     [RelayCommand]
     public void OpenHistory(SearchHistoryRecord? entry)
     {
-        if (entry is null)
+        if (entry is not { } record)
             return;
 
-        SearchText = entry.Value;
+        SearchText = record.Value;
         Search(false);
     }
 

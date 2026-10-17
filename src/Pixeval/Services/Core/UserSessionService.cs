@@ -48,19 +48,20 @@ public sealed class UserSessionService : ObservableObject, IUserSessionService
     public void OnTokenRefreshed(TokenResponse? tokenResponse)
     {
         TokenUser? user = null;
-        if (tokenResponse is null)
+        if (tokenResponse is not { } response)
         {
             _loginContext.CurrentKey = 0;
             _makoClient.ClearToken();
         }
         else
         {
-            user = tokenResponse.User ?? _makoClient.GetUser();
-            if (user is not null)
+            user = response.User ?? _makoClient.GetUser();
+            if (user is { } u)
             {
-                var entry = _storageEngine.UpsertLoginUser(LoginUserRecord.FromTokenUser(tokenResponse.RefreshToken, user));
+                var entry = _storageEngine.UpsertLoginUser(LoginUserRecord.FromTokenUser(response.RefreshToken, u));
                 _loginContext.CurrentKey = (int)entry.HistoryEntryId;
             }
+
         }
 
         void Notify()
