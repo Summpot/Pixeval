@@ -128,7 +128,7 @@ public sealed class LocalizationTest
         {
             var previous = Strings.CurrentLocale;
             using var storage = new Pixeval.Storage.StorageEngine(":memory:");
-            using var engines = new Pixeval.Filters.LocalizedFilterCompletionEngine(storage);
+            using var engines = new Pixeval.Filters.LocalizedFilterSession(storage);
             try
             {
                 foreach (var locale in new[] { "zh-Hans", "en-US", "ru-RU" })

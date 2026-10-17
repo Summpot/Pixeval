@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn test_cache_put_get_remove() {
         let dir = create_test_dir();
-        let cache = CacheEngine::new(dir.path().to_string_lossy().to_string(), Some(64 * 1024)).unwrap();
+        let cache = ImageCache::new(dir.path().to_string_lossy().to_string(), Some(64 * 1024)).unwrap();
 
         assert_eq!(cache.get("key1".to_string()), None);
 
@@ -63,13 +63,13 @@ mod tests {
         let dir_str = dir.path().to_string_lossy().to_string();
 
         {
-            let cache1 = CacheEngine::new(dir_str.clone(), Some(64 * 1024)).unwrap();
+            let cache1 = ImageCache::new(dir_str.clone(), Some(64 * 1024)).unwrap();
             cache1.put("k_persist".to_string(), b"persisted_payload".to_vec()).unwrap();
             assert_eq!(cache1.get("k_persist".to_string()), Some(b"persisted_payload".to_vec()));
         }
 
         {
-            let cache2 = CacheEngine::new(dir_str, Some(64 * 1024)).unwrap();
+            let cache2 = ImageCache::new(dir_str, Some(64 * 1024)).unwrap();
             let retrieved = cache2.get("k_persist".to_string());
             assert_eq!(retrieved, Some(b"persisted_payload".to_vec()));
         }
@@ -110,7 +110,7 @@ mod tests {
     #[test]
     fn test_cache_clear_and_remove() {
         let dir = create_test_dir();
-        let cache = CacheEngine::new(dir.path().to_string_lossy().to_string(), Some(128 * 1024 * 1024)).unwrap();
+        let cache = ImageCache::new(dir.path().to_string_lossy().to_string(), Some(128 * 1024 * 1024)).unwrap();
 
         let d1 = vec![1u8; 32];
         let d2 = vec![2u8; 32];

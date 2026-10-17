@@ -26,7 +26,7 @@ public class Versioning
     private UpdateManager? _velopackUpdateManager;
     private UpdateInfo? _velopackUpdateInfo;
     private AppRelease? _velopackUpdateReleaseModel;
-    private UpdateEngine? _updateEngine;
+    private GithubClient? _githubClient;
     private AppSettings? _settings;
     private FileLogger? _logger;
     private readonly SemaphoreSlim _updateCheckLock = new(1, 1);
@@ -62,19 +62,19 @@ public class Versioning
     {
         _settings = settings;
         _logger = logger;
-        _updateEngine = null;
+        _githubClient = null;
     }
 
-    public UpdateEngine UpdateEngine => _updateEngine ??= UpdateEngine.CreateFromSettings(_settings?.NetworkSettings ?? new NetworkSettingsGroup());
+    public GithubClient GithubClient => _githubClient ??= GithubClient.CreateFromSettings(_settings?.NetworkSettings ?? new NetworkSettingsGroup());
 
-    public void ResetUpdateEngine() => _updateEngine = null;
+    public void ResetGithubClient() => _githubClient = null;
 
     public UpdateState CompareUpdateState(Version currentVersion, Version? newVersion)
     {
         if (newVersion is null)
             return UpdateState.Unknown;
 
-        return UpdateEngine.CompareVersions(currentVersion.ToString(), newVersion.ToString());
+        return GithubClient.CompareVersions(currentVersion.ToString(), newVersion.ToString());
     }
 
     public UpdateState UpdateState { get; private set; } = UpdateState.Unknown;
@@ -100,7 +100,7 @@ public class Versioning
             }
             else
             {
-                var result = await UpdateEngine.CheckForUpdatesAsync(CurrentVersionShortText, includePrereleases: false).ConfigureAwait(false);
+                var result = await GithubClient.CheckForUpdatesAsync(CurrentVersionShortText, includePrereleases: false).ConfigureAwait(false);
                 AppReleaseModels = result.AllReleases;
                 _velopackUpdateInfo = null;
                 _velopackUpdateReleaseModel = result.LatestRelease;
@@ -152,7 +152,7 @@ public class Versioning
             var destinationPath = Path.Combine(updatesDir, asset.Name);
             var progressAdapter = progress != null ? new Progress<int>(progress) : null;
 
-            await UpdateEngine.DownloadAssetWithProgressAsync(asset, destinationPath, progressAdapter, cancelToken).ConfigureAwait(false);
+            await GithubClient.DownloadAssetWithProgressAsync(asset, destinationPath, progressAdapter, cancelToken).ConfigureAwait(false);
             return true;
         }
         finally
@@ -276,7 +276,7 @@ public class Versioning
                 IsPrerelease: false,
                 Assets: []);
             AppReleaseModels = [_velopackUpdateReleaseModel.Value];
-            UpdateState = UpdateEngine.CompareVersions(CurrentVersionShortText, versionStr);
+            UpdateState = GithubClient.CompareVersions(CurrentVersionShortText, versionStr);
         }
 
         TouchLastCheckedUpdate();
@@ -307,7 +307,7 @@ public class Versioning
                 return appReleaseModels.FirstOrDefault(t => t.ParsedVersion == CurrentVersion || t.Version == CurrentVersionShortText);
             }
 
-            var releases = await UpdateEngine.GetReleasesAsync(includePrereleases: false).ConfigureAwait(false);
+            var releases = await GithubClient.GetReleasesAsync(includePrereleases: false).ConfigureAwait(false);
             if (releases.Count == 0)
                 return null;
 
@@ -361,7 +361,7 @@ public class Versioning
             GitHubRepositoryUri,
             string.Empty,
             prerelease: false,
-            downloader: new GitHubFileDownloader(() => UpdateEngine));
+            downloader: new GitHubFileDownloader(() => GithubClient));
 
     private UpdateManager? GetVelopackUpdateManager()
     {

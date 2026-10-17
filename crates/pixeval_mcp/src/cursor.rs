@@ -7,8 +7,8 @@ use std::time::{Duration, Instant};
 use parking_lot::RwLock;
 use pixeval_mako::models::{BookmarkTag, CommentRecord, Illustration, Novel, Series, SpotlightArticle, User};
 use pixeval_mako::stream::{
-    IllustrationFetchEngine, NovelFetchEngine, SeriesFetchEngine, SpotlightFetchEngine,
-    UserFetchEngine,
+    IllustrationFeed, NovelFeed, SeriesFeed, SpotlightFeed,
+    UserFeed,
 };
 use serde_json::json;
 use uuid::Uuid;
@@ -53,11 +53,11 @@ impl CursorKind {
 }
 
 pub enum CursorSource {
-    Illustration(std::sync::Arc<IllustrationFetchEngine>),
-    Novel(std::sync::Arc<NovelFetchEngine>),
-    User(std::sync::Arc<UserFetchEngine>),
-    Series(std::sync::Arc<SeriesFetchEngine>),
-    Spotlight(std::sync::Arc<SpotlightFetchEngine>),
+    Illustration(std::sync::Arc<IllustrationFeed>),
+    Novel(std::sync::Arc<NovelFeed>),
+    User(std::sync::Arc<UserFeed>),
+    Series(std::sync::Arc<SeriesFeed>),
+    Spotlight(std::sync::Arc<SpotlightFeed>),
     JsonItems(CursorKind, VecDeque<serde_json::Value>),
 }
 

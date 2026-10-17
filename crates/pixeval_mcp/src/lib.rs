@@ -24,12 +24,12 @@ pub use tools::*;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pixeval_cache::CacheEngine;
+    use pixeval_cache::ImageCache;
     use pixeval_download::DownloadManager;
     use pixeval_mako::{MakoClient, MakoConfigurationDto};
-    use pixeval_plugin::PluginHostEngine;
+    use pixeval_plugin::PluginHost;
     use pixeval_storage::StorageEngine;
-    use pixeval_subscription::SubscriptionSyncEngine;
+    use pixeval_subscription::SubscriptionSync;
     use std::sync::Arc;
 
     #[derive(Clone)]
@@ -55,9 +55,9 @@ mod tests {
         Arc<MakoClient>,
         Arc<StorageEngine>,
         Arc<DownloadManager>,
-        Arc<CacheEngine>,
-        Arc<SubscriptionSyncEngine>,
-        Option<Arc<PluginHostEngine>>,
+        Arc<ImageCache>,
+        Arc<SubscriptionSync>,
+        Option<Arc<PluginHost>>,
     ) {
         let repo_tmp = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
@@ -82,14 +82,14 @@ mod tests {
 
         let download = DownloadManager::new(3, None, None);
 
-        let cache = CacheEngine::new(
+        let cache = ImageCache::new(
             temp_dir.path().join("cache").to_str().unwrap().to_string(),
             Some(1024 * 1024),
         )
         .unwrap();
 
-        let sub_engine = Arc::new(SubscriptionSyncEngine::new(Some(5), None));
-        let plugin_engine = PluginHostEngine::new("5.0.0".to_string());
+        let sub_engine = Arc::new(SubscriptionSync::new(Some(5), None));
+        let plugin_engine = PluginHost::new("5.0.0".to_string());
 
         (
             mako,

@@ -253,19 +253,19 @@ public partial class MakoClient
             ? NovelRelated(id).AsObjects()
             : WorkRelated(id).AsObjects();
 
-    public UserFetchEngine UserFollowing(long userId, PrivacyPolicy privacy)
+    public UserFeed UserFollowing(long userId, PrivacyPolicy privacy)
     {
         var restrict = privacy is PrivacyPolicy.Private ? "private" : "public";
         return UserFollowing(userId, restrict);
     }
 
-    public UserFetchEngine UserMyPixiv(long userId) =>
+    public UserFeed UserMyPixiv(long userId) =>
         UserMypixiv(userId);
 
-    public CommentFetchEngine WorkComments(SimpleWorkType type, long id) =>
+    public CommentFeed WorkComments(SimpleWorkType type, long id) =>
         WorkComments(type is SimpleWorkType.Novel, id);
 
-    public CommentFetchEngine WorkCommentReplies(SimpleWorkType type, long id) =>
+    public CommentFeed WorkCommentReplies(SimpleWorkType type, long id) =>
         WorkCommentReplies(type is SimpleWorkType.Novel, id);
 
     public Task<CommentRecord> AddWorkCommentAsync(SimpleWorkType type, long parentId, string content) =>
@@ -316,7 +316,7 @@ public partial class MakoClient
     public IAsyncEnumerable<Series> WorkSeriesWatchlist(SimpleWorkType type) =>
         WorkSeriesWatchlist(type is SimpleWorkType.Novel);
 
-    public SpotlightFetchEngine Spotlight(string category = "all") =>
+    public SpotlightFeed Spotlight(string category = "all") =>
         SpotlightArticles(category);
 
     public IAsyncEnumerable<T> Computed<T>(IAsyncEnumerable<T> source) => source;

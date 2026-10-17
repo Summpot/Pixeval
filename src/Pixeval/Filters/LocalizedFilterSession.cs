@@ -4,19 +4,19 @@ using Pixeval.Storage;
 namespace Pixeval.Filters;
 
 /// <summary>Owns the localized native engine while preserving the injected storage provider.</summary>
-public sealed class LocalizedFilterCompletionEngine(StorageEngine storage) : IDisposable
+public sealed class LocalizedFilterSession(StorageEngine storage) : IDisposable
 {
-    private FilterCompletionEngine? _engine;
+    private FilterSession? _engine;
     private string? _locale;
 
-    public FilterCompletionEngine Current
+    public FilterSession Current
     {
         get
         {
             if (_engine is null || _locale != Strings.CurrentLocale)
             {
                 _engine?.Dispose();
-                _engine = FilterCompletionEngine.CreateWithStorage(storage);
+                _engine = FilterSession.CreateWithStorage(storage);
                 _locale = Strings.CurrentLocale;
             }
             return _engine;

@@ -160,7 +160,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             .AddSingleton<IAppUpdateNotificationCoordinator, AppUpdateNotificationCoordinator>()
             .AddSingleton<HomeCardDefinitions>()
             .AddSingleton<WorkCommands>()
-            .AddSingleton<LocalizedFilterCompletionEngine>()
+            .AddSingleton<LocalizedFilterSession>()
             .AddSingleton<IBlockedContentService, BlockedContentService>()
             .AddSingleton<WorkSubscriptionDownloadService>()
             .AddSingleton<IWorkSubscriptionService>(provider =>

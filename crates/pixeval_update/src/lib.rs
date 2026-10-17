@@ -10,7 +10,7 @@ pub mod github;
 pub mod models;
 pub mod version;
 
-pub use engine::{UpdateCancellationToken, UpdateEngine, UpdateProgressCallback};
+pub use engine::{UpdateCancellationToken, GithubClient, UpdateProgressCallback};
 pub use error::UpdateError;
 pub use models::{AppRelease, ReleaseAsset, UpdateCheckResult, UpdateNetworkOptions};
 pub use version::UpdateState;

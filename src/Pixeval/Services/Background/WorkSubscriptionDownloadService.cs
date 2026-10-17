@@ -22,7 +22,7 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
     private readonly FileLogger _logger;
     private readonly IUserSessionService _userSessionService;
     private readonly AppSettings _appSettings;
-    private readonly SubscriptionSyncEngine _syncEngine;
+    private readonly SubscriptionSync _syncEngine;
     private readonly Lock _gate = new();
     private readonly SemaphoreSlim _mutationGate = new(1, 1);
     private SubscriptionFetchState? _currentFetchState;
@@ -50,7 +50,7 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
 
     public bool IsSyncInProgress => _syncEngine.IsSyncInProgress();
 
-    public SubscriptionSyncEngine SyncEngine => _syncEngine;
+    public SubscriptionSync SyncEngine => _syncEngine;
 
     public bool IsDaemonRunning => _syncEngine.IsDaemonRunning();
 
@@ -71,7 +71,7 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
         _appSettings = appSettings;
 
         var config = CreateSyncConfig();
-        _syncEngine = SubscriptionSyncEngine.NewWithServices(
+        _syncEngine = SubscriptionSync.NewWithServices(
             storageEngine,
             makoClient,
             downloadManager,

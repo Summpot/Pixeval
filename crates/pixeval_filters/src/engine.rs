@@ -108,7 +108,7 @@ impl<'a> FilterValueCompletionCallback for EngineCandidateProvider<'a> {
 }
 
 #[derive(uniffi::Object)]
-pub struct FilterCompletionEngine {
+pub struct FilterSession {
     inner: FilterLanguage,
     storage: Option<Box<dyn FilterStorageProvider>>,
     session_tags: RwLock<Vec<ArtworkTag>>,
@@ -116,7 +116,7 @@ pub struct FilterCompletionEngine {
 }
 
 #[uniffi::export]
-impl FilterCompletionEngine {
+impl FilterSession {
     #[uniffi::constructor]
     pub fn new() -> Arc<Self> {
         Self::with_provider(None, None)

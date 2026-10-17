@@ -59,12 +59,12 @@ impl Drop for EngineInner {
 }
 
 #[derive(Clone, uniffi::Object)]
-pub struct SubscriptionSyncEngine {
+pub struct SubscriptionSync {
     inner: Arc<Mutex<EngineInner>>,
 }
 
 #[uniffi::export]
-impl SubscriptionSyncEngine {
+impl SubscriptionSync {
     #[uniffi::constructor]
     pub fn new(
         duplicate_stop_threshold: Option<u32>,
@@ -342,7 +342,7 @@ impl SubscriptionSyncEngine {
     }
 }
 
-impl SubscriptionSyncEngine {
+impl SubscriptionSync {
     fn record_work_processed_internal(
         inner: &mut EngineInner,
         subscription_id: i64,

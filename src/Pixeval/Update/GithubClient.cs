@@ -12,9 +12,9 @@ using Pixeval.Services.Network;
 
 namespace Pixeval.Update;
 
-public partial class UpdateEngine
+public partial class GithubClient
 {
-    public static UpdateEngine CreateFromSettings(NetworkSettingsGroup networkSettings)
+    public static GithubClient CreateFromSettings(NetworkSettingsGroup networkSettings)
     {
         var domainFronting = networkSettings.GitHubDomainFronting.EnableGitHubDomainFronting;
         string? proxyUrl = networkSettings.ProxySettings.ProxyType switch
@@ -39,7 +39,7 @@ public partial class UpdateEngine
             ProxyUrl: proxyUrl,
             CustomDnsMappings: dnsMappings);
 
-        return new UpdateEngine(options);
+        return new GithubClient(options);
     }
 
     public async Task<string> DownloadAssetWithProgressAsync(

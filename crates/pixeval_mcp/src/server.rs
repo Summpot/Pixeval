@@ -17,12 +17,12 @@ use serde_json::json;
 use tokio::sync::watch;
 use uuid::Uuid;
 
-use pixeval_cache::CacheEngine;
+use pixeval_cache::ImageCache;
 use pixeval_download::DownloadManager;
 use pixeval_mako::MakoClient;
-use pixeval_plugin::PluginHostEngine;
+use pixeval_plugin::PluginHost;
 use pixeval_storage::StorageEngine;
-use pixeval_subscription::SubscriptionSyncEngine;
+use pixeval_subscription::SubscriptionSync;
 
 use crate::error::McpError;
 use crate::models::{McpServerConfig, McpServerStatus};
@@ -88,9 +88,9 @@ impl McpServer {
         mako: Arc<MakoClient>,
         storage: Arc<StorageEngine>,
         download: Arc<DownloadManager>,
-        cache: Arc<CacheEngine>,
-        subscription: Arc<SubscriptionSyncEngine>,
-        plugin: Option<Arc<PluginHostEngine>>,
+        cache: Arc<ImageCache>,
+        subscription: Arc<SubscriptionSync>,
+        plugin: Option<Arc<PluginHost>>,
     ) -> Result<Arc<Self>, McpError> {
         let session: Arc<dyn McpSessionBridge> = Arc::new(SessionBridgeWrapper(session));
         let tools = Arc::new(McpToolRegistry::new(

@@ -197,7 +197,7 @@ mod tests {
         let fetcher = Arc::new(MockMultiPageFetcher {
             call_count: AtomicUsize::new(0),
         });
-        let engine = MakoFetchEngine::new(fetcher, Some("https://api.pixiv.net/page1".to_string()));
+        let engine = MakoFeed::new(fetcher, Some("https://api.pixiv.net/page1".to_string()));
 
         let mut collected = Vec::new();
         while let Some(item) = engine.next().await {
@@ -216,7 +216,7 @@ mod tests {
         let fetcher = Arc::new(MockMultiPageFetcher {
             call_count: AtomicUsize::new(0),
         });
-        let engine = MakoFetchEngine::new(fetcher, Some("https://api.pixiv.net/page1".to_string()));
+        let engine = MakoFeed::new(fetcher, Some("https://api.pixiv.net/page1".to_string()));
 
         assert_eq!(engine.next().await, Some(1));
         assert_eq!(engine.next().await, Some(2));
@@ -523,8 +523,8 @@ mod tests {
             }
         }
 
-        let engine = Arc::new(MakoFetchEngine::new(Arc::new(MockCommentFetcher), Some("page1".to_string())));
-        let comment_engine = CommentFetchEngine::new(engine);
+        let engine = Arc::new(MakoFeed::new(Arc::new(MockCommentFetcher), Some("page1".to_string())));
+        let comment_engine = CommentFeed::new(engine);
 
         let first = comment_engine.next().await.unwrap();
         assert_eq!(first.id, 1);
@@ -556,7 +556,7 @@ mod tests {
             }
         }
 
-        let engine = UserFetchEngine::new(Arc::new(MakoFetchEngine::new(
+        let engine = UserFeed::new(Arc::new(MakoFeed::new(
             Arc::new(RecoveringFetcher(AtomicUsize::new(0))), Some("page1".to_string()),
         )));
         assert!(engine.next().await.is_none());

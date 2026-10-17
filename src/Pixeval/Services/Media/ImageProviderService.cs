@@ -20,7 +20,7 @@ public sealed class ImageProviderService : IImageProviderService, IDisposable
 {
     private readonly AppSettings _appSettings;
     private readonly FileLogger _logger;
-    private readonly Lazy<CacheEngine> _cacheEngineLazy;
+    private readonly Lazy<ImageCache> _imageCacheLazy;
     private readonly Lazy<Bitmap> _imageNotAvailableLazy;
     private readonly Lazy<IAnimatedBitmap> _animatedImageNotAvailableLazy;
 
@@ -29,10 +29,10 @@ public sealed class ImageProviderService : IImageProviderService, IDisposable
         _appSettings = appSettings;
         _logger = logger;
 
-        _cacheEngineLazy = new Lazy<CacheEngine>(() =>
+        _imageCacheLazy = new Lazy<ImageCache>(() =>
         {
             var capacity = (ulong)GetCacheSizeLimitInBytes();
-            var engine = new CacheEngine(CachePath, capacity);
+            var engine = new ImageCache(CachePath, capacity);
             try
             {
                 var cfg = _appSettings.ToMakoConfiguration();
@@ -55,7 +55,7 @@ public sealed class ImageProviderService : IImageProviderService, IDisposable
 
     public static string CachePath { get; } = Path.Combine(AppInfo.CacheFolder, "FileCache");
 
-    public CacheEngine CacheEngine => _cacheEngineLazy.Value;
+    public ImageCache ImageCache => _imageCacheLazy.Value;
 
     public Bitmap ImageNotAvailable => _imageNotAvailableLazy.Value;
 
@@ -73,7 +73,7 @@ public sealed class ImageProviderService : IImageProviderService, IDisposable
     {
         try
         {
-            CacheEngine.UpdateNetworkOptions(
+            ImageCache.UpdateNetworkOptions(
                 config.DomainFrontingEnabled,
                 config.SplitDelayMs,
                 config.HostIps,
@@ -86,7 +86,7 @@ public sealed class ImageProviderService : IImageProviderService, IDisposable
     }
 
     public Task PurgeCacheAsync(CancellationToken token = default) =>
-        Task.Run(() => CacheEngine.Clear(), token);
+        Task.Run(() => ImageCache.Clear(), token);
 
     public Task EnforceCacheSizeLimitAsync(CancellationToken token = default) => Task.CompletedTask;
 
@@ -219,7 +219,7 @@ public sealed class ImageProviderService : IImageProviderService, IDisposable
         {
             if (desiredWidth is null)
             {
-                if (CacheEngine.TryReadPlanarBitmap(key) is { } planarBmp)
+                if (ImageCache.TryReadPlanarBitmap(key) is { } planarBmp)
                     return planarBmp;
             }
 
@@ -233,7 +233,7 @@ public sealed class ImageProviderService : IImageProviderService, IDisposable
                 {
                     try
                     {
-                        _ = CacheEngine.DecodeAndCachePlanar(key, bytes);
+                        _ = ImageCache.DecodeAndCachePlanar(key, bytes);
                     }
                     catch
                     {
@@ -261,7 +261,7 @@ public sealed class ImageProviderService : IImageProviderService, IDisposable
     {
         try
         {
-            return CacheEngine.TryReadCache(key, out var stream) ? stream : null;
+            return ImageCache.TryReadCache(key, out var stream) ? stream : null;
         }
         catch (Exception e)
         {
@@ -273,7 +273,7 @@ public sealed class ImageProviderService : IImageProviderService, IDisposable
 
     public bool TryCacheStream(string key, Stream stream)
     {
-        return CacheEngine.TryCache(key, stream);
+        return ImageCache.TryCache(key, stream);
     }
 
     private async ValueTask<Stream?> GetStreamAsync(
@@ -291,7 +291,7 @@ public sealed class ImageProviderService : IImageProviderService, IDisposable
             if (TryGetStream(key) is { } cachedStream)
                 return cachedStream;
 
-            var stream = await CacheEngine.GetOrFetchStreamAsync(
+            var stream = await ImageCache.GetOrFetchStreamAsync(
                 key,
                 referer: null,
                 progress: progress,
@@ -314,9 +314,9 @@ public sealed class ImageProviderService : IImageProviderService, IDisposable
 
     public void Dispose()
     {
-        if (_cacheEngineLazy.IsValueCreated)
+        if (_imageCacheLazy.IsValueCreated)
         {
-            _cacheEngineLazy.Value.Dispose();
+            _imageCacheLazy.Value.Dispose();
         }
     }
 

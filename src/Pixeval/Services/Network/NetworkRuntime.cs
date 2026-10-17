@@ -37,7 +37,7 @@ public sealed class NetworkRuntime(
         makoClient.UpdateConfiguration(config);
         images.UpdateNetworkOptions(config);
         mahoClient.UpdateOptions(mahoOptions());
-        AppInfo.AppVersion.ResetUpdateEngine();
+        AppInfo.AppVersion.ResetGithubClient();
     }
 
     private void OnResolverChanged(object? sender, NotifyCollectionChangedEventArgs e) => UpdateNetworkOptions();

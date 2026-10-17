@@ -97,7 +97,7 @@ fn build_http_client(
 }
 
 #[derive(uniffi::Object)]
-pub struct CacheEngine {
+pub struct ImageCache {
     pub(crate) hybrid_cache: HybridCache<String, Vec<u8>>,
     pub(crate) rt: Arc<tokio::runtime::Runtime>,
     http_client: Arc<parking_lot::RwLock<MahoHttpClient>>,
@@ -105,7 +105,7 @@ pub struct CacheEngine {
 }
 
 #[uniffi::export(async_runtime = "tokio")]
-impl CacheEngine {
+impl ImageCache {
     #[uniffi::constructor]
     pub fn new(
         cache_dir: String,
@@ -501,13 +501,13 @@ impl CacheEngine {
 }
 
 
-impl Drop for CacheEngine {
+impl Drop for ImageCache {
     fn drop(&mut self) {
         self.close();
     }
 }
 
-impl CacheEngine {
+impl ImageCache {
     fn block_on<F, R>(&self, f: F) -> R
     where
         F: std::future::Future<Output = R>,

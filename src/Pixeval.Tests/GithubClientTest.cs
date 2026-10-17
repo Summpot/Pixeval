@@ -14,7 +14,7 @@ using Pixeval.Services.Update;
 namespace Pixeval.Tests;
 
 [TestClass]
-public class UpdateEngineTest
+public class GithubClientTest
 {
     private string _testDir = null!;
 
@@ -52,7 +52,7 @@ public class UpdateEngineTest
     [TestMethod]
     public void CompareVersionsShouldEvaluateCorrectStates()
     {
-        using var engine = new UpdateEngine(null);
+        using var engine = new GithubClient(null);
 
         Assert.AreEqual(UpdateState.UpToDate, engine.CompareVersions("5.0.13.0", "5.0.13"));
         Assert.AreEqual(UpdateState.BuildUpdate, engine.CompareVersions("5.0.13.0", "5.0.14"));
@@ -66,7 +66,7 @@ public class UpdateEngineTest
     [TestMethod]
     public void VerifyFileSha256ShouldValidateChecksum()
     {
-        using var engine = new UpdateEngine(null);
+        using var engine = new GithubClient(null);
 
         var filePath = Path.Combine(_testDir, "test_sha256.txt");
         var content = "pixeval native update engine test content"u8.ToArray();
@@ -128,7 +128,7 @@ public class UpdateEngineTest
     public void CreateEngineFromNetworkSettingsShouldSucceed()
     {
         var settings = new NetworkSettingsGroup();
-        using var engine = UpdateEngine.CreateFromSettings(settings);
+        using var engine = GithubClient.CreateFromSettings(settings);
         Assert.IsNotNull(engine);
     }
 }

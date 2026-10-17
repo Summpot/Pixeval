@@ -11,9 +11,9 @@ using Velopack.Sources;
 namespace Pixeval.Services.Update;
 
 /// <summary>
-/// Forwards Velopack update downloads to <see cref="UpdateEngine"/>.
+/// Forwards Velopack update downloads to <see cref="GithubClient"/>.
 /// </summary>
-internal sealed class GitHubFileDownloader(Func<UpdateEngine> engineProvider) : IFileDownloader
+internal sealed class GitHubFileDownloader(Func<GithubClient> engineProvider) : IFileDownloader
 {
     public Task<string> DownloadString(
         string url,

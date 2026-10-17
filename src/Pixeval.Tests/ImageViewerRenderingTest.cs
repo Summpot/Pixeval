@@ -293,7 +293,7 @@ public sealed class ImageViewerRenderingTest
     {
         public static StubImageProvider Instance { get; } = new();
 
-        public CacheEngine CacheEngine => throw new NotSupportedException();
+        public ImageCache ImageCache => throw new NotSupportedException();
         public Bitmap ImageNotAvailable => throw new NotSupportedException();
         public IAnimatedBitmap AnimatedImageNotAvailable => throw new NotSupportedException();
         public Stream? TryGetStream(string key) => null;

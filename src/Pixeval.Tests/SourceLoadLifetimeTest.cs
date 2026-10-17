@@ -275,7 +275,7 @@ public sealed class SourceLoadLifetimeTest
         public Func<string, string, CancellationToken, Task<Bitmap>>? OnGetBitmap { get; set; }
         public Func<string, string, CancellationToken, Task<Stream?>>? OnGetImageStream { get; set; }
 
-        public CacheEngine CacheEngine => throw new NotImplementedException();
+        public ImageCache ImageCache => throw new NotImplementedException();
         public Bitmap ImageNotAvailable => throw new NotImplementedException();
         public IAnimatedBitmap AnimatedImageNotAvailable => throw new NotImplementedException();
 

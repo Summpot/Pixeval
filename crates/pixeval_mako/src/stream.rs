@@ -17,7 +17,7 @@ pub trait PageFetcher<T>: Send + Sync {
     ) -> Pin<Box<dyn Future<Output = PageFetchResult<T>> + Send + 'a>>;
 }
 
-pub struct MakoFetchEngine<T> {
+pub struct MakoFeed<T> {
     fetcher: Arc<dyn PageFetcher<T>>,
     buffer: Mutex<VecDeque<T>>,
     next_url: Mutex<Option<String>>,
@@ -28,7 +28,7 @@ pub struct MakoFetchEngine<T> {
     last_error: parking_lot::RwLock<Option<String>>,
 }
 
-impl<T: Send + Sync + 'static> MakoFetchEngine<T> {
+impl<T: Send + Sync + 'static> MakoFeed<T> {
     pub fn new(fetcher: Arc<dyn PageFetcher<T>>, initial_url: Option<String>) -> Self {
         Self {
             fetcher,
@@ -221,7 +221,7 @@ pub struct CommentFeedPage {
     pub exhausted: bool,
 }
 
-macro_rules! export_fetch_engine {
+macro_rules! export_feed {
     ($engine:ident, $item:ty, $page:ident) => {
         #[uniffi::export(async_runtime = "tokio")]
         impl $engine {
@@ -257,95 +257,95 @@ macro_rules! export_fetch_engine {
 }
 
 #[derive(uniffi::Object)]
-pub struct IllustrationFetchEngine {
-    pub(crate) inner: Arc<MakoFetchEngine<Illustration>>,
+pub struct IllustrationFeed {
+    pub(crate) inner: Arc<MakoFeed<Illustration>>,
 }
 
-impl IllustrationFetchEngine {
-    pub fn new(inner: Arc<MakoFetchEngine<Illustration>>) -> Self {
+impl IllustrationFeed {
+    pub fn new(inner: Arc<MakoFeed<Illustration>>) -> Self {
         Self { inner }
     }
 }
 
-export_fetch_engine!(IllustrationFetchEngine, Illustration, IllustrationFeedPage);
+export_feed!(IllustrationFeed, Illustration, IllustrationFeedPage);
 
 #[derive(uniffi::Object)]
-pub struct NovelFetchEngine {
-    pub(crate) inner: Arc<MakoFetchEngine<Novel>>,
+pub struct NovelFeed {
+    pub(crate) inner: Arc<MakoFeed<Novel>>,
 }
 
-impl NovelFetchEngine {
-    pub fn new(inner: Arc<MakoFetchEngine<Novel>>) -> Self {
+impl NovelFeed {
+    pub fn new(inner: Arc<MakoFeed<Novel>>) -> Self {
         Self { inner }
     }
 }
 
-export_fetch_engine!(NovelFetchEngine, Novel, NovelFeedPage);
+export_feed!(NovelFeed, Novel, NovelFeedPage);
 
 #[derive(uniffi::Object)]
-pub struct WorkFetchEngine {
-    pub(crate) inner: Arc<MakoFetchEngine<WorkEntry>>,
+pub struct WorkFeed {
+    pub(crate) inner: Arc<MakoFeed<WorkEntry>>,
 }
 
-impl WorkFetchEngine {
-    pub fn new(inner: Arc<MakoFetchEngine<WorkEntry>>) -> Self {
+impl WorkFeed {
+    pub fn new(inner: Arc<MakoFeed<WorkEntry>>) -> Self {
         Self { inner }
     }
 }
 
-export_fetch_engine!(WorkFetchEngine, WorkEntry, WorkFeedPage);
+export_feed!(WorkFeed, WorkEntry, WorkFeedPage);
 
 #[derive(uniffi::Object)]
-pub struct UserFetchEngine {
-    pub(crate) inner: Arc<MakoFetchEngine<User>>,
+pub struct UserFeed {
+    pub(crate) inner: Arc<MakoFeed<User>>,
 }
 
-impl UserFetchEngine {
-    pub fn new(inner: Arc<MakoFetchEngine<User>>) -> Self {
+impl UserFeed {
+    pub fn new(inner: Arc<MakoFeed<User>>) -> Self {
         Self { inner }
     }
 }
 
-export_fetch_engine!(UserFetchEngine, User, UserFeedPage);
+export_feed!(UserFeed, User, UserFeedPage);
 
 #[derive(uniffi::Object)]
-pub struct SeriesFetchEngine {
-    pub(crate) inner: Arc<MakoFetchEngine<Series>>,
+pub struct SeriesFeed {
+    pub(crate) inner: Arc<MakoFeed<Series>>,
 }
 
-impl SeriesFetchEngine {
-    pub fn new(inner: Arc<MakoFetchEngine<Series>>) -> Self {
+impl SeriesFeed {
+    pub fn new(inner: Arc<MakoFeed<Series>>) -> Self {
         Self { inner }
     }
 }
 
-export_fetch_engine!(SeriesFetchEngine, Series, SeriesFeedPage);
+export_feed!(SeriesFeed, Series, SeriesFeedPage);
 
 #[derive(uniffi::Object)]
-pub struct SpotlightFetchEngine {
-    pub(crate) inner: Arc<MakoFetchEngine<SpotlightArticle>>,
+pub struct SpotlightFeed {
+    pub(crate) inner: Arc<MakoFeed<SpotlightArticle>>,
 }
 
-impl SpotlightFetchEngine {
-    pub fn new(inner: Arc<MakoFetchEngine<SpotlightArticle>>) -> Self {
+impl SpotlightFeed {
+    pub fn new(inner: Arc<MakoFeed<SpotlightArticle>>) -> Self {
         Self { inner }
     }
 }
 
-export_fetch_engine!(SpotlightFetchEngine, SpotlightArticle, SpotlightFeedPage);
+export_feed!(SpotlightFeed, SpotlightArticle, SpotlightFeedPage);
 
 #[derive(uniffi::Object)]
-pub struct CommentFetchEngine {
-    pub(crate) inner: Arc<MakoFetchEngine<CommentRecord>>,
+pub struct CommentFeed {
+    pub(crate) inner: Arc<MakoFeed<CommentRecord>>,
 }
 
-impl CommentFetchEngine {
-    pub fn new(inner: Arc<MakoFetchEngine<CommentRecord>>) -> Self {
+impl CommentFeed {
+    pub fn new(inner: Arc<MakoFeed<CommentRecord>>) -> Self {
         Self { inner }
     }
 }
 
-export_fetch_engine!(CommentFetchEngine, CommentRecord, CommentFeedPage);
+export_feed!(CommentFeed, CommentRecord, CommentFeedPage);
 
 #[cfg(test)]
 mod tests {
@@ -380,8 +380,8 @@ mod tests {
         }
     }
 
-    fn engine(pages: Vec<PageFetchResult<i32>>) -> MakoFetchEngine<i32> {
-        MakoFetchEngine::new(ScriptedFetcher::new(pages), Some("https://example.test/first".into()))
+    fn engine(pages: Vec<PageFetchResult<i32>>) -> MakoFeed<i32> {
+        MakoFeed::new(ScriptedFetcher::new(pages), Some("https://example.test/first".into()))
     }
 
     #[tokio::test]
@@ -416,7 +416,7 @@ mod tests {
 
     #[tokio::test]
     async fn next_page_error_is_not_exhausted() {
-        let engine = MakoFetchEngine::new(
+        let engine = MakoFeed::new(
             Arc::new(FailingFetcher),
             Some("https://example.test/first".into()),
         );

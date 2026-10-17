@@ -7,15 +7,15 @@ using Pixeval.Cache;
 namespace Pixeval.Tests;
 
 [TestClass]
-public sealed class CacheEngineTest
+public sealed class ImageCacheTest
 {
     [TestMethod]
-    public void CacheEnginePutGetRemoveShouldSucceed()
+    public void ImageCachePutGetRemoveShouldSucceed()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "pixeval_test_cache_" + Guid.NewGuid().ToString("N"));
         try
         {
-            using var cache = new CacheEngine(tempDir, 64 * 1024);
+            using var cache = new ImageCache(tempDir, 64 * 1024);
 
             Assert.IsNull(cache.Get("key1"));
 
@@ -40,23 +40,23 @@ public sealed class CacheEngineTest
     }
 
     [TestMethod]
-    public void CacheEnginePersistenceAcrossRestartShouldWork()
+    public void ImageCachePersistenceAcrossRestartShouldWork()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "pixeval_test_restart_" + Guid.NewGuid().ToString("N"));
         try
         {
             var data = Encoding.UTF8.GetBytes("persistent cached content");
-            using (var cache1 = new CacheEngine(tempDir, 64 * 1024))
+            using (var cache1 = new ImageCache(tempDir, 64 * 1024))
             {
                 cache1.Put("restart_key", data);
                 Assert.IsNotNull(cache1.Get("restart_key"));
             }
 
             // Reopen engine on the same directory
-            using (var cache2 = new CacheEngine(tempDir, 64 * 1024))
+            using (var cache2 = new ImageCache(tempDir, 64 * 1024))
             {
                 var restored = cache2.Get("restart_key");
-                Assert.IsNotNull(restored, "Cached item should survive CacheEngine restart");
+                Assert.IsNotNull(restored, "Cached item should survive ImageCache restart");
                 Assert.AreEqual("persistent cached content", Encoding.UTF8.GetString(restored));
             }
         }
@@ -68,12 +68,12 @@ public sealed class CacheEngineTest
     }
 
     [TestMethod]
-    public void CacheEngineClearShouldWork()
+    public void ImageCacheClearShouldWork()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "pixeval_test_clear_" + Guid.NewGuid().ToString("N"));
         try
         {
-            using var cache = new CacheEngine(tempDir, 64 * 1024);
+            using var cache = new ImageCache(tempDir, 64 * 1024);
             cache.Put("k1", [1, 2, 3]);
             cache.Put("k2", [4, 5, 6]);
             Assert.IsNotNull(cache.Get("k1"));
@@ -91,12 +91,12 @@ public sealed class CacheEngineTest
     }
 
     [TestMethod]
-    public void CacheEngineShouldPutAndReadStream()
+    public void ImageCacheShouldPutAndReadStream()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "pixeval_test_cachetable_" + Guid.NewGuid().ToString("N"));
         try
         {
-            using var cache = new CacheEngine(tempDir, 64 * 1024);
+            using var cache = new ImageCache(tempDir, 64 * 1024);
             var payload = Encoding.UTF8.GetBytes("hello native cache!");
             Assert.IsTrue(cache.TryCache("k1", payload));
 
@@ -129,12 +129,12 @@ public sealed class CacheEngineTest
     }
 
     [TestMethod]
-    public unsafe void CacheEnginePlanarZeroCopyShouldWork()
+    public unsafe void ImageCachePlanarZeroCopyShouldWork()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "pixeval_test_planar_" + Guid.NewGuid().ToString("N"));
         try
         {
-            using var cache = new CacheEngine(tempDir, 64 * 1024);
+            using var cache = new ImageCache(tempDir, 64 * 1024);
 
             const uint width = 32;
             const uint height = 32;

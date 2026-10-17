@@ -14,10 +14,10 @@ using Pixeval.Views.Shell;
 
 namespace Pixeval.Views.Works;
 
-public class WorkContainerFilterCoordinator(LocalizedFilterCompletionEngine engines)
+public class WorkContainerFilterCoordinator(LocalizedFilterSession engines)
 {
 
-    private FilterCompletionEngine CompletionEngine => engines.Current;
+    private FilterSession CompletionEngine => engines.Current;
     private IReadOnlyCollection<object>? _filterCompletionSource;
     private int _filterCompletionSourceCount = -1;
     private string? _completionLocale;

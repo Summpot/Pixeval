@@ -2,12 +2,12 @@ use std::sync::Arc;
 
 use serde_json::json;
 
-use pixeval_cache::CacheEngine;
+use pixeval_cache::ImageCache;
 use pixeval_download::DownloadManager;
 use pixeval_mako::MakoClient;
-use pixeval_plugin::PluginHostEngine;
+use pixeval_plugin::PluginHost;
 use pixeval_storage::StorageEngine;
-use pixeval_subscription::SubscriptionSyncEngine;
+use pixeval_subscription::SubscriptionSync;
 
 use crate::cursor::{
     bookmark_tag_to_json, comment_to_json, illustration_to_json, novel_to_json,
@@ -23,9 +23,9 @@ pub struct McpToolRegistry {
     pub mako: Arc<MakoClient>,
     pub storage: Arc<StorageEngine>,
     pub download: Arc<DownloadManager>,
-    pub cache: Arc<CacheEngine>,
-    pub subscription: Arc<SubscriptionSyncEngine>,
-    pub plugin: Option<Arc<PluginHostEngine>>,
+    pub cache: Arc<ImageCache>,
+    pub subscription: Arc<SubscriptionSync>,
+    pub plugin: Option<Arc<PluginHost>>,
     pub cursor_store: Arc<CursorStore>,
 }
 
@@ -36,9 +36,9 @@ impl McpToolRegistry {
         mako: Arc<MakoClient>,
         storage: Arc<StorageEngine>,
         download: Arc<DownloadManager>,
-        cache: Arc<CacheEngine>,
-        subscription: Arc<SubscriptionSyncEngine>,
-        plugin: Option<Arc<PluginHostEngine>>,
+        cache: Arc<ImageCache>,
+        subscription: Arc<SubscriptionSync>,
+        plugin: Option<Arc<PluginHost>>,
     ) -> Self {
         Self {
             config,

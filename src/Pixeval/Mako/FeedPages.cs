@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Pixeval.Mako;
 
-public partial class IllustrationFetchEngine : IPageFeed<Illustration>
+public partial class IllustrationFeed : IPageFeed<Illustration>
 {
     public async Task<(IReadOnlyList<Illustration> Items, bool Exhausted)> FetchPageAsync(CancellationToken cancellationToken = default)
     {
@@ -16,7 +16,7 @@ public partial class IllustrationFetchEngine : IPageFeed<Illustration>
     }
 }
 
-public partial class NovelFetchEngine : IPageFeed<Novel>
+public partial class NovelFeed : IPageFeed<Novel>
 {
     public async Task<(IReadOnlyList<Novel> Items, bool Exhausted)> FetchPageAsync(CancellationToken cancellationToken = default)
     {
@@ -25,7 +25,7 @@ public partial class NovelFetchEngine : IPageFeed<Novel>
     }
 }
 
-public partial class WorkFetchEngine : IPageFeed<WorkEntry>
+public partial class WorkFeed : IPageFeed<WorkEntry>
 {
     public async Task<(IReadOnlyList<WorkEntry> Items, bool Exhausted)> FetchPageAsync(CancellationToken cancellationToken = default)
     {
@@ -34,7 +34,7 @@ public partial class WorkFetchEngine : IPageFeed<WorkEntry>
     }
 }
 
-public partial class UserFetchEngine : IPageFeed<User>
+public partial class UserFeed : IPageFeed<User>
 {
     public async Task<(IReadOnlyList<User> Items, bool Exhausted)> FetchPageAsync(CancellationToken cancellationToken = default)
     {
@@ -43,7 +43,7 @@ public partial class UserFetchEngine : IPageFeed<User>
     }
 }
 
-public partial class SeriesFetchEngine : IPageFeed<Series>
+public partial class SeriesFeed : IPageFeed<Series>
 {
     public async Task<(IReadOnlyList<Series> Items, bool Exhausted)> FetchPageAsync(CancellationToken cancellationToken = default)
     {
@@ -52,7 +52,7 @@ public partial class SeriesFetchEngine : IPageFeed<Series>
     }
 }
 
-public partial class SpotlightFetchEngine : IPageFeed<SpotlightArticle>
+public partial class SpotlightFeed : IPageFeed<SpotlightArticle>
 {
     public async Task<(IReadOnlyList<SpotlightArticle> Items, bool Exhausted)> FetchPageAsync(CancellationToken cancellationToken = default)
     {
@@ -61,7 +61,7 @@ public partial class SpotlightFetchEngine : IPageFeed<SpotlightArticle>
     }
 }
 
-public partial class CommentFetchEngine : IPageFeed<CommentRecord>
+public partial class CommentFeed : IPageFeed<CommentRecord>
 {
     public async Task<(IReadOnlyList<CommentRecord> Items, bool Exhausted)> FetchPageAsync(CancellationToken cancellationToken = default)
     {

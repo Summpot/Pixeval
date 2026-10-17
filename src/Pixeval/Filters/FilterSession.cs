@@ -26,15 +26,15 @@ public sealed class StorageFilterProvider(StorageEngine storage) : IFilterStorag
     }
 }
 
-public partial class FilterCompletionEngine
+public partial class FilterSession
 {
-    public static FilterCompletionEngine CreateWithStorage(StorageEngine storage)
+    public static FilterSession CreateWithStorage(StorageEngine storage)
     {
         var provider = new StorageFilterProvider(storage);
         return WithProvider(provider, CreateLocalization());
     }
 
-    public static FilterCompletionEngine CreateDefault() =>
+    public static FilterSession CreateDefault() =>
         WithProvider(null, CreateLocalization());
 
     public FilterAnalysisResult Analyze(string text) => Analyze(text, -1);

@@ -64,7 +64,7 @@ public sealed class MakoClientTest
 
         using var engine = client.WorkRecommended(includeRanking: true, includePrivacy: true);
 
-        // Verify that IllustrationFetchEngine implements IAsyncEnumerable<Illustration>
+        // Verify that IllustrationFeed implements IAsyncEnumerable<Illustration>
         Assert.IsInstanceOfType<IAsyncEnumerable<Illustration>>(engine);
 
         // Engine starts with 0 requested pages
@@ -90,7 +90,7 @@ public sealed class MakoClientTest
 
         using var engine = client.NovelRecommended(includeRanking: true, includePrivacy: true);
 
-        // Verify that NovelFetchEngine implements IAsyncEnumerable<Novel>
+        // Verify that NovelFeed implements IAsyncEnumerable<Novel>
         Assert.IsInstanceOfType<IAsyncEnumerable<Mako.Novel>>(engine);
 
         Assert.AreEqual(0u, engine.RequestedPages());
@@ -114,7 +114,7 @@ public sealed class MakoClientTest
 
         using var engine = client.WorkSearch("illust", "test", null, null);
 
-        // Verify that WorkFetchEngine implements IAsyncEnumerable<WorkEntry>
+        // Verify that WorkFeed implements IAsyncEnumerable<WorkEntry>
         Assert.IsInstanceOfType<IAsyncEnumerable<WorkEntry>>(engine);
 
         Assert.AreEqual(0u, engine.RequestedPages());
@@ -138,7 +138,7 @@ public sealed class MakoClientTest
 
         using var engine = client.UserRecommended();
 
-        // Verify that UserFetchEngine implements IAsyncEnumerable<User>
+        // Verify that UserFeed implements IAsyncEnumerable<User>
         Assert.IsInstanceOfType<IAsyncEnumerable<User>>(engine);
 
         Assert.AreEqual(0u, engine.RequestedPages());
@@ -224,7 +224,7 @@ public sealed class MakoClientTest
 
         using var engine = client.SpotlightArticles("all");
 
-        // Verify that SpotlightFetchEngine implements IAsyncEnumerable<SpotlightArticle>
+        // Verify that SpotlightFeed implements IAsyncEnumerable<SpotlightArticle>
         Assert.IsInstanceOfType<IAsyncEnumerable<SpotlightArticle>>(engine);
 
         Assert.AreEqual(0u, engine.RequestedPages());
@@ -247,7 +247,7 @@ public sealed class MakoClientTest
         using var client = CreateTestClient(settings);
 
         var spotlightStream = client.Spotlight("all");
-        Assert.IsInstanceOfType<SpotlightFetchEngine>(spotlightStream);
+        Assert.IsInstanceOfType<SpotlightFeed>(spotlightStream);
         Assert.IsInstanceOfType<IPageFeed<SpotlightArticle>>(spotlightStream);
 
         // Verify native SpotlightArticle extensions

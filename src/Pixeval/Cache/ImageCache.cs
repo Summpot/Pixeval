@@ -13,7 +13,7 @@ using Avalonia.Platform;
 
 namespace Pixeval.Cache;
 
-public partial class CacheEngine
+public partial class ImageCache
 {
     private sealed class ActionCachePreviewCallback(
         Action<DecodedPreviewFrame>? onPreview,

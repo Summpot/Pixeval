@@ -78,7 +78,7 @@ public partial class WorkContainer : UserControl
     public AvaloniaList<ICommandBarElement> CommandBarSubElements { get; } = [];
 
     private WorkContainerFilterCoordinator FilterCoordinator =>
-        _filterCoordinator ??= new WorkContainerFilterCoordinator(this.GetRequiredUiService<LocalizedFilterCompletionEngine>());
+        _filterCoordinator ??= new WorkContainerFilterCoordinator(this.GetRequiredUiService<LocalizedFilterSession>());
 
     public WorkContainer()
     {

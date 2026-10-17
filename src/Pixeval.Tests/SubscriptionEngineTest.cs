@@ -55,7 +55,7 @@ public sealed class SubscriptionEngineTest
     [TestMethod]
     public void DuplicateFuseBreakerShouldTriggerAtThresholdFive()
     {
-        using var engine = new SubscriptionSyncEngine(5, null);
+        using var engine = new SubscriptionSync(5, null);
 
         // 1 to 4 duplicates should return false
         for (var i = 0; i < 4; i++)
@@ -72,7 +72,7 @@ public sealed class SubscriptionEngineTest
     [TestMethod]
     public void NonDuplicateWorkShouldResetDuplicateCounter()
     {
-        using var engine = new SubscriptionSyncEngine(5, null);
+        using var engine = new SubscriptionSync(5, null);
 
         // 4 duplicates
         for (var i = 0; i < 4; i++)
@@ -96,7 +96,7 @@ public sealed class SubscriptionEngineTest
     [TestMethod]
     public void ResetDuplicateCounterExplicitlyShouldSucceed()
     {
-        using var engine = new SubscriptionSyncEngine(5, null);
+        using var engine = new SubscriptionSync(5, null);
 
         for (var i = 0; i < 4; i++)
         {
@@ -117,7 +117,7 @@ public sealed class SubscriptionEngineTest
     public void FetchStateTransitionAndCallbackShouldWork()
     {
         var callback = new TestProgressCallback();
-        using var engine = new SubscriptionSyncEngine(5, callback);
+        using var engine = new SubscriptionSync(5, callback);
 
         var initialState = engine.GetFetchState(400);
         Assert.IsNull(initialState);
@@ -142,7 +142,7 @@ public sealed class SubscriptionEngineTest
     [TestMethod]
     public void QueueArbitrationSyncAllShouldSupersedeIndividual()
     {
-        using var engine = new SubscriptionSyncEngine(null, null);
+        using var engine = new SubscriptionSync(null, null);
 
         Assert.IsTrue(engine.QueueSyncSubscription(1));
         Assert.IsTrue(engine.QueueSyncSubscription(2));
@@ -166,7 +166,7 @@ public sealed class SubscriptionEngineTest
     public void DaemonLifecycleAndIntervalControlShouldWork()
     {
         var callback = new TestProgressCallback();
-        using var engine = new SubscriptionSyncEngine(5, callback);
+        using var engine = new SubscriptionSync(5, callback);
 
         Assert.IsFalse(engine.IsDaemonRunning());
         Assert.AreEqual(1800UL, engine.GetDaemonInterval());
