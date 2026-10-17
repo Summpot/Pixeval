@@ -18,7 +18,7 @@ namespace Pixeval.Common.Collections;
 /// </typeparam>
 /// <seealso cref="IIncrementalSource{TSource}"/>
 /// <seealso cref="IIncrementalLoading"/>
-public class IncrementalLoadingCollection<IType> : ObservableCollection<IType>, IIncrementalLoading, IDisposable
+public class IncrementalLoadingCollection<IType> : ObservableRangeCollection<IType>, IIncrementalLoading, IDisposable
 {
     private readonly CancellationTokenSource _lifetimeCts = new();
     private readonly Lock _loadingTaskGate = new();
@@ -46,6 +46,8 @@ public class IncrementalLoadingCollection<IType> : ObservableCollection<IType>, 
     protected IIncrementalSource<IType> Source { get; }
 
     public bool IsInterrupted => !IsLoading && Source.IsInterrupted;
+
+    public Exception? LoadError { get; private set; }
 
     /// <summary>
     /// Gets a value indicating how many items that must be retrieved for each incremental call.
@@ -215,6 +217,7 @@ public class IncrementalLoadingCollection<IType> : ObservableCollection<IType>, 
 
     private async Task<int> LoadMoreItemsCoreAsync(CancellationToken token)
     {
+        LoadError = null;
         try
         {
             IReadOnlyCollection<IType> data;
@@ -225,6 +228,7 @@ public class IncrementalLoadingCollection<IType> : ObservableCollection<IType>, 
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
+                LoadError = ex;
                 OnError?.Invoke(ex);
                 HasMoreItems = Source.HasMoreItems;
                 return 0;
@@ -236,10 +240,7 @@ public class IncrementalLoadingCollection<IType> : ObservableCollection<IType>, 
                 return 0;
             }
 
-            foreach (var item in data)
-            {
-                Add(item);
-            }
+            AddRange(data as IReadOnlyList<IType> ?? [.. data]);
 
             HasMoreItems = Source.HasMoreItems;
             return data.Count;

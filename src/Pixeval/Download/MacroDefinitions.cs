@@ -2,7 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System.Collections.Generic;
-using Pixeval.I18N;
+using Pixeval.Localization;
 
 namespace Pixeval.Download;
 
@@ -22,12 +22,28 @@ public interface IPredicate : IMacro
     System.Type ContextType { get; }
 }
 
-public sealed record TransducerMacroDefinition(string Name, string Description) : ITransducer
+public abstract class MacroDefinition : IMacro, System.ComponentModel.INotifyPropertyChanged
+{
+    private readonly System.IDisposable _languageSubscription;
+    protected MacroDefinition(string name, string resourceKey)
+    {
+        Name = name;
+        ResourceKey = resourceKey;
+        _languageSubscription = AppLocalization.Instance.Subscribe(() => PropertyChanged?.Invoke(this,
+            new System.ComponentModel.PropertyChangedEventArgs(nameof(Description))));
+    }
+    public string Name { get; }
+    public string ResourceKey { get; }
+    public string Description => Strings.GetString(ResourceKey);
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+}
+
+public sealed class TransducerMacroDefinition(string name, string resourceKey) : MacroDefinition(name, resourceKey), ITransducer
 {
     public System.Type ContextType => typeof(object);
 }
 
-public sealed record PredicateMacroDefinition(string Name, string Description) : IPredicate
+public sealed class PredicateMacroDefinition(string name, string resourceKey) : MacroDefinition(name, resourceKey), IPredicate
 {
     public System.Type ContextType => typeof(object);
 }
@@ -36,29 +52,29 @@ public static class MacroDefinitions
 {
     public static IReadOnlyList<IMacro> All { get; } =
     [
-        new TransducerMacroDefinition("id", I18NManager.GetResource(MacroParserResources.MacroDescription.Id)),
-        new TransducerMacroDefinition("artist_id", I18NManager.GetResource(MacroParserResources.MacroDescription.ArtistId)),
-        new TransducerMacroDefinition("artist_name", I18NManager.GetResource(MacroParserResources.MacroDescription.ArtistName)),
-        new TransducerMacroDefinition("work_title", I18NManager.GetResource(MacroParserResources.MacroDescription.Title)),
-        new TransducerMacroDefinition("title", I18NManager.GetResource(MacroParserResources.MacroDescription.Title)),
-        new TransducerMacroDefinition("work_publish_time", I18NManager.GetResource(MacroParserResources.MacroDescription.PublishTime)),
-        new TransducerMacroDefinition("publish_time", I18NManager.GetResource(MacroParserResources.MacroDescription.PublishTime)),
-        new TransducerMacroDefinition("ext", I18NManager.GetResource(MacroParserResources.MacroDescription.Ext)),
-        new TransducerMacroDefinition("group_id", I18NManager.GetResource(MacroParserResources.MacroDescription.GroupId)),
-        new TransducerMacroDefinition("series_id", I18NManager.GetResource(MacroParserResources.MacroDescription.SeriesId)),
-        new TransducerMacroDefinition("series_title", I18NManager.GetResource(MacroParserResources.MacroDescription.SeriesTitle)),
-        new TransducerMacroDefinition("pic_set_index", I18NManager.GetResource(MacroParserResources.MacroDescription.PicSetIndex)),
-        new PredicateMacroDefinition("is_group", I18NManager.GetResource(MacroParserResources.MacroDescription.IsGroup)),
-        new PredicateMacroDefinition("is_bookmark_group", I18NManager.GetResource(MacroParserResources.MacroDescription.IsBookmarkGroup)),
-        new PredicateMacroDefinition("is_post_group", I18NManager.GetResource(MacroParserResources.MacroDescription.IsPostGroup)),
-        new PredicateMacroDefinition("is_series_group", I18NManager.GetResource(MacroParserResources.MacroDescription.IsSeriesGroup)),
-        new PredicateMacroDefinition("is_series", I18NManager.GetResource(MacroParserResources.MacroDescription.IsSeries)),
-        new PredicateMacroDefinition("is_pic_set", I18NManager.GetResource(MacroParserResources.MacroDescription.IsPicSet)),
-        new PredicateMacroDefinition("is_pic_one", I18NManager.GetResource(MacroParserResources.MacroDescription.IsPicOne)),
-        new PredicateMacroDefinition("is_pic_gif", I18NManager.GetResource(MacroParserResources.MacroDescription.IsPicGif)),
-        new PredicateMacroDefinition("is_r18", I18NManager.GetResource(MacroParserResources.MacroDescription.IsR18)),
-        new PredicateMacroDefinition("is_r18g", I18NManager.GetResource(MacroParserResources.MacroDescription.IsR18G)),
-        new PredicateMacroDefinition("is_ai", I18NManager.GetResource(MacroParserResources.MacroDescription.IsAi)),
-        new PredicateMacroDefinition("is_novel", I18NManager.GetResource(MacroParserResources.MacroDescription.IsNovel))
+        new TransducerMacroDefinition("id", nameof(Strings.MacroParserMacroDescriptionId)),
+        new TransducerMacroDefinition("artist_id", nameof(Strings.MacroParserMacroDescriptionArtistId)),
+        new TransducerMacroDefinition("artist_name", nameof(Strings.MacroParserMacroDescriptionArtistName)),
+        new TransducerMacroDefinition("work_title", nameof(Strings.MacroParserMacroDescriptionTitle)),
+        new TransducerMacroDefinition("title", nameof(Strings.MacroParserMacroDescriptionTitle)),
+        new TransducerMacroDefinition("work_publish_time", nameof(Strings.MacroParserMacroDescriptionPublishTime)),
+        new TransducerMacroDefinition("publish_time", nameof(Strings.MacroParserMacroDescriptionPublishTime)),
+        new TransducerMacroDefinition("ext", nameof(Strings.MacroParserMacroDescriptionExt)),
+        new TransducerMacroDefinition("group_id", nameof(Strings.MacroParserMacroDescriptionGroupId)),
+        new TransducerMacroDefinition("series_id", nameof(Strings.MacroParserMacroDescriptionSeriesId)),
+        new TransducerMacroDefinition("series_title", nameof(Strings.MacroParserMacroDescriptionSeriesTitle)),
+        new TransducerMacroDefinition("pic_set_index", nameof(Strings.MacroParserMacroDescriptionPicSetIndex)),
+        new PredicateMacroDefinition("is_group", nameof(Strings.MacroParserMacroDescriptionIsGroup)),
+        new PredicateMacroDefinition("is_bookmark_group", nameof(Strings.MacroParserMacroDescriptionIsBookmarkGroup)),
+        new PredicateMacroDefinition("is_post_group", nameof(Strings.MacroParserMacroDescriptionIsPostGroup)),
+        new PredicateMacroDefinition("is_series_group", nameof(Strings.MacroParserMacroDescriptionIsSeriesGroup)),
+        new PredicateMacroDefinition("is_series", nameof(Strings.MacroParserMacroDescriptionIsSeries)),
+        new PredicateMacroDefinition("is_pic_set", nameof(Strings.MacroParserMacroDescriptionIsPicSet)),
+        new PredicateMacroDefinition("is_pic_one", nameof(Strings.MacroParserMacroDescriptionIsPicOne)),
+        new PredicateMacroDefinition("is_pic_gif", nameof(Strings.MacroParserMacroDescriptionIsPicGif)),
+        new PredicateMacroDefinition("is_r18", nameof(Strings.MacroParserMacroDescriptionIsR18)),
+        new PredicateMacroDefinition("is_r18g", nameof(Strings.MacroParserMacroDescriptionIsR18G)),
+        new PredicateMacroDefinition("is_ai", nameof(Strings.MacroParserMacroDescriptionIsAi)),
+        new PredicateMacroDefinition("is_novel", nameof(Strings.MacroParserMacroDescriptionIsNovel))
     ];
 }

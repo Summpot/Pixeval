@@ -10,7 +10,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using CommunityToolkit.Mvvm.Input;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 
@@ -117,6 +117,6 @@ public abstract partial class ImageViewerBase : UserControl
         var clipboard = this.ClipboardService;
         await clipboard.SetBitmapAsync(singleFrame);
         await clipboard.FlushAsync();
-        this.Notifications.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+        this.Notifications.ShowSuccess(Strings.MiscCopied());
     }
 }

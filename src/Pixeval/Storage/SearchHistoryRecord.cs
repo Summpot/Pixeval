@@ -5,7 +5,7 @@ using System;
 
 namespace Pixeval.Storage;
 
-public partial record SearchHistoryRecord
+public partial record struct SearchHistoryRecord
 {
     public DateTime ParsedTime
     {

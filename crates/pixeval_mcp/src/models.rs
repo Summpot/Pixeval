@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
+#[boltffi::data]
 #[derive(Debug, Clone, Serialize, Deserialize, uniffi::Record)]
 pub struct McpServerConfig {
     pub port: u16,
@@ -12,6 +13,7 @@ pub struct McpServerConfig {
     pub target_filter: String,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, Serialize, Deserialize, uniffi::Record)]
 pub struct McpServerStatus {
     pub port: u16,
@@ -24,6 +26,7 @@ pub struct McpServerStatus {
     pub user_name: Option<String>,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, Serialize, Deserialize, uniffi::Record)]
 pub struct McpSessionUserInfo {
     pub id: String,

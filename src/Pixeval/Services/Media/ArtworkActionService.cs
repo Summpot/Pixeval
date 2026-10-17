@@ -3,13 +3,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
 using Pixeval.Config;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Booru;
 using Pixeval.Download;
@@ -70,14 +71,12 @@ public sealed class ArtworkActionService : IArtworkActionService
 
         SaveIllustrationCommand = new AsyncRelayCommand<Illustration>(async illust =>
         {
-            if (illust is not null)
-                await SaveIllustrationAsync(illust);
+            await SaveIllustrationAsync(illust);
         });
 
         SaveNovelCommand = new AsyncRelayCommand<Mako.Novel>(async novel =>
         {
-            if (novel is not null)
-                await SaveNovelAsync(novel);
+            await SaveNovelAsync(novel);
         });
 
         SaveCommand = new AsyncRelayCommand<object>(async work =>
@@ -94,14 +93,12 @@ public sealed class ArtworkActionService : IArtworkActionService
 
         FollowUserCommand = new AsyncRelayCommand<User>(async user =>
         {
-            if (user is not null)
-                await ToggleFollowUserAsync(user);
+            await ToggleFollowUserAsync(user);
         });
 
         BlockUserCommand = new RelayCommand<User>(user =>
         {
-            if (user is not null)
-                BlockUser(user);
+            BlockUser(user);
         });
     }
 
@@ -125,34 +122,35 @@ public sealed class ArtworkActionService : IArtworkActionService
 
     public async Task<bool> ToggleBookmarkAsync(IWorkEntry work)
     {
-        if (BlockedContentHelper.IsBlockedPlaceholder(work))
+        var targetWork = work;
+        if (BlockedContentHelper.IsBlockedPlaceholder(targetWork))
             return false;
 
-        var state = ArtworkUiStateStore.GetOrCreate(work);
+        var state = ArtworkUiStateStore.GetOrCreate(targetWork);
         if ((state.BookmarkState & HeartButtonState.Pending) is not 0)
             return false;
 
         var currentIsFavorite = (state.BookmarkState & HeartButtonState.Checked) is not 0;
         var target = !currentIsFavorite;
 
-        ArtworkUiStateStore.SetBookmarkPending(work);
+        ArtworkUiStateStore.SetBookmarkPending(targetWork);
         try
         {
-            var result = await _makoClient.SetWorkBookmarkAsync(work, target);
+            var result = (await _makoClient.SetBookmarkAsync(targetWork is Mako.Novel ? SimpleWorkKind.Novel : SimpleWorkKind.Illustration, targetWork.Id, target, PrivacyRestrict.Public, null)).Success;
             if (result)
             {
-                ArtworkUiStateStore.SetBookmarkState(work, target);
+                ArtworkUiStateStore.SetBookmarkState(targetWork, target);
                 return true;
             }
             else
             {
-                ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
+                ArtworkUiStateStore.RevertBookmarkPending(targetWork, currentIsFavorite);
                 return false;
             }
         }
         catch (Exception ex)
         {
-            ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
+            ArtworkUiStateStore.RevertBookmarkPending(targetWork, currentIsFavorite);
             _logger.LogError(nameof(ToggleBookmarkAsync), ex);
             throw;
         }
@@ -160,33 +158,34 @@ public sealed class ArtworkActionService : IArtworkActionService
 
     public async Task<bool> AddToBookmarkAsync(IWorkEntry work, bool isPrivate, IReadOnlyList<string>? tags = null)
     {
-        if (BlockedContentHelper.IsBlockedPlaceholder(work))
+        var targetWork = work;
+        if (BlockedContentHelper.IsBlockedPlaceholder(targetWork))
             return false;
 
-        var state = ArtworkUiStateStore.GetOrCreate(work);
+        var state = ArtworkUiStateStore.GetOrCreate(targetWork);
         if ((state.BookmarkState & HeartButtonState.Pending) is not 0)
             return false;
 
         var currentIsFavorite = (state.BookmarkState & HeartButtonState.Checked) is not 0;
 
-        ArtworkUiStateStore.SetBookmarkPending(work);
+        ArtworkUiStateStore.SetBookmarkPending(targetWork);
         try
         {
-            var result = await _makoClient.SetWorkBookmarkAsync(work, true, isPrivate, tags);
+            var result = (await _makoClient.SetBookmarkAsync(targetWork is Mako.Novel ? SimpleWorkKind.Novel : SimpleWorkKind.Illustration, targetWork.Id, true, isPrivate ? PrivacyRestrict.Private : PrivacyRestrict.Public, tags is null ? null : new List<string>(tags))).Success;
             if (result)
             {
-                ArtworkUiStateStore.SetBookmarkState(work, true);
+                ArtworkUiStateStore.SetBookmarkState(targetWork, true);
                 return true;
             }
             else
             {
-                ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
+                ArtworkUiStateStore.RevertBookmarkPending(targetWork, currentIsFavorite);
                 return false;
             }
         }
         catch (Exception ex)
         {
-            ArtworkUiStateStore.RevertBookmarkPending(work, currentIsFavorite);
+            ArtworkUiStateStore.RevertBookmarkPending(targetWork, currentIsFavorite);
             _logger.LogError(nameof(AddToBookmarkAsync), ex);
             throw;
         }
@@ -194,24 +193,25 @@ public sealed class ArtworkActionService : IArtworkActionService
 
     public bool ToggleWatchLater(object work)
     {
-        if (!WatchLaterRecord.TryCreateWorkKey(work, out _))
+        var targetWork = work is WorkEntry we ? we.AsWorkEntry : work;
+        if (!WatchLaterRecord.TryCreateWorkKey(targetWork, out _))
             return false;
 
-        var state = ArtworkUiStateStore.GetOrCreate(work);
+        var state = ArtworkUiStateStore.GetOrCreate(targetWork);
         var target = !state.IsInWatchLater;
         if (target)
         {
-            if (!_storageEngine.WatchLaterRepository.AddWatchLater(work))
+            if (!_storageEngine.WatchLaterRepository.AddWatchLater(targetWork))
                 return false;
         }
-        else if (!_storageEngine.WatchLaterRepository.RemoveWatchLater(work))
+        else if (!_storageEngine.WatchLaterRepository.RemoveWatchLater(targetWork))
         {
             return false;
         }
 
-        ArtworkUiStateStore.SetWatchLater(work, target);
+        ArtworkUiStateStore.SetWatchLater(targetWork, target);
         _notifications.ShowSuccess(
-            I18NManager.GetResource(target ? MiscResources.AddedToWatchLater : MiscResources.RemovedFromWatchLater));
+            Strings.GetString(target ? nameof(Strings.MiscAddedToWatchLater) : nameof(Strings.MiscRemovedFromWatchLater)));
         return true;
     }
 
@@ -220,16 +220,15 @@ public sealed class ArtworkActionService : IArtworkActionService
         if (BlockedContentHelper.IsBlockedPlaceholder(illustration))
             return Task.CompletedTask;
 
-        var destination = _downloadManager.EnqueuePixiv(
-            illustration.Serialize(),
-            false,
+        var destination = _downloadManager.EnqueueIllustration(
+            illustration,
             setIndex,
             _appSettings.DownloadSettings.DownloadPathMacro,
             "",
             0,
             "");
         if (!string.IsNullOrEmpty(destination))
-            _notifications.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
+            _notifications.ShowSuccess(Strings.EntryItemDownloadTaskCreated());
         return Task.CompletedTask;
     }
 
@@ -238,22 +237,21 @@ public sealed class ArtworkActionService : IArtworkActionService
         if (BlockedContentHelper.IsBlockedPlaceholder(novel))
             return Task.CompletedTask;
 
-        var destination = _downloadManager.EnqueuePixiv(
-            novel.Serialize(),
-            true,
-            -1,
+        var destination = _downloadManager.EnqueueNovel(
+            novel,
             _appSettings.DownloadSettings.DownloadPathMacro,
             "",
             0,
             "");
         if (!string.IsNullOrEmpty(destination))
-            _notifications.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
+            _notifications.ShowSuccess(Strings.EntryItemDownloadTaskCreated());
         return Task.CompletedTask;
     }
 
     public async Task SaveWorkAsync(object work)
     {
-        switch (work)
+        var targetWork = work is WorkEntry we ? we.AsWorkEntry : work;
+        switch (targetWork)
         {
             case Illustration illustration:
                 await SaveIllustrationAsync(illustration);
@@ -262,106 +260,54 @@ public sealed class ArtworkActionService : IArtworkActionService
                 await SaveNovelAsync(novel);
                 break;
             case BooruPost post:
-                EnqueueExternalImage(
-                    post.Id,
-                    post.Title,
-                    post.UploaderName,
-                    post.ThumbnailUrl ?? "",
-                    post.WebsiteUri.OriginalString,
-                    post.AppUri.OriginalString,
-                    post.OriginalUrl ?? post.SampleUrl ?? post.PreviewUrl ?? "",
-                    post.Serialize(),
-                    post.SerializeKey,
-                    post.SafeRating.IsR18,
-                    post.SafeRating.IsR18G,
-                    post.CreateDateOffset.ToString("o"));
+                EnqueuePayload(new ArtworkPayload(new ArtworkPayload.Booru(post)));
                 break;
             case SauceNaoItem sauce:
-                EnqueueExternalImage(
-                    sauce.RawId,
-                    sauce.TitleText,
-                    sauce.AuthorName,
-                    sauce.ThumbnailUrl,
-                    sauce.WebsiteUri.OriginalString,
-                    sauce.AppUri.OriginalString,
-                    string.IsNullOrWhiteSpace(sauce.ThumbnailUrl) ? "" : sauce.ThumbnailUrl,
-                    sauce.Serialize(),
-                    sauce.SerializeKey,
-                    sauce.SafeRating.IsR18,
-                    sauce.SafeRating.IsR18G,
-                    "");
+                EnqueuePayload(new ArtworkPayload(new ArtworkPayload.SauceNao(sauce)));
                 break;
         }
     }
 
-    private void EnqueueExternalImage(
-        string artworkId,
-        string title,
-        string author,
-        string thumbnailUrl,
-        string websiteUri,
-        string appUri,
-        string originalUrl,
-        string payloadJson,
-        string serializeKey,
-        bool isR18,
-        bool isR18G,
-        string createDate)
+    private void EnqueuePayload(ArtworkPayload payload)
     {
-        var destination = _downloadManager.EnqueueExternalImage(new ExternalImageRequest(
-            artworkId,
-            title,
-            author,
-            thumbnailUrl,
-            websiteUri,
-            appUri,
-            originalUrl,
+        var destination = _downloadManager.EnqueuePayload(
+            payload,
+            -1,
             _appSettings.DownloadSettings.DownloadPathMacro,
             "",
-            payloadJson,
-            serializeKey,
             0,
-            "",
-            isR18,
-            isR18G,
-            createDate));
+            "");
         if (!string.IsNullOrEmpty(destination))
-            _notifications.ShowSuccess(I18NManager.GetResource(EntryItemResources.DownloadTaskCreated));
+            _notifications.ShowSuccess(Strings.EntryItemDownloadTaskCreated());
     }
 
-    public async Task<bool> ToggleFollowUserAsync(User user)
+    public Task<bool> ToggleFollowUserAsync(User user)
     {
         var state = UserUiStateStore.GetOrCreate(user);
-        if ((state.FollowState & HeartButtonState.Pending) is not 0)
-            return false;
+        return SetFollowUserAsync(user, (state.FollowState & HeartButtonState.Checked) is 0);
+    }
 
-        var currentFollow = (state.FollowState & HeartButtonState.Checked) is not 0;
-        var target = !currentFollow;
-
+    public async Task<bool> SetFollowUserAsync(User user, bool followed, bool privately = false, CancellationToken token = default)
+    {
+        var state = UserUiStateStore.GetOrCreate(user);
+        if ((state.FollowState & HeartButtonState.Pending) is not 0) return false;
+        var previous = (state.FollowState & HeartButtonState.Checked) is not 0;
         UserUiStateStore.SetFollowPending(user);
         try
         {
-            var result = await _makoClient.SetFollowAsync(user, target);
-            if (result)
-            {
-                UserUiStateStore.SetFollowState(user, target);
-                return true;
-            }
-            else
-            {
-                UserUiStateStore.RevertFollowPending(user, currentFollow);
-                return false;
-            }
+            var result = await _makoClient.SetFollowAsync(user.Id, followed, privately ? PrivacyRestrict.Private : PrivacyRestrict.Public, token);
+            if (result.Success) UserUiStateStore.SetFollowState(user, followed);
+            else UserUiStateStore.RevertFollowPending(user, previous);
+            return result.Success;
         }
-        catch (Exception ex)
+        catch
         {
-            UserUiStateStore.RevertFollowPending(user, currentFollow);
-            _logger.LogError(nameof(ToggleFollowUserAsync), ex);
+            UserUiStateStore.RevertFollowPending(user, previous);
             throw;
         }
     }
 
-    public bool BlockUser(User user) => BlockedContentHelper.TryAddOrUpdateBlockedUser(user);
+    public bool BlockUser(User user) => BlockedContentHelper.TryAddOrUpdateBlockedUser(user, _storageEngine);
 
     public async Task CopyImageAsync(Image? image)
     {
@@ -375,7 +321,7 @@ public sealed class ArtworkActionService : IArtworkActionService
     {
         await _clipboard.SetBitmapAsync(bitmap);
         await _clipboard.FlushAsync();
-        _notifications.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+        _notifications.ShowSuccess(Strings.MiscCopied());
     }
 
     public async Task SaveBitmapAsAsync(Bitmap bitmap, string suggestedFileName)
@@ -399,7 +345,7 @@ public sealed class ArtworkActionService : IArtworkActionService
 
         await using var stream = await file.OpenWriteAsync();
         bitmap.Save(stream, new PngBitmapEncoderOptions());
-        _notifications.ShowSuccess(I18NManager.GetResource(MiscResources.Saved), file.Path.OriginalString);
+        _notifications.ShowSuccess(Strings.MiscSaved(), file.Path.OriginalString);
     }
 }
 
@@ -424,6 +370,7 @@ public sealed class NullArtworkActionService : IArtworkActionService
     public Task SaveNovelAsync(Mako.Novel entry) => Task.CompletedTask;
     public Task SaveWorkAsync(object work) => Task.CompletedTask;
     public Task<bool> ToggleFollowUserAsync(User user) => Task.FromResult(false);
+    public Task<bool> SetFollowUserAsync(User user, bool followed, bool privately = false, CancellationToken token = default) => Task.FromResult(false);
     public bool BlockUser(User user) => false;
     public Task CopyImageAsync(Image? image) => Task.CompletedTask;
     public Task CopyBitmapAsync(Bitmap bitmap) => Task.CompletedTask;

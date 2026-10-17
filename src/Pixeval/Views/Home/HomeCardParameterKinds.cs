@@ -9,10 +9,10 @@ namespace Pixeval.Views.Home;
 public enum HomeCardParameterKinds
 {
     None = 0,
-    WorkType = 1 << 0,
-    SimpleWorkType = 1 << 1,
-    PrivacyPolicy = 1 << 2,
-    RankOption = 1 << 3,
+    WorkKind = 1 << 0,
+    SimpleWorkKind = 1 << 1,
+    PrivacyRestrict = 1 << 2,
+    RankMode = 1 << 3,
     RankingDate = 1 << 4,
     UserId = 1 << 5,
     EntryId = 1 << 6,

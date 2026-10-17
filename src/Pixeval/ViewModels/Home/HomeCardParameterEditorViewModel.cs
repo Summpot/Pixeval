@@ -12,11 +12,11 @@ namespace Pixeval.ViewModels.Home;
 
 public abstract class HomeCardParameterEditorViewModel(
     HomeCardParameterKinds kind,
-    string header) : ObservableObject
+    string header) : ViewModelBase
 {
     public HomeCardParameterKinds Kind { get; } = kind;
 
-    public string Header { get; } = header;
+    public string Header => Strings.GetString(header);
 }
 
 public sealed partial class HomeCardChoiceParameterEditorViewModel(

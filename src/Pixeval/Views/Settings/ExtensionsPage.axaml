@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Settings.ExtensionsPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -21,9 +22,9 @@
             DockPanel.Dock="Top"
             Orientation="Horizontal"
             Spacing="20">
-            <TextBlock Text="{I18N {x:Static pixeval:ExtensionsPageResources+TitleTextBlock.Text}}" Theme="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock Text="{CompiledBinding [ExtensionsPage-TitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" Theme="{StaticResource TitleTextBlockStyle}" />
             <TextBlock VerticalAlignment="Bottom" Theme="{StaticResource SubtitleTextBlockStyle}">
-                <Run Text="{I18N {x:Static pixeval:ExtensionsPageResources+SubtitleTextBlock.Text}}" />
+                <Run Text="{CompiledBinding [ExtensionsPage-SubtitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <Run Text="{x:Static extensions:ExtensionService.CurrentVersion}" />
             </TextBlock>
         </StackPanel>
@@ -34,19 +35,19 @@
             <CommandBarButton
                 Click="AddExtensionsOnClick"
                 Icon="{markup:SymbolIcon PlugConnectedAdd}"
-                Label="{I18N {x:Static pixeval:ExtensionsPageResources+AddExtensionsButton.Label}}" />
+                Label="{CompiledBinding [ExtensionsPage-AddExtensionsButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
             <CommandBarButton
                 Click="OpenExtensionsOnClick"
                 Icon="{markup:SymbolIcon FolderAdd}"
-                Label="{I18N {x:Static pixeval:ExtensionsPageResources+OpenExtensionsButton.Label}}" />
+                Label="{CompiledBinding [ExtensionsPage-OpenExtensionsButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
             <CommandBarButton
                 Click="UninstallAllExtensionsOnClick"
                 Icon="{markup:SymbolIcon Delete}"
-                Label="{I18N {x:Static pixeval:ExtensionsPageResources+UninstallAllExtensionsButton.Label}}" />
+                Label="{CompiledBinding [ExtensionsPage-UninstallAllExtensionsButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
             <CommandBarButton
                 Click="UninstallOutdatedExtensionsOnClick"
                 Icon="{markup:SymbolIcon Alert}"
-                Label="{I18N {x:Static pixeval:ExtensionsPageResources+UninstallOutdatedExtensionsButton.Label}}" />
+                Label="{CompiledBinding [ExtensionsPage-UninstallOutdatedExtensionsButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
         </CommandBar>
         <ScrollViewer Margin="20,10,20,20">
             <ItemsControl ItemsSource="{Binding $parent[settings:ExtensionsPage].Models}">
@@ -74,26 +75,26 @@
                                     <CommandBarButton
                                         Click="ExtensionsPriorityUpOnClick"
                                         Icon="{markup:SymbolIcon ChevronUp}"
-                                        ToolTip.Tip="{I18N {x:Static pixeval:ExtensionsPageResources+ExtensionsPriorityUpButton.Label}}" />
+                                        ToolTip.Tip="{CompiledBinding [ExtensionsPage-ExtensionsPriorityUpButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                                     <CommandBarButton
                                         Click="ExtensionsPriorityDownOnClick"
                                         Icon="{markup:SymbolIcon ChevronDown}"
-                                        ToolTip.Tip="{I18N {x:Static pixeval:ExtensionsPageResources+ExtensionsPriorityDownButton.Label}}" />
+                                        ToolTip.Tip="{CompiledBinding [ExtensionsPage-ExtensionsPriorityDownButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                                     <CommandBar.SecondaryCommands>
                                         <CommandBarButton
                                             Click="ExtensionsHelpOnClick"
                                             Icon="{markup:SymbolIcon BookQuestionMark}"
                                             IsVisible="{Binding HelpLink, Converter={x:Static ObjectConverters.IsNotNull}}"
-                                            Label="{I18N {x:Static pixeval:ExtensionsPageResources+ExtensionsHelpButton.Label}}"
+                                            Label="{CompiledBinding [ExtensionsPage-ExtensionsHelpButton-Label], Source={x:Static loc:LocalizationManager.Instance}}"
                                             Tag="{Binding HelpLink}" />
                                         <CommandBarButton
                                             Click="ExtensionsPriorityTopOnClick"
                                             Icon="{markup:SymbolIcon ChevronDoubleUp}"
-                                            Label="{I18N {x:Static pixeval:ExtensionsPageResources+ExtensionsPriorityTopButton.Label}}" />
+                                            Label="{CompiledBinding [ExtensionsPage-ExtensionsPriorityTopButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                                         <CommandBarButton
                                             Click="ExtensionsPriorityBottomOnClick"
                                             Icon="{markup:SymbolIcon ChevronDoubleDown}"
-                                            Label="{I18N {x:Static pixeval:ExtensionsPageResources+ExtensionsPriorityBottomButton.Label}}" />
+                                            Label="{CompiledBinding [ExtensionsPage-ExtensionsPriorityBottomButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                                         <CommandBarButton
                                             Click="UninstallHostOnClick"
                                             Icon="{Binding UninstallCommandIcon, Converter={x:Static converters:PixevalConverters.SymbolIconConverter}}"

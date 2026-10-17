@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+boltffi.workspace = true
 uniffi = { workspace = true, features = ["tokio"] }
 image = { workspace = true, features = ["png", "jpeg", "webp", "gif", "avif"] }
 png.workspace = true

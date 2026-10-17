@@ -1,6 +1,7 @@
 <views:IconContentPage
     x:Class="Pixeval.Views.Search.WorkSearchResultPage"
     xmlns="https://github.com/avaloniaui"
+    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:di="using:Pixeval.Common.Markup"
     xmlns:settings="using:Pixeval.Config"
@@ -122,7 +123,7 @@
                     x:Name="SimpleWorkTypeComboBox"
                     IsEnabled="False"
                     IsVisible="False"
-                    ItemsSource="{markup1:EnumResources x:TypeArguments=enum:SimpleWorkType}"
+                    ItemsSource="{markup1:EnumResources x:TypeArguments=nativeMako:SimpleWorkKind}"
                     SelectedValue="{Binding SearchSettings.DefaultSimpleWorkType, Source={di:Service Type={x:Type settings:AppSettings}}, DataType={x:Type settings:AppSettings}, Mode=OneTime}"
                     SelectionChanged="WorkTypeComboBox_OnSelectionChanged" />
             </work:WorkContainer.CommandBarElements>

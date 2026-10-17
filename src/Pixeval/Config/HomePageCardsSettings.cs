@@ -9,5 +9,5 @@ namespace Pixeval.Config;
 public static class HomePageCardsSettings
 {
     public static ObservableCollection<HomePageCardLayout> CreateDefaultCards() =>
-        new(new ConfigEngine().CreateDefaultCards());
+        new(PixevalConfigMethods.CreateDefaultCards());
 }

@@ -16,7 +16,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Config;
 using Pixeval.Services.Background;
 using Pixeval.Utilities;
@@ -44,8 +44,13 @@ public partial class SettingsPageViewModel : ViewModelBase
     /// <summary>
     /// Text of the update status <see cref="InfoBar"/>.
     /// </summary>
-    [ObservableProperty]
-    public partial string UpdateStatusText { get; set; } = "";
+    private Func<string> _updateStatus = static () => "";
+    public string UpdateStatusText => _updateStatus();
+    private void SetUpdateStatus(Func<string> message)
+    {
+        _updateStatus = message;
+        OnPropertyChanged(nameof(UpdateStatusText));
+    }
 
     public string CurrentVersion => AppInfo.AppVersion.CurrentVersionShortText;
 
@@ -89,13 +94,19 @@ public partial class SettingsPageViewModel : ViewModelBase
         RefreshUpdateStatus();
     }
 
+    protected override void OnLanguageChanged()
+    {
+        SettingsLocalization.Refresh(LocalGroups);
+        base.OnLanguageChanged();
+    }
+
     private IReadOnlyList<ISettingsGroup> BuildLocalGroups()
     {
         LocalSettingsEntryHelper.Initialize();
 
         return SettingsBuilder.CreateGroupList(_appSettings)
             .NewGroup(t => t.ApplicationSettings, group => group
-                .Language(t => t.CultureName)
+                .Language(t => t.CultureName, entry => entry.ValueChanged += AppLocalization.Instance.SetLanguage)
                 .Enum(t => t.Theme,
                     entry => entry.ValueChanged += t => Application.Current?.RequestedThemeVariant = t switch
                     {
@@ -175,20 +186,20 @@ public partial class SettingsPageViewModel : ViewModelBase
                     entry.Enum(
                             WorkTypeEnum.Illustration,
                             t => t.IllustrationRankOption,
-                            SimpleWorkType.Illustration)
+                            SimpleWorkKind.Illustration)
                         .Enum(
                             WorkTypeEnum.Novel,
                             t => t.NovelRankOption,
-                            SimpleWorkType.Novel)))
+                            SimpleWorkKind.Novel)))
             .NewGroup(t => t.DownloadSettings, group => group
                 .Bool(t => t.OverwriteDownloadedFile, entry => entry.ValueChanged += _ => PushDownloadPolicy())
                 .Int(t => t.MaxDownloadTaskConcurrencyLevel, 1, Environment.ProcessorCount, 1,
                     entry => entry.ValueChanged += t => _downloadManager.ConcurrencyDegree = t)
                 .DownloadMacro(t => t.DownloadPathMacro)
                 .MultiValues(t => t.DownloadFormats, entry =>
-                    entry.IllustrationDownloadFormat(format => format.ValueChanged += _ => PushDownloadPolicy())
-                        .UgoiraDownloadFormat(format => format.ValueChanged += _ => PushDownloadPolicy())
-                        .NovelDownloadFormat(format => format.ValueChanged += _ => PushDownloadPolicy()))
+                    entry.IllustrationDownloadFormat(_extensionService, format => format.ValueChanged += _ => PushDownloadPolicy())
+                        .UgoiraDownloadFormat(_extensionService, format => format.ValueChanged += _ => PushDownloadPolicy())
+                        .NovelDownloadFormat(_extensionService, format => format.ValueChanged += _ => PushDownloadPolicy()))
                 .Bool(t => t.EnableSubscriptionDaemon, entry => entry.ValueChanged += enabled =>
                 {
                     if (_serviceProvider.GetService<IWorkSubscriptionService>() is { } subService)
@@ -229,16 +240,16 @@ public partial class SettingsPageViewModel : ViewModelBase
         var updateState = AppInfo.AppVersion.UpdateState;
         var (mode, resource) = updateState switch
         {
-            UpdateState.UpToDate => (InfoBarMode.Success, SettingsMainViewResources.IsUpToDate),
-            UpdateState.MajorUpdate => (InfoBarMode.Warning, SettingsMainViewResources.UpdateAvailable.Major),
-            UpdateState.MinorUpdate => (InfoBarMode.Warning, SettingsMainViewResources.UpdateAvailable.Minor),
-            UpdateState.BuildUpdate => (InfoBarMode.Warning, SettingsMainViewResources.UpdateAvailable.Build),
-            UpdateState.Insider => (InfoBarMode.Info, SettingsMainViewResources.IsInsider),
-            UpdateState.Unknown => (InfoBarMode.Info, SettingsMainViewResources.UpdateAvailable.Unknown),
+            UpdateState.UpToDate => (InfoBarMode.Success, nameof(Strings.SettingsMainViewIsUpToDate)),
+            UpdateState.MajorUpdate => (InfoBarMode.Warning, nameof(Strings.SettingsMainViewUpdateAvailableMajor)),
+            UpdateState.MinorUpdate => (InfoBarMode.Warning, nameof(Strings.SettingsMainViewUpdateAvailableMinor)),
+            UpdateState.BuildUpdate => (InfoBarMode.Warning, nameof(Strings.SettingsMainViewUpdateAvailableBuild)),
+            UpdateState.Insider => (InfoBarMode.Info, nameof(Strings.SettingsMainViewIsInsider)),
+            UpdateState.Unknown => (InfoBarMode.Info, nameof(Strings.SettingsMainViewUpdateAvailableUnknown)),
             _ => throw new ArgumentOutOfRangeException(nameof(updateState), updateState, null)
         };
         UpdateStatusMode = mode;
-        UpdateStatusText = I18NManager.GetResource(resource);
+        SetUpdateStatus(() => Strings.GetString(resource));
     }
 
     [RelayCommand]
@@ -248,8 +259,8 @@ public partial class SettingsPageViewModel : ViewModelBase
     private async Task ResetDefaultSettingsAsync()
     {
         if (await _dialogs.CreateOkCancelAsync(
-                I18NManager.GetResource(SettingsMainViewResources.ResetSettingConfirmationDialogTitle),
-                I18NManager.GetResource(SettingsMainViewResources.ResetSettingConfirmationDialogContent))
+                Strings.SettingsMainViewResetSettingConfirmationDialogTitle(),
+                Strings.SettingsMainViewResetSettingConfirmationDialogContent())
             is not ContentDialogResult.Primary)
             return;
 
@@ -269,7 +280,7 @@ public partial class SettingsPageViewModel : ViewModelBase
     [RelayCommand]
     private async Task ShowReleaseNotesAsync() =>
         _ = await _dialogs.CreateAcknowledgementTaskAsync(
-            I18NManager.GetResource(SettingsMainViewResources.ReleaseNoteDialog.Title),
+            Strings.SettingsMainViewReleaseNoteDialogTitle(),
             async contentDialog =>
             {
                 var control = await Views.Settings.SettingsPage.GetReleaseNotesAsync();
@@ -282,7 +293,7 @@ public partial class SettingsPageViewModel : ViewModelBase
     private async Task CheckForUpdateAsync()
     {
         UpdateStatusMode = InfoBarMode.Info;
-        UpdateStatusText = I18NManager.GetResource(SettingsMainViewResources.CheckingForUpdate);
+        SetUpdateStatus(() => Strings.SettingsMainViewCheckingForUpdate());
         await AppInfo.AppVersion.CheckForUpdateAsync();
         RefreshUpdateStatus();
 
@@ -307,24 +318,24 @@ public partial class SettingsPageViewModel : ViewModelBase
         catch (Exception exception)
         {
             UpdateStatusMode = InfoBarMode.Error;
-            UpdateStatusText = I18NManager.GetResource(SettingsMainViewResources.UpdateDownloadFailed);
+            SetUpdateStatus(() => Strings.SettingsMainViewUpdateDownloadFailed());
             _notifications.ShowError(
-                I18NManager.GetResource(SettingsMainViewResources.UpdateDownloadFailed),
+                Strings.SettingsMainViewUpdateDownloadFailed(),
                 exception.Message);
             return;
         }
 
         var readyVersion = AppInfo.AppVersion.PendingUpdateVersion?.ToString() ?? release.Version;
-        var readyMessage = I18NManager.GetResource(SettingsMainViewResources.UpdateDownloadReadyFormatted, readyVersion);
+        var readyMessage = Strings.SettingsMainViewUpdateDownloadReadyFormatted(version: readyVersion);
         UpdateStatusMode = InfoBarMode.Success;
-        UpdateStatusText = readyMessage;
+        SetUpdateStatus(() => Strings.SettingsMainViewUpdateDownloadReadyFormatted(version: readyVersion));
         _notifications.ShowSuccess(readyMessage);
     }
 
     private void ReportUpdateProgress(int value)
     {
         UpdateStatusMode = InfoBarMode.Info;
-        UpdateStatusText = I18NManager.GetResource(SettingsMainViewResources.UpdateDownloadProgressFormatted, value);
+        SetUpdateStatus(() => Strings.SettingsMainViewUpdateDownloadProgressFormatted(progress: value));
     }
 
     [RelayCommand]
@@ -348,11 +359,11 @@ public partial class SettingsPageViewModel : ViewModelBase
                 return;
             await using var stream = await file.OpenWriteAsync();
             var json = JsonSerializer.Serialize(_appSettings, SettingsSerializerContext.Default.AppSettings);
-            var yaml = new ConfigEngine().JsonToYaml(json);
+            var yaml = PixevalConfigMethods.JsonToYaml(json);
             await using var writer = new StreamWriter(stream);
             await writer.WriteAsync(yaml);
 
-            _notifications.ShowSuccess(I18NManager.GetResource(SettingsMainViewResources.ExportSettingsSuccess));
+            _notifications.ShowSuccess(Strings.SettingsMainViewExportSettingsSuccess());
         }
         catch (Exception exception)
         {
@@ -375,15 +386,14 @@ public partial class SettingsPageViewModel : ViewModelBase
             await using var stream = await file.OpenReadAsync();
             using var reader = new StreamReader(stream);
             var rawYaml = await reader.ReadToEndAsync();
-            var engine = new ConfigEngine();
-            var json = engine.YamlToJson(engine.MigrateYaml(rawYaml));
+            var json = PixevalConfigMethods.YamlToJson(rawYaml);
 
             if (JsonSerializer.Deserialize(json, SettingsSerializerContext.Default.AppSettings) is { } appSettings)
             {
                 foreach (var localGroup in LocalGroups)
                     foreach (var settingsEntry in localGroup)
                         settingsEntry.LocalValueReset(appSettings);
-                _notifications.ShowSuccess(I18NManager.GetResource(SettingsMainViewResources.ImportSettingsSuccess), file.Name);
+                _notifications.ShowSuccess(Strings.SettingsMainViewImportSettingsSuccess(), file.Name);
             }
         }
         catch (Exception exception)
@@ -409,19 +419,19 @@ public partial class SettingsPageViewModel : ViewModelBase
             case ClearDataKind.DownloadHistory:
                 var storage = _serviceProvider.GetRequiredService<StorageEngine>();
                 _downloadManager.ClearTasks();
-                storage.ClearDownloadHistory();
-                storage.ClearSubscriptionDownloadHistory();
+                storage.DownloadRepository.ClearDownloadHistory();
+                storage.DownloadRepository.ClearSubscriptionDownloadHistory();
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
         }
 
-        _notifications.ShowSuccess(I18NManager.GetResource(kind switch
+        _notifications.ShowSuccess(Strings.GetString(kind switch
         {
-            ClearDataKind.FileCache => EnumResources.ClearDataKind.FileCache,
-            ClearDataKind.BrowseHistory => EnumResources.ClearDataKind.BrowseHistory,
-            ClearDataKind.SearchHistory => EnumResources.ClearDataKind.SearchHistory,
-            _ => EnumResources.ClearDataKind.DownloadHistory
+            ClearDataKind.FileCache => nameof(Strings.EnumClearDataKindFileCache),
+            ClearDataKind.BrowseHistory => nameof(Strings.EnumClearDataKindBrowseHistory),
+            ClearDataKind.SearchHistory => nameof(Strings.EnumClearDataKindSearchHistory),
+            _ => nameof(Strings.EnumClearDataKindDownloadHistory)
         }));
     }
 
@@ -434,8 +444,11 @@ public partial class SettingsPageViewModel : ViewModelBase
             foreach (var settingsEntry in extensionGroup)
                 settingsEntry.ValueSaving(extensionGroup.Model.Values);
 
-        AppInfo.SaveSettings();
-        _notifications.ShowSuccess(I18NManager.GetResource(SettingsMainViewResources.SettingsSaved));
+        AppInfo.SaveSettings(
+            _appSettings,
+            _serviceProvider.GetService<HomePageCardSession>()?.Cards,
+            _serviceProvider.GetService<NavigationMenuDocument>()?.Text);
+        _notifications.ShowSuccess(Strings.SettingsMainViewSettingsSaved());
     }
 
     private void PushDownloadPolicy() =>

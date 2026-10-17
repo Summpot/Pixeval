@@ -3,6 +3,7 @@
 
 use crate::engine::state::DownloadState;
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, PartialEq)]
 pub struct DownloadItemSnapshot {
     pub key: crate::engine::key::DownloadTaskKey,
@@ -23,6 +24,7 @@ pub struct DownloadItemSnapshot {
     pub work_subscription_id: i64,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, PartialEq)]
 pub struct DownloadFolderMeta {
     pub subscription_id: i64,
@@ -32,6 +34,7 @@ pub struct DownloadFolderMeta {
     pub work_kind: u32,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, PartialEq)]
 pub struct DownloadFolderSnapshot {
     pub subscription_id: i64,
@@ -51,12 +54,14 @@ pub struct DownloadFolderSnapshot {
     pub retry_at_timestamp: Option<i64>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, PartialEq, Default)]
 pub struct DownloadPageSnapshot {
     pub ordinary_items: Vec<DownloadItemSnapshot>,
     pub folders: Vec<DownloadFolderSnapshot>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, PartialEq)]
 pub struct DownloadPolicy {
     pub overwrite: bool,
@@ -76,6 +81,7 @@ impl Default for DownloadPolicy {
     }
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, PartialEq)]
 pub struct ExternalImageRequest {
     pub artwork_id: String,
@@ -96,6 +102,7 @@ pub struct ExternalImageRequest {
     pub create_date: String,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, PartialEq, Default)]
 pub struct PlannedDownloadProbe {
     pub destination: String,

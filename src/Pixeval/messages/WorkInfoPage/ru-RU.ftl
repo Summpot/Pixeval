@@ -1,0 +1,3 @@
+CopyOriginalTagMenuItem-Text = Скопировать оригинал
+
+CopyTranslatedTagMenuItem-Text = Скопировать перевод

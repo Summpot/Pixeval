@@ -24,7 +24,7 @@
         <local:WorkListBox
             x:Name="WorkListBox"
             controls:IncrementalLoadingBehavior.IsEnabled="True"
-            controls:IncrementalLoadingBehavior.Threshold="200"
+            controls:IncrementalLoadingBehavior.Threshold="800"
             AutoScrollToSelectedItem="False"
             ContainerClearing="ListBox_OnContainerClearing"
             ContainerPrepared="ListBox_OnContainerPrepared"

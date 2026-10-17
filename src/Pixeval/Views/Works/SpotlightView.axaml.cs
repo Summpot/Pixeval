@@ -32,7 +32,7 @@ public partial class SpotlightView : UserControl
     private async Task SpotlightItem_OnTappedAsync(object? sender, TappedEventArgs e)
     {
         if (sender is Control { DataContext: SpotlightArticle vm } control)
-            TopLevel.GetTopLevel(control)?.Launcher.LaunchUriAsync(new Uri(vm.ArticleUrl));
+            _ = control.LauncherService.LaunchUriAsync(new Uri(vm.ArticleUrl));
     }
 
     private void ListBox_OnContainerPrepared(object? sender, ContainerPreparedEventArgs e)

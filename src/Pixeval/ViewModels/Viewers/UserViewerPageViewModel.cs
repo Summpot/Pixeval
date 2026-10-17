@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
@@ -48,30 +47,37 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
 
     public string? BackgroundUrl => UserDetail?.Profile.BackgroundImageUrl ?? AvatarUrl;
 
+    private readonly IArtworkActionService _actions;
     private readonly MakoClient? _makoClient;
     private readonly IUserSessionService? _userSessionService;
-
-    private static MakoClient? ResolveMakoClient(MakoClient? makoClient) =>
-        makoClient ?? (App.Services is { } services ? services.GetRequiredService<MakoClient>() : null);
+    private readonly IBlockedContentService? _blockedContent;
 
     public UserViewerPageViewModel(
         SingleUserResponse userDetail,
         MakoClient? makoClient = null,
-        IUserSessionService? userSessionService = null)
+        IUserSessionService? userSessionService = null,
+        IBlockedContentService? blockedContent = null,
+        IArtworkActionService? actions = null)
     {
-        _makoClient = ResolveMakoClient(makoClient);
-        _userSessionService = userSessionService ?? App.Services?.GetService<IUserSessionService>();
+        _actions = actions ?? NullArtworkActionService.Instance;
+        _makoClient = makoClient;
+        _userSessionService = userSessionService;
+        _blockedContent = blockedContent;
         Id = userDetail.User.Id;
         UserDetail = userDetail;
     }
 
     public UserViewerPageViewModel(
         long userId,
-        MakoClient? makoClient = null,
-        IUserSessionService? userSessionService = null)
+        MakoClient makoClient,
+        IUserSessionService? userSessionService = null,
+        IBlockedContentService? blockedContent = null,
+        IArtworkActionService? actions = null)
     {
-        _makoClient = ResolveMakoClient(makoClient);
-        _userSessionService = userSessionService ?? App.Services?.GetService<IUserSessionService>();
+        _actions = actions ?? NullArtworkActionService.Instance;
+        _makoClient = makoClient;
+        _userSessionService = userSessionService;
+        _blockedContent = blockedContent;
         Id = userId;
         _ = LoadUserAsync(userId);
     }
@@ -115,8 +121,8 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         LoadErrorMessage = null;
         try
         {
-            var userDetail = BlockedContentHelper.Replace(
-                await _makoClient.GetUserFromIdAsync(userId, token));
+            var loaded = await _makoClient.GetUserDetailAsync(userId, token);
+            var userDetail = _blockedContent?.Replace(loaded) ?? loaded;
             if (_disposed)
                 return;
 
@@ -139,30 +145,27 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
 
     private bool CanFollow => Id != (_userSessionService?.CurrentUserId ?? 0);
 
-    private bool CanBlockUser => UserDetail is { UserEntity: var user }
-                                 && !BlockedContentHelper.IsBlocked(user);
+    private bool CanBlockUser =>
+        UserDetail is { UserEntity: var user }
+        && (_blockedContent is null || !_blockedContent.IsBlocked(user));
 
     [RelayCommand(CanExecute = nameof(CanBlockUser))]
     private void BlockUser()
     {
-        if (UserDetail is not { UserEntity: var user }
-            || !BlockedContentHelper.TryAddOrUpdateBlockedUser(user))
+        if (UserDetail is not { } detail || _blockedContent is not { } blocked
+            || !blocked.TryAddOrUpdateBlockedUser(detail.UserEntity))
             return;
 
-        UserDetail = BlockedContentHelper.Replace(UserDetail);
+        UserDetail = blocked.Replace(detail);
     }
 
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private async Task FollowAsync()
     {
-        if (_makoClient is null)
-            return;
-
-        var result = await _makoClient.SetFollowAsync(Id, true, false);
+        if (UserDetail?.User is not { } targetUser) return;
+        var result = await _actions.SetFollowUserAsync(targetUser, true, false, _loadingCts.Token);
         if (result)
         {
-            if (UserDetail?.User is { } user)
-                UserUiStateStore.UpdateFollow(user, HeartButtonState.Checked);
             IsFollowed = true;
         }
     }
@@ -170,14 +173,10 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private async Task FollowPrivatelyAsync()
     {
-        if (_makoClient is null)
-            return;
-
-        var result = await _makoClient.SetFollowAsync(Id, true, true);
+        if (UserDetail?.User is not { } targetUser) return;
+        var result = await _actions.SetFollowUserAsync(targetUser, true, true, _loadingCts.Token);
         if (result)
         {
-            if (UserDetail?.User is { } user)
-                UserUiStateStore.UpdateFollow(user, HeartButtonState.Checked);
             IsFollowed = true;
         }
     }
@@ -185,14 +184,10 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private async Task UnfollowAsync()
     {
-        if (_makoClient is null)
-            return;
-
-        var result = await _makoClient.SetFollowAsync(Id, false);
+        if (UserDetail?.User is not { } targetUser) return;
+        var result = await _actions.SetFollowUserAsync(targetUser, false, false, _loadingCts.Token);
         if (result)
         {
-            if (UserDetail?.User is { } user)
-                UserUiStateStore.UpdateFollow(user, HeartButtonState.Unchecked);
             IsFollowed = false;
         }
     }

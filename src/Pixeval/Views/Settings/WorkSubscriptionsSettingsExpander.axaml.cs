@@ -12,10 +12,9 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using CommunityToolkit.Avalonia.Controls;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
 using Pixeval.Pixiv;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Config;
 using Pixeval.Services.Background;
 using Pixeval.Storage;
@@ -46,8 +45,8 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         UpdateWorkKindItems();
     }
 
-    private static IWorkSubscriptionService SubscriptionService =>
-        App.Services!.GetRequiredService<IWorkSubscriptionService>();
+    private IWorkSubscriptionService SubscriptionService =>
+        this.GetRequiredUiService<IWorkSubscriptionService>();
 
     private static IReadOnlyList<SymbolComboBoxItem> BookmarkWorkKinds { get; } =
         [.. SymbolComboBoxItem.GetValues<WorkSubscriptionWorkKind>().Where(t => t.Value is WorkSubscriptionWorkKind.Illustration or WorkSubscriptionWorkKind.Novel)];
@@ -66,7 +65,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         Subscriptions.Clear();
         try
         {
-            foreach (var entry in App.Services!.GetRequiredService<StorageEngine>().GetAllSubscriptions())
+            foreach (var entry in this.GetRequiredUiService<StorageEngine>().GetAllSubscriptions())
             {
                 token.ThrowIfCancellationRequested();
                 Subscriptions.Add(entry);
@@ -77,7 +76,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         }
         catch (Exception e)
         {
-            App.Services!.GetRequiredService<FileLogger>()
+            this.GetRequiredUiService<FileLogger>()
                 .LogError(nameof(ReloadAsync), e);
         }
     }
@@ -90,7 +89,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         ErrorTextBlock.IsVisible = false;
         if (!long.TryParse(TargetIdTextBox.Text, out var targetId) || targetId <= 0)
         {
-            ShowError(I18NManager.GetResource(WorkSubscriptionsSettingsExpanderResources.InvalidTargetId));
+            ShowError(Strings.WorkSubscriptionsSettingsExpanderInvalidTargetId());
             return;
         }
 
@@ -107,16 +106,19 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         if (subscriptionType is WorkSubscriptionType.Series)
         {
             var simpleWorkType = workKind is WorkSubscriptionWorkKind.Novel
-                ? SimpleWorkType.Novel
-                : SimpleWorkType.Illustration;
-            var storage = App.Services!.GetRequiredService<StorageEngine>();
-            var (detail, first, engine) = await App.Services!.GetRequiredService<MakoClient>().GetWorkSeriesAsync(simpleWorkType, targetId);
-            _ = WorkSubscriptionHelper.TryAddOrUpdateSeries(targetId, workKind, storage, SubscriptionService, detail, first, engine);
+                ? SimpleWorkKind.Novel
+                : SimpleWorkKind.Illustration;
+            var storage = this.GetRequiredUiService<StorageEngine>();
+            var query = await this.GetRequiredUiService<MakoClient>().GetWorkSeriesAsync(simpleWorkType, targetId);
+            var detail = query.Detail();
+            var first = query.First()?.AsWorkEntry;
+            var engine = query.Engine();
+            _ = WorkSubscriptionHelper.TryAddOrUpdateSeries(targetId, workKind, storage, SubscriptionService, detail, first);
         }
         else
         {
-            var storage = App.Services!.GetRequiredService<StorageEngine>();
-            var user = (await App.Services!.GetRequiredService<MakoClient>().GetUserFromIdAsync(targetId)).User;
+            var storage = this.GetRequiredUiService<StorageEngine>();
+            var user = (await this.GetRequiredUiService<MakoClient>().GetUserDetailAsync(targetId)).User;
             _ = WorkSubscriptionHelper.TryAddOrUpdateUser(user, subscriptionType, workKind, storage, SubscriptionService);
         }
 

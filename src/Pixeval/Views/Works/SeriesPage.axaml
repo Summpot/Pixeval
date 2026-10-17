@@ -1,7 +1,9 @@
 <views:IconContentPage
     x:Class="Pixeval.Views.Works.SeriesPage"
     xmlns="https://github.com/avaloniaui"
+    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:di="using:Pixeval.Common.Markup"
     xmlns:settings="using:Pixeval.Config"
     xmlns:controls="using:Pixeval.Controls"
@@ -25,7 +27,7 @@
                 <CommandBarButton
                     Click="RefreshButton_OnClick"
                     Icon="{markup:SymbolIcon ArrowClockwise}"
-                    ToolTip.Tip="{I18N {x:Static pixeval:WorkContainerResources+RefreshButton.Label}}" />
+                    ToolTip.Tip="{CompiledBinding [WorkContainer-RefreshButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
             </CommandBar>
             <StackPanel
                 VerticalAlignment="Center"
@@ -33,7 +35,7 @@
                 Spacing="5">
                 <controls:SymbolComboBox
                     x:Name="SimpleWorkTypeComboBox"
-                    ItemsSource="{markup1:EnumResources x:TypeArguments=enum:SimpleWorkType}"
+                    ItemsSource="{markup1:EnumResources x:TypeArguments=nativeMako:SimpleWorkKind}"
                     SelectedValue="{Binding SearchSettings.DefaultSimpleWorkType, Source={di:Service Type={x:Type settings:AppSettings}}, DataType={x:Type settings:AppSettings}, Mode=OneTime}"
                     SelectionChanged="SimpleWorkTypeComboBox_OnSelectionChanged" />
             </StackPanel>

@@ -20,13 +20,13 @@ struct LoadedPluginInstance {
 }
 
 #[derive(uniffi::Object)]
-pub struct PluginHostEngine {
+pub struct PluginHost {
     current_sdk_version: String,
     loaded_plugins: Arc<RwLock<HashMap<String, LoadedPluginInstance>>>,
 }
 
 #[uniffi::export]
-impl PluginHostEngine {
+impl PluginHost {
     #[uniffi::constructor]
     pub fn new(current_sdk_version: String) -> Arc<Self> {
         Arc::new(Self {
@@ -313,7 +313,7 @@ impl PluginHostEngine {
     }
 }
 
-impl PluginHostEngine {
+impl PluginHost {
     fn try_read_companion_manifest(lib_path: &Path) -> Option<PluginMetadata> {
         let stem = lib_path.file_stem()?.to_string_lossy();
         let parent = lib_path.parent()?;

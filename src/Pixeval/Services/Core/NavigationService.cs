@@ -24,10 +24,10 @@ namespace Pixeval.Services.Core;
 
 public class NavigationService : INavigationService
 {
-    private readonly IServiceProvider? _serviceProvider;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IUiHost? _uiHost;
 
-    public NavigationService(IServiceProvider? serviceProvider = null, IUiHost? uiHost = null)
+    public NavigationService(IServiceProvider serviceProvider, IUiHost? uiHost = null)
     {
         _serviceProvider = serviceProvider;
         _uiHost = uiHost;
@@ -124,9 +124,9 @@ public class NavigationService : INavigationService
             if (parameter is UserViewerPageViewModel userVm)
                 return new UserViewerPage(userVm);
             if (parameter is long userId)
-                return new UserViewerPage(new UserViewerPageViewModel(userId));
+                return new UserViewerPage(CreateViewModel<UserViewerPageViewModel>(userId));
             if (parameter is SingleUserResponse userDetail)
-                return new UserViewerPage(new UserViewerPageViewModel(userDetail));
+                return new UserViewerPage(CreateViewModel<UserViewerPageViewModel>(userDetail));
         }
 
         if (pageType == typeof(SeriesViewerPage))
@@ -137,13 +137,13 @@ public class NavigationService : INavigationService
 
         if (pageType == typeof(WorkSearchResultPage))
         {
-            if (parameter is IllustrationSearchArguments illustArgs)
+            if (parameter is IllustrationSearchParams illustArgs)
                 return new WorkSearchResultPage(illustArgs);
-            if (parameter is NovelSearchArguments novelArgs)
+            if (parameter is NovelSearchParams novelArgs)
                 return new WorkSearchResultPage(novelArgs);
-            if (parameter is ValueTuple<string, SimpleWorkType> tuple2)
+            if (parameter is ValueTuple<string, SimpleWorkKind> tuple2)
                 return new WorkSearchResultPage(tuple2.Item1, tuple2.Item2);
-            if (parameter is ValueTuple<string, IllustrationSearchArguments, NovelSearchArguments, SimpleWorkType> tuple4)
+            if (parameter is ValueTuple<string, IllustrationSearchParams, NovelSearchParams, SimpleWorkKind> tuple4)
                 return new WorkSearchResultPage(tuple4.Item1, tuple4.Item2, tuple4.Item3, tuple4.Item4);
         }
 
@@ -153,31 +153,31 @@ public class NavigationService : INavigationService
         if (pageType == typeof(ArtworkSauceNaoSearchResultPage) && parameter is ValueTuple<string, byte[]> sauceParam)
             return new ArtworkSauceNaoSearchResultPage(sauceParam.Item1, sauceParam.Item2);
 
-        if (pageType == typeof(WorkRecommendedPage) && parameter is WorkType recType)
+        if (pageType == typeof(WorkRecommendedPage) && parameter is WorkKind recType)
             return CreateServicePage<WorkRecommendedPage>(recType);
 
-        if (pageType == typeof(WorkNewPage) && parameter is WorkType newType)
+        if (pageType == typeof(WorkNewPage) && parameter is WorkKind newType)
             return CreateServicePage<WorkNewPage>(newType);
 
-        if (pageType == typeof(WorkPostsPage) && parameter is ValueTuple<User, WorkType> postParam)
+        if (pageType == typeof(WorkPostsPage) && parameter is ValueTuple<User, WorkKind> postParam)
             return CreateServicePage<WorkPostsPage>(postParam.Item1, postParam.Item2);
 
-        if (pageType == typeof(WorkBookmarksPage) && parameter is ValueTuple<User, SimpleWorkType, PrivacyPolicy, string?> bmParam)
+        if (pageType == typeof(WorkBookmarksPage) && parameter is ValueTuple<User, SimpleWorkKind, PrivacyRestrict, string?> bmParam)
             return CreateServicePage<WorkBookmarksPage>(bmParam.Item1, bmParam.Item2, bmParam.Item3, bmParam.Item4 ?? string.Empty);
 
-        if (pageType == typeof(WorkRankingPage) && parameter is ValueTuple<SimpleWorkType, RankOption, DateTime> rkParam)
+        if (pageType == typeof(WorkRankingPage) && parameter is ValueTuple<SimpleWorkKind, RankMode, DateTime> rkParam)
             return CreateServicePage<WorkRankingPage>(rkParam.Item1, rkParam.Item2, rkParam.Item3);
 
-        if (pageType == typeof(WorkFollowingPage) && parameter is ValueTuple<SimpleWorkType, PrivacyPolicy> folParam)
+        if (pageType == typeof(WorkFollowingPage) && parameter is ValueTuple<SimpleWorkKind, PrivacyRestrict> folParam)
             return CreateServicePage<WorkFollowingPage>(folParam.Item1, folParam.Item2);
 
-        if (pageType == typeof(WorkMyPixivPage) && parameter is SimpleWorkType mpType)
+        if (pageType == typeof(WorkMyPixivPage) && parameter is SimpleWorkKind mpType)
             return CreateServicePage<WorkMyPixivPage>(mpType);
 
-        if (pageType == typeof(WorkRelatedPage) && parameter is ValueTuple<long, SimpleWorkType> relParam)
+        if (pageType == typeof(WorkRelatedPage) && parameter is ValueTuple<long, SimpleWorkKind> relParam)
             return CreateServicePage<WorkRelatedPage>(relParam.Item1, relParam.Item2);
 
-        if (pageType == typeof(UserFollowingPage) && parameter is ValueTuple<long, PrivacyPolicy> ufParam)
+        if (pageType == typeof(UserFollowingPage) && parameter is ValueTuple<long, PrivacyRestrict> ufParam)
             return CreateServicePage<UserFollowingPage>(ufParam.Item1, ufParam.Item2);
 
         if (pageType == typeof(UserMyPixivPage) && parameter is long umId)
@@ -191,14 +191,13 @@ public class NavigationService : INavigationService
 
     private Page CreateServicePage(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type pageType,
-        params object[] arguments)
-    {
-        var provider = _serviceProvider ?? App.Services;
-        if (provider is not null)
-            return (Page) ActivatorUtilities.CreateInstance(provider, pageType, arguments);
+        params object[] arguments) =>
+        (Page) ActivatorUtilities.CreateInstance(_serviceProvider, pageType, arguments);
 
-        return (Page) Activator.CreateInstance(pageType, arguments)!;
-    }
+    private TViewModel CreateViewModel<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TViewModel>(
+        params object?[] arguments)
+        where TViewModel : class =>
+        ActivatorUtilities.CreateInstance<TViewModel>(_serviceProvider, arguments!);
 
     private TPage CreateServicePage<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TPage>(params object[] arguments)
         where TPage : Page =>
@@ -217,14 +216,14 @@ public class NavigationService : INavigationService
 
     private User CurrentOrFallbackUser()
     {
-        var session = (_serviceProvider ?? App.Services)?.GetService<IUserSessionService>();
+        var session = _serviceProvider.GetService<IUserSessionService>();
         return session?.CurrentUserEntity
             ?? new User(0, "", "", new ProfileImageUrls(null, null, null, null), false, null, []);
     }
 
     private long CurrentUserId()
     {
-        var session = (_serviceProvider ?? App.Services)?.GetService<IUserSessionService>();
+        var session = _serviceProvider.GetService<IUserSessionService>();
         return session is { CurrentUserId: > 0 } ? session.CurrentUserId : 0;
     }
 
@@ -233,48 +232,48 @@ public class NavigationService : INavigationService
     public void NavigateToIllustration(object illustration, IReadOnlyList<object>? source = null, bool needRefresh = false, Control? sourceControl = null)
     {
         var vm = source is not null
-            ? new IllustrationViewerPageViewModel(source, IndexOf(source, illustration), needRefresh)
-            : new IllustrationViewerPageViewModel(illustration, needRefresh);
+            ? CreateViewModel<IllustrationViewerPageViewModel>(source, IndexOf(source, illustration), needRefresh)
+            : CreateViewModel<IllustrationViewerPageViewModel>(illustration, needRefresh);
 
         NavigateTo<IllustrationViewerPage>(vm, removeCurrentPage: false, sourceControl);
     }
 
     public void NavigateToIllustration(string id, string platform = PlatformConstants.Pixiv, Control? sourceControl = null)
     {
-        NavigateTo<IllustrationViewerPage>(new IllustrationViewerPageViewModel(id, platform), removeCurrentPage: false, sourceControl);
+        NavigateTo<IllustrationViewerPage>(CreateViewModel<IllustrationViewerPageViewModel>(id, platform), removeCurrentPage: false, sourceControl);
     }
 
     public void NavigateToNovel(Mako.Novel novel, IReadOnlyList<Mako.Novel>? source = null, bool needRefresh = false, Control? sourceControl = null)
     {
         var vm = source is not null
-            ? new NovelViewerPageViewModel(source, IndexOf(source, novel), needRefresh)
-            : new NovelViewerPageViewModel(novel, needRefresh);
+            ? CreateViewModel<NovelViewerPageViewModel>(source, IndexOf(source, novel), needRefresh)
+            : CreateViewModel<NovelViewerPageViewModel>(novel, needRefresh);
 
         NavigateTo<NovelViewerPage>(vm, removeCurrentPage: false, sourceControl);
     }
 
     public void NavigateToNovel(long novelId, Control? sourceControl = null)
     {
-        NavigateTo<NovelViewerPage>(new NovelViewerPageViewModel(novelId), removeCurrentPage: false, sourceControl);
+        NavigateTo<NovelViewerPage>(CreateViewModel<NovelViewerPageViewModel>(novelId), removeCurrentPage: false, sourceControl);
     }
 
     public void NavigateToUser(long userId, Control? sourceControl = null)
     {
-        NavigateTo<UserViewerPage>(new UserViewerPageViewModel(userId), removeCurrentPage: false, sourceControl);
+        NavigateTo<UserViewerPage>(CreateViewModel<UserViewerPageViewModel>(userId), removeCurrentPage: false, sourceControl);
     }
 
     public void NavigateToUser(SingleUserResponse userDetail, Control? sourceControl = null)
     {
-        NavigateTo<UserViewerPage>(new UserViewerPageViewModel(userDetail), removeCurrentPage: false, sourceControl);
+        NavigateTo<UserViewerPage>(CreateViewModel<UserViewerPageViewModel>(userDetail), removeCurrentPage: false, sourceControl);
     }
 
-    public void NavigateToSeries(SimpleWorkType workType, long seriesId, Control? sourceControl = null)
+    public void NavigateToSeries(SimpleWorkKind workType, long seriesId, Control? sourceControl = null)
     {
-        NavigateTo<SeriesViewerPage>(new SeriesViewerPageViewModel(workType, seriesId), removeCurrentPage: false, sourceControl);
+        NavigateTo<SeriesViewerPage>(CreateViewModel<SeriesViewerPageViewModel>(workType, seriesId), removeCurrentPage: false, sourceControl);
     }
 
     public void NavigateToSeries(
-        SimpleWorkType workType,
+        SimpleWorkKind workType,
         long seriesId,
         Series seriesDetail,
         IWorkEntry? firstWork,
@@ -282,31 +281,31 @@ public class NavigationService : INavigationService
         Control? sourceControl = null)
     {
         NavigateTo<SeriesViewerPage>(
-            new SeriesViewerPageViewModel(workType, seriesId, seriesDetail, firstWork, worksViewModel),
+            CreateViewModel<SeriesViewerPageViewModel>(workType, seriesId, seriesDetail, firstWork, worksViewModel),
             removeCurrentPage: false,
             sourceControl);
     }
 
-    public void NavigateToWorkSearch(string keyword, SimpleWorkType workType = SimpleWorkType.Illustration, Control? sourceControl = null)
+    public void NavigateToWorkSearch(string keyword, SimpleWorkKind workType = SimpleWorkKind.Illustration, Control? sourceControl = null)
     {
         NavigateTo<WorkSearchResultPage>((keyword, workType), removeCurrentPage: false, sourceControl);
     }
 
-    public void NavigateToWorkSearch(IllustrationSearchArguments arguments, Control? sourceControl = null)
+    public void NavigateToWorkSearch(IllustrationSearchParams arguments, Control? sourceControl = null)
     {
         NavigateTo<WorkSearchResultPage>(arguments, removeCurrentPage: false, sourceControl);
     }
 
-    public void NavigateToWorkSearch(NovelSearchArguments arguments, Control? sourceControl = null)
+    public void NavigateToWorkSearch(NovelSearchParams arguments, Control? sourceControl = null)
     {
         NavigateTo<WorkSearchResultPage>(arguments, removeCurrentPage: false, sourceControl);
     }
 
     public void NavigateToWorkSearch(
         string keyword,
-        IllustrationSearchArguments illustrationArgs,
-        NovelSearchArguments novelArgs,
-        SimpleWorkType workType,
+        IllustrationSearchParams illustrationArgs,
+        NovelSearchParams novelArgs,
+        SimpleWorkKind workType,
         Control? sourceControl = null)
     {
         NavigateTo<WorkSearchResultPage>((keyword, illustrationArgs, novelArgs, workType), removeCurrentPage: false, sourceControl);

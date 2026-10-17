@@ -1,6 +1,7 @@
 use crate::text::FilterTextSpan;
 use chrono::NaiveDate;
 
+#[boltffi::data]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, uniffi::Enum)]
 pub enum FilterValueKind {
     None,

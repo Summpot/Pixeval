@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Pixeval.Mako;
 
-public partial record UgoiraMetadata
+public partial record struct UgoiraMetadata
 {
     public IReadOnlyList<int> Delays => [.. Frames.Select(t => t.Delay)];
 

@@ -3,7 +3,8 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(uniffi::Record, Clone, Debug, Default, Serialize, Deserialize)]
+#[boltffi::data]
+#[derive(uniffi::Record, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct SauceNaoItem {
     pub similarity: f64,
     pub thumbnail_url: String,
@@ -19,6 +20,7 @@ pub struct SauceNaoItem {
     pub is_nsfw: bool,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct SauceNaoSearchResult {
     pub status: i32,

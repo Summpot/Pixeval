@@ -17,7 +17,7 @@ using Avalonia.Threading;
 using ComposeAnimation;
 using Material3Expressive.Tokens;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Config;
 using Pixeval.Services.Background;
 using Pixeval.Mako;
@@ -43,11 +43,8 @@ public class App : Application
     public override void Initialize()
     {
         RegisterUnhandledExceptionHandler();
-        I18NManager.CandidatePaths.Add(AppInfo.ExtensionsFolder);
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
         AppViewModel = new AppViewModel(this, Logger);
-        CultureInfo.CurrentUICulture = CultureInfo.CurrentCulture = LanguageHelper.FindClosest(AppViewModel.AppSettings.ApplicationSettings.CultureName);
-        I18NManager.Initialize();
+        AppLocalization.Instance.SetLanguage(AppViewModel.AppSettings.ApplicationSettings.CultureName);
         AppViewModel.InitializeProvider();
         // Throttling is managed internally by native Mako client
 
@@ -107,8 +104,8 @@ public class App : Application
             try
             {
                 var result = await viewContainer.CreateOkCancelAsync(
-                    I18NManager.GetResource(WorkSubscriptionsSettingsExpanderResources.ExitConfirmation.Title),
-                    I18NManager.GetResource(WorkSubscriptionsSettingsExpanderResources.ExitConfirmation.Content));
+                    Strings.WorkSubscriptionsSettingsExpanderExitConfirmationTitle(),
+                    Strings.WorkSubscriptionsSettingsExpanderExitConfirmationContent());
                 if (result is not Controls.ContentDialogResult.Primary)
                     return;
 
@@ -140,7 +137,11 @@ public class App : Application
                 desktop.ShutdownMode = ShutdownMode.OnLastWindowClose;
                 desktop.Exit += async static (o, e) =>
                 {
-                    AppInfo.SaveContext();
+                    AppInfo.SaveContext(
+                        AppViewModel.LoginContext,
+                        AppViewModel.AppSettings,
+                        AppViewModel.HomePageCards,
+                        AppViewModel.NavigationMenuYamlText);
                     AppInfo.AppVersion.ApplyPendingUpdateOnExit();
                     await AppViewModel.DisposeAsync();
                 };
@@ -206,7 +207,7 @@ public class App : Application
                 }
 
                 AppViewModel.OnTokenRefreshed(null);
-                viewContainer.ShowError(I18NManager.GetResource(MainPageResources.LoggingIn.Failed));
+                viewContainer.ShowError(Strings.MainPageLoggingInFailed());
             }
         }
         catch (Exception e)
@@ -214,7 +215,7 @@ public class App : Application
             AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
                 .LogError(nameof(LoginAsync), e);
             AppViewModel.OnTokenRefreshed(null);
-            viewContainer.ShowError(I18NManager.GetResource(MainPageResources.LoggingIn.Failed));
+            viewContainer.ShowError(Strings.MainPageLoggingInFailed());
         }
 
         AppViewModel.AppServiceProvider.GetRequiredService<INavigationService>()
@@ -238,8 +239,8 @@ public class App : Application
             };
             foreach (var viewContainer in viewContainers)
                 viewContainer.ShowWarning(
-                    I18NManager.GetResource(MiscResources.RateLimitNotification.Title),
-                    I18NManager.GetResource(MiscResources.RateLimitNotification.ContentFormatted, args.RetryAt.ToLocalTime()));
+                    Strings.MiscRateLimitNotificationTitle(),
+                    Strings.MiscRateLimitNotificationContentFormatted(retryAt: (args.RetryAt.ToLocalTime()).ToString("yyyy-MM-dd HH:mm:ss", AppLocalization.Instance.CurrentCulture)));
         });
 
     private void RegisterUnhandledExceptionHandler()

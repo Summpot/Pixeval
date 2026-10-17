@@ -47,6 +47,7 @@ impl DownloadTaskItem {
     }
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, PartialEq)]
 pub struct DownloadProgressInfo {
     pub key: DownloadTaskKey,

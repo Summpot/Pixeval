@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -18,9 +19,13 @@ using Avalonia.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Booru;
-using Pixeval.I18N;
+using Pixeval.Cache;
+using Pixeval.Config;
+using Pixeval.Localization;
+using Pixeval.Mako;
 using Pixeval.Utilities;
 using Pixeval.Services.Background;
+using Pixeval.Services.Media;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
 using SmoothScroll.Avalonia.Controls;
@@ -45,7 +50,6 @@ public sealed class ImageViewerRenderingTest
         await using var session = HeadlessUnitTestSession.StartNew(typeof(ViewerTestApplication));
         await session.Dispatch(() =>
         {
-            I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
             // Supply only the extension registry; do not initialize the real application's network/database services.
             using var extensions = new ExtensionService(null!, [], new HashSet<string>(), false);
             using var services = new ServiceCollection().AddSingleton(extensions).BuildServiceProvider();
@@ -55,15 +59,24 @@ public sealed class ImageViewerRenderingTest
             var previous = appProperty.GetValue(null);
             appProperty.SetValue(null, appModel);
             var window = new Window { Width = 800, Height = 600 };
+            using var mako = new MakoClient(new AppSettings().ToMakoConfiguration());
             try
             {
                 window.Show();
                 foreach (var size in new Size[] { new(640, 320), new(2000, 1000), new(500, 1000) })
                 {
-                    using var model = new SingleViewerViewModel("test", new BooruPost(
-                        "1", "md5", BooruPlatform.Danbooru, "https://example.com/test.jpg", null, null,
-                        100, 100, 0, "jpg", DateTimeOffset.UtcNow.ToString("o"), "1", "test",
-                        null, "general", [], null, false, 0, false, false, null), 0);
+                    using var model = new SingleViewerViewModel(
+                        "test",
+                        new BooruPost(
+                            "1", "md5", BooruPlatform.Danbooru, "https://example.com/test.jpg", null, null,
+                            100, 100, 0, "jpg", DateTimeOffset.UtcNow.ToString("o"), "1", "test",
+                            null, "general", [], null, false, 0, false, false, null),
+                        0,
+                        StubImageProvider.Instance,
+                        NullArtworkActionService.Instance,
+                        NullNotificationService.Instance,
+                        mako,
+                        extensions);
                     using var thumbnail = CreateSource(size);
                     if (sourceReadyBeforeAttachment)
                     {
@@ -274,6 +287,37 @@ public sealed class ImageViewerRenderingTest
             }
         Assert.IsTrue(right >= left && bottom >= top, "The image was not rendered.");
         return new(left, top, right - left + 1, bottom - top + 1);
+    }
+
+    private sealed class StubImageProvider : IImageProviderService
+    {
+        public static StubImageProvider Instance { get; } = new();
+
+        public ImageCache ImageCache => throw new NotSupportedException();
+        public Bitmap ImageNotAvailable => throw new NotSupportedException();
+        public IAnimatedBitmap AnimatedImageNotAvailable => throw new NotSupportedException();
+        public Stream? TryGetStream(string key) => null;
+        public ValueTask<IAnimatedBitmap> GetSingleImageAsync(string platform, string url, IProgress<double>? progress = null,
+            Action<DecodedPreviewFrame>? onPreview = null, CancellationToken token = default) =>
+            ValueTask.FromResult<IAnimatedBitmap>(null!);
+        public ValueTask<IAnimatedBitmap> GetSingleImageAsync(string platform, Uri frameUri, IProgress<double>? progress = null,
+            Action<DecodedPreviewFrame>? onPreview = null, CancellationToken token = default) =>
+            ValueTask.FromResult<IAnimatedBitmap>(null!);
+        public ValueTask<Bitmap> GetBitmapAsync(string platform, string key, IProgress<double>? progress = null,
+            int? desiredWidth = null, CancellationToken token = default) =>
+            ValueTask.FromResult<Bitmap>(null!);
+        public Task<IAnimatedBitmap> GetAnimatedBitmapAsync(string platform, string key, IProgress<double>? progress = null,
+            CancellationToken token = default) => Task.FromResult<IAnimatedBitmap>(null!);
+        public IAnimatedBitmap LoadAnimatedBitmap(Stream stream) => throw new NotSupportedException();
+        public ValueTask<IAnimatedBitmap> GetUgoiraAnimatedImageAsync(string platform, Uri zipUri, IReadOnlyList<int> delays,
+            IProgress<double>? progress = null, Action<DecodedPreviewFrame>? onPreview = null,
+            CancellationToken token = default) => throw new NotSupportedException();
+        public ValueTask<Stream?> GetImageStreamAsync(string platform, string key, IProgress<double>? progress = null,
+            CancellationToken token = default) => ValueTask.FromResult<Stream?>(null);
+        public bool TryCacheStream(string key, Stream stream) => false;
+        public Task PurgeCacheAsync(CancellationToken token = default) => Task.CompletedTask;
+        public Task EnforceCacheSizeLimitAsync(CancellationToken token = default) => Task.CompletedTask;
+        public void UpdateNetworkOptions(MakoConfigurationDto config) { }
     }
 
     public sealed class ViewerTestApplication : Application

@@ -15,7 +15,7 @@ namespace Pixeval.Services.Media;
 
 public interface IImageProviderService
 {
-    CacheEngine CacheEngine { get; }
+    ImageCache ImageCache { get; }
 
     Bitmap ImageNotAvailable { get; }
 

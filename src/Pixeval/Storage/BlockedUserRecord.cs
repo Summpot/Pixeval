@@ -3,7 +3,7 @@
 
 namespace Pixeval.Storage;
 
-public partial record BlockedUserRecord
+public partial record struct BlockedUserRecord
 {
     public string Name => UserName;
 

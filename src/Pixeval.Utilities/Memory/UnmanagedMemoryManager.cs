@@ -50,7 +50,6 @@ public sealed unsafe class UnmanagedMemoryManager<T> : MemoryManager<T>
     /// <summary>
     /// Create a new UnmanagedMemoryManager instance at the given pointer and size
     /// </summary>
-    [CLSCompliant(false)]
     public UnmanagedMemoryManager(T* pointer, int length)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(length);

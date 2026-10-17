@@ -1,0 +1,35 @@
+ActionButtonContentOpen = Открыть
+
+ActionButtonContentPause = Пауза
+
+ActionButtonContentResume = Возобновить
+
+ActionButtonContentRetry = Повторить
+
+CancelDownloadItem-Label = Отменить загрузку
+
+CheckErrorMessageInDetailItem-Label = Подробная информация об ошибке
+
+DownloadCancelled = Загрузка отменена
+
+ActionDownloadCancelled = Отмена
+
+DownloadCompleted = Загрузка завершена
+
+DownloadErrorMessageFormatted = { "Ошибка загрузки: " }{ $error }
+
+DownloadPaused = Загрузка приостановлена
+
+DownloadPending = Ожидание завершения обработки файла
+
+DownloadQueued = В очереди
+
+DownloadRunningFormatted = { "Прогресс загрузки: " }{ $progress }%
+
+ErrorMessageDialogTitle = Информация об ошибке
+
+GoToPageItem-Label = Перейти к странице
+
+OpenDownloadLocationItem-Label = Открыть папку скачивания
+
+ResetItem-Label = Перескачать

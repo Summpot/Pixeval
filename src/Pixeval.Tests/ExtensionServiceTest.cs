@@ -114,7 +114,7 @@ public sealed class ExtensionServiceTest
         _ = Directory.CreateDirectory(extensionsFolder);
         try
         {
-            using var engine = new Pixeval.Plugin.PluginHostEngine("5.0.0");
+            using var engine = new Pixeval.Plugin.PluginHost("5.0.0");
 
             var directFile = Path.Combine(extensionsFolder, "plugin.dll");
             File.WriteAllText(directFile, "test");
@@ -147,7 +147,7 @@ public sealed class ExtensionServiceTest
         _ = Directory.CreateDirectory(tempDir);
         try
         {
-            using var engine = new Pixeval.Plugin.PluginHostEngine("5.0.0");
+            using var engine = new Pixeval.Plugin.PluginHost("5.0.0");
             var fakePackage = Path.Combine(tempDir, "fake.unknown");
             File.WriteAllText(fakePackage, "not a plugin");
 

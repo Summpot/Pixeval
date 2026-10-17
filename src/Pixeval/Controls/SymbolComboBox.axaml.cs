@@ -18,8 +18,14 @@ using Pixeval.Config;
 
 namespace Pixeval.Controls;
 
-public record SymbolComboBoxItem(object Value, string Description, Symbol Symbol) : IReadOnlyStringPair<object>
+public record SymbolComboBoxItem(object Value, string Text, Symbol Symbol) : IReadOnlyStringPair<object>, System.ComponentModel.INotifyPropertyChanged
 {
+    public string? ResourceKey { get; init; }
+    private IDisposable? _languageSubscription;
+    public void EnableLocalization() => _languageSubscription ??= AppLocalization.Instance.Subscribe(RefreshLocalization);
+    public string Description => ResourceKey is null ? Text : Strings.GetString(ResourceKey);
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    public void RefreshLocalization() => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Description)));
     /// <inheritdoc />
     public override string ToString() => Description;
 
@@ -35,7 +41,7 @@ public record SymbolComboBoxItem(object Value, string Description, Symbol Symbol
                 key ??= typeof(TEnum);
                 if (!dict.TryGetValue(key, out var list))
                     dict[key] = list = [];
-                list.Add(new SymbolComboBoxItem(fieldInfo.GetValue(null)!, attribute.Resource, attribute.Symbol));
+                list.Add(new SymbolComboBoxItem(fieldInfo.GetValue(null)!, "", attribute.Symbol) { ResourceKey = attribute.Resource });
             }
 
         foreach (var (key, list) in dict)

@@ -3,6 +3,7 @@
 
 use thiserror::Error;
 
+#[boltffi::error]
 #[derive(Debug, Error, uniffi::Error)]
 pub enum StorageError {
     #[error("Database error: {message}")]

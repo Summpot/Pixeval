@@ -11,14 +11,14 @@ using FluentIcons.Avalonia;
 using FluentIcons.Common;
 using Microsoft.Win32.SafeHandles;
 using Pixeval.Extensions.Common;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 
 namespace Pixeval.Services.Background;
 
 public sealed partial class ExtensionsHostModel(
     IExtensionsHost host,
-    Dictionary<string, object?> values) : ObservableObject, IDisposable
+    Dictionary<string, object?> values) : Pixeval.ViewModels.ViewModelBase, IDisposable
 {
     public IExtensionsHost Host { get; } = host;
 
@@ -61,9 +61,9 @@ public sealed partial class ExtensionsHostModel(
     [NotifyPropertyChangedFor(nameof(UninstallCommandIcon))]
     public partial bool IsPendingUninstall { get; set; }
 
-    public string UninstallCommandLabel => I18NManager.GetResource(IsPendingUninstall
-        ? ExtensionsPageResources.CancelPendingUninstallExtensionsButton.Label
-        : ExtensionsPageResources.UninstallExtensionsButton.Label);
+    public string UninstallCommandLabel => Strings.GetString(IsPendingUninstall
+        ? nameof(Strings.ExtensionsPageCancelPendingUninstallExtensionsButtonLabel)
+        : nameof(Strings.ExtensionsPageUninstallExtensionsButtonLabel));
 
     public Symbol UninstallCommandIcon => IsPendingUninstall ? Symbol.Dismiss : Symbol.Delete;
 

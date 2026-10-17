@@ -6,7 +6,7 @@ namespace Pixeval.Config;
 public static class NavigationMenuYaml
 {
     public const string DefaultYaml =
-        $"""
+        """
          newTab: Home
 
          header:
@@ -16,14 +16,14 @@ public static class NavigationMenuYaml
            - page: WorkBookmarks
            - page: Series
            - page: UserRecommended
-           - folder: "${NavigationSettingsPageResources.WorkFolderTitle}"
+           - folder: "$NavigationSettingsPage.WorkFolderTitle"
              icon: DesignIdeas
              children:
                - page: WorkFollowing
                - page: WorkMyPixiv
                - page: WorkNew
                - page: Spotlight
-           - folder: "${NavigationSettingsPageResources.UserFolderTitle}"
+           - folder: "$NavigationSettingsPage.UserFolderTitle"
              icon: PeopleTeam
              children:
                - page: UserFollowing

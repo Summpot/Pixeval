@@ -1,8 +1,10 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System.Collections.Generic;
 using Pixeval.Config;
 using Pixeval.Mako;
+using Pixeval.Pixiv;
 using Pixeval.Storage;
 using Pixeval.Utilities;
 
@@ -33,8 +35,7 @@ public static class WorkSubscriptionHelper
         StorageEngine storageEngine,
         IWorkSubscriptionService subscriptions,
         Series? seriesDetail = null,
-        IWorkEntry? firstWork = null,
-        IFetchEngine<IWorkEntry>? sourceEngine = null)
+        IWorkEntry? firstWork = null)
     {
         var title = seriesDetail?.Title ?? firstWork?.Title ?? "";
         var avatar = seriesDetail?.CoverUrl ?? firstWork?.GetThumbnailUrl() ?? "";
@@ -46,20 +47,19 @@ public static class WorkSubscriptionHelper
             title,
             author,
             avatar);
-        return TryAddOrUpdate(subscription, storageEngine, subscriptions, sourceEngine);
+        return TryAddOrUpdate(subscription, storageEngine, subscriptions);
     }
 
     private static bool TryAddOrUpdate(
         WorkSubscriptionRecord subscription,
         StorageEngine storageEngine,
-        IWorkSubscriptionService subscriptions,
-        IFetchEngine<IWorkEntry>? sourceEngine = null)
+        IWorkSubscriptionService subscriptions)
     {
         if (subscription.Id is 0)
             return false;
 
         var saved = storageEngine.UpsertSubscription(subscription);
-        subscriptions.QueueInitialSync(saved, sourceEngine);
+        subscriptions.QueueSyncSubscription(saved);
         return true;
     }
 }

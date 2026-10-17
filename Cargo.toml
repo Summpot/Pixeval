@@ -42,6 +42,7 @@ pixeval_update = { path = "crates/pixeval_update" }
 async-compat = { version = "0.2", features = ["multi-thread"] }
 axum = { version = "0.8", default-features = false, features = ["tokio", "http1", "json", "query"] }
 bytes = "1"
+boltffi = { version = "=0.31.0", default-features = false }
 chrono = "0.4"
 flate2 = "1.0"
 foyer = "0.22"

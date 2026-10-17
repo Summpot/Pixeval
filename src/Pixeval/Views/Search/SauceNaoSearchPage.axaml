@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Search.SauceNaoSearchPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
@@ -10,13 +11,11 @@
     xmlns:pixeval="using:Pixeval"
     xmlns:viewModels="using:Pixeval.ViewModels.Search"
     x:DataType="{x:Type viewModels:SauceNaoSearchPageViewModel}"
-    Header="{I18N {x:Static pixeval:SearchResources+AdvancedOptions.SauceNaoTab}}"
+    DataContext="{markup:Service Type={x:Type viewModels:SauceNaoSearchPageViewModel}}"
+    Header="{CompiledBinding [Search-AdvancedOptions-SauceNaoTab], Source={x:Static loc:LocalizationManager.Instance}}"
     mc:Ignorable="d"
     d:DesignHeight="450"
     d:DesignWidth="800">
-    <ContentPage.DataContext>
-        <viewModels:SauceNaoSearchPageViewModel />
-    </ContentPage.DataContext>
     <DockPanel
         Margin="12"
         IsEnabled="{Binding IsApiKeyExisted}"
@@ -25,13 +24,13 @@
             DockPanel.Dock="Top"
             IsVisible="{Binding !IsApiKeyExisted}"
             Mode="Warning"
-            Text="{I18N {x:Static pixeval:SearchResources+SauceNAO.ProvideApiKey}}" />
+            Text="{CompiledBinding [Search-SauceNAO-ProvideApiKey], Source={x:Static loc:LocalizationManager.Instance}}" />
         <Grid RowDefinitions="Auto,*,Auto" RowSpacing="{m3:Token {x:Static m3:MaterialTokens+Comp+ButtonGroup.Spacing}}">
             <Button
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center"
                 Click="SearchButton_OnClick"
-                Content="{I18N {x:Static pixeval:SearchResources+SauceNAO.Search}}"
+                Content="{CompiledBinding [Search-SauceNAO-Search], Source={x:Static loc:LocalizationManager.Instance}}"
                 IsEnabled="{Binding FileSelected}" />
             <m3:Card
                 Grid.Row="1"
@@ -48,7 +47,7 @@
                             Data="{markup:SvgPath {x:Static pixeval:SvgResources.SauceNAO}}" />
                         <TextBlock
                             m3:MaterialText.Style="{m3:Typography TitleLarge}"
-                            Text="{I18N {x:Static pixeval:SearchResources+SauceNAO.ProvideImage}}"
+                            Text="{CompiledBinding [Search-SauceNAO-ProvideImage], Source={x:Static loc:LocalizationManager.Instance}}"
                             TextAlignment="Center" />
                     </StackPanel>
                     <Image Source="{Binding Image}" />
@@ -60,7 +59,7 @@
                 HorizontalContentAlignment="Center"
                 Command="{Binding PasteCommand}"
                 CommandParameter="{Binding $self}"
-                Content="{I18N {x:Static pixeval:SearchResources+SauceNAO.PasteFromClipboard}}" />
+                Content="{CompiledBinding [Search-SauceNAO-PasteFromClipboard], Source={x:Static loc:LocalizationManager.Instance}}" />
         </Grid>
     </DockPanel>
 </ContentPage>

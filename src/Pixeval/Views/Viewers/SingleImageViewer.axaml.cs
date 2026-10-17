@@ -92,6 +92,7 @@ public partial class SingleImageViewer : UserControl
 
         _subscribedViewModel = viewModel;
         viewModel.AttachPreview();
+        _ = viewModel.LoadOriginalImageAsync();
         viewModel.PropertyChanged += ViewModelOnPropertyChanged;
         QueueViewUpdate();
     }

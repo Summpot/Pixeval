@@ -392,7 +392,7 @@ mod tests {
 
     #[test]
     fn test_filter_completion_engine_builtin_syntax() {
-        let engine = FilterCompletionEngine::new();
+        let engine = FilterSession::new();
         let res = engine.analyze("#sky @Alice +ai".to_string(), -1);
         assert!(res.is_success);
         assert!(res.has_query);
@@ -419,7 +419,7 @@ mod tests {
 
     #[test]
     fn test_filter_completion_engine_context_and_completed_text() {
-        let engine = FilterCompletionEngine::new();
+        let engine = FilterSession::new();
         engine.set_session_candidates(
             vec![
                 ArtworkTag::new("touhou", Some("东方".to_string())),
@@ -474,7 +474,7 @@ mod tests {
 
     #[test]
     fn test_filter_completion_engine_storage_history() {
-        let engine = FilterCompletionEngine::with_provider(Some(Box::new(MockStorageProvider)), None);
+        let engine = FilterSession::with_provider(Some(Box::new(MockStorageProvider)), None);
         let res = engine.analyze("#gen".to_string(), 4);
         assert!(!res.completions.is_empty());
         let genshin_item = res.completions.iter().find(|c| c.display_text == "genshin");

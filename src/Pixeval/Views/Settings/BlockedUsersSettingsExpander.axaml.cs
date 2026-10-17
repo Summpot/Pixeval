@@ -10,8 +10,7 @@ using AutoSettingsPage.Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using CommunityToolkit.Avalonia.Controls;
-using Microsoft.Extensions.DependencyInjection;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Config;
 using Pixeval.Storage;
 using Pixeval.Utilities;
@@ -68,13 +67,13 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
         HideError();
         if (!long.TryParse(TargetIdTextBox.Text, out var userId) || userId <= 0)
         {
-            ShowError(I18NManager.GetResource(BlockedUsersSettingsExpanderResources.InvalidUserId));
+            ShowError(Strings.BlockedUsersSettingsExpanderInvalidUserId());
             return;
         }
 
         try
         {
-            var user = (await this.GetRequiredUiService<MakoClient>().GetUserFromIdAsync(userId)).User;
+            var user = (await this.GetRequiredUiService<MakoClient>().GetUserDetailAsync(userId)).User;
             this.GetRequiredUiService<StorageEngine>().AddOrUpdateBlockedUser(BlockedContentModelHelper.CreateBlockedUserRecord(user));
             TargetIdTextBox.Text = "";
             await ReloadAsync();
@@ -108,7 +107,7 @@ public partial class BlockedUsersSettingsExpander : SettingsExpander, IEntryCont
     {
         try
         {
-            var user = (await this.GetRequiredUiService<MakoClient>().GetUserFromIdAsync(item.Id)).User;
+            var user = (await this.GetRequiredUiService<MakoClient>().GetUserDetailAsync(item.Id)).User;
             var entry = this.GetRequiredUiService<StorageEngine>().AddOrUpdateBlockedUser(BlockedContentModelHelper.CreateBlockedUserRecord(user));
             ReplaceUser(entry);
         }

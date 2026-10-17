@@ -11,15 +11,15 @@ public record ThumbnailLayoutSettings
 {
     public ThumbnailLayoutType ThumbnailLayoutType { get; set; } = ThumbnailLayoutType.LinedFlow;
 
-    [SettingsEntry(Symbol.AutoFitHeight, AppSettingsResources.IllustrationLinedFlowItemHeightEntry.Header, AppSettingsResources.IllustrationLinedFlowItemHeightEntry.Description)]
+    [SettingsEntry(Symbol.AutoFitHeight, nameof(Strings.AppSettingsIllustrationLinedFlowItemHeightEntryHeader), nameof(Strings.AppSettingsIllustrationLinedFlowItemHeightEntryDescription))]
     public int IllustrationLinedFlowItemHeight { get; set; } = 200;
 
-    [SettingsEntry(Symbol.AutoFitWidth, AppSettingsResources.IllustrationGridItemSizeEntry.Header, AppSettingsResources.IllustrationGridItemSizeEntry.Description)]
+    [SettingsEntry(Symbol.AutoFitWidth, nameof(Strings.AppSettingsIllustrationGridItemSizeEntryHeader), nameof(Strings.AppSettingsIllustrationGridItemSizeEntryDescription))]
     public int IllustrationGridItemSize { get; set; } = 150;
 
-    [SettingsEntry(Symbol.AutoFitHeight, AppSettingsResources.IllustrationGridLineSizeEntry.Header, AppSettingsResources.IllustrationGridLineSizeEntry.Description)]
+    [SettingsEntry(Symbol.AutoFitHeight, nameof(Strings.AppSettingsIllustrationGridLineSizeEntryHeader), nameof(Strings.AppSettingsIllustrationGridLineSizeEntryDescription))]
     public int IllustrationGridLineSize { get; set; } = 200;
 
-    [SettingsEntry(Symbol.AutoFitWidth, AppSettingsResources.IllustrationMasonryColumnWidthEntry.Header, AppSettingsResources.IllustrationMasonryColumnWidthEntry.Description)]
+    [SettingsEntry(Symbol.AutoFitWidth, nameof(Strings.AppSettingsIllustrationMasonryColumnWidthEntryHeader), nameof(Strings.AppSettingsIllustrationMasonryColumnWidthEntryDescription))]
     public int IllustrationMasonryColumnWidth { get; set; } = 250;
 }

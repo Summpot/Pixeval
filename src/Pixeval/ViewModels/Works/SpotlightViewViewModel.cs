@@ -7,4 +7,11 @@ namespace Pixeval.ViewModels.Works;
 
 public sealed class SpotlightViewViewModel : EntryViewViewModel<SpotlightArticle, SpotlightArticle>
 {
+    public SpotlightViewViewModel() : this(null)
+    {
+    }
+
+    public SpotlightViewViewModel(IBlockedContentService? blockedContent) : base(blockedContent)
+    {
+    }
 }

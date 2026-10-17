@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DownloadTaskKey {
     pub destination: String,

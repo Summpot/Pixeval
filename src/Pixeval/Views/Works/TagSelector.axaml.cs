@@ -10,7 +10,6 @@ using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Pixiv;
 using Pixeval.Utilities;
 
@@ -20,21 +19,21 @@ public partial class TagSelector : UserControl
 {
     public event EventHandler<TagSelector, (bool isPrivate, IReadOnlyList<string> tags)>? TagsSelected;
 
-    public SimpleWorkType WorkType { get; init; }
+    public SimpleWorkKind WorkKind { get; init; } = SimpleWorkKind.Illustration;
 
     public long WorkId { get; init; }
 
-    public static readonly DirectProperty<TagSelector, AvaloniaList<BookmarkTag>> TagsSourceProperty =
-        AvaloniaProperty.RegisterDirect<TagSelector, AvaloniaList<BookmarkTag>>(nameof(TagsSource), t => t.TagsSource,
+    public static readonly DirectProperty<TagSelector, AvaloniaList<IBookmarkTag>> TagsSourceProperty =
+        AvaloniaProperty.RegisterDirect<TagSelector, AvaloniaList<IBookmarkTag>>(nameof(TagsSource), t => t.TagsSource,
             (t, v) => t.TagsSource = v);
 
-    public AvaloniaList<BookmarkTag> TagsSource
+    public AvaloniaList<IBookmarkTag> TagsSource
     {
         get;
         set => SetAndRaise(TagsSourceProperty, ref field, value);
     } = [];
 
-    public AvaloniaList<BookmarkTag> SelectedTags { get; } = new()
+    public AvaloniaList<IBookmarkTag> SelectedTags { get; } = new()
     {
         Validate = t =>
         {
@@ -68,7 +67,7 @@ public partial class TagSelector : UserControl
 
     private void OnConfirmClick(object? sender, RoutedEventArgs e)
     {
-        TagsSelected?.Invoke(this, (IsPrivate, [.. SelectedTags.Select(t => t.Name)]));
+        TagsSelected?.Invoke(this, (IsPrivate, [.. SelectedTags.Select(static t => t.Name).OfType<string>()]));
     }
 
     private void OnListBoxSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -91,22 +90,22 @@ public partial class TagSelector : UserControl
         {
             if (WorkId is 0)
             {
-                var publicTagsTask = GetTagsAsync(PrivacyPolicy.Public);
-                var privateTagsTask = GetTagsAsync(PrivacyPolicy.Private);
+                var publicTagsTask = GetTagsAsync(PrivacyRestrict.Public);
+                var privateTagsTask = GetTagsAsync(PrivacyRestrict.Private);
                 await Task.WhenAll(publicTagsTask, privateTagsTask);
-                var tagSource = publicTagsTask.Result;
-                tagSource.AddRange(privateTagsTask.Result);
+                var tagSource = new AvaloniaList<IBookmarkTag>(publicTagsTask.Result.Cast<IBookmarkTag>());
+                tagSource.AddRange(privateTagsTask.Result.Cast<IBookmarkTag>());
                 tagSource.Add(GetAddTag());
                 TagsSource = tagSource;
             }
             else
             {
                 var makoClient = this.GetRequiredUiService<MakoClient>();
-                var bookmarkDetail = await makoClient.GetWorkBookmarkDetailAsync(WorkType, WorkId);
-                IsPrivate = bookmarkDetail.Restrict.Equals("private", StringComparison.OrdinalIgnoreCase);
+                var bookmarkDetail = await makoClient.GetBookmarkDetailUnifiedAsync(WorkKind, WorkId);
+                IsPrivate = bookmarkDetail.Restrict is PrivacyRestrict.Private;
                 var tags = bookmarkDetail.Tags.Select(BookmarkDetailBookmarkTag.Create).ToArray();
-                TagsSource = [.. tags, GetAddTag()];
-                SelectedTags.AddRange(tags.Where(t => t.IsRegistered));
+                TagsSource = [.. tags.Cast<IBookmarkTag>(), GetAddTag()];
+                SelectedTags.AddRange(tags.Where(t => t.IsRegistered).Cast<IBookmarkTag>());
             }
         }
         finally
@@ -116,13 +115,13 @@ public partial class TagSelector : UserControl
 
         return;
 
-        async Task<AvaloniaList<BookmarkTag>> GetTagsAsync(PrivacyPolicy policy)
+        async Task<AvaloniaList<BookmarkTag>> GetTagsAsync(PrivacyRestrict policy)
         {
             var session = this.GetUiService<IUserSessionService>();
             var myId = session?.CurrentUserId ?? 0;
             var makoClient = this.GetRequiredUiService<MakoClient>();
             return myId > 0
-                ? [.. await makoClient.WorkBookmarkTags(WorkType, myId, policy).ToListAsync(token)]
+                ? [.. await makoClient.GetBookmarkTagsAsync(myId, WorkKind, policy, token)]
                 : [];
         }
     }

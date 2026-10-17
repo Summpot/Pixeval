@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Viewers.IllustrationViewerPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:common="using:FluentIcons.Common"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -254,7 +255,7 @@
                                                                                                   x:TypeArguments=common:Symbol}}"
                                         IsChecked="{Binding CurrentImage.CurrentPage.IsPlaying, Mode=TwoWay, FallbackValue={x:False}}"
                                         IsEnabled="{Binding CurrentImage.CurrentPage.LoadSuccessfully, FallbackValue={x:False}}"
-                                        Label="{I18N {x:Static pixeval:MiscResources.Play}}">
+                                        Label="{CompiledBinding [Misc-Play], Source={x:Static loc:LocalizationManager.Instance}}">
                                         <CommandBarToggleButton.IsVisible>
                                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                                                 <Binding FallbackValue="False" Path="IsPicGif" />
@@ -266,29 +267,29 @@
                                         Command="{Binding CurrentImage.CurrentPage.RotateCounterclockwiseCommand, FallbackValue={x:Null}}"
                                         Icon="{markup:SymbolIcon ArrowRotateCounterclockwise}"
                                         IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}"
-                                        Label="{I18N {x:Static pixeval:EntryViewerPageResources.RotateCounterclockwise}}" />
+                                        Label="{CompiledBinding [EntryViewerPage-RotateCounterclockwise], Source={x:Static loc:LocalizationManager.Instance}}" />
                                     <CommandBarToggleButton
                                         Command="{Binding CurrentImage.CurrentPage.MirrorCommand, FallbackValue={x:Null}}"
                                         Icon="{markup:SymbolIcon FlipHorizontal}"
                                         IsChecked="{Binding CurrentImage.CurrentPage.IsMirrored, Mode=TwoWay, FallbackValue={x:False}}"
                                         IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}"
-                                        Label="{I18N {x:Static pixeval:EntryViewerPageResources.Mirror}}" />
+                                        Label="{CompiledBinding [EntryViewerPage-Mirror], Source={x:Static loc:LocalizationManager.Instance}}" />
                                     <CommandBarButton
                                         Command="{Binding CurrentImage.CurrentPage.RotateClockwiseCommand, FallbackValue={x:Null}}"
                                         Icon="{markup:SymbolIcon ArrowRotateClockwise}"
                                         IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}"
-                                        Label="{I18N {x:Static pixeval:EntryViewerPageResources.RotateClockwise}}" />
+                                        Label="{CompiledBinding [EntryViewerPage-RotateClockwise], Source={x:Static loc:LocalizationManager.Instance}}" />
                                     <CommandBarSeparator x:Name="SwipeTransformSeparator" IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}" />
                                     <CommandBarButton
                                         Command="{Binding CurrentImage.CurrentPage.ZoomOutCommand, FallbackValue={x:Null}}"
                                         Icon="{markup:SymbolIcon ZoomOut}"
                                         IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}"
-                                        Label="{I18N {x:Static pixeval:EntryViewerPageResources.ZoomOut}}" />
+                                        Label="{CompiledBinding [EntryViewerPage-ZoomOut], Source={x:Static loc:LocalizationManager.Instance}}" />
                                     <CommandBarButton
                                         Command="{Binding #I.ImageViewer.ZoomOutCommand}"
                                         Icon="{markup:SymbolIcon ZoomOut}"
                                         IsVisible="{Binding #I.IsSwipeMode, Converter={x:Static BoolConverters.Not}, Mode=OneTime}"
-                                        Label="{I18N {x:Static pixeval:EntryViewerPageResources.ZoomOut}}" />
+                                        Label="{CompiledBinding [EntryViewerPage-ZoomOut], Source={x:Static loc:LocalizationManager.Instance}}" />
                                     <controls:CommandBarElementContainer IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}">
                                         <TextBlock Text="{Binding CurrentImage.CurrentPage.ZoomFactor, StringFormat={}{0:P0}, FallbackValue=100%}" />
                                     </controls:CommandBarElementContainer>
@@ -305,74 +306,74 @@
                                         Command="{Binding CurrentImage.CurrentPage.ZoomInCommand, FallbackValue={x:Null}}"
                                         Icon="{markup:SymbolIcon ZoomIn}"
                                         IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}"
-                                        Label="{I18N {x:Static pixeval:EntryViewerPageResources.ZoomIn}}" />
+                                        Label="{CompiledBinding [EntryViewerPage-ZoomIn], Source={x:Static loc:LocalizationManager.Instance}}" />
                                     <CommandBarButton
                                         Command="{Binding #I.ImageViewer.ZoomInCommand}"
                                         Icon="{markup:SymbolIcon ZoomIn}"
                                         IsVisible="{Binding #I.IsSwipeMode, Converter={x:Static BoolConverters.Not}, Mode=OneTime}"
-                                        Label="{I18N {x:Static pixeval:EntryViewerPageResources.ZoomIn}}" />
+                                        Label="{CompiledBinding [EntryViewerPage-ZoomIn], Source={x:Static loc:LocalizationManager.Instance}}" />
                                     <CommandBarButton
                                         Command="{Binding CurrentImage.CurrentPage.ZoomToOriginalCommand, FallbackValue={x:Null}}"
                                         Icon="{markup:SymbolIcon RatioOneToOne}"
                                         IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}"
-                                        Label="{I18N {x:Static pixeval:EntryViewerPageResources.ZoomToOriginal}}" />
+                                        Label="{CompiledBinding [EntryViewerPage-ZoomToOriginal], Source={x:Static loc:LocalizationManager.Instance}}" />
                                     <CommandBarButton
                                         Command="{Binding #I.ImageViewer.ZoomToOriginalCommand}"
                                         Icon="{markup:SymbolIcon RatioOneToOne}"
                                         IsVisible="{Binding #I.IsSwipeMode, Converter={x:Static BoolConverters.Not}, Mode=OneTime}"
-                                        Label="{I18N {x:Static pixeval:EntryViewerPageResources.ZoomToOriginal}}" />
+                                        Label="{CompiledBinding [EntryViewerPage-ZoomToOriginal], Source={x:Static loc:LocalizationManager.Instance}}" />
                                     <CommandBarButton
                                         Command="{Binding #I.SwipeImageViewer.CurrentPage.ZoomToFitCommand, FallbackValue={x:Null}}"
                                         Icon="{markup:SymbolIcon PageFit}"
                                         IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}"
-                                        Label="{I18N {x:Static pixeval:EntryViewerPageResources.ZoomToFit}}" />
+                                        Label="{CompiledBinding [EntryViewerPage-ZoomToFit], Source={x:Static loc:LocalizationManager.Instance}}" />
                                     <CommandBarSeparator />
                                     <CommandBarToggleButton
                                         Icon="{markup:SymbolIcon SlidePlay}"
                                         IsChecked="{Binding IsAutoPlaying}"
-                                        Label="{I18N {x:Static pixeval:EntryViewerPageResources.AutoPlay}}">
+                                        Label="{CompiledBinding [EntryViewerPage-AutoPlay], Source={x:Static loc:LocalizationManager.Instance}}">
                                         <CommandBarToggleButton.ContextMenu>
                                             <ContextMenu Opened="AutoPlayMenuFlyout_OnOpened">
                                                 <MenuItem
                                                     x:Name="AutoPlayInterval1SecondMenuItem"
                                                     Click="AutoPlayIntervalMenuItem_OnClick"
                                                     GroupName="AutoPlayInterval"
-                                                    Header="{I18N {x:Static pixeval:EntryViewerPageResources+AutoPlayInterval.Seconds1}}"
+                                                    Header="{CompiledBinding [EntryViewerPage-AutoPlayInterval-Seconds1], Source={x:Static loc:LocalizationManager.Instance}}"
                                                     Tag="{markup1:Int32 1}"
                                                     ToggleType="Radio" />
                                                 <MenuItem
                                                     x:Name="AutoPlayInterval3SecondsMenuItem"
                                                     Click="AutoPlayIntervalMenuItem_OnClick"
                                                     GroupName="AutoPlayInterval"
-                                                    Header="{I18N {x:Static pixeval:EntryViewerPageResources+AutoPlayInterval.Seconds3}}"
+                                                    Header="{CompiledBinding [EntryViewerPage-AutoPlayInterval-Seconds3], Source={x:Static loc:LocalizationManager.Instance}}"
                                                     Tag="{markup1:Int32 3}"
                                                     ToggleType="Radio" />
                                                 <MenuItem
                                                     x:Name="AutoPlayInterval5SecondsMenuItem"
                                                     Click="AutoPlayIntervalMenuItem_OnClick"
                                                     GroupName="AutoPlayInterval"
-                                                    Header="{I18N {x:Static pixeval:EntryViewerPageResources+AutoPlayInterval.Seconds5}}"
+                                                    Header="{CompiledBinding [EntryViewerPage-AutoPlayInterval-Seconds5], Source={x:Static loc:LocalizationManager.Instance}}"
                                                     Tag="{markup1:Int32 5}"
                                                     ToggleType="Radio" />
                                                 <MenuItem
                                                     x:Name="AutoPlayInterval10SecondsMenuItem"
                                                     Click="AutoPlayIntervalMenuItem_OnClick"
                                                     GroupName="AutoPlayInterval"
-                                                    Header="{I18N {x:Static pixeval:EntryViewerPageResources+AutoPlayInterval.Seconds10}}"
+                                                    Header="{CompiledBinding [EntryViewerPage-AutoPlayInterval-Seconds10], Source={x:Static loc:LocalizationManager.Instance}}"
                                                     Tag="{markup1:Int32 10}"
                                                     ToggleType="Radio" />
                                                 <MenuItem
                                                     x:Name="AutoPlayInterval15SecondsMenuItem"
                                                     Click="AutoPlayIntervalMenuItem_OnClick"
                                                     GroupName="AutoPlayInterval"
-                                                    Header="{I18N {x:Static pixeval:EntryViewerPageResources+AutoPlayInterval.Seconds15}}"
+                                                    Header="{CompiledBinding [EntryViewerPage-AutoPlayInterval-Seconds15], Source={x:Static loc:LocalizationManager.Instance}}"
                                                     Tag="{markup1:Int32 15}"
                                                     ToggleType="Radio" />
                                                 <MenuItem
                                                     x:Name="AutoPlayInterval30SecondsMenuItem"
                                                     Click="AutoPlayIntervalMenuItem_OnClick"
                                                     GroupName="AutoPlayInterval"
-                                                    Header="{I18N {x:Static pixeval:EntryViewerPageResources+AutoPlayInterval.Seconds30}}"
+                                                    Header="{CompiledBinding [EntryViewerPage-AutoPlayInterval-Seconds30], Source={x:Static loc:LocalizationManager.Instance}}"
                                                     Tag="{markup1:Int32 30}"
                                                     ToggleType="Radio" />
                                                 <Separator />
@@ -380,14 +381,14 @@
                                                     x:Name="AutoPlaySequentialModeMenuItem"
                                                     Click="AutoPlayModeMenuItem_OnClick"
                                                     GroupName="AutoPlayMode"
-                                                    Header="{I18N {x:Static pixeval:EnumResources+IllustrationViewerAutoPlayMode.Sequential}}"
+                                                    Header="{CompiledBinding [Enum-IllustrationViewerAutoPlayMode-Sequential], Source={x:Static loc:LocalizationManager.Instance}}"
                                                     Tag="{x:Static options:IllustrationViewerAutoPlayMode.Sequential}"
                                                     ToggleType="Radio" />
                                                 <MenuItem
                                                     x:Name="AutoPlayLoopPlaybackModeMenuItem"
                                                     Click="AutoPlayModeMenuItem_OnClick"
                                                     GroupName="AutoPlayMode"
-                                                    Header="{I18N {x:Static pixeval:EnumResources+IllustrationViewerAutoPlayMode.Loop}}"
+                                                    Header="{CompiledBinding [Enum-IllustrationViewerAutoPlayMode-Loop], Source={x:Static loc:LocalizationManager.Instance}}"
                                                     Tag="{x:Static options:IllustrationViewerAutoPlayMode.Loop}"
                                                     ToggleType="Radio" />
                                                 <Separator />
@@ -395,14 +396,14 @@
                                                     x:Name="AutoPlayCurrentWorkScopeMenuItem"
                                                     Click="AutoPlayScopeMenuItem_OnClick"
                                                     GroupName="AutoPlayScope"
-                                                    Header="{I18N {x:Static pixeval:EnumResources+IllustrationViewerAutoPlayScope.CurrentWork}}"
+                                                    Header="{CompiledBinding [Enum-IllustrationViewerAutoPlayScope-CurrentWork], Source={x:Static loc:LocalizationManager.Instance}}"
                                                     Tag="{x:Static options:IllustrationViewerAutoPlayScope.CurrentWork}"
                                                     ToggleType="Radio" />
                                                 <MenuItem
                                                     x:Name="AutoPlayAllWorksScopeMenuItem"
                                                     Click="AutoPlayScopeMenuItem_OnClick"
                                                     GroupName="AutoPlayScope"
-                                                    Header="{I18N {x:Static pixeval:EnumResources+IllustrationViewerAutoPlayScope.AllWorks}}"
+                                                    Header="{CompiledBinding [Enum-IllustrationViewerAutoPlayScope-AllWorks], Source={x:Static loc:LocalizationManager.Instance}}"
                                                     Tag="{x:Static options:IllustrationViewerAutoPlayScope.AllWorks}"
                                                     ToggleType="Radio" />
                                             </ContextMenu>

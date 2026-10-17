@@ -12,8 +12,7 @@ use super::tokens::{
 };
 
 pub const IMAGE_NOT_AVAILABLE: &str = "avares://Pixeval/Assets/image-not-available.png";
-pub const ILLUSTRATION_SERIALIZE_KEY: &str = "Mako.Model.Illustration";
-pub const NOVEL_SERIALIZE_KEY: &str = "Mako.Model.Novel";
+pub use pixeval_storage::{ILLUSTRATION_SERIALIZE_KEY, NOVEL_SERIALIZE_KEY};
 
 #[derive(Clone, Debug)]
 pub struct PlannedFile {
@@ -162,7 +161,7 @@ pub fn macro_context_for_illustration(
     subscription_id: Option<i64>,
     subscription_type: Option<String>,
 ) -> MacroContext {
-    let is_gif = illust.illust_type.eq_ignore_ascii_case("ugoira");
+    let is_gif = illust.illust_type.is_ugoira();
     let is_set = illust.page_count > 1 || page_index > -1;
     let image_type = if is_set {
         "ImageSet"
@@ -197,8 +196,8 @@ pub fn macro_context_for_novel(
     subscription_id: Option<i64>,
     subscription_type: Option<String>,
 ) -> MacroContext {
-    let is_r18g = novel.x_restrict == 2;
-    let is_r18 = novel.x_restrict == 1 || is_r18g;
+    let is_r18g = novel.x_restrict.is_r18g();
+    let is_r18 = novel.x_restrict.is_r18();
     MacroContext {
         artwork_id: novel.id.to_string(),
         title: novel.title.clone(),
@@ -219,17 +218,16 @@ pub fn macro_context_for_novel(
     }
 }
 
-fn rating_flags(x_restrict: i32, attributes: Option<&[String]>) -> (bool, bool) {
-    let mut guro = x_restrict == 2;
-    let mut explicit = x_restrict == 1 || guro;
-    if let Some(attributes) = attributes {
-        if attributes.iter().any(|a| a.eq_ignore_ascii_case("r18g")) {
-            guro = true;
-            explicit = true;
-        } else if attributes.iter().any(|a| a.eq_ignore_ascii_case("r18")) {
-            explicit = true;
-        }
-    }
+fn rating_flags(
+    x_restrict: pixeval_mako::XRestrict,
+    attributes: Option<&[pixeval_mako::RestrictionFlag]>,
+) -> (bool, bool) {
+    let rating = pixeval_mako::safe_rating_kind(x_restrict, attributes, 0);
+    let guro = matches!(rating, pixeval_mako::SafeRatingKind::Guro);
+    let explicit = matches!(
+        rating,
+        pixeval_mako::SafeRatingKind::Explicit | pixeval_mako::SafeRatingKind::Guro
+    );
     (guro, explicit)
 }
 
@@ -240,7 +238,7 @@ pub fn build_illustration(
     destination: String,
     format_token: String,
 ) -> WorkBlueprint {
-    let is_gif = illust.illust_type.eq_ignore_ascii_case("ugoira") && page_index < 0;
+    let is_gif = illust.illust_type.is_ugoira() && page_index < 0;
     let is_manga = (illust.page_count > 1 || illust.meta_pages.len() > 1) && page_index < 0 && !is_gif;
     let thumb = illust
         .image_urls
@@ -624,7 +622,6 @@ pub fn read_page_index(json: &str) -> i32 {
     };
     value
         .get("set_index")
-        .or_else(|| value.get("SetIndex"))
         .and_then(|v| v.as_i64())
         .map(|v| v as i32)
         .unwrap_or(-1)
@@ -662,16 +659,16 @@ pub fn plan_pixiv(
     let sub_id = (subscription_id != 0).then_some(subscription_id);
     let sub_type = (!subscription_type.is_empty()).then(|| subscription_type.to_string());
     if is_novel {
-        let novel: Novel = flex_deserialize(&stored)?;
+        let novel: Novel = serde_json::from_str(&stored).map_err(|err| format!("Invalid artwork payload: {err}"))?;
         let context = macro_context_for_novel(&novel, sub_id, sub_type);
         let destination = reduce_destination(path_macro, base_dir, &context)?;
         return Ok(build_novel(&novel, stored, destination, policy.novel_format.clone()));
     }
 
-    let illust: Illustration = flex_deserialize(&stored)?;
+    let illust: Illustration = serde_json::from_str(&stored).map_err(|err| format!("Invalid artwork payload: {err}"))?;
     let context = macro_context_for_illustration(&illust, page_index, sub_id, sub_type);
     let destination = reduce_destination(path_macro, base_dir, &context)?;
-    let is_gif = illust.illust_type.eq_ignore_ascii_case("ugoira") && page_index < 0;
+    let is_gif = illust.illust_type.is_ugoira() && page_index < 0;
     let mut token = if is_gif {
         policy.ugoira_format.clone()
     } else {
@@ -689,9 +686,10 @@ pub fn replan_stored(
     format_token: &str,
     serialize_key: Option<&str>,
 ) -> Result<WorkBlueprint, String> {
-    let key = serialize_key.unwrap_or("");
-    if key.contains("Novel") {
-        let novel: Novel = flex_deserialize(payload_json)?;
+    let key = serialize_key.ok_or_else(|| "Missing artwork type".to_string())?;
+    let payload = pixeval_storage::hydrate(Some(key), payload_json).ok_or_else(|| "Unsupported or invalid artwork payload".to_string())?;
+    if key == NOVEL_SERIALIZE_KEY {
+        let novel: Novel = serde_json::from_str(payload_json).map_err(|err| format!("Invalid artwork payload: {err}"))?;
         return Ok(build_novel(
             &novel,
             payload_json.to_string(),
@@ -699,11 +697,11 @@ pub fn replan_stored(
             format_token.to_string(),
         ));
     }
-    if key.contains("Illustration") || payload_has_illust_type(payload_json) {
-        let illust: Illustration = flex_deserialize(payload_json)?;
+    if key == ILLUSTRATION_SERIALIZE_KEY {
+        let illust: Illustration = serde_json::from_str(payload_json).map_err(|err| format!("Invalid artwork payload: {err}"))?;
         let page_index = read_page_index(payload_json);
         let mut token = format_token.to_string();
-        if illust.illust_type.eq_ignore_ascii_case("ugoira")
+        if illust.illust_type.is_ugoira()
             && page_index < 0
             && token == "Mp4"
             && !pixeval_media::is_mp4_supported()
@@ -718,86 +716,24 @@ pub fn replan_stored(
             token,
         ));
     }
-    Ok(build_external_from_json(payload_json, destination, format_token, key))
-}
-
-fn payload_has_illust_type(json: &str) -> bool {
-    let Ok(value) = serde_json::from_str::<serde_json::Value>(json) else {
-        return false;
-    };
-    value.get("type").is_some()
-        || value.get("Type").is_some()
-        || value.get("illust_type").is_some()
-        || value.get("IllustType").is_some()
-}
-
-pub fn build_external_from_json(
-    payload_json: &str,
-    destination: &str,
-    format_token: &str,
-    serialize_key: &str,
-) -> WorkBlueprint {
-    let value: serde_json::Value = serde_json::from_str(payload_json).unwrap_or(serde_json::Value::Null);
-    let artwork_id = json_string(
-        &value,
-        &["id", "Id", "artwork_id", "ArtworkId", "raw_id", "RawId", "index_id", "IndexId"],
-    );
-    let title = json_string(&value, &["title", "Title", "source", "Source", "index_name", "IndexName"]);
-    let author = json_string(&value, &["author", "Author", "author_name", "AuthorName", "uploader_name", "UploaderName"]);
-    let thumbnail = json_string(
-        &value,
-        &["thumbnail_url", "ThumbnailUrl", "preview_url", "PreviewUrl", "sample_url", "SampleUrl"],
-    );
-    let original = json_string(
-        &value,
-        &[
-            "original_url",
-            "OriginalUrl",
-            "sample_url",
-            "SampleUrl",
-            "preview_url",
-            "PreviewUrl",
-            "thumbnail_url",
-            "ThumbnailUrl",
-        ],
-    );
-    let website = json_string(&value, &["website_uri", "WebsiteUri", "source_url", "SourceUrl"]);
-    let app = json_string(&value, &["app_uri", "AppUri"]);
-    let website = if website.is_empty() {
-        booru_website(&json_string(&value, &["platform", "Platform"]), &artwork_id)
-    } else {
-        website
-    };
-    build_external(
-        artwork_id,
-        title,
-        author,
-        thumbnail,
-        website,
-        app,
-        original,
-        payload_json.to_string(),
-        serialize_key.to_string(),
-        destination.to_string(),
-        format_token.to_string(),
-    )
-}
-
-fn json_string(value: &serde_json::Value, names: &[&str]) -> String {
-    for name in names {
-        if let Some(found) = value.get(*name) {
-            if let Some(text) = found.as_str() {
-                if !text.is_empty() {
-                    return text.to_string();
-                }
-            } else if let Some(number) = found.as_i64() {
-                return number.to_string();
-            } else if let Some(number) = found.as_u64() {
-                return number.to_string();
-            }
+    let blueprint = match payload {
+        pixeval_storage::ArtworkPayload::Booru { post } => {
+            let original = if post.original_url.is_empty() { post.sample_url.clone().or(post.preview_url.clone()).unwrap_or_default() } else { post.original_url.clone() };
+            build_external(post.id.clone(), post.source.unwrap_or_default(), post.uploader_name,
+                post.preview_url.or(post.sample_url).unwrap_or_else(|| original.clone()),
+                booru_website(post.platform.as_str(), &post.id), format!("pixeval://{}/{}", post.platform.as_str(), post.id),
+                original, payload_json.to_string(), key.to_string(), destination.to_string(), format_token.to_string())
         }
-    }
-    String::new()
+        pixeval_storage::ArtworkPayload::SauceNao { item } => {
+            let id = item.artwork_id.clone().filter(|id| !id.is_empty()).unwrap_or_else(|| item.index_id.to_string());
+            let website = item.source_url.or_else(|| item.ext_urls.first().cloned()).unwrap_or_default();
+            let original = if website.is_empty() { item.thumbnail_url.clone() } else { website.clone() };
+            build_external(id, item.title, item.author_name, item.thumbnail_url,
+                website, String::new(), original, payload_json.to_string(), key.to_string(), destination.to_string(), format_token.to_string())
+        }
+        _ => return Err("Unsupported artwork type".to_string()),
+    };
+    Ok(blueprint)
 }
 
 fn booru_website(platform: &str, id: &str) -> String {
@@ -805,11 +741,11 @@ fn booru_website(platform: &str, id: &str) -> String {
         return String::new();
     }
     match platform.to_ascii_lowercase().as_str() {
-        "danbooru" | "0" => format!("https://danbooru.donmai.us/posts/{id}"),
-        "gelbooru" | "1" => format!("https://gelbooru.com/index.php?page=post&s=view&id={id}"),
-        "yandere" | "2" => format!("https://yande.re/post/show/{id}"),
-        "sankaku" | "3" => format!("https://chan.sankakucomplex.com/posts/show/{id}"),
-        "rule34" | "4" => format!("https://rule34.xxx/index.php?page=post&s=view&id={id}"),
+        "danbooru" => format!("https://danbooru.donmai.us/posts/{id}"),
+        "gelbooru" => format!("https://gelbooru.com/index.php?page=post&s=view&id={id}"),
+        "yandere" => format!("https://yande.re/post/show/{id}"),
+        "sankaku" => format!("https://chan.sankakucomplex.com/posts/show/{id}"),
+        "rule34" => format!("https://rule34.xxx/index.php?page=post&s=view&id={id}"),
         _ => String::new(),
     }
 }
@@ -830,50 +766,6 @@ fn join_path(folder: &str, name: &str) -> String {
     std::path::Path::new(folder).join(name).to_string_lossy().to_string()
 }
 
-pub fn flex_deserialize<T: serde::de::DeserializeOwned>(json: &str) -> Result<T, String> {
-    let value: serde_json::Value = serde_json::from_str(json).map_err(|err| err.to_string())?;
-    let normalized = normalize_json(value);
-    serde_json::from_value(normalized).map_err(|err| err.to_string())
-}
-
-fn normalize_json(value: serde_json::Value) -> serde_json::Value {
-    match value {
-        serde_json::Value::Object(map) => {
-            let mut next = serde_json::Map::new();
-            for (key, child) in map {
-                let mut snake = pascal_to_snake(&key);
-                if snake == "illust_type" {
-                    snake = "type".to_string();
-                }
-                next.insert(snake, normalize_json(child));
-            }
-            serde_json::Value::Object(next)
-        }
-        serde_json::Value::Array(items) => {
-            serde_json::Value::Array(items.into_iter().map(normalize_json).collect())
-        }
-        other => other,
-    }
-}
-
-fn pascal_to_snake(key: &str) -> String {
-    if key.chars().any(|c| c == '_') || key.chars().all(|c| !c.is_ascii_uppercase()) {
-        return key.to_string();
-    }
-    let mut out = String::new();
-    for (index, ch) in key.chars().enumerate() {
-        if ch.is_ascii_uppercase() {
-            if index > 0 {
-                out.push('_');
-            }
-            out.push(ch.to_ascii_lowercase());
-        } else {
-            out.push(ch);
-        }
-    }
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -887,7 +779,7 @@ mod tests {
         Illustration {
             id: 42,
             title: "Title".to_string(),
-            illust_type: "illust".to_string(),
+            illust_type: pixeval_mako::IllustContentType::Illustration,
             image_urls: ImageUrls { large: Some("https://i.pximg.net/img-original/img/a.jpg".into()), ..ImageUrls::default() },
             user: user(),
             create_date: "2020-01-02T03:04:05+00:00".into(),
@@ -933,7 +825,7 @@ mod tests {
     #[test]
     fn ugoira_frame_urls_follow_ugoira0_replacement() {
         let mut illust = sample_illust();
-        illust.illust_type = "ugoira".into();
+        illust.illust_type = pixeval_mako::IllustContentType::Ugoira;
         illust.page_count = 1;
         illust.meta_pages.clear();
         illust.meta_single_page.original_image_url = Some("https://i.pximg.net/img-original/img/1_ugoira0.jpg".into());
@@ -989,11 +881,10 @@ mod tests {
     }
 
     #[test]
-    fn pascal_case_illustration_payload_deserializes() {
-        let json = r#"{"Id":5,"Title":"T","IllustType":"illust","ImageUrls":{"Large":"https://example.com/a.jpg"},"User":{"Id":1,"Name":"A","Account":"a"},"CreateDate":"2020-01-01T00:00:00+00:00"}"#;
-        let illust: Illustration = flex_deserialize(json).unwrap();
-        assert_eq!(illust.id, 5);
-        assert_eq!(illust.illust_type, "illust");
-        assert_eq!(illust.user.name, "A");
+    fn rejects_missing_or_unknown_artwork_type() {
+        let json = serde_json::to_string(&sample_illust()).unwrap();
+        for key in [None, Some("Illustration"), Some("UnknownNovel"), Some("unknown")] {
+            assert!(replan_stored(&json, "a.jpg", "Original", key).is_err());
+        }
     }
 }

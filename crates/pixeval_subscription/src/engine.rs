@@ -7,7 +7,7 @@ use parking_lot::Mutex;
 use tokio_util::sync::CancellationToken;
 
 use pixeval_download::DownloadManager;
-use pixeval_mako::MakoClient;
+use pixeval_mako::{MakoClient, WorkEntry};
 use pixeval_storage::{StorageEngine, WorkSubscriptionRecord};
 
 use crate::models::*;
@@ -48,13 +48,23 @@ struct EngineInner {
     is_daemon_running: bool,
 }
 
+impl Drop for EngineInner {
+    fn drop(&mut self) {
+        if let Some(cb) = self.callback.take() {
+            SUBSCRIPTION_RUNTIME.spawn(async move {
+                drop(cb);
+            });
+        }
+    }
+}
+
 #[derive(Clone, uniffi::Object)]
-pub struct SubscriptionSyncEngine {
+pub struct SubscriptionSync {
     inner: Arc<Mutex<EngineInner>>,
 }
 
 #[uniffi::export]
-impl SubscriptionSyncEngine {
+impl SubscriptionSync {
     #[uniffi::constructor]
     pub fn new(
         duplicate_stop_threshold: Option<u32>,
@@ -199,7 +209,12 @@ impl SubscriptionSyncEngine {
 
     pub fn record_work_processed(&self, subscription_id: i64, is_duplicate: bool) -> bool {
         let mut inner = self.inner.lock();
-        Self::record_work_processed_internal(&mut inner, subscription_id, is_duplicate)
+        let stopped = Self::record_work_processed_internal(&mut inner, subscription_id, is_duplicate);
+        let count = inner.duplicate_counts.get(&subscription_id).copied().unwrap_or(0);
+        let callback = inner.callback.clone();
+        drop(inner);
+        if stopped { if let Some(cb) = callback { cb.on_duplicate_stopped(subscription_id, count); } }
+        stopped
     }
 
     pub fn reset_duplicate_counter(&self, subscription_id: i64) {
@@ -222,7 +237,9 @@ impl SubscriptionSyncEngine {
             status: fetch_status,
         };
         inner.fetch_states.insert(subscription_id, state.clone());
-        if let Some(ref cb) = inner.callback {
+        let callback = inner.callback.clone();
+        drop(inner);
+        if let Some(cb) = callback {
             cb.on_fetch_state_changed(state);
         }
     }
@@ -233,10 +250,8 @@ impl SubscriptionSyncEngine {
     }
 
     pub fn notify_item_fetched(&self, item: SubscriptionDownloadItem) {
-        let inner = self.inner.lock();
-        if let Some(ref cb) = inner.callback {
-            cb.on_item_fetched(item);
-        }
+        let callback = self.inner.lock().callback.clone();
+        if let Some(cb) = callback { cb.on_item_fetched(item); }
     }
 
     pub fn get_pending_count(&self) -> u32 {
@@ -258,10 +273,9 @@ impl SubscriptionSyncEngine {
         inner.daemon_cancel = Some(cancel.clone());
         inner.daemon_interval_secs = interval_secs.max(1);
         inner.is_daemon_running = true;
-        if let Some(ref cb) = inner.callback {
-            cb.on_daemon_state_changed(true);
-        }
+        let callback = inner.callback.clone();
         drop(inner);
+        if let Some(cb) = callback { cb.on_daemon_state_changed(true); }
 
         let clone = self.clone();
         SUBSCRIPTION_RUNTIME.spawn(async move {
@@ -295,9 +309,9 @@ impl SubscriptionSyncEngine {
             let mut inner = clone.inner.lock();
             if inner.is_daemon_running {
                 inner.is_daemon_running = false;
-                if let Some(ref cb) = inner.callback {
-                    cb.on_daemon_state_changed(false);
-                }
+                let callback = inner.callback.clone();
+                drop(inner);
+                if let Some(cb) = callback { cb.on_daemon_state_changed(false); }
             }
         });
     }
@@ -310,9 +324,9 @@ impl SubscriptionSyncEngine {
         inner.daemon_cancel = None;
         if inner.is_daemon_running {
             inner.is_daemon_running = false;
-            if let Some(ref cb) = inner.callback {
-                cb.on_daemon_state_changed(false);
-            }
+            let callback = inner.callback.clone();
+            drop(inner);
+            if let Some(cb) = callback { cb.on_daemon_state_changed(false); }
         }
     }
 
@@ -332,7 +346,17 @@ impl SubscriptionSyncEngine {
     }
 }
 
-impl SubscriptionSyncEngine {
+impl SubscriptionSync {
+    fn commit_metadata(
+        storage: &StorageEngine, sub: &WorkSubscriptionRecord, name: String, account: String,
+        avatar: String, callback: Option<&dyn SubscriptionProgressCallback>,
+    ) -> Result<WorkSubscriptionRecord, pixeval_storage::StorageError> {
+        let record = storage.upsert_subscription(sub.id, sub.subscription_type, sub.work_kind,
+            name, account, avatar)?;
+        if let Some(cb) = callback { cb.on_subscription_updated(record.clone()); }
+        Ok(record)
+    }
+
     fn record_work_processed_internal(
         inner: &mut EngineInner,
         subscription_id: i64,
@@ -344,10 +368,6 @@ impl SubscriptionSyncEngine {
         if is_duplicate {
             *count += 1;
             if *count >= threshold {
-                let duplicate_count = *count;
-                if let Some(ref cb) = inner.callback {
-                    cb.on_duplicate_stopped(subscription_id, duplicate_count);
-                }
                 return true;
             }
             false
@@ -381,9 +401,9 @@ impl SubscriptionSyncEngine {
                     inner.is_running = false;
                     inner.active_request = None;
                     inner.active_sub_cancel = None;
-                    if let Some(ref cb) = inner.callback {
-                        cb.on_sync_finished();
-                    }
+                    let callback = inner.callback.clone();
+                    drop(inner);
+                    if let Some(cb) = callback { cb.on_sync_finished(); }
                     break;
                 }
                 match inner.queue.try_dequeue() {
@@ -402,9 +422,9 @@ impl SubscriptionSyncEngine {
                         inner.is_running = false;
                         inner.active_request = None;
                         inner.active_sub_cancel = None;
-                        if let Some(ref cb) = inner.callback {
-                            cb.on_sync_finished();
-                        }
+                        let callback = inner.callback.clone();
+                        drop(inner);
+                        if let Some(cb) = callback { cb.on_sync_finished(); }
                         break;
                     }
                 }
@@ -558,6 +578,7 @@ impl SubscriptionSyncEngine {
                 status: SubscriptionStatus::Fetching,
             };
             g.fetch_states.insert(history_id, state.clone());
+            drop(g);
             if let Some(cb) = callback {
                 cb.on_fetch_state_changed(state);
             }
@@ -575,23 +596,7 @@ impl SubscriptionSyncEngine {
                         .medium
                         .or(user_resp.user.profile_image_urls.px_170x170)
                         .unwrap_or_default();
-                    if storage
-                        .upsert_subscription(
-                            sub.id,
-                            sub.subscription_type,
-                            sub.work_kind,
-                            name.clone(),
-                            account.clone(),
-                            avatar.clone(),
-                            String::new(),
-                            None,
-                        )
-                        .is_ok()
-                    {
-                        if let Some(cb) = callback {
-                            cb.on_subscription_updated(history_id, name, account, avatar);
-                        }
-                    }
+                    let _ = Self::commit_metadata(&storage, &sub, name, account, avatar, callback);
                 }
             }
         }
@@ -620,7 +625,11 @@ impl SubscriptionSyncEngine {
                         break 'outer_novel;
                     }
 
-                    let payload_json = serde_json::to_string(&novel).unwrap_or_default();
+                    let Ok((_, payload_json)) = pixeval_storage::serialize(&pixeval_storage::ArtworkPayload::Work {
+                        entry: WorkEntry::NovelWork {
+                            novel: novel.clone(),
+                        },
+                    }) else { continue; };
                     let probe = download.plan_pixiv_probe(
                         payload_json.clone(),
                         true,
@@ -636,6 +645,7 @@ impl SubscriptionSyncEngine {
                         .any(|path| std::path::Path::new(path).is_file());
 
                     let is_dup = storage
+                        .download()
                         .contains_subscription_download_identity(
                             history_id,
                             novel.id.to_string(),
@@ -651,6 +661,7 @@ impl SubscriptionSyncEngine {
 
                     if is_dup {
                         if is_fused {
+                            if let Some(cb) = callback { cb.on_duplicate_stopped(history_id, config.duplicate_stop_threshold); }
                             break 'outer_novel;
                         }
                         continue;
@@ -693,6 +704,7 @@ impl SubscriptionSyncEngine {
                             status: SubscriptionStatus::Fetching,
                         };
                         g.fetch_states.insert(history_id, state.clone());
+            drop(g);
                         if let Some(cb) = callback {
                             cb.on_item_fetched(item);
                             cb.on_fetch_state_changed(state);
@@ -728,7 +740,11 @@ impl SubscriptionSyncEngine {
                         break 'outer_illust;
                     }
 
-                    let payload_json = serde_json::to_string(&illust).unwrap_or_default();
+                    let Ok((_, payload_json)) = pixeval_storage::serialize(&pixeval_storage::ArtworkPayload::Work {
+                        entry: WorkEntry::Illust {
+                            illustration: illust.clone(),
+                        },
+                    }) else { continue; };
                     let probe = download.plan_pixiv_probe(
                         payload_json.clone(),
                         false,
@@ -744,6 +760,7 @@ impl SubscriptionSyncEngine {
                         .any(|path| std::path::Path::new(path).is_file());
 
                     let is_dup = storage
+                        .download()
                         .contains_subscription_download_identity(
                             history_id,
                             illust.id.to_string(),
@@ -759,6 +776,7 @@ impl SubscriptionSyncEngine {
 
                     if is_dup {
                         if is_fused {
+                            if let Some(cb) = callback { cb.on_duplicate_stopped(history_id, config.duplicate_stop_threshold); }
                             break 'outer_illust;
                         }
                         continue;
@@ -801,6 +819,7 @@ impl SubscriptionSyncEngine {
                             status: SubscriptionStatus::Fetching,
                         };
                         g.fetch_states.insert(history_id, state.clone());
+            drop(g);
                         if let Some(cb) = callback {
                             cb.on_item_fetched(item);
                             cb.on_fetch_state_changed(state);
@@ -826,11 +845,39 @@ impl SubscriptionSyncEngine {
                 status: final_status,
             };
             g.fetch_states.insert(history_id, state.clone());
+            drop(g);
             if let Some(cb) = callback {
                 cb.on_fetch_state_changed(state);
             }
         }
 
         total_fetched
+    }
+}
+
+#[cfg(test)]
+mod metadata_tests {
+    use super::*;
+    struct Callback { storage: Arc<StorageEngine>, observed: std::sync::Mutex<Vec<WorkSubscriptionRecord>> }
+    impl SubscriptionProgressCallback for Callback {
+        fn on_fetch_state_changed(&self, _: SubscriptionFetchState) {}
+        fn on_subscription_updated(&self, record: WorkSubscriptionRecord) {
+            let persisted = self.storage.get_subscription_by_history_id(record.history_entry_id).unwrap().unwrap();
+            assert_eq!(persisted, record);
+            self.observed.lock().unwrap().push(record);
+        }
+        fn on_item_fetched(&self, _: SubscriptionDownloadItem) {}
+        fn on_duplicate_stopped(&self, _: i64, _: u32) {}
+        fn on_sync_finished(&self) {}
+        fn on_new_works_ingested(&self, _: u32) {}
+        fn on_daemon_state_changed(&self, _: bool) {}
+    }
+    #[test]
+    fn metadata_callback_can_read_the_committed_record() {
+        let storage = Arc::new(StorageEngine::new(":memory:".into()).unwrap());
+        let sub = storage.upsert_subscription(42, 0, 0, "".into(), "".into(), "".into()).unwrap();
+        let callback = Callback { storage: storage.clone(), observed: Default::default() };
+        let record = SubscriptionSync::commit_metadata(&storage, &sub, "name".into(), "account".into(), "avatar".into(), Some(&callback)).unwrap();
+        assert_eq!(callback.observed.lock().unwrap().as_slice(), &[record]);
     }
 }

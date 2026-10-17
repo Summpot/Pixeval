@@ -13,6 +13,7 @@ pub use error::*;
 pub use models::*;
 pub use queue::*;
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn compute_subscription_folder_snapshot(
     subscription_id: i64,
@@ -137,7 +138,7 @@ mod tests {
 
     #[test]
     fn test_duplicate_stop_fuse() {
-        let engine = SubscriptionSyncEngine::new(Some(3), None);
+        let engine = SubscriptionSync::new(Some(3), None);
 
         // 1st duplicate
         assert!(!engine.record_work_processed(1, true));
@@ -156,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_queue_superseding_and_deduplication() {
-        let engine = SubscriptionSyncEngine::new(None, None);
+        let engine = SubscriptionSync::new(None, None);
 
         assert!(engine.queue_sync_subscription(1));
         assert!(!engine.queue_sync_subscription(1)); // duplicate rejected
@@ -176,7 +177,7 @@ mod tests {
 
     #[test]
     fn test_fetch_state_lifecycle() {
-        let engine = SubscriptionSyncEngine::new(None, None);
+        let engine = SubscriptionSync::new(None, None);
 
         engine.set_fetch_state(42, 1, 30, SubscriptionStatus::Fetching);
         let state = engine.get_fetch_state(42).unwrap();
@@ -193,7 +194,7 @@ mod tests {
 
     #[test]
     fn test_cancellation_and_config_update() {
-        let engine = SubscriptionSyncEngine::new(Some(5), None);
+        let engine = SubscriptionSync::new(Some(5), None);
         assert!(!engine.is_sync_in_progress());
 
         let config = SubscriptionSyncConfig {
@@ -220,7 +221,7 @@ mod tests {
 
     impl SubscriptionProgressCallback for TestCallback {
         fn on_fetch_state_changed(&self, _state: SubscriptionFetchState) {}
-        fn on_subscription_updated(&self, _id: i64, _name: String, _acc: String, _av: String) {}
+        fn on_subscription_updated(&self, _record: pixeval_storage::WorkSubscriptionRecord) {}
         fn on_item_fetched(&self, _item: SubscriptionDownloadItem) {}
         fn on_duplicate_stopped(&self, _id: i64, _count: u32) {}
         fn on_sync_finished(&self) {}
@@ -232,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_daemon_lifecycle() {
-        let engine = SubscriptionSyncEngine::new(None, None);
+        let engine = SubscriptionSync::new(None, None);
         assert!(!engine.is_daemon_running());
         assert_eq!(engine.get_daemon_interval(), 1800);
 
@@ -253,7 +254,7 @@ mod tests {
         let cb = TestCallback {
             daemon_states: std::sync::Arc::clone(&daemon_states),
         };
-        let engine = SubscriptionSyncEngine::new(None, Some(Box::new(cb)));
+        let engine = SubscriptionSync::new(None, Some(Box::new(cb)));
 
         engine.start_daemon(10);
         assert!(engine.is_daemon_running());

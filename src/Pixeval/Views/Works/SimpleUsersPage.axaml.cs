@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Interactivity;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 using Pixeval.Utilities;
@@ -58,13 +58,13 @@ public abstract partial class SimpleUsersPage : IconContentPage
     protected void ChangeSource()
     {
         if (!(_sourcePending = !EnsureServices()))
-            ResetEngine(GetFetchEngine(_client!));
+            ResetSource(GetSource(_client!));
     }
 
-    private void ResetEngine(IAsyncEnumerable<User> fetchEngine) =>
-        (UserContainer.UserView.DataContext as UserViewViewModel)?.ResetEngine(fetchEngine);
+    private void ResetSource(IAsyncEnumerable<User> fetchEngine) =>
+        (UserContainer.UserView.DataContext as UserViewViewModel)?.ResetSource(fetchEngine);
 
-    protected abstract IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient);
+    protected abstract IAsyncEnumerable<User> GetSource(MakoClient makoClient);
 }
 
 public class UserRecommendedPage : SimpleUsersPage
@@ -79,7 +79,7 @@ public class UserRecommendedPage : SimpleUsersPage
         InitializeSource(viewModel);
     }
 
-    protected override IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
+    protected override IAsyncEnumerable<User> GetSource(MakoClient makoClient)
     {
         return makoClient.UserRecommended();
     }
@@ -96,12 +96,14 @@ public class UserSearchResultPage : SimpleUsersPage
     public UserSearchResultPage(string? searchText, MakoClient client, IUserSessionService session, UserViewViewModel? viewModel = null)
         : base(client, session)
     {
-        Header = I18NManager.GetResource(MainPageResources.SearchResultFormatted, searchText);
+        Header = Strings.MainPageSearchResultFormatted(searchText: searchText);
+        var languageSubscription = AppLocalization.Instance.Subscribe(() => Header = Strings.MainPageSearchResultFormatted(searchText: searchText));
+        Pixeval.ViewModels.ViewModelDisposal.Register(this, languageSubscription);
         _searchText = searchText;
         InitializeSource(viewModel);
     }
 
-    protected override IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
+    protected override IAsyncEnumerable<User> GetSource(MakoClient makoClient)
     {
         if (_searchText is null)
             return AsyncEnumerable.Empty<User>();
@@ -121,7 +123,7 @@ public class UserFollowerPage : SimpleUsersPage
         InitializeSource(viewModel);
     }
 
-    protected override IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
+    protected override IAsyncEnumerable<User> GetSource(MakoClient makoClient)
     {
         var myId = CurrentUserId;
         if (myId <= 0)
@@ -183,7 +185,7 @@ public class UserMyPixivPage : SimpleUsersPage
         ChangeSource();
     }
 
-    protected override IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
+    protected override IAsyncEnumerable<User> GetSource(MakoClient makoClient)
     {
         if (_userId <= 0)
             return AsyncEnumerable.Empty<User>();
@@ -230,7 +232,7 @@ public class RelatedUsersPage : SimpleUsersPage
         ChangeSource();
     }
 
-    protected override IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
+    protected override IAsyncEnumerable<User> GetSource(MakoClient makoClient)
     {
         if (_userId <= 0)
             return AsyncEnumerable.Empty<User>();
@@ -252,7 +254,7 @@ public class BookmarkUsersPage : SimpleUsersPage
         ChangeSource();
     }
 
-    protected override async IAsyncEnumerable<User> GetFetchEngine(MakoClient makoClient)
+    protected override async IAsyncEnumerable<User> GetSource(MakoClient makoClient)
     {
         if (_workId <= 0)
             yield break;

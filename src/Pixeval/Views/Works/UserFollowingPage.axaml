@@ -1,6 +1,7 @@
 <views:IconContentPage
     x:Class="Pixeval.Views.Works.UserFollowingPage"
     xmlns="https://github.com/avaloniaui"
+    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -16,7 +17,7 @@
         <entry:UserContainer.CommandBarElements>
             <controls:SymbolComboBox
                 x:Name="PrivacyPolicyComboBox"
-                ItemsSource="{markup1:EnumResources x:TypeArguments=enum:PrivacyPolicy}"
+                ItemsSource="{markup1:EnumResources x:TypeArguments=nativeMako:PrivacyRestrict}"
                 SelectionChanged="WorkTypeComboBox_OnSelectionChanged" />
         </entry:UserContainer.CommandBarElements>
     </entry:UserContainer>

@@ -11,7 +11,7 @@ namespace Pixeval.Config;
 
 public record DownloadSettingsGroup
 {
-    [SettingsEntry(Symbol.Rename, AppSettingsResources.DownloadPathMacroEntry.Header, AppSettingsResources.DownloadPathMacroEntry.Description)]
+    [SettingsEntry(Symbol.Rename, nameof(Strings.AppSettingsDownloadPathMacroEntryHeader), nameof(Strings.AppSettingsDownloadPathMacroEntryDescription))]
     public string DownloadPathMacro { get; set; } = Path.Join(
         GetSpecialFolder(),
         "@{is_group?@{group_id}:}",
@@ -19,26 +19,26 @@ public record DownloadSettingsGroup
         "[@{artist_name}] @{id}@{is_pic_set?p@{pic_set_index}:}.@{ext}"
     );
 
-    [SettingsEntry(Symbol.TextPeriodAsterisk, AppSettingsResources.WorkDownloadFormatEntry.Header, AppSettingsResources.WorkDownloadFormatEntry.Description)]
+    [SettingsEntry(Symbol.TextPeriodAsterisk, nameof(Strings.AppSettingsWorkDownloadFormatEntryHeader), nameof(Strings.AppSettingsWorkDownloadFormatEntryDescription))]
     public DownloadFormatsSettings DownloadFormats { get; set; } = new();
 
-    [SettingsEntry(Symbol.ImageSplit, AppSettingsResources.OverwriteDownloadedFileEntry.Header, AppSettingsResources.OverwriteDownloadedFileEntry.Description)]
+    [SettingsEntry(Symbol.ImageSplit, nameof(Strings.AppSettingsOverwriteDownloadedFileEntryHeader), nameof(Strings.AppSettingsOverwriteDownloadedFileEntryDescription))]
     public bool OverwriteDownloadedFile { get; set; }
 
     /// <summary>
     /// The max download tasks that are allowed to run concurrently
     /// </summary>
-    [SettingsEntry(Symbol.DeveloperBoardLightning, AppSettingsResources.MaxDownloadConcurrencyLevelEntry.Header, AppSettingsResources.MaxDownloadConcurrencyLevelEntry.Description)]
+    [SettingsEntry(Symbol.DeveloperBoardLightning, nameof(Strings.AppSettingsMaxDownloadConcurrencyLevelEntryHeader), nameof(Strings.AppSettingsMaxDownloadConcurrencyLevelEntryDescription))]
     public int MaxDownloadTaskConcurrencyLevel { get; set; } = Environment.ProcessorCount / 4;
 
-    [SettingsEntry(Symbol.Clock, AppSettingsResources.EnableSubscriptionDaemonEntry.Header, AppSettingsResources.EnableSubscriptionDaemonEntry.Description)]
+    [SettingsEntry(Symbol.Clock, nameof(Strings.AppSettingsEnableSubscriptionDaemonEntryHeader), nameof(Strings.AppSettingsEnableSubscriptionDaemonEntryDescription))]
     public bool EnableSubscriptionDaemon { get; set; } = true;
 
-    [SettingsEntry(Symbol.Timer, AppSettingsResources.SubscriptionDaemonIntervalMinutesEntry.Header, AppSettingsResources.SubscriptionDaemonIntervalMinutesEntry.Description)]
+    [SettingsEntry(Symbol.Timer, nameof(Strings.AppSettingsSubscriptionDaemonIntervalMinutesEntryHeader), nameof(Strings.AppSettingsSubscriptionDaemonIntervalMinutesEntryDescription))]
     public int SubscriptionDaemonIntervalMinutes { get; set; } = 30;
 
     [JsonIgnore]
-    [SettingsEntry(Symbol.FolderSync, AppSettingsResources.WorkSubscriptionsSettingsEntry.Header, AppSettingsResources.WorkSubscriptionsSettingsEntry.Description)]
+    [SettingsEntry(Symbol.FolderSync, nameof(Strings.AppSettingsWorkSubscriptionsSettingsEntryHeader), nameof(Strings.AppSettingsWorkSubscriptionsSettingsEntryDescription))]
     public byte WorkSubscriptions => 0;
 
     private static string GetSpecialFolder()

@@ -20,7 +20,7 @@ public partial class WorkMyPixivPage : IconContentPage
     {
     }
 
-    public WorkMyPixivPage(SimpleWorkType simpleWorkType, MakoClient client, IWorkViewViewModel? viewModel = null)
+    public WorkMyPixivPage(SimpleWorkKind simpleWorkType, MakoClient client, IWorkViewViewModel? viewModel = null)
     {
         _client = client;
         InitializeComponent();
@@ -43,8 +43,8 @@ public partial class WorkMyPixivPage : IconContentPage
 
     private void ChangeSource()
     {
-        var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
-        var engine = _client.WorkMyPixiv(workType);
-        WorkContainer.ResetEngine(engine);
+        var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>();
+        var engine = _client.WorkMypixivUnified(workType);
+        WorkContainer.ResetSource(engine.AsObjects(), workType);
     }
 }

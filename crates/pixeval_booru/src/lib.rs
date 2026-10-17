@@ -14,6 +14,7 @@ pub use models::{
     BooruPlatform, BooruPost, BooruPostPreview, BooruSearchResult, BooruTag, normalize_rating,
 };
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn booru_ping() -> String {
     "booru_pong".to_string()

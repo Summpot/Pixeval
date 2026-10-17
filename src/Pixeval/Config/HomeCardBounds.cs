@@ -3,7 +3,7 @@
 
 namespace Pixeval.Config;
 
-public partial record HomeCardBounds
+public partial record struct HomeCardBounds
 {
     public static HomeCardBounds From(HomePageCardLayout card) => new(card.Column, card.Row, card.ColumnSpan, card.RowSpan);
 

@@ -33,7 +33,7 @@ public partial class WorkSeriesInfoPane : UserControl
             || this.AppNavigation is not { } navigator)
             return;
 
-        navigator.CreateSeriesPage(viewModel.WorkType, viewModel.Id);
+        navigator.CreateSeriesPage(viewModel.WorkKind, viewModel.Id);
     }
 
     private void NavigationButton_OnClick(object? sender, RoutedEventArgs e)
@@ -43,7 +43,7 @@ public partial class WorkSeriesInfoPane : UserControl
             || this.AppNavigation is not { } navigator)
             return;
 
-        if (viewModel.WorkType is SimpleWorkType.Novel)
+        if (viewModel.WorkKind is SimpleWorkKind.Novel)
             navigator.CreateNovelPage(navigation.Id);
         else if (navigation.Illustration is { } illustration)
             navigator.CreateIllustrationPage(illustration);

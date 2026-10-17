@@ -14,9 +14,10 @@ using FluentIcons.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Config;
 using Pixeval.Services.Core;
+using Pixeval.Services.Update;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Settings;
@@ -34,15 +35,15 @@ public sealed class ViewerSubPageCompositionTest
         await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerRenderingTest.ViewerTestApplication));
         await session.Dispatch(() =>
         {
-            I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
             var previousServices = App.Services;
             var services = new ServiceCollection()
                 .AddSingleton(new NavigationMenuDocument(NavigationMenuYaml.DefaultYaml))
+                .AddSingleton(new GitHubService(new NetworkSettingsGroup()))
                 .BuildServiceProvider();
             App.Services = services;
             try
             {
-                var service = new NavigationService();
+                var service = new NavigationService(services);
                 var group = new EmptySettingsGroup();
 
                 Assert.IsInstanceOfType<AboutPage>(service.CreatePage(typeof(AboutPage)));

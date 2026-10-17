@@ -1,0 +1,7 @@
+AddSubscriptionButton-Label = Добавить подписку
+
+SyncAllSubscriptionsButton-Label = Синхронизировать все подписки
+
+TargetIdTextBox-PlaceholderText = ID пользователя или серии
+
+InvalidTargetId = Введите корректный ID пользователя или серии

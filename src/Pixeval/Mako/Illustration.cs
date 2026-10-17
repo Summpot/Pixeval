@@ -6,13 +6,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
-using Pixeval.I18N;
+using Pixeval.Filters;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
-using Pixeval.Storage;
 
 namespace Pixeval.Mako;
 
-public partial record Illustration : IWorkEntry, IArtworkSerializable
+public partial record struct Illustration : IWorkEntry
 {
     [JsonIgnore]
     public bool IsBookmarkSupported => !BlockedContentHelper.IsBlockedPlaceholder(this) && Platform is PlatformConstants.Pixiv;
@@ -27,7 +27,7 @@ public partial record Illustration : IWorkEntry, IArtworkSerializable
     public string? SizeText => Width > 0 && Height > 0 ? $"{Width} x {Height}" : null;
 
     [JsonIgnore]
-    public string? ThumbnailUrl => ImageUrls?.Medium ?? ImageUrls?.SquareMedium ?? ImageUrls?.Large;
+    public string? ThumbnailUrl => ImageUrls.Medium ?? ImageUrls.SquareMedium ?? ImageUrls.Large;
 
     [JsonIgnore]
     public string Tooltip
@@ -36,9 +36,9 @@ public partial record Illustration : IWorkEntry, IArtworkSerializable
         {
             var sb = new StringBuilder(Title);
             if (IsPicGif)
-                sb.AppendLine().Append(I18NManager.GetResource(EntryItemResources.TheIllustrationIsAnUgoira));
+                sb.AppendLine().Append(Strings.EntryItemTheIllustrationIsAnUgoira());
             else if (IsPicSet)
-                sb.AppendLine().Append(string.Format(I18NManager.GetResource(EntryItemResources.TheIllustrationIsAMangaFormatted), PageCount));
+                sb.AppendLine().Append(Strings.EntryItemTheIllustrationIsAMangaFormatted(count: PageCount));
             return sb.ToString();
         }
     }
@@ -50,21 +50,16 @@ public partial record Illustration : IWorkEntry, IArtworkSerializable
     public DateTimeOffset CreateDateOffset => DateTimeOffset.TryParse(CreateDate, out var dt) ? dt : default;
 
     [JsonIgnore]
-    public IllustrationType Type => IllustType switch
-    {
-        "manga" => IllustrationType.Manga,
-        "ugoira" => IllustrationType.Ugoira,
-        _ => IllustrationType.Illustration
-    };
+    public IllustContentType Type => IllustType;
 
     [JsonIgnore]
     public int SetIndex { get; init; } = -1;
 
     [JsonIgnore]
-    public string? OriginalUrl => MetaSinglePage?.OriginalImageUrl ?? ImageUrls?.Original ?? ImageUrls?.Large ?? ImageUrls?.Medium;
+    public string? OriginalUrl => MetaSinglePage.OriginalImageUrl ?? ImageUrls.Original ?? ImageUrls.Large ?? ImageUrls.Medium;
 
     [JsonIgnore]
-    public bool IsPicGif => string.Equals(IllustType, "ugoira", StringComparison.OrdinalIgnoreCase);
+    public bool IsPicGif => IllustType is IllustContentType.Ugoira;
 
     [JsonIgnore]
     public bool IsPicSet => PageCount > 1 || SetIndex > -1;
@@ -79,31 +74,8 @@ public partial record Illustration : IWorkEntry, IArtworkSerializable
     public Uri AppUri => new($"pixeval://illust/{Id}");
 
     [JsonIgnore]
-    public SafeRating SafeRating => XRestrict switch
-    {
-        1 => SafeRating.Explicit,
-        2 => SafeRating.Guro,
-        _ => RestrictionAttributes?.Any(a => string.Equals(a, "r18g", StringComparison.OrdinalIgnoreCase)) == true
-            ? SafeRating.Guro
-            : RestrictionAttributes?.Any(a => string.Equals(a, "r18", StringComparison.OrdinalIgnoreCase)) == true
-                ? SafeRating.Explicit
-                : RestrictionAttributes?.Any(a => string.Equals(a, "sensitive", StringComparison.OrdinalIgnoreCase)) == true
-                    ? SafeRating.Questionable
-                    : SanityLevel switch
-                    {
-                        6 => SafeRating.Questionable,
-                        2 => SafeRating.General,
-                        _ => SafeRating.NotSpecified
-                    }
-    };
+    public SafeRating SafeRating => XRestrict.ToSafeRating(RestrictionAttributes, SanityLevel);
 
-    [JsonIgnore]
-    public XRestrict XRestrictValue => XRestrict switch
-    {
-        1 => Pixeval.Pixiv.XRestrict.R18,
-        2 => Pixeval.Pixiv.XRestrict.R18G,
-        _ => Pixeval.Pixiv.XRestrict.Ordinary
-    };
 
     [JsonIgnore]
     public bool IsAiGenerated => IllustAiType == 2;
@@ -112,57 +84,32 @@ public partial record Illustration : IWorkEntry, IArtworkSerializable
     public UgoiraMetadata? UgoiraMetadata { get; init; }
 
     [JsonIgnore]
-    public IReadOnlyList<Illustration> Pages => PageCount <= 1
-        ? [this]
-        : [.. MetaPages.Select((m, i) => this with
-        {
-            SetIndex = i,
-            ImageUrls = m.ImageUrls,
-            MetaSinglePage = new MetaSinglePage(m.ImageUrls.Original)
-        })];
-
-    public const string LegacyIllustrationToken = "Mako.Model.Illustration";
-
-    public string Serialize() => System.Text.Json.JsonSerializer.Serialize(this);
-
-    [JsonIgnore]
-    public string SerializeKey => LegacyIllustrationToken;
-
-    private static readonly System.Text.Json.JsonSerializerOptions s_snakeCaseOptions = new()
+    public IReadOnlyList<Illustration> Pages
     {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower
-    };
-
-    private static readonly System.Text.Json.JsonSerializerOptions s_caseInsensitiveOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
-
-    public static Illustration Deserialize(string data)
-    {
-        try
+        get
         {
-            var res = System.Text.Json.JsonSerializer.Deserialize<Illustration>(data, s_snakeCaseOptions);
-            if (res != null && (res.Id != 0 || res.ImageUrls != null))
-                return res;
+            if (PageCount <= 1) return [this];
+            var self = this;
+            return [.. MetaPages.Select((m, i) => self with
+            {
+                SetIndex = i,
+                ImageUrls = m.ImageUrls,
+                MetaSinglePage = new MetaSinglePage(m.ImageUrls.Original)
+            })];
         }
-        catch
-        {
-            // fallback
-        }
-
-        try
-        {
-            var res = System.Text.Json.JsonSerializer.Deserialize<Illustration>(data, s_caseInsensitiveOptions);
-            if (res != null)
-                return res;
-        }
-        catch
-        {
-            // fallback
-        }
-
-        return System.Text.Json.JsonSerializer.Deserialize<Illustration>(data)!;
     }
+
+    public ArtworkMetadata ToArtworkMetadata() => new(
+        Id.ToString(),
+        Title ?? string.Empty,
+        User.Name ?? string.Empty,
+        User.Account ?? string.Empty,
+        Tags.Select(t => new ArtworkTag(t.Name, t.TranslatedName ?? string.Empty)).ToList(),
+        TotalBookmarks,
+        CreateDateOffset.ToUnixTimeSeconds(),
+        Width,
+        Height,
+        (int)StoredEnum.ToIndex(XRestrict),
+        IsAiGenerated ? 1 : 0,
+        Type == IllustContentType.Ugoira ? 2 : Type == IllustContentType.Manga ? 1 : 0);
 }

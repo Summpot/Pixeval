@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
+#[boltffi::data]
 #[derive(uniffi::Enum, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum NovelNode {
     Text { content: String },
@@ -14,12 +15,14 @@ pub enum NovelNode {
     PixivImage { illust_id: i64, page: i32 },
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct NovelPage {
     pub page_index: u32,
     pub nodes: Vec<NovelNode>,
 }
 
+#[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct NovelDocument {
     pub pages: Vec<NovelPage>,

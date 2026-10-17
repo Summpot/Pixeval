@@ -11,6 +11,7 @@ pub use client::SauceNaoClient;
 pub use error::SauceNaoError;
 pub use models::{SauceNaoItem, SauceNaoSearchResult};
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn saucenao_ping() -> String {
     "saucenao_pong".to_string()

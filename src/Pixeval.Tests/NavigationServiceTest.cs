@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Config;
 using Pixeval.Utilities;
@@ -13,7 +14,7 @@ public sealed class NavigationServiceTest
     [TestMethod]
     public void ResolveViewContainer_ReturnsNull_WhenNoVisualContextProvided()
     {
-        var service = new NavigationService();
+        var service = new NavigationService(new ServiceCollection().BuildServiceProvider());
         var container = service.ResolveViewContainer(null);
         Assert.IsNull(container);
     }
@@ -35,7 +36,7 @@ public sealed class NavigationServiceTest
     [TestMethod]
     public void NavigateToKey_WithInvalidKey_DoesNotThrow()
     {
-        var service = new NavigationService();
+        var service = new NavigationService(new ServiceCollection().BuildServiceProvider());
         service.NavigateToKey("InvalidNonExistentPageKey", null, false, null);
     }
 }

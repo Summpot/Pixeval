@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Pixeval.Mako;
 
-public partial record NovelContent
+public partial record struct NovelContent
 {
     public static NovelContent CreateDefault() => new(
         0,
@@ -36,7 +36,6 @@ public partial record NovelContent
 
     public IReadOnlyList<string> RenderMarkdownPages()
     {
-        var engine = new Pixeval.Novel.NovelEngine();
         var images = Images
             .Select(x => new Pixeval.Novel.NovelImageRenderDto(x.NovelImageId, x.ThumbnailUrl, ""))
             .ToList();
@@ -44,7 +43,7 @@ public partial record NovelContent
             .Select(x => new Pixeval.Novel.NovelIllustRenderDto(x.Id, x.Page, x.ThumbnailUrl, x.AppUri.OriginalString, x.WebsiteUri.OriginalString, ""))
             .ToList();
 
-        var pages = engine.RenderPagesMarkdown(Text, images, illusts);
+        var pages = Pixeval.Novel.PixevalNovelMethods.RenderPagesMarkdown(Text, images, illusts);
         if (pages.Count is 0)
             pages.Add("");
 
@@ -52,13 +51,13 @@ public partial record NovelContent
     }
 }
 
-public partial record NovelImage
+public partial record struct NovelImage
 {
     public string ThumbnailUrl => Urls.X1200;
     public string OriginalUrl => Urls.Original;
 }
 
-public partial record NovelIllustration
+public partial record struct NovelIllustration
 {
     public string ThumbnailUrl => Illust.Images.Medium;
     public Uri WebsiteUri => new($"https://www.pixiv.net/artworks/{Id}");

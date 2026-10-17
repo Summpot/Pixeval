@@ -3,7 +3,6 @@
 
 using AutoSettingsPage;
 using AutoSettingsPage.Avalonia;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Avalonia.Interactivity;
 using Pixeval.ViewModels.Viewers;
@@ -33,7 +32,7 @@ public sealed class NovelViewerSettingsPage : SettingsSubView
 
         _applied = true;
         LocalSettingsEntryHelper.Initialize();
-        var group = SettingsBuilder.CreateGroupList(App.Services!.GetRequiredService<AppSettings>())
+        var group = SettingsBuilder.CreateGroupList(viewModel.AppSettings)
             .NewGroup(t => t.NovelSettings, entries => entries
                 .Color(t => t.NovelBackground, entry => entry.PropertyChanged += (_, _) => viewModel.NotifyNovelBackgroundChanged())
                 .Color(t => t.NovelFontColor, entry => entry.PropertyChanged += (_, _) => viewModel.NotifyNovelFontColorChanged())

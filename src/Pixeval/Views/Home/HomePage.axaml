@@ -1,7 +1,8 @@
-﻿<DrawerPage
+<DrawerPage
     x:Class="Pixeval.Views.Home.HomePage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:appManagement="using:Pixeval.Services.Core"
     xmlns:capability="using:Pixeval.Views.Works"
     xmlns:controls="using:Pixeval.Controls"
@@ -18,7 +19,7 @@
     DrawerIcon="{markup:SymbolIcon Edit}"
     DrawerLayoutBehavior="Split"
     DrawerPlacement="Right"
-    Header="{I18N {x:Static pixeval:MainPageResources+Tab.Home}}"
+    Header="{CompiledBinding [MainPage-Tab-Home], Source={x:Static loc:LocalizationManager.Instance}}"
     Icon="{markup:SymbolIcon Home,
                              FontSize=16,
                              IconVariant=Color}"
@@ -84,16 +85,16 @@
                 <CommandBarToggleButton
                     Icon="{markup:SymbolIcon AppTitle}"
                     IsChecked="{Binding HideHomePageCardTitle, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}, Mode=TwoWay}"
-                    Label="{I18N {x:Static pixeval:HomePageResources+HideCardTitleButton.Label}}" />
+                    Label="{CompiledBinding [HomePage-HideCardTitleButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <CommandBarToggleButton
                     x:Name="HideHomePageToolbarButton"
                     Icon="{markup:SymbolIcon WindowHeaderHorizontal}"
                     IsChecked="{Binding HideHomePageToolbar, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}, Mode=TwoWay}"
-                    Label="{I18N {x:Static pixeval:HomePageResources+HideToolbarButton.Label}}" />
+                    Label="{CompiledBinding [HomePage-HideToolbarButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <CommandBarToggleButton
                     Icon="{markup:SymbolIcon Edit}"
                     IsChecked="{Binding IsEditMode, Mode=TwoWay}"
-                    Label="{I18N {x:Static pixeval:HomePageResources+EditButton.Label}}" />
+                    Label="{CompiledBinding [HomePage-EditButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
             </CommandBar>
         </DockPanel>
 
@@ -124,21 +125,21 @@
         <ScrollViewer>
             <StackPanel Margin="16" Spacing="16">
                 <StackPanel Spacing="4">
-                    <TextBlock Text="{I18N {x:Static pixeval:HomePageResources+EditPaneTitleTextBlock.Text}}" Theme="{StaticResource BodyLargeStrongTextBlockStyle}" />
+                    <TextBlock Text="{CompiledBinding [HomePage-EditPaneTitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" Theme="{StaticResource BodyLargeStrongTextBlockStyle}" />
                     <TextBlock
                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                        Text="{I18N {x:Static pixeval:HomePageResources+EditPaneDescriptionTextBlock.Text}}"
+                        Text="{CompiledBinding [HomePage-EditPaneDescriptionTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                         TextWrapping="Wrap" />
                 </StackPanel>
 
                 <Border Classes="editor-section">
                     <StackPanel Spacing="10">
-                        <TextBlock FontWeight="SemiBold" Text="{I18N {x:Static pixeval:HomePageResources+GridSizeTitleTextBlock.Text}}" />
+                        <TextBlock FontWeight="SemiBold" Text="{CompiledBinding [HomePage-GridSizeTitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                         <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8">
                             <TextBlock
                                 Grid.Column="0"
                                 Classes="editor-label"
-                                Text="{I18N {x:Static pixeval:HomePageResources+GridColumnsTextBlock.Text}}" />
+                                Text="{CompiledBinding [HomePage-GridColumnsTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <NumericUpDown
                                 Grid.Column="1"
                                 Classes="integer-editor"
@@ -148,7 +149,7 @@
                             <TextBlock
                                 Grid.Column="2"
                                 Classes="editor-label"
-                                Text="{I18N {x:Static pixeval:HomePageResources+GridRowsTextBlock.Text}}" />
+                                Text="{CompiledBinding [HomePage-GridRowsTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <NumericUpDown
                                 Grid.Column="3"
                                 Classes="integer-editor"
@@ -161,7 +162,7 @@
 
                 <Border Classes="editor-section">
                     <StackPanel Spacing="10">
-                        <TextBlock FontWeight="SemiBold" Text="{I18N {x:Static pixeval:HomePageResources+SelectedCardTitleTextBlock.Text}}" />
+                        <TextBlock FontWeight="SemiBold" Text="{CompiledBinding [HomePage-SelectedCardTitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                         <TextBlock
                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             Text="{Binding SelectedCardDescription}"
@@ -170,7 +171,7 @@
                             <TextBlock
                                 Grid.Column="0"
                                 Classes="editor-label"
-                                Text="{I18N {x:Static pixeval:HomePageResources+PositionXTextBlock.Text}}" />
+                                Text="{CompiledBinding [HomePage-PositionXTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <NumericUpDown
                                 Grid.Column="1"
                                 Classes="integer-editor card-layout-editor"
@@ -179,7 +180,7 @@
                             <TextBlock
                                 Grid.Column="2"
                                 Classes="editor-label"
-                                Text="{I18N {x:Static pixeval:HomePageResources+PositionYTextBlock.Text}}" />
+                                Text="{CompiledBinding [HomePage-PositionYTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <NumericUpDown
                                 Grid.Column="3"
                                 Classes="integer-editor card-layout-editor"
@@ -190,7 +191,7 @@
                             <TextBlock
                                 Grid.Column="0"
                                 Classes="editor-label"
-                                Text="{I18N {x:Static pixeval:HomePageResources+WidthTextBlock.Text}}" />
+                                Text="{CompiledBinding [HomePage-WidthTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <NumericUpDown
                                 Grid.Column="1"
                                 Classes="integer-editor card-layout-editor"
@@ -199,7 +200,7 @@
                             <TextBlock
                                 Grid.Column="2"
                                 Classes="editor-label"
-                                Text="{I18N {x:Static pixeval:HomePageResources+HeightTextBlock.Text}}" />
+                                Text="{CompiledBinding [HomePage-HeightTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <NumericUpDown
                                 Grid.Column="3"
                                 Classes="integer-editor card-layout-editor"
@@ -207,7 +208,7 @@
                                 Value="{Binding SelectedHeightValue, Mode=TwoWay}" />
                         </Grid>
                         <StackPanel Spacing="4">
-                            <TextBlock Text="{I18N {x:Static pixeval:HomePageResources+CardBackgroundTextBlock.Text}}" />
+                            <TextBlock Text="{CompiledBinding [HomePage-CardBackgroundTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <ColorPicker
                                 HorizontalAlignment="Stretch"
                                 IsAlphaEnabled="True"
@@ -229,7 +230,7 @@
                                 Orientation="Horizontal"
                                 Spacing="8">
                                 <ContentControl Content="{markup:SymbolIcon Delete}" />
-                                <TextBlock Text="{I18N {x:Static pixeval:HomePageResources+DeleteSelectedCardButton.Content}}" />
+                                <TextBlock Text="{CompiledBinding [HomePage-DeleteSelectedCardButton-Content], Source={x:Static loc:LocalizationManager.Instance}}" />
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -273,7 +274,7 @@
                                 <DataTemplate x:DataType="{x:Type viewModels:HomeCardRankingDateParameterEditorViewModel}">
                                     <StackPanel Spacing="4">
                                         <TextBlock Text="{Binding Header}" />
-                                        <CheckBox Content="{I18N {x:Static pixeval:HomePageResources+Source+UseSpecifiedRankingDateCheckBox.Content}}" IsChecked="{Binding UseSpecifiedDate, Mode=TwoWay}" />
+                                        <CheckBox Content="{CompiledBinding [HomePage-Source-UseSpecifiedRankingDateCheckBox-Content], Source={x:Static loc:LocalizationManager.Instance}}" IsChecked="{Binding UseSpecifiedDate, Mode=TwoWay}" />
                                         <CalendarDatePicker
                                             HorizontalAlignment="Stretch"
                                             DisplayDateEnd="{x:Static capability:WorkRankingPage.MaxDate}"
@@ -294,14 +295,14 @@
                                 Orientation="Horizontal"
                                 Spacing="8">
                                 <ContentControl Content="{markup:SymbolIcon Add}" />
-                                <TextBlock Text="{I18N {x:Static pixeval:HomePageResources+AddConfiguredCardButton.Content}}" />
+                                <TextBlock Text="{CompiledBinding [HomePage-AddConfiguredCardButton-Content], Source={x:Static loc:LocalizationManager.Instance}}" />
                             </StackPanel>
                         </Button>
                     </StackPanel>
                 </Border>
 
                 <StackPanel Spacing="8">
-                    <TextBlock FontWeight="SemiBold" Text="{I18N {x:Static pixeval:HomePageResources+CardLibraryTitleTextBlock.Text}}" />
+                    <TextBlock FontWeight="SemiBold" Text="{CompiledBinding [HomePage-CardLibraryTitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                     <ItemsControl ItemsSource="{Binding CardTemplates}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="{x:Type home:HomeCardDefinition}">

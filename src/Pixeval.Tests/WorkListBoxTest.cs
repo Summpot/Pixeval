@@ -67,8 +67,8 @@ public sealed class WorkListBoxTest
                 window.UpdateLayout();
                 var container = (ListBoxItem) list.ContainerFromIndex(index)!;
                 Assert.IsNotNull(container);
-                var card = container.GetLogicalDescendants().OfType<WorkItem>().First();
-                Assert.AreEqual(items[index], card.DataContext);
+                var card = Assert.IsInstanceOfType<WorkItem>(container.Content);
+                Assert.AreEqual(items[index], container.DataContext);
                 Assert.AreEqual(items[index], ((TextBlock) card.Content!).Text);
             }
         }, CancellationToken.None);
@@ -96,22 +96,23 @@ public sealed class WorkListBoxTest
             Assert.AreSame(key, sameKey);
             Assert.IsTrue(generator.NeedsContainer(42, 2, out var otherKey));
             Assert.AreNotSame(key, otherKey);
+            Assert.AreEqual(typeof(string), key);
+            Assert.AreEqual(typeof(int), otherKey);
 
             var container = (ListBoxItem) generator.CreateContainer("first", 0, key);
             generator.PrepareItemContainer(container, "first", 0);
-            Assert.IsNotNull(container.ContentTemplate, "ContentTemplate should not be null");
-            Assert.AreEqual("first", container.Content);
+            var card = Assert.IsInstanceOfType<WorkItem>(container.Content);
+            Assert.AreEqual("first", container.DataContext);
             var window = new Window { Content = container };
             try
             {
                 window.Show();
                 window.UpdateLayout();
-                var card = container.GetLogicalDescendants().OfType<WorkItem>().First();
                 var text = (TextBlock) card.Content!;
                 Assert.AreEqual("first", text.Text);
+                Assert.AreSame(card, container.GetLogicalDescendants().OfType<WorkItem>().First());
 
                 generator.ClearItemContainer(container);
-                Assert.IsNull(card.DataContext);
                 Assert.IsNull(container.DataContext);
                 Assert.IsNull(text.Text);
                 if (detach)
@@ -121,7 +122,7 @@ public sealed class WorkListBoxTest
                 if (detach)
                     window.Content = container;
                 window.UpdateLayout();
-                var reboundCard = container.GetLogicalDescendants().OfType<WorkItem>().First();
+                var reboundCard = Assert.IsInstanceOfType<WorkItem>(container.Content);
                 Assert.AreSame(card, reboundCard);
                 Assert.AreEqual("second", text.Text);
                 Assert.AreEqual(1, builds);

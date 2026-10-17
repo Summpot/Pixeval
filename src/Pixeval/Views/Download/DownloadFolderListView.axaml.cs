@@ -8,7 +8,6 @@ using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Services.Background;
 using Pixeval.Download;
 using Pixeval.Utilities;

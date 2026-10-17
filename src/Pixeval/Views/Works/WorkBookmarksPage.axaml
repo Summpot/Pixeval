@@ -1,7 +1,9 @@
 <views:IconContentPage
     x:Class="Pixeval.Views.Works.WorkBookmarksPage"
     xmlns="https://github.com/avaloniaui"
+    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:di="using:Pixeval.Common.Markup"
     xmlns:settings="using:Pixeval.Config"
     xmlns:capability="using:Pixeval.Views.Works"
@@ -27,11 +29,11 @@
                 SelectionChanged="TagComboBox_OnSelectionChanged" />
             <controls:SymbolComboBox
                 x:Name="PrivacyPolicyComboBox"
-                ItemsSource="{markup1:EnumResources x:TypeArguments=enum:PrivacyPolicy}"
+                ItemsSource="{markup1:EnumResources x:TypeArguments=nativeMako:PrivacyRestrict}"
                 SelectionChanged="WorkTypeComboBox_OnSelectionChanged" />
             <controls:SymbolComboBox
                 x:Name="SimpleWorkTypeComboBox"
-                ItemsSource="{markup1:EnumResources x:TypeArguments=enum:SimpleWorkType}"
+                ItemsSource="{markup1:EnumResources x:TypeArguments=nativeMako:SimpleWorkKind}"
                 SelectedValue="{Binding SearchSettings.DefaultSimpleWorkType, Source={di:Service Type={x:Type settings:AppSettings}}, DataType={x:Type settings:AppSettings}, Mode=OneTime}"
                 SelectionChanged="WorkTypeComboBox_OnSelectionChanged" />
         </work:WorkContainer.CommandBarElements>
@@ -41,14 +43,14 @@
                 VerticalAlignment="Stretch"
                 Command="{Binding $parent[work:WorkBookmarksPage].AddSubscriptionCommand}"
                 Icon="{markup:SymbolIcon Alert}"
-                Label="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+AddSubscriptionButton.Label}}" />
+                Label="{CompiledBinding [WorkSubscriptionsSettingsExpander-AddSubscriptionButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
             <CommandBarButton
                 x:Name="RemoveSubscriptionButton"
                 VerticalAlignment="Stretch"
                 Command="{Binding $parent[work:WorkBookmarksPage].RemoveSubscriptionCommand}"
                 Icon="{markup:SymbolIcon AlertOff}"
                 IsVisible="False"
-                Label="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+RemoveSubscriptionButton.Label}}" />
+                Label="{CompiledBinding [WorkSubscriptionsSettingsExpander-RemoveSubscriptionButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
         </work:WorkContainer.CommandBarSubElements>
     </work:WorkContainer>
 </views:IconContentPage>

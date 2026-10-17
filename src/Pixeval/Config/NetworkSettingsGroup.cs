@@ -8,25 +8,25 @@ namespace Pixeval.Config;
 
 public record NetworkSettingsGroup
 {
-    [SettingsEntry(Symbol.Timer, AppSettingsResources.ApiRequestCooldownEntry.Header, AppSettingsResources.ApiRequestCooldownEntry.Description)]
+    [SettingsEntry(Symbol.Timer, nameof(Strings.AppSettingsApiRequestCooldownEntryHeader), nameof(Strings.AppSettingsApiRequestCooldownEntryDescription))]
     public int ApiRequestCooldown { get; set; } = 700;
 
-    [SettingsEntry(Symbol.Router, AppSettingsResources.ProxyTypeEntry.Header, AppSettingsResources.ProxyTypeEntry.Description)]
+    [SettingsEntry(Symbol.Router, nameof(Strings.AppSettingsProxyTypeEntryHeader), nameof(Strings.AppSettingsProxyTypeEntryDescription))]
     public ProxySettings ProxySettings { get; set; } = new();
 
-    [SettingsEntry(Symbol.ShieldTask, AppSettingsResources.EnableGitHubDomainFrontingEntry.Header, AppSettingsResources.EnableGitHubDomainFrontingEntry.Description)]
+    [SettingsEntry(Symbol.ShieldTask, nameof(Strings.AppSettingsEnableGitHubDomainFrontingEntryHeader), nameof(Strings.AppSettingsEnableGitHubDomainFrontingEntryDescription))]
     public GitHubDomainFrontingSettings GitHubDomainFronting { get; set; } = new();
 
-    [SettingsEntry(Symbol.ShieldTask, AppSettingsResources.EnablePixivDomainFrontingEntry.Header, AppSettingsResources.EnablePixivDomainFrontingEntry.Description)]
+    [SettingsEntry(Symbol.ShieldTask, nameof(Strings.AppSettingsEnablePixivDomainFrontingEntryHeader), nameof(Strings.AppSettingsEnablePixivDomainFrontingEntryDescription))]
     public PixivDomainFrontingSettings PixivDomainFronting { get; set; } = new();
 
     /// <summary>
     /// The mirror host for image server, Pixeval will do a simple substitution that
     /// changes the host of the original url(i.pximg.net) to this one.
     /// </summary>
-    [SettingsEntry(Symbol.HardDrive, AppSettingsResources.ImageMirrorServerEntry.Header, AppSettingsResources.ImageMirrorServerEntry.Description, AppSettingsResources.ImageMirrorServerEntry.Placeholder)]
+    [SettingsEntry(Symbol.HardDrive, nameof(Strings.AppSettingsImageMirrorServerEntryHeader), nameof(Strings.AppSettingsImageMirrorServerEntryDescription), nameof(Strings.AppSettingsImageMirrorServerEntryPlaceholder))]
     public string MirrorHost { get; set; } = "";
 
-    [SettingsEntry(Symbol.Cookies, AppSettingsResources.WebCookieEntry.Header, AppSettingsResources.WebCookieEntry.Description, AppSettingsResources.WebCookieEntry.Placeholder)]
+    [SettingsEntry(Symbol.Cookies, nameof(Strings.AppSettingsWebCookieEntryHeader), nameof(Strings.AppSettingsWebCookieEntryDescription), nameof(Strings.AppSettingsWebCookieEntryPlaceholder))]
     public string WebCookie { get; set; } = "";
 }

@@ -20,27 +20,27 @@ public record ApplicationSettingsGroup
     public bool IsMaximized { get; set; }
 
     // TODO: Not Used
-    [SettingsEntry(Symbol.Communication, AppSettingsResources.DownloadUpdateAutomaticallyEntry.Header, AppSettingsResources.DownloadUpdateAutomaticallyEntry.Description)]
+    [SettingsEntry(Symbol.Communication, nameof(Strings.AppSettingsDownloadUpdateAutomaticallyEntryHeader), nameof(Strings.AppSettingsDownloadUpdateAutomaticallyEntryDescription))]
     public bool DownloadUpdateAutomatically { get; set; }
 
     /// <summary>
     /// "" 表示使用系统默认语言
     /// </summary>
-    [SettingsEntry(Symbol.LocalLanguage, AppSettingsResources.AppLanguageEntry.Header, AppSettingsResources.AppLanguageEntry.Description, AppSettingsResources.AppLanguageEntry.Placeholder, "ms-settings:regionlanguage")]
+    [SettingsEntry(Symbol.LocalLanguage, nameof(Strings.AppSettingsAppLanguageEntryHeader), nameof(Strings.AppSettingsAppLanguageEntryDescription), nameof(Strings.AppSettingsAppLanguageEntryPlaceholder), "ms-settings:regionlanguage")]
     public string CultureName { get; set; } = "";
 
     /// <summary>
     /// The Application Theme
     /// </summary>
-    [SettingsEntry(Symbol.DarkTheme, AppSettingsResources.ThemeEntry.Header, AppSettingsResources.ThemeEntry.Description)]
+    [SettingsEntry(Symbol.DarkTheme, nameof(Strings.AppSettingsThemeEntryHeader), nameof(Strings.AppSettingsThemeEntryDescription))]
     public ApplicationTheme Theme { get; set; }
 
-    [SettingsEntry(Symbol.DatabaseLightning, AppSettingsResources.LimitFileCacheSizeEntry.Header, AppSettingsResources.LimitFileCacheSizeEntry.Description)]
+    [SettingsEntry(Symbol.DatabaseLightning, nameof(Strings.AppSettingsLimitFileCacheSizeEntryHeader), nameof(Strings.AppSettingsLimitFileCacheSizeEntryDescription))]
     public FileCacheSettings FileCache { get; set; } = new();
 
-    [SettingsEntry(Symbol.TextFont, AppSettingsResources.AppFontFamilyEntry.Header, AppSettingsResources.AppFontFamilyEntry.Description, AppSettingsResources.AppFontFamilyEntry.Placeholder)]
+    [SettingsEntry(Symbol.TextFont, nameof(Strings.AppSettingsAppFontFamilyEntryHeader), nameof(Strings.AppSettingsAppFontFamilyEntryDescription), nameof(Strings.AppSettingsAppFontFamilyEntryPlaceholder))]
     public ObservableCollection<string> AppFontFamily { get; set; } = [];
 
-    [SettingsEntry(Symbol.Home, AppSettingsResources.HomePageEntry.Header, AppSettingsResources.HomePageEntry.Description)]
+    [SettingsEntry(Symbol.Home, nameof(Strings.AppSettingsHomePageEntryHeader), nameof(Strings.AppSettingsHomePageEntryDescription))]
     public HomePageSettings HomePage { get; set; } = new();
 }

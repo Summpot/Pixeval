@@ -17,7 +17,7 @@ public sealed class SearchHistorySession(StorageEngine storage, ObservableCollec
         if (string.IsNullOrWhiteSpace(text))
             return;
 
-        var entry = storage.UpsertSearchHistory(text, translatedName, DateTimeOffset.UtcNow.ToString("O"));
+        var entry = storage.HistoryRepository.UpsertSearchHistory(text, translatedName, DateTimeOffset.UtcNow.ToString("O"));
         if (Entries.FirstOrDefault(e => e.Value == text) is { } existing)
             Entries.Remove(existing);
         Entries.Insert(0, entry);
@@ -27,7 +27,7 @@ public sealed class SearchHistorySession(StorageEngine storage, ObservableCollec
 
     public void Clear()
     {
-        storage.ClearSearchHistory();
+        storage.HistoryRepository.ClearSearchHistory();
         Entries.Clear();
     }
 }

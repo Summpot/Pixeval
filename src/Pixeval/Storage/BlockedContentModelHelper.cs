@@ -4,7 +4,7 @@
 using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
 using Pixeval.Storage;
@@ -31,13 +31,16 @@ public static class BlockedContentModelHelper
         Title = entry.Title,
         UserId = entry.User.Id,
         CoverUrl = AppInfo.BlockedContentPath,
-        Text = I18NManager.GetResource(BlockedContentResources.Work)
+        Text = Strings.BlockedContentWork()
     };
 
     internal static bool IsBlockedPlaceholder(object entry) =>
+        (entry is Illustration i && i.MetaSinglePage.OriginalImageUrl == AppInfo.BlockedContentPath) ||
+        (entry is Mako.Novel n && n.ImageUrls.Medium == AppInfo.BlockedContentPath) ||
         _BlockedArtworkMarkers.TryGetValue(entry, out _);
 
-    internal static T Replace<T>(T entry, BlockedContentSnapshot snapshot) where T : class
+
+    internal static T Replace<T>(T entry, BlockedContentSnapshot snapshot) where T : notnull
     {
         return BlockedContentHelper.IsBlocked(entry, snapshot)
             ? entry switch
@@ -52,7 +55,7 @@ public static class BlockedContentModelHelper
         static Illustration ReplaceIllustration(Illustration entry, BlockedContentSnapshot snapshot) =>
             MarkBlocked(entry with
             {
-                Title = I18NManager.GetResource(BlockedContentResources.Work),
+                Title = Strings.BlockedContentWork(),
                 ImageUrls = CreatePlaceholderImageUrls(),
                 MetaSinglePage = new(AppInfo.BlockedContentPath),
                 MetaPages = [],
@@ -64,7 +67,7 @@ public static class BlockedContentModelHelper
         static Mako.Novel ReplaceNovel(Mako.Novel entry, BlockedContentSnapshot snapshot) =>
             MarkBlocked(entry with
             {
-                Title = I18NManager.GetResource(BlockedContentResources.Work),
+                Title = Strings.BlockedContentWork(),
                 ImageUrls = CreatePlaceholderImageUrls(),
                 PageCount = 1
             });
@@ -80,7 +83,7 @@ public static class BlockedContentModelHelper
         BlockedContentHelper.IsBlocked(entry.Id, snapshot)
             ? entry with
             {
-                Name = I18NManager.GetResource(BlockedContentResources.User),
+                Name = Strings.BlockedContentUser(),
                 ProfileImageUrls = new ProfileImageUrls(
                     AppInfo.BlockedContentPath,
                     AppInfo.BlockedContentPath,
@@ -101,15 +104,17 @@ public static class BlockedContentModelHelper
     private static CommentRecord ReplaceComment(CommentRecord entry, BlockedContentSnapshot snapshot) =>
         entry with
         {
-            Comment = I18NManager.GetResource(BlockedContentResources.Comment),
+            Comment = Strings.BlockedContentComment(),
             User = Replace(entry.User, snapshot)
         };
 
     private static T MarkBlocked<T>(T entry)
-        where T : class
     {
-        if (!_BlockedArtworkMarkers.TryGetValue(entry, out _))
-            _BlockedArtworkMarkers.Add(entry, _BlockedArtworkMarker);
+        if (typeof(T).IsClass && entry is object obj)
+        {
+            if (!_BlockedArtworkMarkers.TryGetValue(obj, out _))
+                _BlockedArtworkMarkers.Add(obj, _BlockedArtworkMarker);
+        }
         return entry;
     }
 }

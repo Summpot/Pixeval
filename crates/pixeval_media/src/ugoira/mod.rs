@@ -13,6 +13,7 @@ use crate::error::MediaError;
 
 pub mod mp4;
 
+#[boltffi::data]
 #[derive(uniffi::Enum, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum UgoiraFormat {
     Original,

@@ -3,6 +3,7 @@
 
 use thiserror::Error;
 
+#[boltffi::error]
 #[derive(Debug, Error, uniffi::Error)]
 pub enum ConfigError {
     #[error("IO error: {message}")]

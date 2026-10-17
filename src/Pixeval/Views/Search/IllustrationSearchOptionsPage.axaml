@@ -1,7 +1,9 @@
 <ContentPage
     x:Class="Pixeval.Views.Search.IllustrationSearchOptionsPage"
     xmlns="https://github.com/avaloniaui"
+    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:enum="using:Pixeval.Pixiv"
@@ -11,22 +13,22 @@
     xmlns:viewModels="using:Pixeval.ViewModels.Search"
     x:DataType="{x:Type viewModels:IllustrationSearchFormViewModel}"
     DataContext="{x:Null}"
-    Header="{I18N {x:Static pixeval:SearchResources+AdvancedOptions.IllustrationTab}}"
+    Header="{CompiledBinding [Search-AdvancedOptions-IllustrationTab], Source={x:Static loc:LocalizationManager.Instance}}"
     mc:Ignorable="d"
     d:DesignHeight="450"
     d:DesignWidth="800">
     <StackPanel Margin="12" Spacing="12">
-        <TextBlock FontWeight="SemiBold" Text="{I18N {x:Static pixeval:SearchResources+Sections.Common}}" />
+        <TextBlock FontWeight="SemiBold" Text="{CompiledBinding [Search-Sections-Common], Source={x:Static loc:LocalizationManager.Instance}}" />
         <Grid ColumnDefinitions="180,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Common.SortOption}}" />
+            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Common-SortOption], Source={x:Static loc:LocalizationManager.Instance}}" />
             <controls:SymbolComboBox
                 Grid.Column="1"
                 IconMode="False"
-                ItemsSource="{markup:EnumResources x:TypeArguments=enum:WorkSortOption}"
+                ItemsSource="{markup:EnumResources x:TypeArguments=nativeMako:SortOrder}"
                 SelectedValue="{Binding SortOption, Mode=TwoWay}" />
         </Grid>
         <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Common.StartDate}}" />
+            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Common-StartDate], Source={x:Static loc:LocalizationManager.Instance}}" />
             <ToggleSwitch Grid.Column="1" IsChecked="{Binding StartDateOption.IsEnabled, Mode=TwoWay}" />
             <CalendarDatePicker
                 Grid.Column="2"
@@ -35,7 +37,7 @@
                 SelectedDateFormat="Short" />
         </Grid>
         <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Common.EndDate}}" />
+            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Common-EndDate], Source={x:Static loc:LocalizationManager.Instance}}" />
             <ToggleSwitch Grid.Column="1" IsChecked="{Binding EndDateOption.IsEnabled, Mode=TwoWay}" />
             <CalendarDatePicker
                 Grid.Column="2"
@@ -44,35 +46,35 @@
                 SelectedDateFormat="Short" />
         </Grid>
         <Grid ColumnDefinitions="180,Auto" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Common.ShowAiWorks}}" />
+            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Common-ShowAiWorks], Source={x:Static loc:LocalizationManager.Instance}}" />
             <ToggleSwitch Grid.Column="1" IsChecked="{Binding AiType, Mode=TwoWay}" />
         </Grid>
         <Grid ColumnDefinitions="180,Auto" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Common.MergePlainKeywordResults}}" />
+            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Common-MergePlainKeywordResults], Source={x:Static loc:LocalizationManager.Instance}}" />
             <ToggleSwitch Grid.Column="1" IsChecked="{Binding MergePlainKeywordResults, Mode=TwoWay}" />
         </Grid>
         <Grid ColumnDefinitions="180,Auto" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Common.IncludeTranslatedTagResults}}" />
+            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Common-IncludeTranslatedTagResults], Source={x:Static loc:LocalizationManager.Instance}}" />
             <ToggleSwitch Grid.Column="1" IsChecked="{Binding IncludeTranslatedTagResults, Mode=TwoWay}" />
         </Grid>
         <Grid ColumnDefinitions="180,Auto" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Common.IncludePotentialViolationWorks}}" />
+            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Common-IncludePotentialViolationWorks], Source={x:Static loc:LocalizationManager.Instance}}" />
             <ToggleSwitch Grid.Column="1" IsChecked="{Binding IncludePotentialViolationWorks, Mode=TwoWay}" />
         </Grid>
 
         <Separator />
 
-        <TextBlock FontWeight="SemiBold" Text="{I18N {x:Static pixeval:SearchResources+Sections.Illustration}}" />
+        <TextBlock FontWeight="SemiBold" Text="{CompiledBinding [Search-Sections-Illustration], Source={x:Static loc:LocalizationManager.Instance}}" />
         <Grid ColumnDefinitions="180,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.MatchOption}}" />
+            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Illustration-MatchOption], Source={x:Static loc:LocalizationManager.Instance}}" />
             <controls:SymbolComboBox
                 Grid.Column="1"
                 IconMode="False"
-                ItemsSource="{markup:EnumResources x:TypeArguments=enum:SearchIllustrationTagMatchOption}"
+                ItemsSource="{markup:EnumResources x:TypeArguments=nativeMako:IllustSearchTarget}"
                 SelectedValue="{Binding MatchOption, Mode=TwoWay}" />
         </Grid>
         <Grid ColumnDefinitions="180,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.ContentType}}" />
+            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Illustration-ContentType], Source={x:Static loc:LocalizationManager.Instance}}" />
             <controls:SymbolComboBox
                 Grid.Column="1"
                 IconMode="False"
@@ -80,7 +82,7 @@
                 SelectedValue="{Binding ContentType, Mode=TwoWay}" />
         </Grid>
         <Grid ColumnDefinitions="180,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.RatioPattern}}" />
+            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Illustration-RatioPattern], Source={x:Static loc:LocalizationManager.Instance}}" />
             <controls:SymbolComboBox
                 Grid.Column="1"
                 IconMode="False"
@@ -88,7 +90,7 @@
                 SelectedValue="{Binding RatioPattern, Mode=TwoWay}" />
         </Grid>
         <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.WidthMin}}" />
+            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Illustration-WidthMin], Source={x:Static loc:LocalizationManager.Instance}}" />
             <ToggleSwitch Grid.Column="1" IsChecked="{Binding WidthMinOption.IsEnabled, Mode=TwoWay}" />
             <NumericUpDown
                 Grid.Column="2"
@@ -101,7 +103,7 @@
                 Value="{Binding WidthMinOption.Value, Mode=TwoWay}" />
         </Grid>
         <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.WidthMax}}" />
+            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Illustration-WidthMax], Source={x:Static loc:LocalizationManager.Instance}}" />
             <ToggleSwitch Grid.Column="1" IsChecked="{Binding WidthMaxOption.IsEnabled, Mode=TwoWay}" />
             <NumericUpDown
                 Grid.Column="2"
@@ -114,7 +116,7 @@
                 Value="{Binding WidthMaxOption.Value, Mode=TwoWay}" />
         </Grid>
         <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.HeightMin}}" />
+            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Illustration-HeightMin], Source={x:Static loc:LocalizationManager.Instance}}" />
             <ToggleSwitch Grid.Column="1" IsChecked="{Binding HeightMinOption.IsEnabled, Mode=TwoWay}" />
             <NumericUpDown
                 Grid.Column="2"
@@ -127,7 +129,7 @@
                 Value="{Binding HeightMinOption.Value, Mode=TwoWay}" />
         </Grid>
         <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.HeightMax}}" />
+            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Illustration-HeightMax], Source={x:Static loc:LocalizationManager.Instance}}" />
             <ToggleSwitch Grid.Column="1" IsChecked="{Binding HeightMaxOption.IsEnabled, Mode=TwoWay}" />
             <NumericUpDown
                 Grid.Column="2"
@@ -140,7 +142,7 @@
                 Value="{Binding HeightMaxOption.Value, Mode=TwoWay}" />
         </Grid>
         <Grid ColumnDefinitions="180,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.Tool}}" />
+            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Illustration-Tool], Source={x:Static loc:LocalizationManager.Instance}}" />
             <ComboBox
                 Grid.Column="1"
                 HorizontalAlignment="Stretch"

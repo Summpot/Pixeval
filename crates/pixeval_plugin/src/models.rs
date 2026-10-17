@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct PluginExtensionDescriptor {
     pub kind: String,
@@ -11,6 +12,7 @@ pub struct PluginExtensionDescriptor {
     pub identifier: String,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct PluginMetadata {
     pub id: String,
@@ -24,6 +26,7 @@ pub struct PluginMetadata {
     pub is_active: bool,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct DiscoveredPlugin {
     pub library_path: String,
@@ -31,12 +34,14 @@ pub struct DiscoveredPlugin {
     pub relative_path: String,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct PluginInstallResult {
     pub destination_dir: String,
     pub installed_host_libraries: Vec<String>,
 }
 
+#[boltffi::data]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct LocalExtensionHost {
     pub library_path: String,

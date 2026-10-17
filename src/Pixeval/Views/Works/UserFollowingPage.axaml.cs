@@ -27,7 +27,7 @@ public partial class UserFollowingPage : IconContentPage
     private bool _suppressChangeSource;
 
     /// <summary>XAML constructor: services are resolved from <see cref="UiServices.ProviderProperty"/> once the page is attached under the shell.</summary>
-    public UserFollowingPage() : this(0, PrivacyPolicy.Public, null, null)
+    public UserFollowingPage() : this(0, PrivacyRestrict.Public, null, null)
     {
     }
 
@@ -37,13 +37,13 @@ public partial class UserFollowingPage : IconContentPage
     }
 
     public UserFollowingPage(long id, MakoClient client, IUserSessionService session)
-        : this(id, PrivacyPolicy.Public, client, session)
+        : this(id, PrivacyRestrict.Public, client, session)
     {
     }
 
     public UserFollowingPage(
         long id,
-        PrivacyPolicy privacyPolicy,
+        PrivacyRestrict privacyPolicy,
         MakoClient? client,
         IUserSessionService? session,
         UserViewViewModel? viewModel = null)
@@ -122,16 +122,16 @@ public partial class UserFollowingPage : IconContentPage
     {
         if (_userId <= 0)
         {
-            ResetEngine(AsyncEnumerable.Empty<Pixeval.Mako.User>());
+            ResetSource(AsyncEnumerable.Empty<Pixeval.Mako.User>());
             return;
         }
         _client ??= this.GetUiService<MakoClient>();
         if (_sourcePending = _client is null)
             return;
-        var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>();
-        ResetEngine(_client!.UserFollowing(_userId, privacy));
+        var privacy = PrivacyPolicyComboBox.GetSelectedValue<PrivacyRestrict>();
+        ResetSource(_client!.UserFollowingUnified(_userId, privacy));
     }
 
-    private void ResetEngine(IAsyncEnumerable<Pixeval.Mako.User> fetchEngine) =>
-        (UserContainer.UserView.DataContext as UserViewViewModel)?.ResetEngine(fetchEngine);
+    private void ResetSource(IAsyncEnumerable<Pixeval.Mako.User> fetchEngine) =>
+        (UserContainer.UserView.DataContext as UserViewViewModel)?.ResetSource(fetchEngine);
 }

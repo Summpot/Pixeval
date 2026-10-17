@@ -8,19 +8,18 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Config;
 using Pixeval.Common.Collections;
 using Pixeval.Mako;
 
 namespace Pixeval.ViewModels.Works;
 
-public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<string>? blockedTags)
-    : EntryViewViewModel<T, TViewModel>, IWorkViewViewModel
-    where T : class
-    where TViewModel : class
+public abstract partial class WorkViewViewModelBase<T, TViewModel>(AppSettings appSettings, IBlockedContentService? blockedContent = null)
+    : EntryViewViewModel<T, TViewModel>(blockedContent), IWorkViewViewModel
+    where T : notnull
+    where TViewModel : notnull
 {
-    public FrozenSet<string> CachedBlockedTags { get; private set; } = blockedTags ?? App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.BlockedTags.ToFrozenSet();
+    public FrozenSet<string> CachedBlockedTags { get; private set; } = appSettings.BrowsingExperienceSettings.BlockedTags.ToFrozenSet();
 
     [ObservableProperty]
     public partial bool IsSelecting { get; set; }
@@ -58,29 +57,30 @@ public abstract partial class WorkViewViewModelBase<T, TViewModel>(FrozenSet<str
         }
     }
 
-    IReadOnlyCollection<object> IOperableViewViewModel.View => View;
+    IReadOnlyCollection<object> IOperableViewViewModel.View => ((ISimpleViewViewModel) this).View;
 
-    IReadOnlyCollection<object> IOperableViewViewModel.Source => Source;
+    IReadOnlyCollection<object> IOperableViewViewModel.Source => ((ISimpleViewViewModel) this).Source;
+
 
     public abstract bool RequireAdaptiveGrid { get; }
 
-    public override void ResetEngine(IAsyncEnumerable<T>? newEngine, Func<T, int, TViewModel>? factory = null, int itemsPerPage = 20, int itemLimit = -1)
+    public override void ResetSource(IAsyncEnumerable<T>? source, Func<T, int, TViewModel>? factory = null, int itemsPerPage = 20, int itemLimit = -1)
     {
-        base.ResetEngine(newEngine, factory, itemsPerPage, itemLimit);
+        base.ResetSource(source, factory, itemsPerPage, itemLimit);
         _filteredView?.Dispose();
         _filteredView = CreateFilteredView();
         OnPropertyChanged(nameof(View));
     }
 
-    public void ResetEngine(IAsyncEnumerable<object>? newEngine, int itemsPerPage = 20, int itemLimit = -1)
+    public void ResetSource(IAsyncEnumerable<object>? source, int itemsPerPage = 20, int itemLimit = -1)
     {
-        CachedBlockedTags = [.. App.Services!.GetRequiredService<AppSettings>().BrowsingExperienceSettings.BlockedTags.ToFrozenSet()];
-        var typedEngine = newEngine as IAsyncEnumerable<T> ?? (newEngine is not null ? CastEngine(newEngine) : null);
-        ResetEngine(typedEngine, static (info, _) => (TViewModel) (object) info, itemsPerPage, itemLimit);
+        CachedBlockedTags = [.. appSettings.BrowsingExperienceSettings.BlockedTags.ToFrozenSet()];
+        var typed = source as IAsyncEnumerable<T> ?? (source is not null ? CastSource(source) : null);
+        ResetSource(typed, static (info, _) => (TViewModel) (object) info, itemsPerPage, itemLimit);
 
-        static async IAsyncEnumerable<T> CastEngine(IAsyncEnumerable<object> source)
+        static async IAsyncEnumerable<T> CastSource(IAsyncEnumerable<object> items)
         {
-            await foreach (var item in source)
+            await foreach (var item in items)
                 yield return (T) item;
         }
     }

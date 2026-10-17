@@ -16,7 +16,7 @@ using FluentIcons.Common;
 using Pixeval.Config;
 using Pixeval.Controls;
 using Pixeval.Extensions.Common.Settings;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Services.Background;
 using Pixeval.Views.Settings;
 
@@ -24,6 +24,8 @@ namespace Pixeval.Config;
 
 public static class LocalSettingsEntryHelper
 {
+    private static readonly IDisposable _Localization;
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, IDisposable> _HeaderSubscriptions = new();
     private static IDataTemplate LanguageValueTemplate { get; } =
         new FuncDataTemplate<ISingleValueSettingsEntry<string>>(static (entry, _) => new LanguageSettingsValue { Entry = entry });
 
@@ -50,6 +52,11 @@ public static class LocalSettingsEntryHelper
 
     static LocalSettingsEntryHelper()
     {
+        _Localization = AppLocalization.Instance.Subscribe(() =>
+        {
+            foreach (var items in RegisteredAttach.Values)
+                foreach (var item in items) item.RefreshLocalization();
+        });
         SettingsEntryAttribute.SettingsResourceKeysProvider = new SettingsResourceKeysProviderImpl();
 
         _ = SettingsEntryHelper.FactoryDictionary
@@ -85,122 +92,93 @@ public static class LocalSettingsEntryHelper
         });
         RegisterAttach<DomainFrontingType>(t =>
         {
-            t.Register(DomainFrontingType.Fragmentation, EnumResources.DomainFrontingType.Fragmentation);
+            t.Register(DomainFrontingType.Fragmentation, nameof(Strings.EnumDomainFrontingTypeFragmentation));
             // t.RegisterDirect(DomainFrontingType.Ech, "ECH");
-            // t.Register(DomainFrontingType.Desync, EnumResources.DomainFrontingType.Desync);
+            // t.Register(DomainFrontingType.Desync, nameof(Strings.EnumDomainFrontingTypeDesync));
         });
-        RegisterAttach<SearchIllustrationTagMatchOption>(t =>
+        RegisterAttach<IllustSearchTarget>(t =>
         {
-            t.Register(SearchIllustrationTagMatchOption.PartialMatchForTags, EnumResources.SearchIllustrationTagMatchOption.PartialMatchForTags);
-            t.Register(SearchIllustrationTagMatchOption.ExactMatchForTags, EnumResources.SearchIllustrationTagMatchOption.ExactMatchForTags);
-            t.Register(SearchIllustrationTagMatchOption.TitleAndCaption, EnumResources.SearchIllustrationTagMatchOption.TitleAndCaption);
+            t.Register(IllustSearchTarget.PartialMatchForTags, nameof(Strings.EnumSearchIllustrationTagMatchOptionPartialMatchForTags));
+            t.Register(IllustSearchTarget.ExactMatchForTags, nameof(Strings.EnumSearchIllustrationTagMatchOptionExactMatchForTags));
+            t.Register(IllustSearchTarget.TitleAndCaption, nameof(Strings.EnumSearchIllustrationTagMatchOptionTitleAndCaption));
         });
-        RegisterAttach<SearchNovelTagMatchOption>(t =>
+        RegisterAttach<NovelSearchTarget>(t =>
         {
-            t.Register(SearchNovelTagMatchOption.PartialMatchForTags, EnumResources.SearchNovelTagMatchOption.PartialMatchForTags);
-            t.Register(SearchNovelTagMatchOption.ExactMatchForTags, EnumResources.SearchNovelTagMatchOption.ExactMatchForTags);
-            t.Register(SearchNovelTagMatchOption.Text, EnumResources.SearchNovelTagMatchOption.Text);
-            t.Register(SearchNovelTagMatchOption.Keyword, EnumResources.SearchNovelTagMatchOption.Keyword);
+            t.Register(NovelSearchTarget.PartialMatchForTags, nameof(Strings.EnumSearchNovelTagMatchOptionPartialMatchForTags));
+            t.Register(NovelSearchTarget.ExactMatchForTags, nameof(Strings.EnumSearchNovelTagMatchOptionExactMatchForTags));
+            t.Register(NovelSearchTarget.Text, nameof(Strings.EnumSearchNovelTagMatchOptionText));
+            t.Register(NovelSearchTarget.Keyword, nameof(Strings.EnumSearchNovelTagMatchOptionKeyword));
         });
         RegisterAttach<SearchIllustrationContentType>(t =>
         {
-            t.Register(SearchIllustrationContentType.IllustrationAndMangaAndUgoira, EnumResources.SearchIllustrationContentType.IllustrationAndMangaAndUgoira);
-            t.Register(SearchIllustrationContentType.IllustrationAndUgoira, EnumResources.SearchIllustrationContentType.IllustrationAndUgoira);
-            t.Register(SearchIllustrationContentType.Illustration, EnumResources.SearchIllustrationContentType.Illustration);
-            t.Register(SearchIllustrationContentType.Manga, EnumResources.SearchIllustrationContentType.Manga);
-            t.Register(SearchIllustrationContentType.Ugoira, EnumResources.SearchIllustrationContentType.Ugoira);
+            t.Register(SearchIllustrationContentType.IllustrationAndMangaAndUgoira, nameof(Strings.EnumSearchIllustrationContentTypeIllustrationAndMangaAndUgoira));
+            t.Register(SearchIllustrationContentType.IllustrationAndUgoira, nameof(Strings.EnumSearchIllustrationContentTypeIllustrationAndUgoira));
+            t.Register(SearchIllustrationContentType.Illustration, nameof(Strings.EnumSearchIllustrationContentTypeIllustration));
+            t.Register(SearchIllustrationContentType.Manga, nameof(Strings.EnumSearchIllustrationContentTypeManga));
+            t.Register(SearchIllustrationContentType.Ugoira, nameof(Strings.EnumSearchIllustrationContentTypeUgoira));
         });
         RegisterAttach<SearchIllustrationRatioPattern>(t =>
         {
-            t.Register(SearchIllustrationRatioPattern.All, EnumResources.SearchIllustrationRatioPattern.All);
-            t.Register(SearchIllustrationRatioPattern.Landscape, EnumResources.SearchIllustrationRatioPattern.Landscape);
-            t.Register(SearchIllustrationRatioPattern.Portrait, EnumResources.SearchIllustrationRatioPattern.Portrait);
-            t.Register(SearchIllustrationRatioPattern.Square, EnumResources.SearchIllustrationRatioPattern.Square);
+            t.Register(SearchIllustrationRatioPattern.All, nameof(Strings.EnumSearchIllustrationRatioPatternAll));
+            t.Register(SearchIllustrationRatioPattern.Landscape, nameof(Strings.EnumSearchIllustrationRatioPatternLandscape));
+            t.Register(SearchIllustrationRatioPattern.Portrait, nameof(Strings.EnumSearchIllustrationRatioPatternPortrait));
+            t.Register(SearchIllustrationRatioPattern.Square, nameof(Strings.EnumSearchIllustrationRatioPatternSquare));
         });
         RegisterAttach<SearchNovelContentLengthOption>(t =>
         {
-            t.Register(SearchNovelContentLengthOption.None, EnumResources.SearchNovelContentLengthOption.None);
-            t.Register(SearchNovelContentLengthOption.TextLength, EnumResources.SearchNovelContentLengthOption.TextLength);
-            t.Register(SearchNovelContentLengthOption.WordCount, EnumResources.SearchNovelContentLengthOption.WordCount);
-            t.Register(SearchNovelContentLengthOption.ReadingTime, EnumResources.SearchNovelContentLengthOption.ReadingTime);
+            t.Register(SearchNovelContentLengthOption.None, nameof(Strings.EnumSearchNovelContentLengthOptionNone));
+            t.Register(SearchNovelContentLengthOption.TextLength, nameof(Strings.EnumSearchNovelContentLengthOptionTextLength));
+            t.Register(SearchNovelContentLengthOption.WordCount, nameof(Strings.EnumSearchNovelContentLengthOptionWordCount));
+            t.Register(SearchNovelContentLengthOption.ReadingTime, nameof(Strings.EnumSearchNovelContentLengthOptionReadingTime));
         });
-        RegisterAttach<WorkSortOption>(t =>
+        RegisterAttach<SortOrder>(t =>
         {
-            t.Register(WorkSortOption.PublishDateDescending, Symbol.ArrowSortDownLines, EnumResources.WorkSortOption.PublishDateDescending);
-            t.Register(WorkSortOption.PublishDateAscending, Symbol.ArrowSortUpLines, EnumResources.WorkSortOption.PublishDateAscending);
-            t.Register(WorkSortOption.PopularityDescending, Symbol.ArrowTrendingSparkle, EnumResources.WorkSortOption.PopularityDescending);
+            t.Register(SortOrder.DateDesc, Symbol.ArrowSortDownLines, nameof(Strings.EnumWorkSortOptionPublishDateDescending));
+            t.Register(SortOrder.DateAsc, Symbol.ArrowSortUpLines, nameof(Strings.EnumWorkSortOptionPublishDateAscending));
+            t.Register(SortOrder.PopularDesc, Symbol.ArrowTrendingSparkle, nameof(Strings.EnumWorkSortOptionPopularityDescending));
         });
-        RegisterAttach<PrivacyPolicy>(t =>
+        RegisterAttach<PrivacyRestrict>(t =>
         {
-            t.Register(PrivacyPolicy.Public, Symbol.Person, EnumResources.PrivacyPolicy.Public);
-            t.Register(PrivacyPolicy.Private, Symbol.InPrivateAccount, EnumResources.PrivacyPolicy.Private);
+            t.Register(PrivacyRestrict.Public, Symbol.Person, nameof(Strings.EnumPrivacyPolicyPublic));
+            t.Register(PrivacyRestrict.Private, Symbol.InPrivateAccount, nameof(Strings.EnumPrivacyPolicyPrivate));
         });
         RegisterAttach<FontWeight>(t =>
         {
-            t.Register(FontWeight.Thin, Symbol.TextFont, EnumResources.FontWeight.Thin);
-            t.Register(FontWeight.ExtraLight, Symbol.TextFont, EnumResources.FontWeight.ExtraLight);
-            t.Register(FontWeight.Light, Symbol.TextFont, EnumResources.FontWeight.Light);
-            t.Register(FontWeight.SemiLight, Symbol.TextFont, EnumResources.FontWeight.SemiLight);
-            t.Register(FontWeight.Normal, Symbol.TextFont, EnumResources.FontWeight.Normal);
-            t.Register(FontWeight.Medium, Symbol.TextFont, EnumResources.FontWeight.Medium);
-            t.Register(FontWeight.SemiBold, Symbol.TextFont, EnumResources.FontWeight.SemiBold);
-            t.Register(FontWeight.Bold, Symbol.TextFont, EnumResources.FontWeight.Bold);
-            t.Register(FontWeight.ExtraBold, Symbol.TextFont, EnumResources.FontWeight.ExtraBold);
-            t.Register(FontWeight.Black, Symbol.TextFont, EnumResources.FontWeight.Black);
-            t.Register(FontWeight.ExtraBlack, Symbol.TextFont, EnumResources.FontWeight.ExtraBlack);
+            t.Register(FontWeight.Thin, Symbol.TextFont, nameof(Strings.EnumFontWeightThin));
+            t.Register(FontWeight.ExtraLight, Symbol.TextFont, nameof(Strings.EnumFontWeightExtraLight));
+            t.Register(FontWeight.Light, Symbol.TextFont, nameof(Strings.EnumFontWeightLight));
+            t.Register(FontWeight.SemiLight, Symbol.TextFont, nameof(Strings.EnumFontWeightSemiLight));
+            t.Register(FontWeight.Normal, Symbol.TextFont, nameof(Strings.EnumFontWeightNormal));
+            t.Register(FontWeight.Medium, Symbol.TextFont, nameof(Strings.EnumFontWeightMedium));
+            t.Register(FontWeight.SemiBold, Symbol.TextFont, nameof(Strings.EnumFontWeightSemiBold));
+            t.Register(FontWeight.Bold, Symbol.TextFont, nameof(Strings.EnumFontWeightBold));
+            t.Register(FontWeight.ExtraBold, Symbol.TextFont, nameof(Strings.EnumFontWeightExtraBold));
+            t.Register(FontWeight.Black, Symbol.TextFont, nameof(Strings.EnumFontWeightBlack));
+            t.Register(FontWeight.ExtraBlack, Symbol.TextFont, nameof(Strings.EnumFontWeightExtraBlack));
         });
-        RegisterAttach<WorkType>(t =>
+        RegisterAttach<WorkKind>(t =>
         {
-            t.Register(WorkType.Illustration, Symbol.Image, EnumResources.WorkType.Illustration);
-            t.Register(WorkType.Manga, Symbol.ImageStack, EnumResources.WorkType.Manga);
-            t.Register(WorkType.Novel, Symbol.Book, EnumResources.WorkType.Novel);
+            t.Register(WorkKind.Illustration, Symbol.Image, nameof(Strings.EnumWorkTypeIllustration));
+            t.Register(WorkKind.Manga, Symbol.ImageStack, nameof(Strings.EnumWorkTypeManga));
+            t.Register(WorkKind.Novel, Symbol.Book, nameof(Strings.EnumWorkTypeNovel));
         });
-        RegisterAttach<SimpleWorkType>(t =>
+        RegisterAttach<SimpleWorkKind>(t =>
         {
-            t.Register(SimpleWorkType.Illustration, Symbol.Image, EnumResources.WorkType.Illustration);
-            t.Register(SimpleWorkType.Novel, Symbol.Book, EnumResources.WorkType.Novel);
+            t.Register(SimpleWorkKind.Illustration, Symbol.Image, nameof(Strings.EnumWorkTypeIllustration));
+            t.Register(SimpleWorkKind.Novel, Symbol.Book, nameof(Strings.EnumWorkTypeNovel));
         });
         RegisterAttach<Orientation>(t =>
         {
-            t.Register(Orientation.Horizontal, Symbol.ArrowBidirectionalLeftRight, EnumResources.Orientation.Horizontal);
-            t.Register(Orientation.Vertical, Symbol.ArrowBidirectionalUpDown, EnumResources.Orientation.Vertical);
+            t.Register(Orientation.Horizontal, Symbol.ArrowBidirectionalLeftRight, nameof(Strings.EnumOrientationHorizontal));
+            t.Register(Orientation.Vertical, Symbol.ArrowBidirectionalUpDown, nameof(Strings.EnumOrientationVertical));
         });
 
-        RegisterAttach<RankOption>(SimpleWorkType.Illustration, t =>
-        {
-            t.Register(RankOption.Day, EnumResources.RankOption.Day);
-            t.Register(RankOption.Week, EnumResources.RankOption.Week);
-            t.Register(RankOption.Month, EnumResources.RankOption.Month);
-            t.Register(RankOption.DayMale, EnumResources.RankOption.DayMale);
-            t.Register(RankOption.DayFemale, EnumResources.RankOption.DayFemale);
-            t.Register(RankOption.DayManga, EnumResources.RankOption.DayManga);
-            t.Register(RankOption.WeekManga, EnumResources.RankOption.WeekManga);
-            t.Register(RankOption.MonthManga, EnumResources.RankOption.MonthManga);
-            t.Register(RankOption.WeekOriginal, EnumResources.RankOption.WeekOriginal);
-            t.Register(RankOption.WeekRookie, EnumResources.RankOption.WeekRookie);
-            t.Register(RankOption.DayR18, EnumResources.RankOption.DayR18);
-            t.Register(RankOption.DayMaleR18, EnumResources.RankOption.DayMaleR18);
-            t.Register(RankOption.DayFemaleR18, EnumResources.RankOption.DayFemaleR18);
-            t.Register(RankOption.WeekR18, EnumResources.RankOption.WeekR18);
-            t.Register(RankOption.WeekR18G, EnumResources.RankOption.WeekR18G);
-            t.Register(RankOption.DayAi, EnumResources.RankOption.DayAi);
-            t.Register(RankOption.DayR18Ai, EnumResources.RankOption.DayR18Ai);
-        });
-        RegisterAttach<RankOption>(SimpleWorkType.Novel, t =>
-        {
-            t.Register(RankOption.Day, EnumResources.RankOption.Day);
-            t.Register(RankOption.Week, EnumResources.RankOption.Week);
-            t.Register(RankOption.DayMale, EnumResources.RankOption.DayMale);
-            t.Register(RankOption.DayFemale, EnumResources.RankOption.DayFemale);
-            t.Register(RankOption.WeekRookie, EnumResources.RankOption.WeekRookie);
-            t.Register(RankOption.DayR18, EnumResources.RankOption.DayR18);
-            t.Register(RankOption.DayMaleR18, EnumResources.RankOption.DayMaleR18);
-            t.Register(RankOption.DayFemaleR18, EnumResources.RankOption.DayFemaleR18);
-            t.Register(RankOption.WeekR18, EnumResources.RankOption.WeekR18);
-            t.Register(RankOption.WeekR18G, EnumResources.RankOption.WeekR18G);
-            t.Register(RankOption.WeekAi, EnumResources.RankOption.WeekAi);
-            t.Register(RankOption.WeekAiR18, EnumResources.RankOption.WeekAiR18);
-        });
+        foreach (var kind in System.Enum.GetValues<SimpleWorkKind>())
+            RegisterAttach<RankMode>(kind, t =>
+            {
+                foreach (var mode in PixevalMakoMethods.SupportedRankModes(kind))
+                    t.Register(mode, "EnumRankOption" + mode);
+            });
     }
 
     public static Dictionary<object, IReadOnlyList<SymbolComboBoxItem>> RegisteredAttach { get; } = [];
@@ -331,13 +309,14 @@ public static class LocalSettingsEntryHelper
                 entry.Description = "";
                 (entry.Icon, var header) = workType switch
                 {
-                    WorkTypeEnum.Illustration => (Symbol.Image, EnumResources.WorkTypeEnum.Illustration),
-                    WorkTypeEnum.Manga => (Symbol.ImageMultiple, EnumResources.WorkTypeEnum.Manga),
-                    WorkTypeEnum.Ugoira => (Symbol.Gif, EnumResources.WorkTypeEnum.Ugoira),
-                    WorkTypeEnum.Novel => (Symbol.BookOpen, EnumResources.WorkTypeEnum.Novel),
+                    WorkTypeEnum.Illustration => (Symbol.Image, nameof(Strings.EnumWorkTypeEnumIllustration)),
+                    WorkTypeEnum.Manga => (Symbol.ImageMultiple, nameof(Strings.EnumWorkTypeEnumManga)),
+                    WorkTypeEnum.Ugoira => (Symbol.Gif, nameof(Strings.EnumWorkTypeEnumUgoira)),
+                    WorkTypeEnum.Novel => (Symbol.BookOpen, nameof(Strings.EnumWorkTypeEnumNovel)),
                     _ => throw new ArgumentOutOfRangeException(nameof(workType))
                 };
-                entry.Header = I18NManager.GetResource(header);
+                entry.Header = Strings.GetString(header);
+                _HeaderSubscriptions.Add(entry, AppLocalization.Instance.Subscribe(() => entry.Header = Strings.GetString(header)));
                 config?.Invoke(entry);
             });
         }
@@ -404,16 +383,19 @@ public static class LocalSettingsEntryHelper
     extension(ISettingsGroupBuilder<DownloadFormatsSettings> builder)
     {
         public ISettingsGroupBuilder<DownloadFormatsSettings> IllustrationDownloadFormat(
+            ExtensionService extensions,
             Action<IllustrationDownloadFormatSettingsEntry>? config = null) =>
-            builder.Add(new IllustrationDownloadFormatSettingsEntry(builder.Settings), config);
+            builder.Add(new IllustrationDownloadFormatSettingsEntry(builder.Settings, extensions), config);
 
         public ISettingsGroupBuilder<DownloadFormatsSettings> UgoiraDownloadFormat(
+            ExtensionService extensions,
             Action<UgoiraDownloadFormatSettingsEntry>? config = null) =>
-            builder.Add(new UgoiraDownloadFormatSettingsEntry(builder.Settings), config);
+            builder.Add(new UgoiraDownloadFormatSettingsEntry(builder.Settings, extensions), config);
 
         public ISettingsGroupBuilder<DownloadFormatsSettings> NovelDownloadFormat(
+            ExtensionService extensions,
             Action<NovelDownloadFormatSettingsEntry>? config = null) =>
-            builder.Add(new NovelDownloadFormatSettingsEntry(builder.Settings), config);
+            builder.Add(new NovelDownloadFormatSettingsEntry(builder.Settings, extensions), config);
 
     }
 
@@ -428,7 +410,7 @@ public static class LocalSettingsEntryHelper
     private class SettingsResourceKeysProviderImpl : ISettingsResourceKeysProvider
     {
         /// <inheritdoc />
-        public string this[string resourceKey] => I18NManager.GetResource(resourceKey);
+        public string this[string resourceKey] => Strings.GetString(resourceKey);
     }
 }
 
@@ -439,7 +421,7 @@ public class RegisterAttachHelper<TEnum>(IList<SymbolComboBoxItem> list)
 
     public void RegisterDirect(TEnum value, string resource) => RegisterDirect(value, default, resource);
 
-    public void Register(TEnum value, Symbol symbol, string key) => RegisterDirect(value, symbol, I18NManager.GetResource(key));
+    public void Register(TEnum value, Symbol symbol, string key) => list.Add(new SymbolComboBoxItem(value, "", symbol) { ResourceKey = key });
 
     public void Register(TEnum value, string key) => Register(value, default, key);
 }

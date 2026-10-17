@@ -1,7 +1,9 @@
 <shell:IconContentPage
     x:Class="Pixeval.Views.Viewers.NovelViewerPage"
     xmlns="https://github.com/avaloniaui"
+    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:capability="using:Pixeval.Views.Works"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Common.Converters"
@@ -22,7 +24,7 @@
     xmlns:shell="using:Pixeval.Views.Shell"
     xmlns:work="using:Pixeval.Views.Works"
     x:DataType="{x:Type viewers:NovelViewerPageViewModel}"
-    Header="{Binding CurrentNovel.Title, FallbackValue={x:Null}}"
+    Header="{Binding CurrentNovel.Value.Title, FallbackValue={x:Null}}"
     mc:Ignorable="d"
     d:DesignHeight="600"
     d:DesignWidth="1000">
@@ -41,13 +43,13 @@
                             Work="{Binding CurrentNovel}" />
                         <local:CommentsPage
                             controls:TabPageInclusion.IsIncluded="{Binding CurrentNovel, Converter={x:Static converters:PixevalConverters.IsInteractiveWork}}"
-                            ParentId="{Binding CurrentNovel.Id}"
-                            ParentType="{x:Static pixiv:SimpleWorkType.Novel}" />
+                            ParentId="{Binding CurrentNovel.Value.Id}"
+                            ParentType="{x:Static nativeMako:SimpleWorkKind.Novel}" />
                         <capability:WorkRelatedPage
                             controls:TabPageInclusion.IsIncluded="{Binding CurrentNovel, Converter={x:Static converters:PixevalConverters.IsInteractiveWork}}"
                             IsCommandBarCollapsed="True"
-                            WorkId="{Binding CurrentNovel.Id}"
-                            WorkType="{x:Static pixiv:SimpleWorkType.Novel}" />
+                            WorkId="{Binding CurrentNovel.Value.Id}"
+                            WorkKind="{x:Static nativeMako:SimpleWorkKind.Novel}" />
                         <local:NovelViewerSettingsPage
                             controls:TabPageInclusion.IsIncluded="{Binding CurrentNovel, Converter={x:Static converters:PixevalConverters.IsInteractiveWork}}" />
                     </TabbedPage>
@@ -61,43 +63,43 @@
                     DockPanel.Dock="Top"
                     IsDynamicOverflowEnabled="True">
                     <CommandBarButton
-                        Command="{x:Static novel:WorkCommands.BookmarkCommand}"
+                        Command="{Binding BookmarkCommand, Source={di:Service Type={x:Type novel:WorkCommands}}, DataType={x:Type novel:WorkCommands}}"
                         CommandParameter="{Binding CurrentNovel}"
                         ContextRequested="AddToBookmarkButton_OnClick"
                         Icon="{markup1:SymbolIconEx Heart,
                                                     IconVariant={Binding CurrentUiState.BookmarkState,
                                                                          Converter={x:Static converters:PixevalConverters.StateToIconVariant}}}"
-                        IsVisible="{Binding CurrentNovel.IsBookmarkSupported, FallbackValue={x:False}}"
-                        Label="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}" />
+                        IsVisible="{Binding CurrentNovel.Value.IsBookmarkSupported, FallbackValue={x:False}}"
+                        Label="{CompiledBinding [EntryItem-AddToBookmark], Source={x:Static loc:LocalizationManager.Instance}}" />
                     <CommandBarSeparator />
                     <CommandBarButton
-                        Command="{x:Static novel:WorkCommands.SaveCommand}"
+                        Command="{Binding SaveCommand, Source={di:Service Type={x:Type novel:WorkCommands}}, DataType={x:Type novel:WorkCommands}}"
                         CommandParameter="{Binding CurrentNovel}"
                         Icon="{markup:SymbolIcon Save}"
-                        Label="{I18N {x:Static pixeval:EntryItemResources.Save}}" />
+                        Label="{CompiledBinding [EntryItem-Save], Source={x:Static loc:LocalizationManager.Instance}}" />
                     <CommandBarSeparator />
                     <CommandBarButton
-                        Command="{x:Static novel:WorkCommands.AddToWatchLaterCommand}"
+                        Command="{Binding AddToWatchLaterCommand, Source={di:Service Type={x:Type novel:WorkCommands}}, DataType={x:Type novel:WorkCommands}}"
                         CommandParameter="{Binding CurrentNovel}"
                         Icon="{markup1:SymbolIconEx Clock,
                                                     IconVariant={Binding CurrentUiState.IsInWatchLater,
                                                                          Converter={x:Static converters:PixevalConverters.BoolToIconVariant}}}"
-                        Label="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}" />
+                        Label="{CompiledBinding [EntryItem-AddToWatchLater], Source={x:Static loc:LocalizationManager.Instance}}" />
                     <!--<CommandBarButton
                             Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
                             Icon="{markup:SymbolIcon Link}"
-                            Label="{I18N {x:Static pixeval:EntryItemResources.GenerateLink}}"
+                            Label="{CompiledBinding [EntryItem-GenerateLink], Source={x:Static loc:LocalizationManager.Instance}}"
                             Tag="{Binding CurrentNovel.AppUri}" />-->
                     <CommandBarButton
                         Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
                         Icon="{markup:SymbolIcon LinkMultiple}"
-                        Label="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
-                        Tag="{Binding CurrentNovel.WebsiteUri, FallbackValue={x:Null}}" />
+                        Label="{CompiledBinding [EntryItem-GenerateWebLink], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Tag="{Binding CurrentNovel.Value.WebsiteUri, FallbackValue={x:Null}}" />
                     <CommandBarButton
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                         Icon="{markup:SymbolIcon GlobeArrowUp}"
-                        Label="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
-                        Tag="{Binding CurrentNovel.WebsiteUri, FallbackValue={x:Null}}" />
+                        Label="{CompiledBinding [EntryItem-OpenInWebBrowser], Source={x:Static loc:LocalizationManager.Instance}}"
+                        Tag="{Binding CurrentNovel.Value.WebsiteUri, FallbackValue={x:Null}}" />
                 </CommandBar>
 
                 <Border Background="{Binding NovelBackground, Converter={x:Static converters:PixevalConverters.OptionalColorToBrush}}">
@@ -182,19 +184,19 @@
                         <CommandBarToggleButton
                             Icon="{markup:SymbolIcon Info}"
                             IsChecked="{Binding #InfoSplitView.IsPaneOpen}"
-                            Label="{I18N {x:Static pixeval:EntryViewerPageResources.InfoAndComments}}" />
+                            Label="{CompiledBinding [EntryViewerPage-InfoAndComments], Source={x:Static loc:LocalizationManager.Instance}}" />
                         <CommandBarToggleButton
                             Icon="{markup:SymbolIcon PanelBottomExpand}"
                             IsChecked="{Binding IsBottomListOpen}"
-                            Label="{I18N {x:Static pixeval:MiscResources.OpenBottomList}}" />
+                            Label="{CompiledBinding [Misc-OpenBottomList], Source={x:Static loc:LocalizationManager.Instance}}" />
                     </CommandBar>
                     <controls:IconText
                         MaxWidth="350"
                         VerticalAlignment="Center"
                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                        IsVisible="{Binding CurrentNovel.Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue={x:Null}}"
+                        IsVisible="{Binding CurrentNovel.Value.Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue={x:Null}}"
                         Symbol="AppTitle"
-                        Text="{Binding CurrentNovel.Title, FallbackValue={x:Null}}" />
+                        Text="{Binding CurrentNovel.Value.Title, FallbackValue={x:Null}}" />
                 </StackPanel>
 
                 <StackPanel

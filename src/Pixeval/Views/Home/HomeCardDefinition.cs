@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using FluentIcons.Common;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Config;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Home;
@@ -19,9 +19,7 @@ public sealed class HomeCardDefinition(
     Action<HomePageCardLayout, HomeCardPreviewSource> pageOpener,
     Func<HomePageCardLayout, IReadOnlyList<string>>? titleParameterFactory = null)
 {
-    private static readonly ConfigEngine ConfigEngine = new();
-
-    private readonly HomeCardMetadata _metadata = ConfigEngine.GetCardMetadata(sourceKind);
+    private readonly HomeCardMetadata _metadata = PixevalConfigMethods.GetCardMetadata(sourceKind);
 
     public HomePageCardSourceKind SourceKind { get; } = sourceKind;
 
@@ -33,17 +31,39 @@ public sealed class HomeCardDefinition(
 
     public int DefaultRowSpan => _metadata.DefaultRowSpan;
 
-    public WorkType WorkType => (WorkType)_metadata.DefaultWorkType;
+    public WorkKind WorkKind => StoredEnum.FromIndex<WorkKind>(_metadata.DefaultWorkType);
 
-    public SimpleWorkType SimpleWorkType => (SimpleWorkType)_metadata.DefaultSimpleWorkType;
+    public SimpleWorkKind SimpleWorkKind => StoredEnum.FromIndex<SimpleWorkKind>(_metadata.DefaultSimpleWorkType);
 
-    public PrivacyPolicy PrivacyPolicy => (PrivacyPolicy)_metadata.DefaultPrivacyPolicy;
+    public PrivacyRestrict PrivacyRestrict => StoredEnum.FromIndex<PrivacyRestrict>(_metadata.DefaultPrivacyPolicy);
 
     public bool UseCurrentUserAsDefault => _metadata.UseCurrentUserAsDefault;
 
     public string Title => AvaloniaHelper.GetHomeCardHeader(SourceKind).Header;
 
-    public string Description => I18NManager.GetResource($"Enum.HomePageCardSourceKindDescription.{SourceKind}");
+    public string Description => SourceKind switch
+    {
+        HomePageCardSourceKind.WorkRecommended => Strings.EnumHomePageCardSourceKindDescriptionWorkRecommended(),
+        HomePageCardSourceKind.WorkBookmarks => Strings.EnumHomePageCardSourceKindDescriptionWorkBookmarks(),
+        HomePageCardSourceKind.WorkRanking => Strings.EnumHomePageCardSourceKindDescriptionWorkRanking(),
+        HomePageCardSourceKind.WorkNew => Strings.EnumHomePageCardSourceKindDescriptionWorkNew(),
+        HomePageCardSourceKind.WorkFollowing => Strings.EnumHomePageCardSourceKindDescriptionWorkFollowing(),
+        HomePageCardSourceKind.WorkMyPixiv => Strings.EnumHomePageCardSourceKindDescriptionWorkMyPixiv(),
+        HomePageCardSourceKind.WorkRelated => Strings.EnumHomePageCardSourceKindDescriptionWorkRelated(),
+        HomePageCardSourceKind.WorkPosts => Strings.EnumHomePageCardSourceKindDescriptionWorkPosts(),
+        HomePageCardSourceKind.WorkSearch => Strings.EnumHomePageCardSourceKindDescriptionWorkSearch(),
+        HomePageCardSourceKind.UserRecommended => Strings.EnumHomePageCardSourceKindDescriptionUserRecommended(),
+        HomePageCardSourceKind.UserSearch => Strings.EnumHomePageCardSourceKindDescriptionUserSearch(),
+        HomePageCardSourceKind.UserFollowing => Strings.EnumHomePageCardSourceKindDescriptionUserFollowing(),
+        HomePageCardSourceKind.UserFollower => Strings.EnumHomePageCardSourceKindDescriptionUserFollower(),
+        HomePageCardSourceKind.UserMyPixiv => Strings.EnumHomePageCardSourceKindDescriptionUserMyPixiv(),
+        HomePageCardSourceKind.Spotlight => Strings.EnumHomePageCardSourceKindDescriptionSpotlight(),
+        HomePageCardSourceKind.SingleImage => Strings.EnumHomePageCardSourceKindDescriptionSingleImage(),
+        HomePageCardSourceKind.SingleNovel => Strings.EnumHomePageCardSourceKindDescriptionSingleNovel(),
+        HomePageCardSourceKind.SingleSeries => Strings.EnumHomePageCardSourceKindDescriptionSingleSeries(),
+        HomePageCardSourceKind.SingleUser => Strings.EnumHomePageCardSourceKindDescriptionSingleUser(),
+        _ => ""
+    };
 
     public bool HasParameter(HomeCardParameterKinds parameter) =>
         (Parameters & parameter) is not HomeCardParameterKinds.None;
@@ -69,6 +89,6 @@ public sealed class HomeCardDefinition(
         if (titleParameterFactory is not null)
             parts.AddRange(titleParameterFactory(card));
 
-        return string.Join(I18NManager.GetResource(HomePageResources.CardTitle.ParameterSeparator), parts);
+        return string.Join(Strings.HomePageCardTitleParameterSeparator(), parts);
     }
 }

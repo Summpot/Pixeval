@@ -3,14 +3,19 @@
 
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Pixeval.I18N;
+using Pixeval.Localization;
+using Pixeval.Mako;
 
 namespace Pixeval.ViewModels.Search;
 
 public partial class NovelSearchFormViewModel : SearchArgumentsFormViewModelBase
 {
+    public NovelSearchFormViewModel(IUserSessionService? userSession = null) : base(userSession)
+    {
+    }
+
     [ObservableProperty]
-    public partial SearchNovelTagMatchOption MatchOption { get; set; }
+    public partial NovelSearchTarget MatchOption { get; set; } = NovelSearchTarget.PartialMatchForTags;
 
     [ObservableProperty]
     public partial IReadOnlyList<SearchOptionsLanguage> LanguageItems { get; set; } =
@@ -53,8 +58,8 @@ public partial class NovelSearchFormViewModel : SearchArgumentsFormViewModelBase
 
         if (IsContentLengthEnabled && HasInvalidRange(ContentLengthMinOption.NullableInt, ContentLengthMaxOption.NullableInt))
         {
-            title = I18NManager.GetResource(SearchResources.Validation.InvalidNumericRange.Title);
-            content = I18NManager.GetResource(SearchResources.Validation.InvalidNumericRange.Content);
+            title = Strings.SearchValidationInvalidNumericRangeTitle();
+            content = Strings.SearchValidationInvalidNumericRangeContent();
             return false;
         }
 
@@ -62,22 +67,25 @@ public partial class NovelSearchFormViewModel : SearchArgumentsFormViewModelBase
         return true;
     }
 
-    public NovelSearchArguments BuildArguments(string searchText)
+    public NovelSearchParams ToSearchParams(string searchText)
     {
         var hasContentLength = IsContentLengthEnabled;
-        var arguments = new NovelSearchArguments(searchText)
-        {
-            MatchOption = MatchOption,
-            LangCode = Language is "" ? null : Language,
-            Option = ContentLengthOption,
-            ContentLengthMin = hasContentLength ? ContentLengthMinOption.NullableInt : null,
-            ContentLengthMax = hasContentLength ? ContentLengthMaxOption.NullableInt : null,
-            IsOriginalOnly = IsOriginalOnly,
-            GenreId = IsOriginalOnly ? GenreId is 0 ? null : GenreId : null,
-            IsReplaceableOnly = IsReplaceableOnly
-        };
-
-        ApplyCommonArguments(arguments);
-        return arguments;
+        return new(
+            Word: searchText,
+            SearchTarget: MatchOption,
+            Sort: SortOption,
+            SearchAiType: AiType ? 1 : 0,
+            Lang: Language is "" ? null : Language,
+            ContentLengthOption: ContentLengthOption.ToNovelContentLength(),
+            ContentLengthMin: hasContentLength ? ContentLengthMinOption.NullableInt : null,
+            ContentLengthMax: hasContentLength ? ContentLengthMaxOption.NullableInt : null,
+            IsOriginalOnly: IsOriginalOnly ? true : null,
+            Genre: IsOriginalOnly ? GenreId is 0 ? null : GenreId : null,
+            IsReplaceableOnly: IsReplaceableOnly ? true : null,
+            MergePlainKeywordResults: MergePlainKeywordResults,
+            IncludeTranslatedTagResults: IncludeTranslatedTagResults,
+            IncludePotentialViolationWorks: IncludePotentialViolationWorks,
+            StartDate: StartDateOption.ToNullableDateTimeOffset().ToQueryDate(),
+            EndDate: EndDateOption.ToNullableDateTimeOffset().ToQueryDate());
     }
 }

@@ -14,7 +14,6 @@ using CommunityToolkit.Mvvm.Input;
 using Pixeval.Config;
 using Pixeval.Pixiv;
 using Pixeval.Booru;
-using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Utilities;
 using Pixeval.Views.Works;
 using Pixeval.Views.Search;
@@ -194,7 +193,7 @@ public class WorkInfoPane : TemplatedControl
 
     private void ViewLikedUsers()
     {
-        var nav = this.GetUiService<INavigationService>() ?? new NavigationService();
+        var nav = this.GetRequiredUiService<INavigationService>();
 
         if (ArtworkInfo is Illustration illust && illust.Id > 0)
         {
@@ -237,9 +236,9 @@ public class WorkInfoPane : TemplatedControl
         if (tag is null)
             return;
 
-        var type = ArtworkInfo is Mako.Novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
+        var type = ArtworkInfo is Mako.Novel ? SimpleWorkKind.Novel : SimpleWorkKind.Illustration;
         this.GetRequiredUiService<SearchHistorySession>().Add(tag.Name, tag.TranslatedName);
-        var nav = this.GetUiService<INavigationService>() ?? new NavigationService();
+        var nav = this.GetRequiredUiService<INavigationService>();
         nav.NavigateToWorkSearch(tag.Name, type, this);
     }
 
@@ -256,10 +255,10 @@ public class WorkInfoPane : TemplatedControl
         }
     }
 
-    private static void BlockUser(object? user)
+    private void BlockUser(object? user)
     {
         if (user is User u)
-            _ = BlockedContentHelper.TryAddOrUpdateBlockedUser(u);
+            _ = BlockedContentHelper.TryAddOrUpdateBlockedUser(u, this.GetRequiredUiService<StorageEngine>());
     }
 
     public static IValueConverter HalfVerticalSpaceConverter { get; } = new FuncValueConverter<Rect, double>(x => x.Height / 2);

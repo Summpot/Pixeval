@@ -66,33 +66,30 @@ public sealed class NovelContext(NovelContent novelContent) : INovelContext<Stre
 
     public StringBuilder LoadMdContent()
     {
-        var engine = new Pixeval.Novel.NovelEngine();
         var images = NovelContent.Images
             .Select(x => new Pixeval.Novel.NovelImageRenderDto(x.NovelImageId, x.ThumbnailUrl, GetLocalImageFileName(x)))
             .ToList();
         var illusts = NovelContent.Illustrations
             .Select(x => new Pixeval.Novel.NovelIllustRenderDto(x.Id, x.Page, x.ThumbnailUrl, x.AppUri.OriginalString, x.WebsiteUri.OriginalString, GetLocalImageFileName(x)))
             .ToList();
-        var md = engine.RenderExportMarkdownFromText(NovelContent.Text, CoverFileName, images, illusts);
+        var md = Pixeval.Novel.PixevalNovelMethods.RenderExportMarkdownFromText(NovelContent.Text, CoverFileName, images, illusts);
         return new StringBuilder(md);
     }
 
     public StringBuilder LoadHtmlContent()
     {
-        var engine = new Pixeval.Novel.NovelEngine();
         var images = NovelContent.Images
             .Select(x => new Pixeval.Novel.NovelImageRenderDto(x.NovelImageId, x.ThumbnailUrl, GetLocalImageFileName(x)))
             .ToList();
         var illusts = NovelContent.Illustrations
             .Select(x => new Pixeval.Novel.NovelIllustRenderDto(x.Id, x.Page, x.ThumbnailUrl, x.AppUri.OriginalString, x.WebsiteUri.OriginalString, GetLocalImageFileName(x)))
             .ToList();
-        var html = engine.RenderExportHtmlFromText(NovelContent.Text, NovelContent.Title, CoverFileName, images, illusts);
+        var html = Pixeval.Novel.PixevalNovelMethods.RenderExportHtmlFromText(NovelContent.Text, NovelContent.Title, CoverFileName, images, illusts);
         return new StringBuilder(html);
     }
 
     public byte[] BuildEpubBytes(Dictionary<string, byte[]> images, string? author = null)
     {
-        var engine = new Pixeval.Novel.NovelEngine();
         var metadata = new Pixeval.Novel.NovelEpubMetadataDto(
             NovelContent.Id,
             NovelContent.Title,
@@ -101,7 +98,7 @@ public sealed class NovelContext(NovelContent novelContent) : INovelContext<Stre
             string.IsNullOrWhiteSpace(NovelContent.Language) ? "ja" : NovelContent.Language,
             images.ContainsKey(CoverFileName) ? CoverFileName : null
         );
-        return engine.BuildEpubFromText(metadata, NovelContent.Text, images);
+        return Pixeval.Novel.PixevalNovelMethods.BuildEpubFromText(metadata, NovelContent.Text, images);
     }
 
     public Stream? TryGetStream(int index)

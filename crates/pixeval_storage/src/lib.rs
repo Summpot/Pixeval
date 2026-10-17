@@ -6,12 +6,18 @@ uniffi::setup_scaffolding!();
 pub mod engine;
 pub mod error;
 pub mod models;
+pub mod payload;
 pub mod repository;
 pub mod schema;
 
 pub use engine::*;
 pub use error::*;
 pub use models::*;
+pub use payload::{
+    artwork_id, artwork_payload_id, artwork_serialize_key, artwork_work_key, hydrate, serialize,
+    serialize_key, work_key, ArtworkPayload, BOORU_SERIALIZE_KEY, ILLUSTRATION_SERIALIZE_KEY,
+    NOVEL_SERIALIZE_KEY, SAUCENAO_SERIALIZE_KEY,
+};
 pub use repository::*;
 
 #[cfg(test)]
@@ -22,35 +28,37 @@ mod tests {
     #[test]
     fn test_search_history_crud() {
         let storage = StorageEngine::new(":memory:".to_string()).unwrap();
+        let history = storage.history();
 
-        assert_eq!(storage.count_search_history().unwrap(), 0);
+        assert_eq!(history.count_search_history().unwrap(), 0);
 
-        let rec = storage
+        let rec = history
             .insert_search_history("pixiv".to_string(), Some("Pixiv".to_string()), "2026-10-06T00:00:00Z".to_string())
             .unwrap();
         assert_eq!(rec.value, "pixiv");
-        assert_eq!(storage.count_search_history().unwrap(), 1);
+        assert_eq!(history.count_search_history().unwrap(), 1);
 
-        let queried = storage.get_search_history_by_value("pixiv".to_string()).unwrap();
+        let queried = history.get_search_history_by_value("pixiv".to_string()).unwrap();
         assert!(queried.is_some());
         assert_eq!(queried.unwrap().translated_name, Some("Pixiv".to_string()));
 
-        let upserted = storage
+        let upserted = history
             .upsert_search_history("pixiv".to_string(), Some("Pixiv Updated".to_string()), "2026-10-06T01:00:00Z".to_string())
             .unwrap();
         assert_eq!(upserted.translated_name, Some("Pixiv Updated".to_string()));
-        assert_eq!(storage.count_search_history().unwrap(), 1);
+        assert_eq!(history.count_search_history().unwrap(), 1);
 
-        let deleted = storage.try_delete_search_history_by_value("pixiv".to_string()).unwrap();
+        let deleted = history.try_delete_search_history_by_value("pixiv".to_string()).unwrap();
         assert!(deleted);
-        assert_eq!(storage.count_search_history().unwrap(), 0);
+        assert_eq!(history.count_search_history().unwrap(), 0);
     }
 
     #[test]
     fn test_browse_history_cascade_and_stream() {
         let storage = StorageEngine::new(":memory:".to_string()).unwrap();
+        let history = storage.history();
 
-        let rec1 = storage
+        let rec1 = history
             .add_or_replace_browse_history(
                 "100".to_string(),
                 Some("Illustration".to_string()),
@@ -59,10 +67,10 @@ mod tests {
             )
             .unwrap();
         assert_eq!(rec1.work_key, "Illustration:100");
-        assert_eq!(storage.count_browse_history().unwrap(), 1);
+        assert_eq!(history.count_browse_history().unwrap(), 1);
 
         // Replacing should reuse/cascade payload
-        let rec2 = storage
+        let rec2 = history
             .add_or_replace_browse_history(
                 "100".to_string(),
                 Some("Illustration".to_string()),
@@ -71,21 +79,22 @@ mod tests {
             )
             .unwrap();
         assert_eq!(rec2.work_key, "Illustration:100");
-        assert_eq!(storage.count_browse_history().unwrap(), 1);
+        assert_eq!(history.count_browse_history().unwrap(), 1);
 
-        let stream = storage.stream_browse_history(0, 10).unwrap();
+        let stream = history.stream_browse_history(0, 10).unwrap();
         assert_eq!(stream.len(), 1);
         assert_eq!(stream[0].payload_json, Some("{\"title\":\"test1-updated\"}".to_string()));
 
-        storage.clear_browse_history().unwrap();
-        assert_eq!(storage.count_browse_history().unwrap(), 0);
+        history.clear_browse_history().unwrap();
+        assert_eq!(history.count_browse_history().unwrap(), 0);
     }
 
     #[test]
     fn test_subscription_download_identity_and_orphans() {
         let storage = StorageEngine::new(":memory:".to_string()).unwrap();
+        let download = storage.download();
 
-        let r1 = storage
+        let r1 = download
             .add_or_replace_subscription_download_history(
                 "1".to_string(),
                 Some("Illustration".to_string()),
@@ -101,10 +110,10 @@ mod tests {
         assert_eq!(r1.work_subscription_id, 10);
         assert_eq!(r1.state, 3);
 
-        assert!(storage
+        assert!(download
             .contains_subscription_download_identity(10, "art1".to_string(), "C:/dest1.jpg".to_string())
             .unwrap());
-        assert!(!storage
+        assert!(!download
             .contains_subscription_download_identity(10, "art1".to_string(), "C:/other.jpg".to_string())
             .unwrap());
 
@@ -121,6 +130,7 @@ mod tests {
                 work_subscription_id: 20,
                 artwork_id: "art2".to_string(),
                 payload_json: Some("{\"art\":2}".to_string()),
+                payload: None,
             },
             SubscriptionDownloadHistoryRecord {
                 history_entry_id: 0,
@@ -133,15 +143,16 @@ mod tests {
                 work_subscription_id: 30,
                 artwork_id: "art3".to_string(),
                 payload_json: Some("{\"art\":3}".to_string()),
+                payload: None,
             },
         ];
-        storage.add_or_replace_subscription_download_history_batch(entries).unwrap();
-        assert_eq!(storage.count_subscription_download_history().unwrap(), 3);
+        download.add_or_replace_subscription_download_history_batch(entries).unwrap();
+        assert_eq!(download.count_subscription_download_history().unwrap(), 3);
 
         // Delete orphans: keeping only sub 10 and 20
-        let deleted = storage.delete_orphan_subscription_downloads(vec![10, 20]).unwrap();
+        let deleted = download.delete_orphan_subscription_downloads(vec![10, 20]).unwrap();
         assert_eq!(deleted, 1);
-        assert_eq!(storage.count_subscription_download_history().unwrap(), 2);
+        assert_eq!(download.count_subscription_download_history().unwrap(), 2);
     }
 
     #[test]
@@ -155,10 +166,7 @@ mod tests {
                 0,
                 "Artist Name".to_string(),
                 "Artist".to_string(),
-                "avatar.jpg".to_string(),
-                "2026-10-06".to_string(),
-                Some("99999".to_string()),
-            )
+                "avatar.jpg".to_string())
             .unwrap();
         assert_eq!(sub.id, 12345);
 

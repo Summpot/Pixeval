@@ -4,7 +4,7 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Pixeval.I18N;
+using Pixeval.Localization;
 
 namespace Pixeval.ViewModels.Viewers;
 
@@ -55,17 +55,17 @@ public abstract partial class PagedViewerViewModel : ViewModelBase
 
     public string? PrevButtonText => PrevAction switch
     {
-        PagedBehavior.PageAndWork => I18NManager.GetResource(EntryViewerPageResources.Prev.PageOrWork),
-        PagedBehavior.Work => I18NManager.GetResource(EntryViewerPageResources.Prev.Work),
-        PagedBehavior.Page => I18NManager.GetResource(EntryViewerPageResources.Prev.Page),
+        PagedBehavior.PageAndWork => Strings.EntryViewerPagePrevPageOrWork(),
+        PagedBehavior.Work => Strings.EntryViewerPagePrevWork(),
+        PagedBehavior.Page => Strings.EntryViewerPagePrevPage(),
         _ => null
     };
 
     public string? NextButtonText => NextAction switch
     {
-        PagedBehavior.PageAndWork => I18NManager.GetResource(EntryViewerPageResources.Next.PageOrWork),
-        PagedBehavior.Work => I18NManager.GetResource(EntryViewerPageResources.Next.Work),
-        PagedBehavior.Page => I18NManager.GetResource(EntryViewerPageResources.Next.Page),
+        PagedBehavior.PageAndWork => Strings.EntryViewerPageNextPageOrWork(),
+        PagedBehavior.Work => Strings.EntryViewerPageNextWork(),
+        PagedBehavior.Page => Strings.EntryViewerPageNextPage(),
         _ => null
     };
 

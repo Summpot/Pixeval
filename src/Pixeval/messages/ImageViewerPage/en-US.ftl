@@ -1,0 +1,11 @@
+ApplyingTransformerExtensions = Applying image transformer extensions
+
+TransformerExtensionFinishedSuccessfully = Image transformer extension applied successfully
+
+LoadingOriginalImage = Loading original image…
+
+OriginalImageLoadedSuccessfully = Original image loaded successfully
+
+OriginalImageLoadFailed = Original image load failed
+
+TransformerExtensionFailed = Image transformer extension failed

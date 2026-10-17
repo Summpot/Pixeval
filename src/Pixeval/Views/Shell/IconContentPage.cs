@@ -14,6 +14,14 @@ public class IconContentPage : ContentPage
     {
         var tuple = AvaloniaHelper.GetPageHeader(GetType());
         Header = tuple.Header;
+        var previousHeader = tuple.Header;
+        var localization = AppLocalization.Instance.Subscribe(() =>
+        {
+            var translated = AvaloniaHelper.GetPageHeader(GetType()).Header;
+            if (Equals(Header, previousHeader)) Header = translated;
+            previousHeader = translated;
+        });
+        Pixeval.ViewModels.ViewModelDisposal.Register(this, localization);
         Icon = new SymbolIcon
         {
             Symbol = tuple.Symbol,
@@ -29,6 +37,14 @@ public class IconNavigationPage : NavigationPage
     {
         var tuple = AvaloniaHelper.GetPageHeader(GetType());
         Header = tuple.Header;
+        var previousHeader = tuple.Header;
+        var localization = AppLocalization.Instance.Subscribe(() =>
+        {
+            var translated = AvaloniaHelper.GetPageHeader(GetType()).Header;
+            if (Equals(Header, previousHeader)) Header = translated;
+            previousHeader = translated;
+        });
+        Pixeval.ViewModels.ViewModelDisposal.Register(this, localization);
         Icon = new SymbolIcon
         {
             Symbol = tuple.Symbol,
@@ -44,6 +60,14 @@ public class IconTabbedPage : TabbedPage
     {
         var tuple = AvaloniaHelper.GetPageHeader(GetType());
         Header = tuple.Header;
+        var previousHeader = tuple.Header;
+        var localization = AppLocalization.Instance.Subscribe(() =>
+        {
+            var translated = AvaloniaHelper.GetPageHeader(GetType()).Header;
+            if (Equals(Header, previousHeader)) Header = translated;
+            previousHeader = translated;
+        });
+        Pixeval.ViewModels.ViewModelDisposal.Register(this, localization);
         Icon = new SymbolIcon
         {
             Symbol = tuple.Symbol,

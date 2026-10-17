@@ -31,7 +31,7 @@ public partial class SeriesView : UserControl
         if (sender is not Control { DataContext: Series viewModel })
             return;
 
-        this.AppNavigation?.CreateSeriesPage(viewModel.WorkType, viewModel.Id);
+        this.AppNavigation?.CreateSeriesPage(viewModel.WorkKind, viewModel.Id);
     }
 
     private void SeriesListBox_OnContainerPrepared(object? sender, ContainerPreparedEventArgs e)

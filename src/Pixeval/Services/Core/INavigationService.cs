@@ -75,27 +75,27 @@ public interface INavigationService
 
     void NavigateToUser(SingleUserResponse userDetail, Control? sourceControl = null);
 
-    void NavigateToSeries(SimpleWorkType workType, long seriesId, Control? sourceControl = null);
+    void NavigateToSeries(SimpleWorkKind workType, long seriesId, Control? sourceControl = null);
 
     void NavigateToSeries(
-        SimpleWorkType workType,
+        SimpleWorkKind workType,
         long seriesId,
         Series seriesDetail,
         IWorkEntry? firstWork,
         IWorkViewViewModel worksViewModel,
         Control? sourceControl = null);
 
-    void NavigateToWorkSearch(string keyword, SimpleWorkType workType = SimpleWorkType.Illustration, Control? sourceControl = null);
+    void NavigateToWorkSearch(string keyword, SimpleWorkKind workType = SimpleWorkKind.Illustration, Control? sourceControl = null);
 
-    void NavigateToWorkSearch(IllustrationSearchArguments arguments, Control? sourceControl = null);
+    void NavigateToWorkSearch(IllustrationSearchParams arguments, Control? sourceControl = null);
 
-    void NavigateToWorkSearch(NovelSearchArguments arguments, Control? sourceControl = null);
+    void NavigateToWorkSearch(NovelSearchParams arguments, Control? sourceControl = null);
 
     void NavigateToWorkSearch(
         string keyword,
-        IllustrationSearchArguments illustrationArgs,
-        NovelSearchArguments novelArgs,
-        SimpleWorkType workType,
+        IllustrationSearchParams illustrationArgs,
+        NovelSearchParams novelArgs,
+        SimpleWorkKind workType,
         Control? sourceControl = null);
 
     void NavigateToUserSearch(string? keyword, Control? sourceControl = null);

@@ -3,6 +3,7 @@
 
 use thiserror::Error;
 
+#[boltffi::error]
 #[derive(Error, Debug, Clone, PartialEq, Eq, uniffi::Error)]
 pub enum CacheError {
     #[error("I/O error: {message}")]

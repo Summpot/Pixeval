@@ -1,0 +1,13 @@
+AddSubscriptionButton-Label = 添加订阅
+
+RemoveSubscriptionButton-Label = 取消订阅
+
+SyncAllSubscriptionsButton-Label = 立即同步所有订阅
+
+ExitConfirmation-Title = 订阅内容仍在获取
+
+ExitConfirmation-Content = 现在退出会丢弃本次尚未提交的订阅获取结果。确定要停止获取并退出吗？
+
+TargetIdTextBox-PlaceholderText = 用户或系列 ID
+
+InvalidTargetId = 请输入有效的用户或系列 ID
