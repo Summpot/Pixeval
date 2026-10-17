@@ -26,7 +26,7 @@ public sealed class DownloadFormatService : IDownloadFormatService
         var token = new UgoiraDownloadFormatToken(ugoiraDownloadFormat);
         if (token.BuiltInFormat is not null)
         {
-            if (token.BuiltInFormat == UgoiraDownloadFormat.Mp4 && !MediaEngine.IsMp4Available)
+            if (token.BuiltInFormat == UgoiraDownloadFormat.Mp4 && !MediaCodec.IsMp4Available)
                 return UgoiraDownloadFormatToken.Default;
             return token;
         }

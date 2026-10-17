@@ -8,13 +8,17 @@ pub mod parser;
 pub mod render;
 
 use std::collections::HashMap;
-use std::sync::Arc;
+
+use render::epub::build_epub as build_epub_doc;
+use render::html::render_export_html as render_export_html_doc;
+use render::markdown::{
+    render_export_markdown as render_export_markdown_doc,
+    render_pages_markdown as render_pages_markdown_doc,
+};
 
 pub use ast::*;
 pub use parser::*;
-pub use render::epub::*;
-pub use render::html::*;
-pub use render::markdown::*;
+pub use render::epub::EpubMetadata;
 
 #[boltffi::data]
 #[derive(uniffi::Record, Clone, Debug, Default)]
@@ -57,132 +61,134 @@ pub enum NovelError {
     IoError { message: String },
 }
 
-#[derive(uniffi::Object, Default)]
-pub struct NovelEngine;
+fn url_lookups(
+    images: Vec<NovelImageRenderDto>,
+    illusts: Vec<NovelIllustRenderDto>,
+) -> (HashMap<i64, String>, HashMap<(i64, i32), (String, String)>) {
+    let img_lookup = images.into_iter().map(|img| (img.image_id, img.url)).collect();
+    let ill_lookup = illusts
+        .into_iter()
+        .map(|ill| ((ill.illust_id, ill.page), (ill.url, ill.app_uri)))
+        .collect();
+    (img_lookup, ill_lookup)
+}
 
+fn filename_lookups(
+    images: Vec<NovelImageRenderDto>,
+    illusts: Vec<NovelIllustRenderDto>,
+) -> (HashMap<i64, String>, HashMap<(i64, i32), (String, String)>) {
+    let img_lookup = images
+        .into_iter()
+        .map(|img| (img.image_id, img.filename))
+        .collect();
+    let ill_lookup = illusts
+        .into_iter()
+        .map(|ill| ((ill.illust_id, ill.page), (ill.filename, ill.web_uri)))
+        .collect();
+    (img_lookup, ill_lookup)
+}
+
+/// Parses novel raw markup text into a structured AST document
 #[uniffi::export]
-impl NovelEngine {
-    #[uniffi::constructor]
-    pub fn new() -> Arc<Self> {
-        Arc::new(Self)
-    }
+pub fn parse_novel(text: String) -> NovelDocument {
+    NovelParser::parse(&text)
+}
 
-    /// Parses novel raw markup text into a structured AST document
-    pub fn parse(&self, text: String) -> NovelDocument {
-        NovelParser::parse(&text)
-    }
+/// Renders markdown pages for Avalonia UI display
+#[uniffi::export]
+pub fn render_pages_markdown(
+    text: String,
+    images: Vec<NovelImageRenderDto>,
+    illusts: Vec<NovelIllustRenderDto>,
+) -> Vec<String> {
+    let doc = NovelParser::parse(&text);
+    let (img_lookup, ill_lookup) = url_lookups(images, illusts);
+    render_pages_markdown_doc(&doc, &img_lookup, &ill_lookup)
+}
 
-    /// Renders markdown pages for Avalonia UI display
-    pub fn render_pages_markdown(
-        &self,
-        text: String,
-        images: Vec<NovelImageRenderDto>,
-        illusts: Vec<NovelIllustRenderDto>,
-    ) -> Vec<String> {
-        let doc = NovelParser::parse(&text);
-        let mut img_lookup = HashMap::new();
-        for img in images {
-            img_lookup.insert(img.image_id, img.url);
-        }
-        let mut ill_lookup = HashMap::new();
-        for ill in illusts {
-            ill_lookup.insert((ill.illust_id, ill.page), (ill.url, ill.app_uri));
-        }
-        render_pages_markdown(&doc, &img_lookup, &ill_lookup)
-    }
+/// Renders full markdown document for file export
+#[uniffi::export]
+pub fn render_export_markdown(
+    doc: NovelDocument,
+    cover_filename: Option<String>,
+    images: Vec<NovelImageRenderDto>,
+    illusts: Vec<NovelIllustRenderDto>,
+) -> String {
+    let (img_lookup, ill_lookup) = filename_lookups(images, illusts);
+    render_export_markdown_doc(&doc, cover_filename.as_deref(), &img_lookup, &ill_lookup)
+}
 
-    /// Renders full markdown document for file export
-    pub fn render_export_markdown(
-        &self,
-        doc: &NovelDocument,
-        cover_filename: Option<String>,
-        images: Vec<NovelImageRenderDto>,
-        illusts: Vec<NovelIllustRenderDto>,
-    ) -> String {
-        let mut img_lookup = HashMap::new();
-        for img in images {
-            img_lookup.insert(img.image_id, img.filename);
-        }
-        let mut ill_lookup = HashMap::new();
-        for ill in illusts {
-            ill_lookup.insert((ill.illust_id, ill.page), (ill.filename, ill.web_uri));
-        }
-        render_export_markdown(doc, cover_filename.as_deref(), &img_lookup, &ill_lookup)
-    }
+/// Renders semantic HTML document for file export
+#[uniffi::export]
+pub fn render_export_html(
+    doc: NovelDocument,
+    title: String,
+    cover_filename: Option<String>,
+    images: Vec<NovelImageRenderDto>,
+    illusts: Vec<NovelIllustRenderDto>,
+) -> String {
+    let (img_lookup, ill_lookup) = filename_lookups(images, illusts);
+    render_export_html_doc(
+        &doc,
+        &title,
+        cover_filename.as_deref(),
+        &img_lookup,
+        &ill_lookup,
+    )
+}
 
-    /// Renders semantic HTML document for file export
-    pub fn render_export_html(
-        &self,
-        doc: &NovelDocument,
-        title: String,
-        cover_filename: Option<String>,
-        images: Vec<NovelImageRenderDto>,
-        illusts: Vec<NovelIllustRenderDto>,
-    ) -> String {
-        let mut img_lookup = HashMap::new();
-        for img in images {
-            img_lookup.insert(img.image_id, img.filename);
-        }
-        let mut ill_lookup = HashMap::new();
-        for ill in illusts {
-            ill_lookup.insert((ill.illust_id, ill.page), (ill.filename, ill.web_uri));
-        }
-        render_export_html(doc, &title, cover_filename.as_deref(), &img_lookup, &ill_lookup)
-    }
+/// Builds an EPUB 3.0 electronic book
+#[uniffi::export]
+pub fn build_epub(
+    metadata: NovelEpubMetadataDto,
+    doc: NovelDocument,
+    images: HashMap<String, Vec<u8>>,
+) -> Result<Vec<u8>, NovelError> {
+    let meta = EpubMetadata {
+        id: metadata.id,
+        title: metadata.title,
+        author: metadata.author,
+        description: metadata.description,
+        language: metadata.language,
+        cover_filename: metadata.cover_filename,
+    };
+    build_epub_doc(meta, &doc, &images).map_err(|e| NovelError::EpubError { message: e })
+}
 
-    /// Builds an EPUB 3.0 electronic book
-    pub fn build_epub(
-        &self,
-        metadata: NovelEpubMetadataDto,
-        doc: &NovelDocument,
-        images: HashMap<String, Vec<u8>>,
-    ) -> Result<Vec<u8>, NovelError> {
-        let meta = EpubMetadata {
-            id: metadata.id,
-            title: metadata.title,
-            author: metadata.author,
-            description: metadata.description,
-            language: metadata.language,
-            cover_filename: metadata.cover_filename,
-        };
-        build_epub(meta, doc, &images).map_err(|e| NovelError::EpubError { message: e })
-    }
+/// Renders full markdown document for file export directly from text
+#[uniffi::export]
+pub fn render_export_markdown_from_text(
+    text: String,
+    cover_filename: Option<String>,
+    images: Vec<NovelImageRenderDto>,
+    illusts: Vec<NovelIllustRenderDto>,
+) -> String {
+    let doc = NovelParser::parse(&text);
+    render_export_markdown(doc, cover_filename, images, illusts)
+}
 
-    /// Renders full markdown document for file export directly from text
-    pub fn render_export_markdown_from_text(
-        &self,
-        text: String,
-        cover_filename: Option<String>,
-        images: Vec<NovelImageRenderDto>,
-        illusts: Vec<NovelIllustRenderDto>,
-    ) -> String {
-        let doc = NovelParser::parse(&text);
-        self.render_export_markdown(&doc, cover_filename, images, illusts)
-    }
+/// Renders semantic HTML document for file export directly from text
+#[uniffi::export]
+pub fn render_export_html_from_text(
+    text: String,
+    title: String,
+    cover_filename: Option<String>,
+    images: Vec<NovelImageRenderDto>,
+    illusts: Vec<NovelIllustRenderDto>,
+) -> String {
+    let doc = NovelParser::parse(&text);
+    render_export_html(doc, title, cover_filename, images, illusts)
+}
 
-    /// Renders semantic HTML document for file export directly from text
-    pub fn render_export_html_from_text(
-        &self,
-        text: String,
-        title: String,
-        cover_filename: Option<String>,
-        images: Vec<NovelImageRenderDto>,
-        illusts: Vec<NovelIllustRenderDto>,
-    ) -> String {
-        let doc = NovelParser::parse(&text);
-        self.render_export_html(&doc, title, cover_filename, images, illusts)
-    }
-
-    /// Builds an EPUB 3.0 electronic book directly from text
-    pub fn build_epub_from_text(
-        &self,
-        metadata: NovelEpubMetadataDto,
-        text: String,
-        images: HashMap<String, Vec<u8>>,
-    ) -> Result<Vec<u8>, NovelError> {
-        let doc = NovelParser::parse(&text);
-        self.build_epub(metadata, &doc, images)
-    }
+/// Builds an EPUB 3.0 electronic book directly from text
+#[uniffi::export]
+pub fn build_epub_from_text(
+    metadata: NovelEpubMetadataDto,
+    text: String,
+    images: HashMap<String, Vec<u8>>,
+) -> Result<Vec<u8>, NovelError> {
+    let doc = NovelParser::parse(&text);
+    build_epub(metadata, doc, images)
 }
 
 #[cfg(test)]
@@ -257,16 +263,15 @@ mod tests {
 
     #[test]
     fn test_render_markdown_and_html() {
-        let engine = NovelEngine::new();
         let text = "前言[chapter:序章]\n[[rb:漢字 > かんじ]][newpage]第二页";
-        let pages_md = engine.render_pages_markdown(text.to_string(), vec![], vec![]);
+        let pages_md = render_pages_markdown(text.to_string(), vec![], vec![]);
         assert_eq!(pages_md.len(), 2);
         assert!(pages_md[0].contains("## 序章"));
         assert!(pages_md[0].contains("<ruby>漢字<rp>（</rp><rt>かんじ</rt><rp>）</rp></ruby>"));
 
-        let doc = engine.parse(text.to_string());
-        let full_html = engine.render_export_html(
-            &doc,
+        let doc = parse_novel(text.to_string());
+        let full_html = render_export_html(
+            doc,
             "测试小说".to_string(),
             Some("cover.jpg".to_string()),
             vec![],
@@ -280,9 +285,8 @@ mod tests {
 
     #[test]
     fn test_build_epub() {
-        let engine = NovelEngine::new();
         let text = "小说正文[chapter:开端]\n测试EPUB生成[newpage]第二章内容";
-        let doc = engine.parse(text.to_string());
+        let doc = parse_novel(text.to_string());
         let meta = NovelEpubMetadataDto {
             id: 11111,
             title: "EPUB测试".to_string(),
@@ -291,8 +295,7 @@ mod tests {
             language: "zh".to_string(),
             cover_filename: None,
         };
-        let epub_bytes = engine
-            .build_epub(meta, &doc, HashMap::new())
+        let epub_bytes = build_epub(meta, doc, HashMap::new())
             .expect("EPUB build should succeed");
         assert!(!epub_bytes.is_empty());
         // Verify mimetype header in zip

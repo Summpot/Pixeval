@@ -8,7 +8,10 @@ use std::sync::atomic::Ordering;
 
 use pixeval_mako::{Illustration, Novel, NovelContent};
 use pixeval_media::{ImageCodecFormat, UgoiraFormat};
-use pixeval_novel::{NovelEngine, NovelEpubMetadataDto, NovelIllustRenderDto, NovelImageRenderDto};
+use pixeval_novel::{
+    build_epub_from_text, render_export_html_from_text, render_export_markdown_from_text,
+    NovelEpubMetadataDto, NovelIllustRenderDto, NovelImageRenderDto,
+};
 use pixeval_storage::{DownloadHistoryRecord, StorageEngine, SubscriptionDownloadHistoryRecord};
 use tokio_util::sync::CancellationToken;
 
@@ -1349,14 +1352,12 @@ fn commit_bytes(
 
 fn render_novel_html(job: &AfterJob, content: &NovelContent) -> String {
     let (images, illusts, cover) = novel_names(job, content);
-    let engine = NovelEngine::new();
-    engine.render_export_html_from_text(content.text.clone(), job.novel.title.clone(), cover, images, illusts)
+    render_export_html_from_text(content.text.clone(), job.novel.title.clone(), cover, images, illusts)
 }
 
 fn render_novel_markdown(job: &AfterJob, content: &NovelContent) -> String {
     let (images, illusts, cover) = novel_names(job, content);
-    let engine = NovelEngine::new();
-    engine.render_export_markdown_from_text(content.text.clone(), cover, images, illusts)
+    render_export_markdown_from_text(content.text.clone(), cover, images, illusts)
 }
 
 fn render_novel_epub(job: &AfterJob, content: &NovelContent) -> Result<Vec<u8>, String> {
@@ -1369,7 +1370,6 @@ fn render_novel_epub(job: &AfterJob, content: &NovelContent) -> Result<Vec<u8>, 
             }
         }
     }
-    let engine = NovelEngine::new();
     let metadata = NovelEpubMetadataDto {
         id: job.novel_id,
         title: job.novel.title.clone(),
@@ -1378,8 +1378,7 @@ fn render_novel_epub(job: &AfterJob, content: &NovelContent) -> Result<Vec<u8>, 
         language: job.novel.language.clone(),
         cover_filename: cover,
     };
-    engine
-        .build_epub_from_text(metadata, content.text.clone(), bytes)
+    build_epub_from_text(metadata, content.text.clone(), bytes)
         .map_err(|err| err.to_string())
         .map(|data| {
             let _ = (images, illusts);

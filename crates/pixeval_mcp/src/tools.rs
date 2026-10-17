@@ -732,8 +732,7 @@ impl McpToolRegistry {
                     .get("text")
                     .and_then(|v| v.as_str())
                     .unwrap_or_default();
-                let engine = pixeval_download::MetaPathEngine::new();
-                let analysis = engine.analyze(text.to_string());
+                let analysis = pixeval_download::analyze_meta_path(text.to_string());
                 let res = json!({
                     "isSuccess": analysis.is_success,
                     "diagnosticsCount": analysis.diagnostics.len(),
@@ -837,8 +836,12 @@ impl McpToolRegistry {
                 match self.mako.get_novel_content(id).await {
                     Ok(raw_text) => {
                         let markdown = if include_markdown {
-                            let engine = pixeval_novel::NovelEngine::new();
-                            Some(engine.render_export_markdown_from_text(raw_text.clone(), None, vec![], vec![]))
+                            Some(pixeval_novel::render_export_markdown_from_text(
+                                raw_text.clone(),
+                                None,
+                                vec![],
+                                vec![],
+                            ))
                         } else {
                             None
                         };

@@ -12,14 +12,12 @@ namespace Pixeval.Download;
 
 public static partial class DownloadPathMacroParser
 {
-    private static readonly MetaPathEngine Engine = new();
-
     public static IReadOnlyList<IMacro> MacroProvider => MacroDefinitions.All;
 
-    public static MacroAnalysisResult Analyze(string text) => Engine.Analyze(text);
+    public static MacroAnalysisResult Analyze(string text) => PixevalDownloadMethods.AnalyzeMetaPath(text);
 
     public static string Reduce(string raw, ParserContext context) =>
-        Engine.Reduce(raw, context.ToMacroContext());
+        PixevalDownloadMethods.ReduceMetaPath(raw, context.ToMacroContext());
 
     public static MacroContext ToMacroContext(this ParserContext parserContext)
     {

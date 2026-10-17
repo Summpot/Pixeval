@@ -31,7 +31,7 @@ public class UgoiraDownloadFormatSettingsEntry(DownloadFormatsSettings settings,
     private static IReadOnlyList<IReadOnlyStringPair<object>> CreateEnumItems(ExtensionService extensionService)
     {
         var builtIns = SymbolComboBoxItem.GetValues<UgoiraDownloadFormat>()
-            .Where(static t => (UgoiraDownloadFormat) t.Value != UgoiraDownloadFormat.Mp4 || MediaEngine.IsMp4Available)
+            .Where(static t => (UgoiraDownloadFormat) t.Value != UgoiraDownloadFormat.Mp4 || MediaCodec.IsMp4Available)
             .Select(t => new SymbolComboBoxItem(UgoiraDownloadFormatToken.BuiltIn((UgoiraDownloadFormat) t.Value), "", t.Symbol) { ResourceKey = t.ResourceKey });
 
         var extensionItems = extensionService

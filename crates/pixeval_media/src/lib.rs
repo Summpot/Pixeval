@@ -9,11 +9,14 @@ pub mod manga;
 pub mod transcode;
 pub mod ugoira;
 
-pub use engine::MediaEngine;
+pub use engine::{
+    is_mp4_supported, pack_manga, synthesize_ugoira, synthesize_ugoira_from_frames,
+    synthesize_ugoira_from_zip, transcode_bytes, transcode_file,
+};
 pub use error::MediaError;
 pub use manga::MangaArchiveFormat;
 pub use transcode::{ImageCodecFormat, TranscodeOptions};
-pub use ugoira::{UgoiraFormat, is_mp4_supported};
+pub use ugoira::UgoiraFormat;
 
 #[boltffi::export]
 #[uniffi::export]
@@ -129,19 +132,17 @@ mod tests {
             zip.finish().unwrap();
         }
 
-        let engine = MediaEngine::new();
         let delays = vec![100, 120];
 
         // Synthesize GIF
         let gif_out = dir.path().join("ugoira.gif");
-        engine
-            .synthesize_ugoira_from_zip(
-                zip_path.to_str().unwrap().to_string(),
-                gif_out.to_str().unwrap().to_string(),
-                UgoiraFormat::Gif,
-                delays.clone(),
-            )
-            .unwrap();
+        synthesize_ugoira_from_zip(
+            zip_path.to_str().unwrap().to_string(),
+            gif_out.to_str().unwrap().to_string(),
+            UgoiraFormat::Gif,
+            delays.clone(),
+        )
+        .unwrap();
         assert!(gif_out.exists());
         assert_eq!(
             image::guess_format(&std::fs::read(&gif_out).unwrap()).unwrap(),
@@ -150,14 +151,13 @@ mod tests {
 
         // Synthesize APNG
         let apng_out = dir.path().join("ugoira.png");
-        engine
-            .synthesize_ugoira_from_zip(
-                zip_path.to_str().unwrap().to_string(),
-                apng_out.to_str().unwrap().to_string(),
-                UgoiraFormat::Apng,
-                delays.clone(),
-            )
-            .unwrap();
+        synthesize_ugoira_from_zip(
+            zip_path.to_str().unwrap().to_string(),
+            apng_out.to_str().unwrap().to_string(),
+            UgoiraFormat::Apng,
+            delays.clone(),
+        )
+        .unwrap();
         assert!(apng_out.exists());
         assert_eq!(
             image::guess_format(&std::fs::read(&apng_out).unwrap()).unwrap(),
@@ -166,14 +166,13 @@ mod tests {
 
         // Synthesize WebP
         let webp_out = dir.path().join("ugoira.webp");
-        engine
-            .synthesize_ugoira_from_zip(
-                zip_path.to_str().unwrap().to_string(),
-                webp_out.to_str().unwrap().to_string(),
-                UgoiraFormat::Webp,
-                delays.clone(),
-            )
-            .unwrap();
+        synthesize_ugoira_from_zip(
+            zip_path.to_str().unwrap().to_string(),
+            webp_out.to_str().unwrap().to_string(),
+            UgoiraFormat::Webp,
+            delays.clone(),
+        )
+        .unwrap();
         assert!(webp_out.exists());
         assert_eq!(
             image::guess_format(&std::fs::read(&webp_out).unwrap()).unwrap(),
@@ -182,14 +181,13 @@ mod tests {
 
         // Extract Original format
         let orig_out = dir.path().join("ugoira_loose");
-        engine
-            .synthesize_ugoira_from_zip(
-                zip_path.to_str().unwrap().to_string(),
-                orig_out.to_str().unwrap().to_string(),
-                UgoiraFormat::Original,
-                delays.clone(),
-            )
-            .unwrap();
+        synthesize_ugoira_from_zip(
+            zip_path.to_str().unwrap().to_string(),
+            orig_out.to_str().unwrap().to_string(),
+            UgoiraFormat::Original,
+            delays.clone(),
+        )
+        .unwrap();
         assert!(orig_out.exists());
         assert!(orig_out.join("000000.jpg").exists());
         assert!(orig_out.join("000001.jpg").exists());
@@ -199,13 +197,13 @@ mod tests {
 
         // MP4 synthesis test
         let mp4_out = dir.path().join("ugoira.mp4");
-        let mp4_res = engine.synthesize_ugoira_from_zip(
+        let mp4_res = synthesize_ugoira_from_zip(
             zip_path.to_str().unwrap().to_string(),
             mp4_out.to_str().unwrap().to_string(),
             UgoiraFormat::Mp4,
             delays.clone(),
         );
-        if !engine.is_mp4_supported() {
+        if !is_mp4_supported() {
             assert!(mp4_res.is_err());
         } else {
             assert!(mp4_res.is_ok(), "MP4 encoding failed: {:?}", mp4_res);
@@ -217,8 +215,7 @@ mod tests {
 
     #[test]
     fn test_ugoira_mp4_dedicated() {
-        let engine = MediaEngine::new();
-        if !engine.is_mp4_supported() {
+        if !is_mp4_supported() {
             println!("MP4 not supported on this platform, skipping dedicated test");
             return;
         }
@@ -239,14 +236,13 @@ mod tests {
         let delays = vec![80, 120, 150];
 
         let mp4_out = dir.path().join("output.mp4");
-        engine
-            .synthesize_ugoira_from_frames(
-                frames,
-                mp4_out.to_str().unwrap().to_string(),
-                UgoiraFormat::Mp4,
-                delays,
-            )
-            .expect("Failed to synthesize MP4 from frames");
+        synthesize_ugoira_from_frames(
+            frames,
+            mp4_out.to_str().unwrap().to_string(),
+            UgoiraFormat::Mp4,
+            delays,
+        )
+        .expect("Failed to synthesize MP4 from frames");
 
         assert!(mp4_out.exists());
         let bytes = std::fs::read(&mp4_out).unwrap();

@@ -36,7 +36,6 @@ public partial record struct NovelContent
 
     public IReadOnlyList<string> RenderMarkdownPages()
     {
-        var engine = new Pixeval.Novel.NovelEngine();
         var images = Images
             .Select(x => new Pixeval.Novel.NovelImageRenderDto(x.NovelImageId, x.ThumbnailUrl, ""))
             .ToList();
@@ -44,7 +43,7 @@ public partial record struct NovelContent
             .Select(x => new Pixeval.Novel.NovelIllustRenderDto(x.Id, x.Page, x.ThumbnailUrl, x.AppUri.OriginalString, x.WebsiteUri.OriginalString, ""))
             .ToList();
 
-        var pages = engine.RenderPagesMarkdown(Text, images, illusts);
+        var pages = Pixeval.Novel.PixevalNovelMethods.RenderPagesMarkdown(Text, images, illusts);
         if (pages.Count is 0)
             pages.Add("");
 

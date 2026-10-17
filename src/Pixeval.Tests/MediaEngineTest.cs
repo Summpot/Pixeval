@@ -60,12 +60,12 @@ public class MediaEngineTest
     public void TranscodeBytesShouldConvertJpegToPngAndWebp()
     {
         var jpeg = CreateSampleJpeg();
-        var png = MediaEngine.Shared.TranscodeBytes(jpeg, ImageCodecFormat.Png, null);
+        var png = MediaCodec.TranscodeBytes(jpeg, ImageCodecFormat.Png, null);
         Assert.IsNotNull(png);
         Assert.IsTrue(png.Length > 0);
         Assert.AreEqual((byte)0x89, png[0]); // PNG magic header
 
-        var webp = MediaEngine.Shared.TranscodeBytes(jpeg, ImageCodecFormat.Webp, null);
+        var webp = MediaCodec.TranscodeBytes(jpeg, ImageCodecFormat.Webp, null);
         Assert.IsNotNull(webp);
         Assert.IsTrue(webp.Length > 0);
         Assert.AreEqual((byte)'R', webp[0]); // RIFF magic header
@@ -81,7 +81,7 @@ public class MediaEngineTest
         await File.WriteAllBytesAsync(page1, jpeg);
 
         var cbzPath = Path.Combine(_testDir, "manga.cbz");
-        await MediaEngine.Shared.PackMangaAsync([page0, page1], cbzPath, MangaArchiveFormat.Cbz);
+        await MediaCodec.PackMangaAsync([page0, page1], cbzPath, MangaArchiveFormat.Cbz);
 
         Assert.IsTrue(File.Exists(cbzPath));
         using var archive = ZipFile.OpenRead(cbzPath);
@@ -111,7 +111,7 @@ public class MediaEngineTest
 
         // Synthesize GIF
         var gifPath = Path.Combine(_testDir, "anim.gif");
-        await MediaEngine.Shared.SynthesizeUgoiraAsync(zipPath, gifPath, UgoiraFormat.Gif, [100, 100]);
+        await MediaCodec.SynthesizeUgoiraAsync(zipPath, gifPath, UgoiraFormat.Gif, [100, 100]);
         Assert.IsTrue(File.Exists(gifPath));
         var gifBytes = await File.ReadAllBytesAsync(gifPath);
         Assert.AreEqual((byte)'G', gifBytes[0]);
@@ -120,7 +120,7 @@ public class MediaEngineTest
 
         // Synthesize Original (loose extraction)
         var looseDir = Path.Combine(_testDir, "loose");
-        await MediaEngine.Shared.SynthesizeUgoiraAsync(zipPath, looseDir, UgoiraFormat.Original, [100, 120]);
+        await MediaCodec.SynthesizeUgoiraAsync(zipPath, looseDir, UgoiraFormat.Original, [100, 120]);
         Assert.IsTrue(Directory.Exists(looseDir));
         Assert.IsTrue(File.Exists(Path.Combine(looseDir, "000000.jpg")));
         Assert.IsTrue(File.Exists(Path.Combine(looseDir, "000001.jpg")));
