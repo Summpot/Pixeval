@@ -77,41 +77,61 @@ impl CursorEntry {
 
         while self.buffer.len() < target_plus_one && !self.is_exhausted {
             match &self.source {
-                CursorSource::Illustration(engine) => {
-                    if let Some(item) = engine.next().await {
-                        self.buffer.push_back(illustration_to_json(&item));
-                    } else {
-                        self.is_exhausted = true;
+                CursorSource::Illustration(engine) => match engine.next_page().await {
+                    Ok(page) => {
+                        for item in page.items {
+                            self.buffer.push_back(illustration_to_json(&item));
+                        }
+                        if page.exhausted {
+                            self.is_exhausted = true;
+                        }
                     }
-                }
-                CursorSource::Novel(engine) => {
-                    if let Some(item) = engine.next().await {
-                        self.buffer.push_back(novel_to_json(&item));
-                    } else {
-                        self.is_exhausted = true;
+                    Err(_) => break,
+                },
+                CursorSource::Novel(engine) => match engine.next_page().await {
+                    Ok(page) => {
+                        for item in page.items {
+                            self.buffer.push_back(novel_to_json(&item));
+                        }
+                        if page.exhausted {
+                            self.is_exhausted = true;
+                        }
                     }
-                }
-                CursorSource::User(engine) => {
-                    if let Some(item) = engine.next().await {
-                        self.buffer.push_back(user_to_json(&item));
-                    } else {
-                        self.is_exhausted = true;
+                    Err(_) => break,
+                },
+                CursorSource::User(engine) => match engine.next_page().await {
+                    Ok(page) => {
+                        for item in page.items {
+                            self.buffer.push_back(user_to_json(&item));
+                        }
+                        if page.exhausted {
+                            self.is_exhausted = true;
+                        }
                     }
-                }
-                CursorSource::Series(engine) => {
-                    if let Some(item) = engine.next().await {
-                        self.buffer.push_back(series_to_json(&item));
-                    } else {
-                        self.is_exhausted = true;
+                    Err(_) => break,
+                },
+                CursorSource::Series(engine) => match engine.next_page().await {
+                    Ok(page) => {
+                        for item in page.items {
+                            self.buffer.push_back(series_to_json(&item));
+                        }
+                        if page.exhausted {
+                            self.is_exhausted = true;
+                        }
                     }
-                }
-                CursorSource::Spotlight(engine) => {
-                    if let Some(item) = engine.next().await {
-                        self.buffer.push_back(spotlight_to_json(&item));
-                    } else {
-                        self.is_exhausted = true;
+                    Err(_) => break,
+                },
+                CursorSource::Spotlight(engine) => match engine.next_page().await {
+                    Ok(page) => {
+                        for item in page.items {
+                            self.buffer.push_back(spotlight_to_json(&item));
+                        }
+                        if page.exhausted {
+                            self.is_exhausted = true;
+                        }
                     }
-                }
+                    Err(_) => break,
+                },
                 CursorSource::JsonItems(_, queue) => {
                     let mut q = queue.clone();
                     if let Some(item) = q.pop_front() {
