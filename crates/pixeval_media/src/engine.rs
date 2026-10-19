@@ -14,6 +14,7 @@ pub fn is_mp4_supported() -> bool {
 }
 
 /// Synthesize Ugoira from a Pixiv zip archive.
+#[boltffi::export]
 #[uniffi::export]
 pub fn synthesize_ugoira_from_zip(
     zip_path: String,
@@ -25,6 +26,7 @@ pub fn synthesize_ugoira_from_zip(
 }
 
 /// Synthesize Ugoira from individual frame file paths.
+#[boltffi::export]
 #[uniffi::export]
 pub fn synthesize_ugoira_from_frames(
     frame_paths: Vec<String>,
@@ -36,6 +38,7 @@ pub fn synthesize_ugoira_from_frames(
 }
 
 /// Synthesize Ugoira automatically: detects whether input_path is a zip file or a folder of frames.
+#[boltffi::export]
 #[uniffi::export]
 pub fn synthesize_ugoira(
     input_path: String,
@@ -66,6 +69,7 @@ pub fn synthesize_ugoira(
 }
 
 /// Pack multi-page manga into a CBZ or ZIP archive.
+#[boltffi::export]
 #[uniffi::export]
 pub fn pack_manga(
     file_paths: Vec<String>,
@@ -76,6 +80,7 @@ pub fn pack_manga(
 }
 
 /// Transcode an image file.
+#[boltffi::export]
 #[uniffi::export]
 pub fn transcode_file(
     input_path: String,
@@ -87,6 +92,7 @@ pub fn transcode_file(
 }
 
 /// Transcode image bytes in memory.
+#[boltffi::export]
 #[uniffi::export]
 pub fn transcode_bytes(
     input_bytes: Vec<u8>,

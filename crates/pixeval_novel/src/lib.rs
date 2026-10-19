@@ -142,6 +142,7 @@ pub fn render_export_html(
 }
 
 /// Builds an EPUB 3.0 electronic book
+#[boltffi::export]
 #[uniffi::export]
 pub fn build_epub(
     metadata: NovelEpubMetadataDto,
@@ -187,6 +188,7 @@ pub fn render_export_html_from_text(
 }
 
 /// Builds an EPUB 3.0 electronic book directly from text
+#[boltffi::export]
 #[uniffi::export]
 pub fn build_epub_from_text(
     metadata: NovelEpubMetadataDto,

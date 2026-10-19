@@ -65,11 +65,13 @@ pub fn parse_navigation_yaml(
     parser.parse()
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn format_navigation_yaml(settings: NavigationYamlSettings) -> Result<String, ConfigError> {
     format_navigation_yaml_doc(&settings)
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn layout_can_place(
     cards: Vec<HomeCardBounds>,
@@ -115,6 +117,7 @@ pub fn layout_clamp(bounds: HomeCardBounds, row_count: i32, column_count: i32) -
     clamp(bounds, row_count, column_count)
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn layout_can_resize_grid(
     cards: Vec<HomeCardBounds>,
@@ -160,6 +163,7 @@ pub fn create_default_cards() -> Vec<HomePageCardLayout> {
     crate::layout::create_default_cards()
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn layout_calculate_edit_candidate(
     action: HomeCardEditAction,
@@ -185,6 +189,7 @@ pub fn parse_home_page_cards_yaml(yaml: String) -> Result<Vec<HomePageCardLayout
     Ok(cards)
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn format_home_page_cards_yaml(cards: Vec<HomePageCardLayout>) -> Result<String, ConfigError> {
     let yaml = serde_yaml::to_string(&cards)?;

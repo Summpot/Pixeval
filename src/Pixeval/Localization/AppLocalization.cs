@@ -22,6 +22,35 @@ public sealed class AppLocalization
     {
         AvailableLanguages = [new SystemLanguage(), .. SupportedLanguages];
         Strings.CurrentLocaleChanged += NotifyChanged;
+
+        var method = typeof(LocalizationManager).GetMethod("OnCurrentLocaleChanged", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        if (method is not null)
+        {
+            var originalDelegate = (Action)Delegate.CreateDelegate(typeof(Action), LocalizationManager.Instance, method);
+            Strings.CurrentLocaleChanged -= originalDelegate;
+            Strings.CurrentLocaleChanged += SafeNotifyLocalizationManager;
+        }
+    }
+
+    private static void SafeNotifyLocalizationManager()
+    {
+        var field = typeof(LocalizationManager).GetField("PropertyChanged", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var handler = (PropertyChangedEventHandler?)field?.GetValue(LocalizationManager.Instance);
+        if (handler is null) return;
+        var args = new PropertyChangedEventArgs(string.Empty);
+        foreach (var d in handler.GetInvocationList())
+        {
+            try
+            {
+                d.DynamicInvoke(LocalizationManager.Instance, args);
+            }
+            catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is InvalidOperationException)
+            {
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
     }
 
     public string ResolveLanguage(string? name)
