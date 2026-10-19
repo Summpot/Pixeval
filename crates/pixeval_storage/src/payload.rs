@@ -66,16 +66,19 @@ pub fn hydrate(key: Option<&str>, json: &str) -> Option<ArtworkPayload> {
     }
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn artwork_work_key(payload: ArtworkPayload) -> String {
     work_key(&payload)
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn artwork_serialize_key(payload: ArtworkPayload) -> String {
     serialize_key(&payload).to_string()
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn artwork_payload_id(payload: ArtworkPayload) -> String {
     artwork_id(&payload)

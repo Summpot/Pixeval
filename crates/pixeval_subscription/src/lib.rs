@@ -13,7 +13,6 @@ pub use error::*;
 pub use models::*;
 pub use queue::*;
 
-#[boltffi::export]
 #[uniffi::export]
 pub fn compute_subscription_folder_snapshot(
     subscription_id: i64,
