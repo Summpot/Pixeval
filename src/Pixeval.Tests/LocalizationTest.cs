@@ -19,14 +19,10 @@ namespace Pixeval.Tests;
 [DoNotParallelize]
 public sealed class LocalizationTest
 {
-    private static readonly HeadlessUnitTestSession Session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerLoadingTest.ViewerApplication));
-    [ClassCleanup]
-    public static async Task Cleanup() => await Session.DisposeAsync();
-
     [TestMethod]
     public async Task LanguageSelectionAndPersistedNavigationKeysRemainCompatible()
     {
-        var session = Session;
+        await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerLoadingTest.ViewerApplication));
         await session.Dispatch(() =>
         {
             var previous = Strings.CurrentLocale;
@@ -56,7 +52,7 @@ public sealed class LocalizationTest
     [TestMethod]
     public async Task OpenHelpSettingsAndDownloadControlsUpdateWithoutLosingState()
     {
-        var session = Session;
+        await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerLoadingTest.ViewerApplication));
         await session.Dispatch(() =>
         {
             var previous = Strings.CurrentLocale;
@@ -67,7 +63,7 @@ public sealed class LocalizationTest
             var card = new AutoSettingsPage.Avalonia.StringSettingsCard { Entry = entry };
             var help = new HelpPage();
             var helpText = new MarkdownBox();
-            helpText.Bind(Markdown.Avalonia.MarkdownScrollViewer.MarkdownProperty,
+            using var markdownBinding = helpText.Bind(Markdown.Avalonia.MarkdownScrollViewer.MarkdownProperty,
                 CompiledBinding.Create<LocalizedHelp, string>(static resources => resources["DownloadMacroHelp"], LocalizedHelp.Instance));
             var download = new DownloadItem { DataContext = new Pixeval.Download.DownloadItemSnapshot() };
             var panel = new StackPanel { Children = { control, card, download, help, helpText } };
@@ -89,14 +85,21 @@ public sealed class LocalizationTest
                         .Any(text => text.Text == ((Pixeval.Download.DownloadItemSnapshot)download.DataContext!).ProgressMessage));
                 }
             }
-            finally { window.Close(); window.Content = null; AppLocalization.Instance.SetLanguage(previous); }
+            finally
+            {
+                window.Close();
+                window.Content = null;
+                markdownBinding.Dispose();
+                Pixeval.ViewModels.ViewModelDisposal.Dispose(help);
+                AppLocalization.Instance.SetLanguage(previous);
+            }
         }, default);
     }
 
     [TestMethod]
     public async Task RefreshingSettingsPreservesValuesCallbacksAndLiteralOverrides()
     {
-        var session = Session;
+        await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerLoadingTest.ViewerApplication));
         await session.Dispatch(() =>
         {
             var previous = Strings.CurrentLocale;
@@ -124,7 +127,8 @@ public sealed class LocalizationTest
     [TestMethod]
     public async Task InjectedFilterEngineUsesCurrentLanguageAfterSwitching()
     {
-        await Session.Dispatch(() =>
+        await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerLoadingTest.ViewerApplication));
+        await session.Dispatch(() =>
         {
             var previous = Strings.CurrentLocale;
             using var storage = new Pixeval.Storage.StorageEngine(":memory:");
@@ -145,7 +149,7 @@ public sealed class LocalizationTest
     [TestMethod]
     public async Task EnumAndNavigationItemsRetainIdentityAndNotifyOncePerSwitch()
     {
-        var session = Session;
+        await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerLoadingTest.ViewerApplication));
         await session.Dispatch(() =>
         {
             var previous = Strings.CurrentLocale;

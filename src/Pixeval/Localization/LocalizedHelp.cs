@@ -4,6 +4,8 @@ using System.ComponentModel;
 using System.IO;
 using Avalonia.Platform;
 
+using System.Reflection;
+
 namespace Pixeval.Localization;
 
 public sealed class LocalizedHelp : INotifyPropertyChanged
@@ -13,8 +15,23 @@ public sealed class LocalizedHelp : INotifyPropertyChanged
     private readonly IDisposable _subscription;
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    private LocalizedHelp() => _subscription = AppLocalization.Instance.Subscribe(
-        () => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty)));
+    private LocalizedHelp() => _subscription = AppLocalization.Instance.Subscribe(() =>
+    {
+        if (PropertyChanged is null) return;
+        foreach (var invocation in PropertyChanged.GetInvocationList())
+        {
+            try
+            {
+                invocation.DynamicInvoke(this, new PropertyChangedEventArgs(string.Empty));
+            }
+            catch (TargetInvocationException ex) when (ex.InnerException is InvalidOperationException)
+            {
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
+    });
 
     public string this[string name]
     {

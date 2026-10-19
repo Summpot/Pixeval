@@ -17,6 +17,7 @@ public class IconContentPage : ContentPage
         var previousHeader = tuple.Header;
         var localization = AppLocalization.Instance.Subscribe(() =>
         {
+            if (!CheckAccess()) return;
             var translated = AvaloniaHelper.GetPageHeader(GetType()).Header;
             if (Equals(Header, previousHeader)) Header = translated;
             previousHeader = translated;
@@ -40,6 +41,7 @@ public class IconNavigationPage : NavigationPage
         var previousHeader = tuple.Header;
         var localization = AppLocalization.Instance.Subscribe(() =>
         {
+            if (!CheckAccess()) return;
             var translated = AvaloniaHelper.GetPageHeader(GetType()).Header;
             if (Equals(Header, previousHeader)) Header = translated;
             previousHeader = translated;
@@ -63,6 +65,7 @@ public class IconTabbedPage : TabbedPage
         var previousHeader = tuple.Header;
         var localization = AppLocalization.Instance.Subscribe(() =>
         {
+            if (!CheckAccess()) return;
             var translated = AvaloniaHelper.GetPageHeader(GetType()).Header;
             if (Equals(Header, previousHeader)) Header = translated;
             previousHeader = translated;
