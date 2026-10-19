@@ -7,6 +7,7 @@ use crate::transcode::{self, ImageCodecFormat, TranscodeOptions};
 use crate::ugoira::{self, UgoiraFormat};
 
 /// Check if MP4 synthesis is supported on current OS.
+#[boltffi::export]
 #[uniffi::export]
 pub fn is_mp4_supported() -> bool {
     ugoira::is_mp4_supported()
