@@ -15,7 +15,12 @@ public partial class McpHelpSection : UserControl
 #if PIXEVAL_MCP
         InitializeComponent();
         SetMcpStatus(Strings.HelpPageMcpToolsStatusDisabled);
-        _languageSubscription = AppLocalization.Instance.Subscribe(() => McpToolsStatus = _status());
+        _languageSubscription = AppLocalization.Instance.Subscribe(() =>
+        {
+            if (!CheckAccess()) return;
+            McpToolsStatus = _status();
+        });
+        Pixeval.ViewModels.ViewModelDisposal.Register(this, _languageSubscription);
 #endif
     }
 }

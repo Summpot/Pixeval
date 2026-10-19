@@ -17,6 +17,7 @@ pub fn analyze_meta_path(text: String) -> MacroAnalysisResult {
     analyze(&text)
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn reduce_meta_path(raw: String, ctx: MacroContext) -> Result<String, MetaPathError> {
     reduce(&raw, &ctx).map_err(|e| MetaPathError::Evaluation {

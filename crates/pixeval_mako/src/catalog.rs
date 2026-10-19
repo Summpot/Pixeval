@@ -551,6 +551,7 @@ pub enum SafeRatingKind {
     Guro,
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn get_safe_rating(x_restrict: XRestrict, attributes: Option<Vec<RestrictionFlag>>, sanity_level: i32) -> SafeRatingKind {
     safe_rating_kind(x_restrict, attributes.as_deref(), sanity_level)
@@ -1222,6 +1223,7 @@ mod tests {
     }
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn supported_rank_modes(kind: SimpleWorkKind) -> Vec<RankMode> {
     RankMode::supported_for(kind)
