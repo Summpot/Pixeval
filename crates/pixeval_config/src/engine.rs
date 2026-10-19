@@ -24,6 +24,7 @@ pub fn load_from_file(path: String) -> Result<String, ConfigError> {
     Ok(raw)
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn save_to_file(path: String, content: String) -> Result<(), ConfigError> {
     let target_path = Path::new(&path);
@@ -108,6 +109,7 @@ pub fn layout_try_find_best_fitting_free_position(
     )
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn layout_clamp(bounds: HomeCardBounds, row_count: i32, column_count: i32) -> HomeCardBounds {
     clamp(bounds, row_count, column_count)
@@ -122,11 +124,13 @@ pub fn layout_can_resize_grid(
     can_resize_grid(&cards, row_count, column_count)
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn layout_is_within_grid(bounds: HomeCardBounds, row_count: i32, column_count: i32) -> bool {
     is_within_grid(bounds, row_count, column_count)
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn layout_overlaps(first: HomeCardBounds, second: HomeCardBounds) -> bool {
     overlaps(first, second)
@@ -193,6 +197,7 @@ pub fn load_home_page_cards_from_file(path: String) -> Result<Vec<HomePageCardLa
     parse_home_page_cards_yaml(raw)
 }
 
+#[boltffi::export]
 #[uniffi::export]
 pub fn save_home_page_cards_to_file(
     path: String,

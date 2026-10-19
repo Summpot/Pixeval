@@ -89,12 +89,14 @@ fn filename_lookups(
 }
 
 /// Parses novel raw markup text into a structured AST document
+#[boltffi::export]
 #[uniffi::export]
 pub fn parse_novel(text: String) -> NovelDocument {
     NovelParser::parse(&text)
 }
 
 /// Renders markdown pages for Avalonia UI display
+#[boltffi::export]
 #[uniffi::export]
 pub fn render_pages_markdown(
     text: String,
@@ -107,6 +109,7 @@ pub fn render_pages_markdown(
 }
 
 /// Renders full markdown document for file export
+#[boltffi::export]
 #[uniffi::export]
 pub fn render_export_markdown(
     doc: NovelDocument,
@@ -119,6 +122,7 @@ pub fn render_export_markdown(
 }
 
 /// Renders semantic HTML document for file export
+#[boltffi::export]
 #[uniffi::export]
 pub fn render_export_html(
     doc: NovelDocument,
@@ -156,6 +160,7 @@ pub fn build_epub(
 }
 
 /// Renders full markdown document for file export directly from text
+#[boltffi::export]
 #[uniffi::export]
 pub fn render_export_markdown_from_text(
     text: String,
@@ -168,6 +173,7 @@ pub fn render_export_markdown_from_text(
 }
 
 /// Renders semantic HTML document for file export directly from text
+#[boltffi::export]
 #[uniffi::export]
 pub fn render_export_html_from_text(
     text: String,
