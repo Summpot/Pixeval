@@ -6,7 +6,6 @@ using Pixeval.Attributes;
 
 namespace Pixeval.Config;
 
-[LocalizationMetadata]
 public enum IllustrationViewerAutoPlayScope
 {
     [LocalizedResource(Symbol.Image, nameof(Strings.EnumIllustrationViewerAutoPlayScopeCurrentWork))]

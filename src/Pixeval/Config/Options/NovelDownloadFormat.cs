@@ -5,7 +5,6 @@ using Pixeval.Attributes;
 
 namespace Pixeval.Config;
 
-[LocalizationMetadata]
 public enum NovelDownloadFormat
 {
     [LocalizedResource(nameof(Strings.EnumNovelDownloadFormatHtml))]

@@ -20,18 +20,6 @@ internal static class ArtworkPayloads
         _ => entry
     };
 
-    public static bool TryGet(ArtworkPayload? payload, out ArtworkPayload value)
-    {
-        if (payload is object boxed && boxed is ArtworkPayload typed)
-        {
-            value = typed;
-            return true;
-        }
-
-        value = default!;
-        return false;
-    }
-
     public static bool TryWrap(object? entry, out ArtworkPayload payload)
     {
         payload = default!;

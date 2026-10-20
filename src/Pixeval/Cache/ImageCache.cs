@@ -3,8 +3,6 @@
 
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -128,7 +126,6 @@ public partial class ImageCache
             if (width <= 0 || height <= 0)
                 return null;
 
-
             var wb = new WriteableBitmap(
                 new PixelSize(width, height),
                 new Vector(96, 96),
@@ -156,36 +153,4 @@ public partial class ImageCache
         }
     }
 
-    /// <summary>
-    /// Decodes a raw image byte stream in Rust, saves it as Planar LZ4 for future instant zero-copy loading,
-    /// and returns the decoded WriteableBitmap.
-    /// </summary>
-    public WriteableBitmap? CacheAndDecodePlanarBitmap(string key, byte[] rawBytes)
-    {
-        try
-        {
-            var planarResult = DecodeAndCachePlanar(key, rawBytes);
-            var width = (int)planarResult.Width;
-            var height = (int)planarResult.Height;
-            if (width <= 0 || height <= 0)
-                return null;
-
-            var wb = new WriteableBitmap(
-                new PixelSize(width, height),
-                new Vector(96, 96),
-                PixelFormat.Bgra8888,
-                AlphaFormat.Premul);
-
-            using (var fb = wb.Lock())
-            {
-                Marshal.Copy(planarResult.BgraData, 0, fb.Address, planarResult.BgraData.Length);
-            }
-
-            return wb;
-        }
-        catch
-        {
-            return null;
-        }
-    }
 }

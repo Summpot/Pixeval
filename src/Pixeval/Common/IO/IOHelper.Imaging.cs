@@ -8,35 +8,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media.Imaging;
-using Pixeval.Download;
-using Pixeval.Services.Background;
-using Pixeval.Config;
-using Pixeval.Media;
 using SkiaSharp;
-
 
 namespace Pixeval.Common.IO;
 
 public static partial class IoHelper
 {
-    public const string PixevalTempExtension = ".pixevaldownloading";
-
     private const string FileExtensionTokenPrefix = "<ext";
 
     extension(Stream stream)
     {
-        public async Task StreamSaveToFileAsync(string path)
-        {
-            await using var fileStream = FileHelper.CreateAsyncWriteCreateParent(path);
-            await stream.CopyToAsync(fileStream);
-        }
-
-        public async Task StreamsCompressSaveToFileAsync(string path)
-        {
-            await using var fileStream = FileHelper.CreateAsyncWriteCreateParent(path);
-            await stream.CopyToAsync(fileStream);
-        }
-
         public async Task<Bitmap> DecodeBitmapImageAsync(
             bool disposeOfImageStream,
             int? desiredWidth = null,
@@ -84,138 +65,9 @@ public static partial class IoHelper
         }
     }
 
-    public static UgoiraDownloadFormatToken GetAvailableUgoiraDownloadFormatToken(string? ugoiraDownloadFormat = null)
-    {
-        var token = new UgoiraDownloadFormatToken(ugoiraDownloadFormat ?? string.Empty);
-        if (token.BuiltInFormat is not null)
-        {
-            if (token.BuiltInFormat == UgoiraDownloadFormat.Mp4 && !MediaCodec.IsMp4Available)
-                return UgoiraDownloadFormatToken.Default;
-            return token;
-        }
-
-        return token.ExtensionFormatExtension is not null ? token : UgoiraDownloadFormatToken.Default;
-    }
-
-    public static IllustrationDownloadFormatToken GetAvailableIllustrationDownloadFormatToken(string? illustrationDownloadFormat = null)
-    {
-        var token = new IllustrationDownloadFormatToken(illustrationDownloadFormat ?? string.Empty);
-        if (token.BuiltInFormat is IllustrationDownloadFormat.Original)
-            return token;
-
-        return token.ExtensionFormatExtension is not null ? token : IllustrationDownloadFormatToken.Default;
-    }
-
-    public static NovelDownloadFormatToken GetAvailableNovelDownloadFormatToken(string? novelDownloadFormat = null)
-    {
-        var token = new NovelDownloadFormatToken(novelDownloadFormat ?? string.Empty);
-        if (token.BuiltInFormat is not null)
-            return token;
-
-        return token.ExtensionFormatExtension is not null ? token : NovelDownloadFormatToken.Default;
-    }
-
-    /// <summary>
-    /// 返回null表示<see cref="UgoiraDownloadFormat.Original"/>
-    /// </summary>
-    /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static string? GetUgoiraExtension(string? ugoiraDownloadFormat = null)
-    {
-        var token = GetAvailableUgoiraDownloadFormatToken(ugoiraDownloadFormat);
-        if (token.ExtensionFormatExtension is { } extension)
-            return extension;
-
-        return (token.BuiltInFormat ?? UgoiraDownloadFormatToken.DefaultBuiltInFormat) switch
-        {
-            UgoiraDownloadFormat.Original => null,
-            UgoiraDownloadFormat.Gif => "gif",
-            UgoiraDownloadFormat.Apng => "png",
-            UgoiraDownloadFormat.Webp => "webp",
-            UgoiraDownloadFormat.Mp4 => "mp4",
-            _ => throw new ArgumentOutOfRangeException(nameof(ugoiraDownloadFormat))
-        };
-    }
-
-    /// <summary>
-    /// 返回null表示<see cref="IllustrationDownloadFormat.Original"/>
-    /// </summary>
-    /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static string? GetIllustrationExtension(string? illustrationDownloadFormat = null)
-    {
-        var token = GetAvailableIllustrationDownloadFormatToken(illustrationDownloadFormat);
-        if (token.ExtensionFormatExtension is { } extension)
-            return extension;
-
-        return (token.BuiltInFormat ?? IllustrationDownloadFormatToken.DefaultBuiltInFormat) switch
-        {
-            IllustrationDownloadFormat.Original => null,
-            _ => throw new ArgumentOutOfRangeException(nameof(illustrationDownloadFormat))
-        };
-    }
-
-    public static string GetNovelExtension(string? novelDownloadFormat = null) =>
-        GetNovelExtension(GetAvailableNovelDownloadFormatToken(novelDownloadFormat));
-
-    public static string GetNovelExtension(NovelDownloadFormatToken token)
-    {
-        if (token.ExtensionFormatExtension is { } extension)
-            return extension;
-
-        return (token.BuiltInFormat ?? NovelDownloadFormatToken.DefaultBuiltInFormat) switch
-        {
-            NovelDownloadFormat.OriginalTxt => "txt",
-            NovelDownloadFormat.Html => "html",
-            NovelDownloadFormat.Md => "md",
-            NovelDownloadFormat.Epub => "epub",
-            _ => throw new ArgumentOutOfRangeException(nameof(token))
-        };
-    }
-
-    public static NovelDownloadFormat GetNovelFormat(string extension)
-    {
-        if (TryGetNovelFormat(extension, out var format))
-            return format;
-
-        throw new ArgumentOutOfRangeException(nameof(extension));
-    }
-
-    public static bool TryGetNovelFormat(string extension, out NovelDownloadFormat format)
-    {
-        return extension switch
-        {
-            ".txt" => Assign(NovelDownloadFormat.OriginalTxt, out format),
-            ".html" => Assign(NovelDownloadFormat.Html, out format),
-            ".md" => Assign(NovelDownloadFormat.Md, out format),
-            ".epub" => Assign(NovelDownloadFormat.Epub, out format),
-            _ => Assign(default, out format, false)
-        };
-
-        static bool Assign(NovelDownloadFormat value, out NovelDownloadFormat format, bool result = true)
-        {
-            format = value;
-            return result;
-        }
-    }
-
     public static string ChangeExtension(string path, string extension)
     {
         return ReplaceFileExtensionTokens(path, extension);
-    }
-
-    public static string ReplaceTokenExtensionFromUrl(string path, Uri uri, int setIndex)
-    {
-        var url = uri.OriginalString;
-        return ReplaceTokenExtensionFromUrl(path, url, setIndex);
-    }
-
-    public static string ReplaceTokenExtensionFromUrl(string path, string url, int setIndex)
-    {
-        return ReplaceTokenSetIndex(ReplaceFileExtensionTokens(path, Path.GetExtension(url)), setIndex);
-    }
-
-    public static string ReplaceTokenExtensionWithTempExtension(string path, int setIndex)
-    {
-        return ReplaceTokenSetIndex(ReplaceFileExtensionTokens(path, PixevalTempExtension), setIndex);
     }
 
     public static string ReplaceTokenSetIndex(string path, int setIndex)

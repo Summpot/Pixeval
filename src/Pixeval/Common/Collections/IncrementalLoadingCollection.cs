@@ -26,21 +26,6 @@ public class IncrementalLoadingCollection<IType> : ObservableRangeCollection<ITy
     private bool _isDisposed;
 
     /// <summary>
-    /// Gets or sets an <see cref="Action"/> that is called when a retrieval operation begins.
-    /// </summary>
-    public event Action? OnStartLoading;
-
-    /// <summary>
-    /// Gets or sets an <see cref="Action"/> that is called when a retrieval operation ends.
-    /// </summary>
-    public event Action? OnEndLoading;
-
-    /// <summary>
-    /// Gets or sets an <see cref="Action"/> that is called if an error occurs during data retrieval. The actual <see cref="Exception"/> is passed as an argument.
-    /// </summary>
-    public event Action<Exception>? OnError;
-
-    /// <summary>
     /// Gets a value indicating the source of incremental loading.
     /// </summary>
     protected IIncrementalSource<IType> Source { get; }
@@ -71,11 +56,6 @@ public class IncrementalLoadingCollection<IType> : ObservableRangeCollection<ITy
                 return;
             field = value;
             OnPropertyChanged(new PropertyChangedEventArgs(nameof(IsLoading)));
-
-            if (field)
-                OnStartLoading?.Invoke();
-            else
-                OnEndLoading?.Invoke();
         }
     }
 
@@ -104,67 +84,15 @@ public class IncrementalLoadingCollection<IType> : ObservableRangeCollection<ITy
     /// <param name="itemsPerPage">
     /// The number of items to retrieve for each call. Default is 20.
     /// </param>
-    /// <param name="onStartLoading">
-    /// An <see cref="Action"/> that is called when a retrieval operation begins.
-    /// </param>
-    /// <param name="onEndLoading">
-    /// An <see cref="Action"/> that is called when a retrieval operation ends.
-    /// </param>
-    /// <param name="onError">
-    /// An <see cref="Action"/> that is called if an error occurs during data retrieval.
-    /// </param>
     /// <seealso cref="IIncrementalSource{TSource}"/>
 
-    public IncrementalLoadingCollection(IIncrementalSource<IType> source, int itemsPerPage = 20, Action? onStartLoading = null, Action? onEndLoading = null, Action<Exception>? onError = null)
+    public IncrementalLoadingCollection(IIncrementalSource<IType> source, int itemsPerPage = 20)
     {
         ArgumentNullException.ThrowIfNull(source);
 
         Source = source;
 
-        OnStartLoading += onStartLoading;
-        OnEndLoading += onEndLoading;
-        OnError += onError;
-
         ItemsPerPage = itemsPerPage;
-    }
-
-
-    /// <summary>
-    /// Clears the collection and triggers/forces a reload of the first page
-    /// </summary>
-    /// <param name="token">
-    /// Used to propagate notification that operation should be canceled.
-    /// </param>
-    /// <returns>This method does not return a result</returns>
-    public async Task RefreshAsync(CancellationToken token = default)
-    {
-        ObjectDisposedException.ThrowIf(_isDisposed, this);
-        var loadingTask = GetRunningLoadingTask();
-        if (loadingTask is not null)
-        {
-            try
-            {
-                await WaitForLoadingTaskAsync(loadingTask, token);
-            }
-            catch (OperationCanceledException) when (!token.IsCancellationRequested)
-            {
-                // The in-flight load was canceled independently; the refresh can still continue.
-            }
-        }
-
-        ObjectDisposedException.ThrowIf(_isDisposed, this);
-        token.ThrowIfCancellationRequested();
-
-        var previousCount = Count;
-        Clear();
-        CurrentPageIndex = 0;
-        HasMoreItems = true;
-
-        if (previousCount is 0)
-        {
-            // When the list was empty before clearing, the automatic reload isn't fired, so force a reload.
-            await LoadMoreItemsAsync(0, token);
-        }
     }
 
     /// <summary>
@@ -229,7 +157,6 @@ public class IncrementalLoadingCollection<IType> : ObservableRangeCollection<ITy
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 LoadError = ex;
-                OnError?.Invoke(ex);
                 HasMoreItems = Source.HasMoreItems;
                 return 0;
             }
@@ -248,14 +175,6 @@ public class IncrementalLoadingCollection<IType> : ObservableRangeCollection<ITy
         finally
         {
             IsLoading = false;
-        }
-    }
-
-    private Task<int>? GetRunningLoadingTask()
-    {
-        lock (_loadingTaskGate)
-        {
-            return _loadingTask is { IsCompleted: false } loadingTask ? loadingTask : null;
         }
     }
 
@@ -298,9 +217,6 @@ public class IncrementalLoadingCollection<IType> : ObservableRangeCollection<ITy
             loadingTask = _loadingTask;
         }
 
-        OnStartLoading = null;
-        OnEndLoading = null;
-        OnError = null;
         _lifetimeCts.Cancel();
         if (Source is IDisposable disposable)
             disposable.Dispose();

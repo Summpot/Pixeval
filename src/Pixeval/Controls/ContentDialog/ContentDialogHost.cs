@@ -142,7 +142,7 @@ public class ContentDialogHost : TemplatedControl
             if (wasTopmost && _dialogs.Count > 0)
                 await Dispatcher.UIThread.InvokeAsync(_dialogs[^1].FocusInitialElement, DispatcherPriority.Loaded);
 
-            dialog.CompleteClose(result);
+            dialog.CompleteClose();
         }
     }
 

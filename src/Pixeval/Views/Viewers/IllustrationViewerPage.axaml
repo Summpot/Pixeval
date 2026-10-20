@@ -132,9 +132,6 @@
             <Setter Property="Opacity" Value="1" />
         </Style>
 
-        <Style Selector="Border#FloatingToolbarPane.temporary-visible">
-            <Setter Property="Opacity" Value="1" />
-        </Style>
     </ContentPage.Styles>
 
     <Grid>

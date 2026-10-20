@@ -83,8 +83,6 @@ public class Versioning
 
     public bool UsesVelopack => StoreDataMigration.IsVelopackInstallation;
 
-    public bool CanApplyUpdate => UsesVelopack && _velopackUpdateManager?.UpdatePendingRestart is not null;
-
     public Version? PendingUpdateVersion => _velopackUpdateManager?.UpdatePendingRestart?.Version.Version;
 
     public async Task CheckForUpdateAsync()
@@ -190,31 +188,6 @@ public class Versioning
                 if (predicate(list[i])) return list[i];
             }
             return null;
-        }
-    }
-
-
-    public void ApplyUpdateAndRestart()
-    {
-        if (!UsesVelopack)
-            return;
-
-        var manager = GetVelopackUpdateManager();
-        var target = manager?.UpdatePendingRestart;
-        if (manager is null || target is null)
-            return;
-
-        if (_settings is { } settings)
-            AppInfo.SaveSettings(settings);
-        _updateApplyRequested = true;
-        try
-        {
-            manager.ApplyUpdatesAndRestart(target, [.. Environment.GetCommandLineArgs().Skip(1)]);
-        }
-        catch
-        {
-            _updateApplyRequested = false;
-            throw;
         }
     }
 

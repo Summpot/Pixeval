@@ -79,29 +79,4 @@ public static class Streams
             return [ms];
         }
     }
-
-    public static async Task<MemoryStream> WriteZipAsync(IReadOnlyList<string> names, IReadOnlyList<Stream> streams, bool dispose)
-    {
-        var zipStream = _RecyclableMemoryStreamManager.GetStream();
-
-        var zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Create, true);
-
-        for (var i = 0; i < streams.Count; ++i)
-        {
-            // ReSharper disable once AccessToDisposedClosure
-            var entry = zipArchive.CreateEntry(names[i]);
-            await using var entryStream = await entry.OpenAsync();
-            await streams[i].CopyToAsync(entryStream);
-            if (dispose)
-                await streams[i].DisposeAsync();
-        }
-
-        await zipArchive.DisposeAsync();
-        // see-also https://stackoverflow.com/questions/47707862/ziparchive-gives-unexpected-end-of-data-corrupted-error/47707973
-        // 在flush前释放ZipArchive
-        zipStream.Position = 0;
-        await zipStream.FlushAsync();
-
-        return zipStream;
-    }
 }

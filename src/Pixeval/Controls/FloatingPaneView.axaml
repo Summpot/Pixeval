@@ -79,10 +79,6 @@
             <Setter Property="Opacity" Value="1" />
         </Style>
 
-        <Style Selector="^ /template/ Border#PART_FloatingPaneBorder.temporary-visible">
-            <Setter Property="Opacity" Value="1" />
-        </Style>
-
         <Style Selector="^:docked /template/ Border#PART_FloatingPaneBorder">
             <Setter Property="Opacity" Value="1" />
             <Setter Property="controls:FloatingPane.IsEnabled" Value="False" />
