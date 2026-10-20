@@ -1,8 +1,7 @@
 <Project>
 	<PropertyGroup>
-		<AvaloniaVersion>12.1.5</AvaloniaVersion>
-		<SkiaSharpVersion>4.154.0</SkiaSharpVersion>
-		<FluentIconsVersion>2.1.341</FluentIconsVersion>
+		<AvaloniaVersion>12.1.4</AvaloniaVersion>
+		<FluentIconsVersion>2.1.344</FluentIconsVersion>
 		<UniFFICargoTargetDir Condition="'$(UniFFICargoTargetDir)' == ''">$(MSBuildThisFileDirectory)target</UniFFICargoTargetDir>
 		<UniFFICargoProfile Condition="'$(UniFFICargoProfile)' == ''">release</UniFFICargoProfile>
 	</PropertyGroup>
