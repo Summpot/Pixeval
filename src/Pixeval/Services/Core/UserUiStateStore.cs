@@ -32,11 +32,6 @@ public static class UserUiStateStore
         });
     }
 
-    public static bool TryGetState(User user, out UserUiState? state)
-    {
-        return s_states.TryGetValue(user.RawId, out state);
-    }
-
     public static void SetFollowPending(User user)
     {
         var state = GetOrCreate(user);

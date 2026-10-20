@@ -1,10 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,8 +16,6 @@ public interface IWorkEntry
     string Title { get; }
     Series? Series => null;
 }
-
-
 
 public enum DomainFrontingType
 {
@@ -37,11 +32,6 @@ public static class MakoHttpOptions
     public const string OAuthHost = "oauth.secure.pixiv.net";
     public const string ImageHost = "i.pximg.net";
     public const string ImageHost2 = "s.pximg.net";
-}
-
-public class RateLimitEventArgs(DateTimeOffset retryAt) : EventArgs
-{
-    public DateTimeOffset RetryAt { get; } = retryAt;
 }
 
 public static class FetchEngineExtensions

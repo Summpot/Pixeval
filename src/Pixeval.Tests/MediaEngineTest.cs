@@ -60,19 +60,19 @@ public class MediaEngineTest
     public void TranscodeBytesShouldConvertJpegToPngAndWebp()
     {
         var jpeg = CreateSampleJpeg();
-        var png = MediaCodec.TranscodeBytes(jpeg, ImageCodecFormat.Png, null);
+        var png = PixevalMediaMethods.TranscodeBytes(jpeg, ImageCodecFormat.Png, null);
         Assert.IsNotNull(png);
         Assert.IsTrue(png.Length > 0);
         Assert.AreEqual((byte)0x89, png[0]); // PNG magic header
 
-        var webp = MediaCodec.TranscodeBytes(jpeg, ImageCodecFormat.Webp, null);
+        var webp = PixevalMediaMethods.TranscodeBytes(jpeg, ImageCodecFormat.Webp, null);
         Assert.IsNotNull(webp);
         Assert.IsTrue(webp.Length > 0);
         Assert.AreEqual((byte)'R', webp[0]); // RIFF magic header
     }
 
     [TestMethod]
-    public async Task PackMangaAsyncShouldCreateValidCbz()
+    public async Task PackMangaShouldCreateValidCbz()
     {
         var jpeg = CreateSampleJpeg();
         var page0 = Path.Combine(_testDir, "p0.jpg");
@@ -81,7 +81,7 @@ public class MediaEngineTest
         await File.WriteAllBytesAsync(page1, jpeg);
 
         var cbzPath = Path.Combine(_testDir, "manga.cbz");
-        await MediaCodec.PackMangaAsync([page0, page1], cbzPath, MangaArchiveFormat.Cbz);
+        PixevalMediaMethods.PackManga([page0, page1], cbzPath, MangaArchiveFormat.Cbz);
 
         Assert.IsTrue(File.Exists(cbzPath));
         using var archive = ZipFile.OpenRead(cbzPath);
@@ -91,7 +91,7 @@ public class MediaEngineTest
     }
 
     [TestMethod]
-    public async Task SynthesizeUgoiraAsyncShouldCreateGifAndOriginal()
+    public async Task SynthesizeUgoiraShouldCreateGifAndOriginal()
     {
         var jpeg = CreateSampleJpeg();
         var zipPath = Path.Combine(_testDir, "ugoira.zip");
@@ -111,7 +111,7 @@ public class MediaEngineTest
 
         // Synthesize GIF
         var gifPath = Path.Combine(_testDir, "anim.gif");
-        await MediaCodec.SynthesizeUgoiraAsync(zipPath, gifPath, UgoiraFormat.Gif, [100, 100]);
+        PixevalMediaMethods.SynthesizeUgoira(zipPath, gifPath, UgoiraFormat.Gif, [100, 100]);
         Assert.IsTrue(File.Exists(gifPath));
         var gifBytes = await File.ReadAllBytesAsync(gifPath);
         Assert.AreEqual((byte)'G', gifBytes[0]);
@@ -120,7 +120,7 @@ public class MediaEngineTest
 
         // Synthesize Original (loose extraction)
         var looseDir = Path.Combine(_testDir, "loose");
-        await MediaCodec.SynthesizeUgoiraAsync(zipPath, looseDir, UgoiraFormat.Original, [100, 120]);
+        PixevalMediaMethods.SynthesizeUgoira(zipPath, looseDir, UgoiraFormat.Original, [100, 120]);
         Assert.IsTrue(Directory.Exists(looseDir));
         Assert.IsTrue(File.Exists(Path.Combine(looseDir, "000000.jpg")));
         Assert.IsTrue(File.Exists(Path.Combine(looseDir, "000001.jpg")));

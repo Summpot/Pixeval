@@ -67,24 +67,6 @@ public partial class FileLogger : ILogger, Pixeval.Extensions.Common.ILogger
         }
     }
 
-    public void Log(LogLevel logLevel, string message, Exception? exception,
-        [CallerMemberName] string memberName = "",
-        [CallerFilePath] string filePath = "",
-        [CallerLineNumber] int lineNumber = 0) =>
-        _ = LogPrivateAsync(logLevel, message, exception, memberName, filePath, lineNumber);
-
-    public void LogTrace(string message, Exception? exception,
-        [CallerMemberName] string memberName = "",
-        [CallerFilePath] string filePath = "",
-        [CallerLineNumber] int lineNumber = 0) =>
-        _ = LogPrivateAsync(LogLevel.Trace, message, exception, memberName, filePath, lineNumber);
-
-    public void LogDebug(string message, Exception? exception,
-        [CallerMemberName] string memberName = "",
-        [CallerFilePath] string filePath = "",
-        [CallerLineNumber] int lineNumber = 0) =>
-        _ = LogPrivateAsync(LogLevel.Debug, message, exception, memberName, filePath, lineNumber);
-
     public void LogInformation(string message, Exception? exception,
         [CallerMemberName] string memberName = "",
         [CallerFilePath] string filePath = "",

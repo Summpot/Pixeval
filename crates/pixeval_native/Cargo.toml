@@ -9,9 +9,6 @@ crate-type = ["cdylib", "staticlib"]
 [dependencies]
 boltffi.workspace = true
 uniffi = { workspace = true, features = ["tokio"] }
-tokio = { workspace = true, features = ["full"] }
-async-compat.workspace = true
-thiserror.workspace = true
 pixeval_filters.workspace = true
 pixeval_cache.workspace = true
 pixeval_maho.workspace = true
@@ -27,5 +24,3 @@ pixeval_media.workspace = true
 pixeval_booru.workspace = true
 pixeval_saucenao.workspace = true
 pixeval_update.workspace = true
-serde.workspace = true
-serde_json.workspace = true

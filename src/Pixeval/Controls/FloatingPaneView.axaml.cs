@@ -171,13 +171,11 @@ public class FloatingPaneView : ContentControl
     {
         if (!isDocked)
         {
-            FloatingPane.ClearTemporaryVisible(border);
             FloatingPane.SetPointerAway(border);
             return;
         }
 
         FloatingPane.ResetState(border);
-        FloatingPane.ClearTemporaryVisible(border);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)

@@ -5,8 +5,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text.Json.Serialization;
 using AutoSettingsPage;
-using Avalonia;
-using Avalonia.Styling;
 using FluentIcons.Common;
 using Pixeval.Config;
 using Pixeval.Utilities;
@@ -34,21 +32,6 @@ public record AppSettings
             IsNewVersion = true;
             LastOpenedVersion = AppInfo.AppVersion.CurrentVersionShortText;
 
-            // 更新时若域前置IP改变，则在此手动更新域名
-            //var network = new NetworkSettingsGroup();
-            //NetworkSettings.PixivDomainFronting.PixivAppApiNameResolver = network.PixivDomainFronting.PixivAppApiNameResolver;
-            //NetworkSettings.PixivDomainFronting.PixivWebApiNameResolver = network.PixivDomainFronting.PixivWebApiNameResolver;
-            //NetworkSettings.PixivDomainFronting.PixivAccountNameResolver = network.PixivDomainFronting.PixivAccountNameResolver;
-            //NetworkSettings.PixivDomainFronting.PixivOAuthNameResolver = network.PixivDomainFronting.PixivOAuthNameResolver;
-            //NetworkSettings.PixivDomainFronting.PixivImageNameResolver = network.PixivDomainFronting.PixivImageNameResolver;
-            //NetworkSettings.PixivDomainFronting.PixivImageNameResolver2 = network.PixivDomainFronting.PixivImageNameResolver2;
-
-            //NetworkSettings.GitHubDomainFronting.GitHubNameResolver = network.GitHubDomainFronting.GitHubNameResolver;
-            //NetworkSettings.GitHubDomainFronting.GitHubApiNameResolver = network.GitHubDomainFronting.GitHubApiNameResolver;
-            //NetworkSettings.GitHubDomainFronting.GitHubAvatarNameResolver = network.GitHubDomainFronting.GitHubAvatarNameResolver;
-            //NetworkSettings.GitHubDomainFronting.GitHubUserContentNameResolver = network.GitHubDomainFronting.GitHubUserContentNameResolver;
-            //NetworkSettings.GitHubDomainFronting.GitHubAssetsNameResolver = network.GitHubDomainFronting.GitHubAssetsNameResolver;
-            //NetworkSettings.GitHubDomainFronting.GitHubCodeloadNameResolver = network.GitHubDomainFronting.GitHubCodeloadNameResolver;
         }
     }
 
@@ -89,11 +72,6 @@ public record AppSettings
 
     [JsonIgnore]
     public bool IsNewVersion { get; private set; }
-
-    [JsonIgnore]
-    public ApplicationTheme ActualTheme => ApplicationSettings.Theme is ApplicationTheme.Default
-        ? Application.Current!.ActualThemeVariant == ThemeVariant.Dark ? ApplicationTheme.Dark : ApplicationTheme.Light
-        : ApplicationSettings.Theme;
 
     public MakoConfigurationDto ToMakoConfiguration()
     {

@@ -19,16 +19,4 @@ impl DownloadTaskKey {
             artwork_id: None,
         }
     }
-
-    pub fn new_subscription(
-        destination: impl Into<String>,
-        work_subscription_id: i32,
-        artwork_id: impl Into<String>,
-    ) -> Self {
-        Self {
-            destination: destination.into(),
-            work_subscription_id,
-            artwork_id: Some(artwork_id.into()),
-        }
-    }
 }

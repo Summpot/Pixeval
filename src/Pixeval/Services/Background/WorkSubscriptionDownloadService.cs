@@ -54,8 +54,6 @@ public sealed class WorkSubscriptionDownloadService : IWorkSubscriptionService, 
 
     public bool IsDaemonRunning => _syncEngine.IsDaemonRunning();
 
-    public ulong DaemonIntervalSecs => _syncEngine.GetDaemonInterval();
-
     public WorkSubscriptionDownloadService(
         StorageEngine storageEngine,
         DownloadManager downloadManager,

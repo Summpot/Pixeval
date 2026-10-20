@@ -1,7 +1,6 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using Pixeval.Pixiv;
 using Pixeval.Mako;
 
 namespace Pixeval.Storage;
@@ -13,8 +12,6 @@ public partial record struct LoginUserRecord
     public string AvatarUrl => string.IsNullOrWhiteSpace(Avatar50Url) ? AppInfo.ImageNotAvailablePath : Avatar50Url;
 
     public string AccountDisplay => string.IsNullOrWhiteSpace(Account) ? "" : $"@{Account}";
-
-    public XRestrict RestrictLevel => StoredEnum.FromIndex<XRestrict>(XRestrict);
 
     public TokenUser TokenUser => new(
         UserId.ToString(),

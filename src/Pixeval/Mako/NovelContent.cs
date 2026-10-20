@@ -9,27 +9,6 @@ namespace Pixeval.Mako;
 
 public partial record struct NovelContent
 {
-    public static NovelContent CreateDefault() => new(
-        0,
-        "",
-        null,
-        null,
-        null,
-        0,
-        "",
-        [],
-        "",
-        "",
-        null,
-        "",
-        null,
-        [],
-        [],
-        null,
-        0,
-        false,
-        "");
-
     public IReadOnlyList<NovelIllustration> Illustrations => Illusts;
 
     public DateTimeOffset Date => DateTimeOffset.TryParse(Cdate, out var dt) ? dt : DateTimeOffset.UtcNow;

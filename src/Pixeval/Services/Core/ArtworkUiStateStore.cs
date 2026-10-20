@@ -78,11 +78,6 @@ public static class ArtworkUiStateStore
         });
     }
 
-    public static bool TryGetState(object entry, out ArtworkUiState? state)
-    {
-        return s_states.TryGetValue(GetKey(entry), out state);
-    }
-
     public static void SetBookmarkPending(object entry)
     {
         var state = GetOrCreate(entry);

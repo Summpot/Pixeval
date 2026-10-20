@@ -8,7 +8,6 @@ namespace Pixeval.Cache;
 
 public partial class ProgressiveImageDecoder
 {
-    public const long MaximumPixelCount = 4 * 1024 * 1024;
     public const int PreviewDimension = 1024;
 
     private Stream? _source;

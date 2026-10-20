@@ -11,8 +11,6 @@ namespace Pixeval.Download;
 
 public partial record struct DownloadItemSnapshot
 {
-    public string AuthorsText => Author;
-
     public bool ShowGroupStats => ActiveCount + CompletedCount + ErrorCount > 1;
 
     public bool IsPending => State is DownloadState.Pending;

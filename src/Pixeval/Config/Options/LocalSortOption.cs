@@ -6,7 +6,6 @@ using Pixeval.Attributes;
 
 namespace Pixeval.Config;
 
-[LocalizationMetadata]
 public enum LocalSortOption
 {
     [LocalizedResource(Symbol.ArrowSort, nameof(Strings.EnumLocalSortOptionDoNotSort))]

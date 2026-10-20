@@ -9,8 +9,6 @@ public partial record struct AppRelease : IComparable<AppRelease>
 {
     public Version? ParsedVersion => System.Version.TryParse(Version, out var v) ? v : null;
 
-    public Version VersionObject => ParsedVersion ?? new Version(0, 0, 0, 0);
-
     public string ReleaseNote => ReleaseNotes;
 
     public Uri? ReleaseUri => Uri.TryCreate(HtmlUrl, UriKind.Absolute, out var uri) ? uri : null;

@@ -7,27 +7,6 @@ namespace Pixeval.Storage;
 
 public partial record struct SearchHistoryRecord
 {
-    public DateTime ParsedTime
-    {
-        get
-        {
-            if (DateTime.TryParse(Time, out var dt))
-                return dt;
-            if (long.TryParse(Time, out var ticks))
-            {
-                try
-                {
-                    return new DateTime(ticks, DateTimeKind.Utc);
-                }
-                catch
-                {
-                    // ignore invalid tick range
-                }
-            }
-            return DateTime.MinValue;
-        }
-    }
-
     public SearchHistoryRecord() : this(0, "", null, DateTime.UtcNow.ToString("o"))
     {
     }

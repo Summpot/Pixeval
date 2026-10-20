@@ -118,13 +118,6 @@
             <Setter Property="Opacity" Value="1" />
         </Style>
 
-        <Style Selector="Border#FloatingToolbarPane.temporary-visible">
-            <Setter Property="Opacity" Value="1" />
-        </Style>
-
-        <Style Selector="Border#FloatingToolbarPane:focus-within, Border#FloatingToolbarPane.command-menu-open">
-            <Setter Property="Opacity" Value="1" />
-        </Style>
     </ContentPage.Styles>
 
     <Grid>

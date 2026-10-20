@@ -25,20 +25,10 @@ public static class BlockedContentModelHelper
         return new BlockedUserRecord(0, user.Id, user.Name ?? "", avatarUrl, account);
     }
 
-    public static NovelContent CreateBlockedNovelContent(Mako.Novel entry) => NovelContent.CreateDefault() with
-    {
-        Id = entry.Id,
-        Title = entry.Title,
-        UserId = entry.User.Id,
-        CoverUrl = AppInfo.BlockedContentPath,
-        Text = Strings.BlockedContentWork()
-    };
-
     internal static bool IsBlockedPlaceholder(object entry) =>
         (entry is Illustration i && i.MetaSinglePage.OriginalImageUrl == AppInfo.BlockedContentPath) ||
         (entry is Mako.Novel n && n.ImageUrls.Medium == AppInfo.BlockedContentPath) ||
         _BlockedArtworkMarkers.TryGetValue(entry, out _);
-
 
     internal static T Replace<T>(T entry, BlockedContentSnapshot snapshot) where T : notnull
     {

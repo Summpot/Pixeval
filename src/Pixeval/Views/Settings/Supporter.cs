@@ -6,7 +6,6 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Pixeval.Utilities;
 using Pixeval.Services.Update;
@@ -35,26 +34,6 @@ public partial class Supporter : ViewModelBase
     public static string BasePath { get; } = Path.Combine(AppInfo.CacheFolder, "GitHubSupporters");
 
     public string AtName => "@" + Name;
-
-    public Bitmap? ProfileImage
-    {
-        get
-        {
-            var path = Path.Combine(BasePath, Name + ".png");
-            if (!File.Exists(path))
-                return null;
-
-            try
-            {
-                return new Bitmap(path);
-            }
-            catch
-            {
-                _ = FileHelper.TryDeleteFile(path);
-                return null;
-            }
-        }
-    }
 
     public string Nickname { get; init; } = null!;
 
@@ -96,7 +75,6 @@ public partial class Supporter : ViewModelBase
         try
         {
             _ = Directory.CreateDirectory(BasePath);
-
 
             var path = Path.Combine(BasePath, "github-supporters.json");
             var exists = File.Exists(path);

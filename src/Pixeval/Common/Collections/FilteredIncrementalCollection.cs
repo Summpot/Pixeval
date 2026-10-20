@@ -27,8 +27,6 @@ public class FilteredIncrementalCollection<T> : ObservableRangeCollection<T>, II
         Rebuild();
     }
 
-    public IncrementalLoadingCollection<T> Source => _source;
-
     public Predicate<object>? Filter
     {
         get => _filter;
