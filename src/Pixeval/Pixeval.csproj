@@ -41,7 +41,7 @@
 		<PackageReference Include="ZeroI18n" Version="1.1.0" PrivateAssets="all" />
 		<PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
 		<PackageReference Include="Avalonia.AvaloniaEdit" Version="12.0.0" />
-		<PackageReference Include="Avalonia.Controls.WebView" Version="12.1.0" />
+		<PackageReference Include="Avalonia.Controls.WebView" Version="12.1.1" />
 		<PackageReference Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
 		<PackageReference Include="Avalonia.Fonts.Inter" Version="$(AvaloniaVersion)" />
 		<PackageReference Include="Avalonia.Controls.ColorPicker" Version="$(AvaloniaVersion)" />
@@ -54,14 +54,10 @@
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
 		<PackageReference Include="Markdown.Avalonia" Version="12.0.0-a3" />
 		<!--<PackageReference Include="SmoothScroll.Avalonia" Version="12.0.0.12" />-->
-		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.12" />
+		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.17" />
 		<PackageReference Include="TabView.Avalonia" Version="1.0.0" />
-		<PackageReference Include="Velopack" Version="1.2.158" />
-        
-        <PackageReference Include="SkiaSharp" Version="3.119.4" />
-		<PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" />
-		<PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" Version="3.119.4" />
-		<PackageReference Include="UniFFISharp" Version="0.3.10" />
+		<PackageReference Include="Velopack" Version="1.2.161" />
+		<PackageReference Include="UniFFISharp" Version="0.3.11" />
 	</ItemGroup>
 
 
