@@ -33,4 +33,36 @@
 		</None>
 	</ItemGroup>
 
+	<!-- UniFFISharp 静态链接生效条件（跨平台通用） -->
+	<PropertyGroup>
+		<_IsUniFFIStaticLinking Condition="'$(UniFFILinkMode)' == 'Static' or ('$(UniFFILinkMode)' != 'Dynamic' and '$(PublishAot)' == 'true' and ('$(_IsPublishing)' == 'true' or '$(DeployOnBuild)' == 'true'))">true</_IsUniFFIStaticLinking>
+		<EmbedAngleNative Condition="'$(EmbedAngleNative)' == '' and '$(_IsUniFFIStaticLinking)' == 'true'">true</EmbedAngleNative>
+	</PropertyGroup>
+
+	<!-- 在编译前将包解析出的 av_libglesv2 原生库作为内嵌资源打入主程序 -->
+	<Target Name="EmbedAngleNativeOnUniFFIStatic"
+	        AfterTargets="ResolvePackageAssets"
+	        BeforeTargets="CreateManifestResourceNames;CoreCompile"
+	        Condition="'$(EmbedAngleNative)' == 'true'">
+		<ItemGroup>
+			<EmbeddedResource Include="@(NativeCopyLocalItems)"
+			                  Condition="$([System.String]::Copy('%(FileName)').ToLower().Contains('av_libglesv2'))">
+				<LogicalName>%(FileName)%(Extension)</LogicalName>
+			</EmbeddedResource>
+		</ItemGroup>
+	</Target>
+
+	<!-- 在发布计算文件清单时移除 av_libglesv2 原生库，避免其复制到输出发布目录 -->
+	<Target Name="ExcludeAngleNativeFromPublish"
+	        BeforeTargets="ComputeFilesToPublish;CopyNativeSymbolFiles;_CopyResolvedFilesToPublishPreserveNewest"
+	        Condition="'$(EmbedAngleNative)' == 'true'">
+		<ItemGroup>
+			<NativeCopyLocalItems Remove="@(NativeCopyLocalItems)"
+			                      Condition="$([System.String]::Copy('%(FileName)').ToLower().Contains('av_libglesv2'))" />
+			<ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+			                       Condition="$([System.String]::Copy('%(FileName)').ToLower().Contains('av_libglesv2'))" />
+		</ItemGroup>
+	</Target>
+
 </Project>
+
