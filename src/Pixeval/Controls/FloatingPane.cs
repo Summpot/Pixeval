@@ -16,7 +16,6 @@ public static class FloatingPane
     private const string ProximityClass = "proximity";
     private const string CloseProximityClass = "close-proximity";
     private const string NotProximityClass = "not-proximity";
-    private const string TemporaryVisibleClass = "temporary-visible";
 
     public static readonly AttachedProperty<bool> IsEnabledProperty =
         AvaloniaProperty.RegisterAttached<Control, bool>(
@@ -46,12 +45,6 @@ public static class FloatingPane
             "CloseProximityExitDelay",
             typeof(FloatingPane),
             defaultValue: TimeSpan.FromSeconds(0.3));
-
-    public static readonly AttachedProperty<TimeSpan> TemporaryVisibleDurationProperty =
-        AvaloniaProperty.RegisterAttached<Control, TimeSpan>(
-            "TemporaryVisibleDuration",
-            typeof(FloatingPane),
-            defaultValue: TimeSpan.FromSeconds(1));
 
     static readonly AttachedProperty<FloatingPaneDelayTask?> DelayTasksProperty =
         AvaloniaProperty.RegisterAttached<Control, FloatingPaneDelayTask?>(
@@ -93,28 +86,6 @@ public static class FloatingPane
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static void SetCloseProximityExitDelay(Control element, TimeSpan value) =>
         element.SetValue(CloseProximityExitDelayProperty, value);
-
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public static TimeSpan GetTemporaryVisibleDuration(Control element) => element.GetValue(TemporaryVisibleDurationProperty);
-
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public static void SetTemporaryVisibleDuration(Control element, TimeSpan value) =>
-        element.SetValue(TemporaryVisibleDurationProperty, value);
-
-    public static void ShowTemporarily(Control element, TimeSpan? duration = null)
-    {
-        var state = GetDelayTasks(element);
-        state.TemporaryVisibleDelayTask?.Dispose();
-
-        element.Classes.Set(TemporaryVisibleClass, true);
-        state.TemporaryVisibleDelayTask = DispatcherTimer.RunOnce(
-            () =>
-            {
-                element.Classes.Set(TemporaryVisibleClass, false);
-                state.TemporaryVisibleDelayTask = null;
-            },
-            duration ?? GetTemporaryVisibleDuration(element));
-    }
 
     internal static void RefreshHostRegistration(Control element)
     {
@@ -191,7 +162,6 @@ public static class FloatingPane
                 var state = element.GetValue(DelayTasksProperty);
                 state?.CloseProximityDelayTask?.Dispose();
                 state?.CloseProximityDelayTask = null;
-                ClearTemporaryVisible(element);
 
                 ResetState(element);
 
@@ -201,15 +171,6 @@ public static class FloatingPane
         }
     }
     
-    internal static void ClearTemporaryVisible(Control element)
-    {
-        var state = element.GetValue(DelayTasksProperty);
-        state?.TemporaryVisibleDelayTask?.Dispose();
-        state?.TemporaryVisibleDelayTask = null;
-
-        element.Classes.Set(TemporaryVisibleClass, false);
-    }
-
     private static void SetProximity(Control element, bool isInProximity)
     {
         element.Classes.Set(ProximityClass, isInProximity);
@@ -254,7 +215,5 @@ public static class FloatingPane
     sealed class FloatingPaneDelayTask
     {
         public IDisposable? CloseProximityDelayTask { get; set; }
-
-        public IDisposable? TemporaryVisibleDelayTask { get; set; }
     }
 }

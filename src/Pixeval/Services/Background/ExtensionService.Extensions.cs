@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.Commands.Transformers;
-using Pixeval.Extensions.Common.Downloaders;
 using Pixeval.Extensions.Common.FormatProviders;
 
 namespace Pixeval.Services.Background;
@@ -22,9 +21,6 @@ public sealed partial class ExtensionService
 
     public IEnumerable<ITextTransformerCommandExtension> ActiveTextTransformerCommands =>
         ActiveExtensions.OfType<ITextTransformerCommandExtension>();
-
-    public IEnumerable<IDownloaderExtension> ActiveDownloaders =>
-        ActiveExtensions.OfType<IDownloaderExtension>();
 
     public IEnumerable<IStaticImageFormatProviderExtension> ActiveStaticImageFormatProviders =>
         ActiveExtensions.OfType<IStaticImageFormatProviderExtension>();

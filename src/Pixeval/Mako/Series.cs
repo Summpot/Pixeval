@@ -24,13 +24,6 @@ public partial record struct Series
         : $"https://www.pixiv.net/user/{User?.Id}/series/{Id}");
 
     [JsonIgnore]
-    public DateTimeOffset LastPublishedDate =>
-        DateTimeOffset.TryParse(LastPublishedContentDatetime, out var dt) ? dt : default;
-
-    [JsonIgnore]
-    public int ContentCount => PublishedContentCount ?? 0;
-
-    [JsonIgnore]
     public string Caption => MaskText ?? "";
 
     [JsonIgnore]

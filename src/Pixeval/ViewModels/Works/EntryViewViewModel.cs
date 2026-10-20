@@ -35,8 +35,6 @@ public abstract class EntryViewViewModel<T, TViewModel>
 
     public ObservableCollection<TViewModel> Source => _source ??= CreateEmptyCollection();
 
-    protected IncrementalLoadingCollection<TViewModel>? BackingCollection => _source;
-
     public virtual void Dispose()
     {
         GC.SuppressFinalize(this);

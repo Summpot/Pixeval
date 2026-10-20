@@ -13,7 +13,6 @@ const BASE_URL: &str = "https://danbooru.donmai.us";
 const USER_AGENT: &str = "gdl/1.24.5";
 
 #[derive(Deserialize, Debug)]
-#[allow(dead_code)]
 struct DanbooruPostRaw {
     pub id: i64,
     #[serde(default)]
@@ -51,7 +50,7 @@ struct DanbooruPostRaw {
     #[serde(default)]
     pub media_metadata: Option<DanbooruMediaMetadataRaw>,
     #[serde(default)]
-    pub children: Option<Vec<DanbooruChildRaw>>,
+    pub children: Option<Vec<serde::de::IgnoredAny>>,
     #[serde(default)]
     pub score: Option<i32>,
     #[serde(default)]
@@ -64,34 +63,21 @@ struct DanbooruPostRaw {
     pub tag_string_general: Option<String>,
     #[serde(default)]
     pub tag_string_meta: Option<String>,
-    #[serde(default)]
-    pub tag_string: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
-#[allow(dead_code)]
 struct DanbooruUploaderRaw {
-    #[serde(default)]
-    pub id: Option<i64>,
     #[serde(default)]
     pub name: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
-#[allow(dead_code)]
 struct DanbooruMediaMetadataRaw {
     #[serde(default)]
     pub metadata: Option<serde_json::Value>,
 }
 
 #[derive(Deserialize, Debug)]
-#[allow(dead_code)]
-struct DanbooruChildRaw {
-    pub id: i64,
-}
-
-#[derive(Deserialize, Debug)]
-#[allow(dead_code)]
 struct DanbooruPreviewRaw {
     pub id: i64,
     #[serde(default)]

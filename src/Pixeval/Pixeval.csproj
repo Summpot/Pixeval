@@ -25,7 +25,6 @@
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 	</PropertyGroup>
 
-
 	<!-- GUI-only global properties must not be propagated to library and source-generator projects. -->
 	<ItemDefinitionGroup>
 		<ProjectReference>
@@ -52,14 +51,14 @@
 		</PackageReference>
 		
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.13" />
+		<PackageReference Include="Pixeval.Extensions.Common" Version="5.0.0" />
 		<PackageReference Include="Markdown.Avalonia" Version="12.0.0-a3" />
-		<!--<PackageReference Include="SmoothScroll.Avalonia" Version="12.0.0.12" />-->
 		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.17" />
 		<PackageReference Include="TabView.Avalonia" Version="1.0.0" />
 		<PackageReference Include="Velopack" Version="1.2.161" />
 		<PackageReference Include="UniFFISharp" Version="0.3.11" />
 	</ItemGroup>
-
 
 	<ItemGroup>
 		<ProjectReference Include="..\lib\AutoSettingsPage\AutoSettingsPage.Avalonia\AutoSettingsPage.Avalonia.csproj" />
@@ -86,7 +85,6 @@
 		<Compile Remove="Views\Settings\McpHelpSection.Mcp.cs" />
 		<Compile Remove="Views\Settings\McpHelpSection.McpTools.cs" />
 	</ItemGroup>
-
 
 	<ItemGroup>
         <AdditionalFiles Include="Assets\PathIcons\*.svg" />

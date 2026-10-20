@@ -348,8 +348,6 @@ public partial class ContinuousImageViewer : ImageViewerBase
 
     private Point? GetPageOriginInContent(Control container) => container.TranslatePoint(default, ImageItemsControl);
 
-    private double GetScrollOffset(Point origin) => (IsHorizontal ? origin.X : origin.Y) * CanvasZoomFactor;
-
     private double CanvasZoomFactor => ViewerScrollView?.ZoomFactor ?? 1;
 
     private double CurrentPixelScale => CurrentPage is not { } page ? 1

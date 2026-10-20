@@ -9,13 +9,8 @@ uniffi = { workspace = true, features = ["tokio"] }
 image = { workspace = true, features = ["png", "jpeg", "webp", "gif", "avif"] }
 png.workspace = true
 zip.workspace = true
-tokio = { workspace = true, features = ["rt", "sync", "fs", "io-util"] }
 thiserror.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-parking_lot.workspace = true
 libloading.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
-tokio = { workspace = true, features = ["full"] }

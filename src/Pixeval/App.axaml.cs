@@ -215,23 +215,6 @@ public class App : Application
         ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
         && desktop.Windows.Where(static candidate => candidate.IsVisible).All(candidate => ReferenceEquals(candidate, window));
 
-    private void MakoClient_OnRateLimitEncountered(MakoClient sender, RateLimitEventArgs args) =>
-        Dispatcher.UIThread.Post(() =>
-        {
-            var viewContainers = ApplicationLifetime switch
-            {
-                IClassicDesktopStyleApplicationLifetime desktop => desktop.Windows
-                    .Select(static window => window.Content)
-                    .OfType<ViewContainerBase>(),
-                ISingleViewApplicationLifetime { MainView: ViewContainerBase container } => [container],
-                _ => []
-            };
-            foreach (var viewContainer in viewContainers)
-                viewContainer.ShowWarning(
-                    Strings.MiscRateLimitNotificationTitle(),
-                    Strings.MiscRateLimitNotificationContentFormatted(retryAt: (args.RetryAt.ToLocalTime()).ToString("yyyy-MM-dd HH:mm:ss", AppLocalization.Instance.CurrentCulture)));
-        });
-
     private void RegisterUnhandledExceptionHandler()
     {
         Dispatcher.UIThread.UnhandledException += (_, e) =>

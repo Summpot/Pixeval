@@ -59,13 +59,6 @@ public static class KeyboardShortcut
         object? commandParameter = null) =>
         Matches(e, key) && TryExecuteCommand(e, command, commandParameter);
 
-    public static bool TryExecute(
-        KeyEventArgs e,
-        IReadOnlyList<KeyGesture>? gestures,
-        ICommand? command,
-        object? commandParameter = null) =>
-        Matches(e, gestures) && TryExecuteCommand(e, command, commandParameter);
-
     public static bool TryExecutePlatformCommand(
         KeyEventArgs e,
         Key key,

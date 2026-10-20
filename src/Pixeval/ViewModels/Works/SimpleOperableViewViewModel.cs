@@ -88,9 +88,6 @@ public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelB
     /// <inheritdoc />
     IReadOnlyCollection<object> IOperableViewViewModel.View => View;
 
-    /// <inheritdoc />
-    public IReadOnlyCollection<object> SourceItems => Source;
-
     IReadOnlyCollection<object> IOperableViewViewModel.Source => Source;
 
     /// <inheritdoc />

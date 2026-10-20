@@ -290,7 +290,7 @@ public sealed class MakoClientTest
         Assert.AreEqual("Pure Title", article.PureTitle);
         Assert.AreEqual("https://example.com/thumb.jpg", article.Thumbnail);
         Assert.AreEqual("https://example.com/article", article.ArticleUrl);
-        Assert.AreEqual(Pixeval.Mako.SpotlightCategory.Spotlight, article.CategoryEnum);
+        Assert.AreEqual(Pixeval.Mako.SpotlightCategory.Spotlight, article.Category);
         Assert.AreEqual("Subcategory", article.SubcategoryLabel);
         Assert.AreEqual(new System.Uri("https://www.pixivision.net/a/12345"), article.WebsiteUri);
         Assert.AreEqual(new System.Uri("pixeval://spotlight/12345"), article.AppUri);

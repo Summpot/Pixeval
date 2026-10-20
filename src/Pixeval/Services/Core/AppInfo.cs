@@ -61,8 +61,6 @@ public static class AppInfo
 
     public static readonly Uri IconApplicationUri = new($"avares://{AppIdentifier}/Assets/logo.ico");
 
-    public static readonly Uri SvgIconApplicationUri = new($"avares://{AppIdentifier}/Assets/logo.svg");
-
     public static Versioning AppVersion { get; } = new();
 
     static AppInfo()
@@ -84,14 +82,6 @@ public static class AppInfo
     public const string BlockedContentPath = $"{AssetsPathPrefix}blocked-content.png";
 
     public static Stream GetImageNotAvailableStream() => AssetLoader.Open(new Uri(ImageNotAvailablePath));
-
-    public static async Task<byte[]> GetAssetBytesAsync(string relativeToAssetsFolder)
-    {
-        await using var stream = GetAssetStream(relativeToAssetsFolder);
-        await using var ms = new MemoryStream();
-        await stream.CopyToAsync(ms);
-        return ms.ToArray();
-    }
 
     public static Stream GetAssetStream(string relativeToAssetsFolder)
     {

@@ -163,10 +163,6 @@ public class VirtualizingStackPanel : VirtualizingPanel, IScrollSnapPointsInfo
         set => SetValue(AreVerticalSnapPointsRegularProperty, value);
     }
 
-    public int FirstRealizedIndex => _realized.Count is 0 ? -1 : _realized.Keys.Min();
-
-    public int LastRealizedIndex => _realized.Count is 0 ? -1 : _realized.Keys.Max();
-
     /// <summary>
     /// Gets the unscaled start offset of an item without realizing its container.
     /// </summary>

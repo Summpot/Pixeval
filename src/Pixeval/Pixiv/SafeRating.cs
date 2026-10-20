@@ -14,15 +14,6 @@ public readonly record struct SafeRating(sbyte SafeRatingValue)
     public static SafeRating Explicit => new(40);
     public static SafeRating Guro => new(50);
 
-    public bool IsNotSpecified => SafeRatingValue == -1;
-    public bool IsGeneral => SafeRatingValue == 10;
-    public bool IsSensitive => SafeRatingValue == 20;
-    public bool IsQuestionable => SafeRatingValue == 30;
-    public bool IsExplicit => SafeRatingValue == 40;
-    public bool IsGuro => SafeRatingValue == 50;
-
-    public bool IsSafe => SafeRatingValue is 10 or -1;
-    public bool IsR17 => SafeRatingValue >= 20;
     public bool IsR18 => SafeRatingValue >= 40;
     public bool IsR18G => SafeRatingValue >= 50;
 

@@ -26,16 +26,6 @@ impl Utf16Mapping {
         }
     }
 
-    #[inline]
-    pub fn total_utf16(&self) -> usize {
-        self.total_utf16
-    }
-
-    #[inline]
-    pub fn total_bytes(&self) -> usize {
-        self.total_bytes
-    }
-
     pub fn utf16_to_byte(&self, utf16_pos: usize) -> usize {
         if utf16_pos >= self.total_utf16 {
             return self.total_bytes;

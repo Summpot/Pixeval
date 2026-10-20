@@ -5,7 +5,6 @@ using Pixeval.Attributes;
 
 namespace Pixeval.Config;
 
-[LocalizationMetadata]
 public enum WorkSubscriptionType
 {
     [LocalizedResource(nameof(Strings.EnumWorkSubscriptionTypeBookmarks))]

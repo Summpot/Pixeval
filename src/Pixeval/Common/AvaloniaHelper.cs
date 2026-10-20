@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
@@ -162,20 +161,6 @@ public static class AvaloniaHelper
                 if (parameter is not string str || !Uri.TryCreate(str, UriKind.RelativeOrAbsolute, out uri!))
                     return;
             _ = launcher.LaunchUriAsync(uri);
-        };
-
-    public static EventHandler<RoutedEventArgs>? LaunchFileTagInWebBrowser { get; }
-        = (sender, e) =>
-        {
-            if (sender is not Control { Tag: { } parameter } control)
-                return;
-            var launcher = control.LauncherService;
-            if (parameter is not string path)
-                return;
-            if (new FileInfo(path) is { Exists: true } file)
-                _ = launcher.LaunchFileInfoAsync(file);
-            else if (new DirectoryInfo(path) is { Exists: true } directory)
-                _ = launcher.LaunchDirectoryInfoAsync(directory);
         };
 
     public static EventHandler<RoutedEventArgs>? CopyTagToClipboard { get; }

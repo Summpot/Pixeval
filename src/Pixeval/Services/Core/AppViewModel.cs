@@ -56,8 +56,6 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         set => NavigationMenu.Text = value;
     }
 
-    public void ResetHomePageCards() => HomePageCardsSession.Reset();
-
     public void InitializeProvider()
     {
         AppSettings.Initialize();
@@ -67,7 +65,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         NavigationService = AppServiceProvider.GetRequiredService<INavigationService>();
         AppUpdateNotificationCoordinator = AppServiceProvider.GetRequiredService<IAppUpdateNotificationCoordinator>();
         UserSession.UserRefreshed += u => UserRefreshed?.Invoke(u);
-        SetNameResolvers();
+        NetworkRuntime.AttachNameResolverHooks();
         InitializePersistence();
         if (GetCurrentLoginUser() is { } currentUser)
         {
@@ -147,7 +145,6 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             .AddSingleton(_ => DownloadManager)
             .AddSingleton<IUserSessionService, UserSessionService>()
             .AddSingleton<IImageProviderService>(images)
-            .AddSingleton<IDownloadFormatService, DownloadFormatService>()
             .AddSingleton<IArtworkActionService, ArtworkActionService>()
             .AddSingleton<IUiHost, UiHost>()
             .AddSingleton<INotificationService, NotificationService>()
@@ -205,21 +202,6 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         }
     }
 
-    public void AddSearchHistory(string text, string? translatedName = null) =>
-        SearchHistory.Add(text, translatedName);
-
-    public void ClearSearchHistory() => SearchHistory.Clear();
-
-    public void AddBrowseHistory(object entry) => StorageEngine.HistoryRepository.AddBrowseHistory(entry);
-
-    public void ClearBrowseHistory() => StorageEngine.HistoryRepository.Clear();
-
-    public bool ContainsWatchLater(object entry) => StorageEngine.WatchLaterRepository.ContainsWatchLater(entry);
-
-    public bool AddWatchLater(object entry) => StorageEngine.WatchLaterRepository.AddWatchLater(entry);
-
-    public bool RemoveWatchLater(object entry) => StorageEngine.WatchLaterRepository.RemoveWatchLater(entry);
-
     public static DownloadPolicy CreateDownloadPolicy(AppSettings settings)
     {
         var download = settings.DownloadSettings;
@@ -228,20 +210,6 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             download.DownloadFormats.IllustrationDownloadFormat,
             download.DownloadFormats.UgoiraDownloadFormat,
             download.DownloadFormats.NovelDownloadFormat);
-    }
-
-    public void ClearDownloadHistories()
-    {
-        DownloadManager.ClearTasks();
-        StorageEngine.DownloadRepository.ClearDownloadHistory();
-        StorageEngine.DownloadRepository.ClearSubscriptionDownloadHistory();
-    }
-
-    public Task RemoveWorkSubscriptionDownloadsAsync(long workSubscriptionId)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(workSubscriptionId);
-        DownloadManager.RemoveSubscription(workSubscriptionId);
-        return Task.CompletedTask;
     }
 
     public void OnTokenRefreshed(TokenResponse? tokenResponse) =>
@@ -254,13 +222,6 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
 
     public void QueueWorkSubscriptionSyncAll() =>
         AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().QueueSyncAll();
-
-    public void QueueWorkSubscriptionSync(WorkSubscriptionRecord subscription) =>
-        AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>().QueueSyncSubscription(subscription);
-
-    public void SetNameResolvers() => NetworkRuntime.AttachNameResolverHooks();
-
-    public void UpdateMakoNetworkOptions() => NetworkRuntime.UpdateNetworkOptions();
 
     public async ValueTask DisposeAsync()
     {

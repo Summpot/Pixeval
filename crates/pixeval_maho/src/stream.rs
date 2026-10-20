@@ -32,18 +32,6 @@ impl<S> TlsFragmentedStream<S> {
             active_delay: None,
         }
     }
-
-    pub fn into_inner(self) -> S {
-        self.inner
-    }
-
-    pub fn inner(&self) -> &S {
-        &self.inner
-    }
-
-    pub fn inner_mut(&mut self) -> &mut S {
-        &mut self.inner
-    }
 }
 
 impl<S: AsyncRead + Unpin> AsyncRead for TlsFragmentedStream<S> {

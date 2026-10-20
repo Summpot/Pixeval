@@ -11,15 +11,12 @@ lz4.workspace = true
 image = { workspace = true, features = ["png", "jpeg", "webp", "gif"] }
 parking_lot.workspace = true
 thiserror.workspace = true
-uuid.workspace = true
 uniffi = { workspace = true, features = ["tokio"] }
 tokio = { workspace = true, features = ["full"] }
 async-compat.workspace = true
 futures-util = { workspace = true, default-features = false, features = ["std"] }
 flate2.workspace = true
 pixeval_maho.workspace = true
-bytes.workspace = true
-http.workspace = true
 zune-jpeg = { version = "0.5", default-features = false }
 zune-core = { version = "0.5", default-features = false }
 png.workspace = true

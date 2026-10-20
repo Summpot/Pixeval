@@ -6,7 +6,6 @@ using Pixeval.Attributes;
 
 namespace Pixeval.Config;
 
-[LocalizationMetadata]
 public enum IllustrationViewerAutoPlayMode
 {
     [LocalizedResource(Symbol.ArrowRight, nameof(Strings.EnumIllustrationViewerAutoPlayModeSequential))]

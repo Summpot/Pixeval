@@ -121,18 +121,6 @@ public sealed partial class HomePage
             }
     }
 
-    private void UpdateSelectedCardLayoutVisual()
-    {
-        if (_selectedCard is not { } card)
-            return;
-
-        if (TryGetCardControl(card, out var control))
-        {
-            control.UpdateBackground();
-            ApplyCardLayout(control);
-        }
-    }
-
     private bool TryGetCardControl(HomePageCardLayout card, out HomePageCardControl control)
     {
         foreach (var child in HomeGrid.Children)
@@ -227,26 +215,6 @@ public sealed partial class HomePage
 
     private bool CanResizeGrid(int rowCount, int columnCount) =>
         HomeCardLayout.CanResizeGrid(_cards, rowCount, columnCount);
-
-    private bool CanPlace(IReadOnlyCollection<HomePageCardLayout> occupiedCards, int column, int row, int columnSpan, int rowSpan)
-        => HomeCardLayout.CanPlace(occupiedCards, null, new(column, row, columnSpan, rowSpan), RowCount, ColumnCount);
-
-    private bool ClampCard(HomePageCardLayout card)
-    {
-        var oldBounds = HomeCardBounds.From(card);
-        var newBounds = HomeCardLayout.Clamp(oldBounds, RowCount, ColumnCount);
-        if (oldBounds != newBounds)
-        {
-            var idx = _cards.IndexOf(card);
-            var updated = newBounds.ApplyTo(card);
-            if (idx >= 0)
-                _cards[idx] = updated;
-            if (_selectedCard == card)
-                _selectedCard = updated;
-            return true;
-        }
-        return false;
-    }
 
     private void NormalizeCards()
     {

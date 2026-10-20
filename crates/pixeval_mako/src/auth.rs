@@ -120,14 +120,6 @@ impl OAuthManager {
         }
     }
 
-    pub fn get_access_token(&self) -> Option<String> {
-        let guard = self.state.read();
-        guard
-            .as_ref()
-            .map(|t| t.response.access_token.clone())
-            .filter(|t| !t.is_empty())
-    }
-
     pub fn get_valid_access_token(&self) -> Option<String> {
         let guard = self.state.read();
         if let Some(entry) = guard.as_ref() {

@@ -2,8 +2,6 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
-using System.Net;
-using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -11,14 +9,6 @@ namespace Pixeval.Views.Login;
 
 public static class PixivAuth
 {
-    public static int NegotiatePort()
-    {
-        using var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint) listener.LocalEndpoint).Port;
-        return port;
-    }
-
     public static string GetCodeVerify()
     {
         return RandomNumberGenerator.GetBytes(32).ToUrlSafeBase64String();

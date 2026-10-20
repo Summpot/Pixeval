@@ -3,16 +3,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Pixeval.Pixiv;
 
 namespace Pixeval.Mako;
 
 public static class QueryEnums
 {
-    public static SimpleWorkKind ToSimpleWorkKind(this WorkKind type) =>
-        type is WorkKind.Novel ? SimpleWorkKind.Novel : SimpleWorkKind.Illustration;
-
     public static SafeRating ToSafeRating(this XRestrict restrict, IReadOnlyList<RestrictionFlag>? attributes = null, int sanityLevel = 0) =>
         PixevalMakoMethods.GetSafeRating(restrict, attributes is null ? null : new List<RestrictionFlag>(attributes), sanityLevel) switch
         {
