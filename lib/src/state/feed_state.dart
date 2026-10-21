@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../rust/api/feed.dart';
+import 'auth_state.dart';
 
 IllustSummary updateIllustBookmark(IllustSummary item, bool isBookmarked) {
   return IllustSummary(
@@ -66,11 +67,17 @@ class FeedState {
 class RecommendedFeedNotifier extends Notifier<FeedState> {
   @override
   FeedState build() {
+    ref.listen(authProvider, (previous, next) {
+      if ((previous == null || !previous.isLoggedIn) && next.isLoggedIn) {
+        loadInitial();
+      }
+    });
     Future.microtask(() => loadInitial());
     return const FeedState();
   }
 
   Future<void> loadInitial() async {
+    if (!ref.read(authProvider).isLoggedIn) return;
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       final res = await getRecommendedFeed(refresh: true);
@@ -85,6 +92,7 @@ class RecommendedFeedNotifier extends Notifier<FeedState> {
   }
 
   Future<void> refresh() async {
+    if (!ref.read(authProvider).isLoggedIn) return;
     state = state.copyWith(isRefreshing: true, errorMessage: null);
     try {
       final res = await getRecommendedFeed(refresh: true);
@@ -99,6 +107,7 @@ class RecommendedFeedNotifier extends Notifier<FeedState> {
   }
 
   Future<void> loadMore() async {
+    if (!ref.read(authProvider).isLoggedIn) return;
     if (state.isLoading || state.isRefreshing || state.exhausted) return;
     state = state.copyWith(isLoading: true);
     try {
@@ -151,6 +160,11 @@ class RankingFeedNotifier extends Notifier<FeedState> {
 
   @override
   FeedState build() {
+    ref.listen(authProvider, (previous, next) {
+      if ((previous == null || !previous.isLoggedIn) && next.isLoggedIn) {
+        loadInitial();
+      }
+    });
     Future.microtask(() => loadInitial());
     return const FeedState();
   }
@@ -162,6 +176,7 @@ class RankingFeedNotifier extends Notifier<FeedState> {
   }
 
   Future<void> loadInitial() async {
+    if (!ref.read(authProvider).isLoggedIn) return;
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       final res = await getRankingFeed(mode: _mode, refresh: true);
@@ -176,6 +191,7 @@ class RankingFeedNotifier extends Notifier<FeedState> {
   }
 
   Future<void> refresh() async {
+    if (!ref.read(authProvider).isLoggedIn) return;
     state = state.copyWith(isRefreshing: true, errorMessage: null);
     try {
       final res = await getRankingFeed(mode: _mode, refresh: true);
@@ -190,6 +206,7 @@ class RankingFeedNotifier extends Notifier<FeedState> {
   }
 
   Future<void> loadMore() async {
+    if (!ref.read(authProvider).isLoggedIn) return;
     if (state.isLoading || state.isRefreshing || state.exhausted) return;
     state = state.copyWith(isLoading: true);
     try {
@@ -245,11 +262,17 @@ class FollowFeedNotifier extends Notifier<FeedState> {
 
   @override
   FeedState build() {
+    ref.listen(authProvider, (previous, next) {
+      if ((previous == null || !previous.isLoggedIn) && next.isLoggedIn) {
+        loadInitial();
+      }
+    });
     Future.microtask(() => loadInitial());
     return const FeedState();
   }
 
   Future<void> loadInitial() async {
+    if (!ref.read(authProvider).isLoggedIn) return;
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       final res = await getFollowFeed(restrict: _restrict, refresh: true);
@@ -264,6 +287,7 @@ class FollowFeedNotifier extends Notifier<FeedState> {
   }
 
   Future<void> refresh() async {
+    if (!ref.read(authProvider).isLoggedIn) return;
     state = state.copyWith(isRefreshing: true, errorMessage: null);
     try {
       final res = await getFollowFeed(restrict: _restrict, refresh: true);
@@ -278,6 +302,7 @@ class FollowFeedNotifier extends Notifier<FeedState> {
   }
 
   Future<void> loadMore() async {
+    if (!ref.read(authProvider).isLoggedIn) return;
     if (state.isLoading || state.isRefreshing || state.exhausted) return;
     state = state.copyWith(isLoading: true);
     try {

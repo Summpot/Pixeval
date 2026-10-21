@@ -1,8 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pixeval_flutter/main.dart';
 import 'package:pixeval_flutter/src/deeplink/deeplink_handler.dart';
 import 'package:pixeval_flutter/src/ui/home_shell.dart';
+import 'package:pixeval_flutter/src/ui/login_page.dart';
 import 'package:pixeval_flutter/src/rust/api/auth.dart';
 import 'package:pixeval_flutter/src/rust/api/booru.dart';
 import 'package:pixeval_flutter/src/rust/api/deeplink.dart';
@@ -406,10 +408,37 @@ void main() {
     RustLib.initMock(api: MockRustLibApi());
   });
 
-  testWidgets('HomeShell navigation bar tabs smoke test', (
+  testWidgets('Unauthenticated startup presents full-screen LoginGuidePage', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const ProviderScope(child: PixevalApp()));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LoginGuidePage), findsOneWidget);
+    expect(find.text('Pixiv 登录指引'), findsOneWidget);
+    expect(find.text('为什么必须登录 Pixiv？'), findsOneWidget);
+    expect(find.text('网络与免代理设置'), findsAtLeastNWidgets(1));
+    expect(find.text('OAuth 网页授权登录'), findsOneWidget);
+    expect(find.text('Refresh Token 登录'), findsOneWidget);
+    expect(find.text('暂不登录，以访客模式浏览'), findsOneWidget);
+
+    // Tap Refresh Token tab to test tab switching
+    await tester.tap(find.text('Refresh Token 登录'));
+    await tester.pumpAndSettle();
+    expect(find.text('使用已有 Refresh Token 登录'), findsOneWidget);
+
+    // Switch back to OAuth tab
+    await tester.tap(find.text('OAuth 网页授权登录'));
+    await tester.pumpAndSettle();
+    expect(find.text('生成授权并在浏览器打开'), findsOneWidget);
+  });
+
+  testWidgets('HomeShell navigation bar tabs smoke test in guest mode', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const ProviderScope(
+      child: PixevalApp(initialGuestMode: true),
+    ));
     await tester.pumpAndSettle();
 
     // Verify initial Explore tab
@@ -434,6 +463,8 @@ void main() {
     expect(find.text('Not Logged In'), findsOneWidget);
     expect(find.text('Download Manager'), findsOneWidget);
     expect(find.text('Browsing History'), findsOneWidget);
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+    await tester.pumpAndSettle();
     expect(find.text('Anti-Blocking & Network'), findsOneWidget);
     expect(find.text('Image Cache'), findsOneWidget);
 
@@ -459,7 +490,9 @@ void main() {
   testWidgets('DeeplinkHandler handles artwork link navigation', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const ProviderScope(child: PixevalApp()));
+    await tester.pumpWidget(const ProviderScope(
+      child: PixevalApp(initialGuestMode: true),
+    ));
     await tester.pumpAndSettle();
 
     final context = tester.element(find.byType(HomeShell));

@@ -7,8 +7,14 @@ class AuthState {
   final api_auth.UserProfile? user;
   final bool isLoading;
   final String? errorMessage;
+  final bool isGuestMode;
 
-  const AuthState({this.user, this.isLoading = false, this.errorMessage});
+  const AuthState({
+    this.user,
+    this.isLoading = false,
+    this.errorMessage,
+    this.isGuestMode = false,
+  });
 
   bool get isLoggedIn => user != null;
   bool get isAuthenticated => isLoggedIn;
@@ -18,11 +24,13 @@ class AuthState {
     bool? isLoading,
     String? errorMessage,
     bool clearUser = false,
+    bool? isGuestMode,
   }) {
     return AuthState(
       user: clearUser ? null : (user ?? this.user),
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
+      isGuestMode: isGuestMode ?? (clearUser ? false : this.isGuestMode),
     );
   }
 }
@@ -49,11 +57,19 @@ class AuthNotifier extends Notifier<AuthState> {
     return loginWithCode(code, verifier);
   }
 
+  void enterGuestMode() {
+    state = state.copyWith(isGuestMode: true);
+  }
+
+  void exitGuestMode() {
+    state = state.copyWith(isGuestMode: false);
+  }
+
   @override
   AuthState build() {
     // Trigger async initialization on build
     _initialization = Future.microtask(_initSession);
-    return const AuthState();
+    return const AuthState(isLoading: true);
   }
 
   Future<void> _initSession() async {
@@ -74,7 +90,7 @@ class AuthNotifier extends Notifier<AuthState> {
             authResp.refreshToken != token) {
           await prefs.setString(_refreshTokenKey, authResp.refreshToken);
         }
-        state = state.copyWith(user: authResp.user, isLoading: false);
+        state = state.copyWith(user: authResp.user, isLoading: false, isGuestMode: false);
       } else {
         state = state.copyWith(isLoading: false);
       }
@@ -97,7 +113,7 @@ class AuthNotifier extends Notifier<AuthState> {
           ? authResp.refreshToken
           : refreshToken;
       await prefs.setString(_refreshTokenKey, tokenToSave);
-      state = state.copyWith(user: authResp.user, isLoading: false);
+      state = state.copyWith(user: authResp.user, isLoading: false, isGuestMode: false);
       return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
@@ -119,7 +135,7 @@ class AuthNotifier extends Notifier<AuthState> {
         await prefs.setString(_refreshTokenKey, authResp.refreshToken);
       }
       await prefs.remove(_pkceVerifierKey);
-      state = state.copyWith(user: authResp.user, isLoading: false);
+      state = state.copyWith(user: authResp.user, isLoading: false, isGuestMode: false);
       return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
@@ -149,6 +165,7 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(
       clearUser: true,
       isLoading: false,
+      isGuestMode: false,
       errorMessage: reason != null
           ? 'Session expired: $reason'
           : 'Session invalidated',
@@ -162,7 +179,7 @@ class AuthNotifier extends Notifier<AuthState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_refreshTokenKey);
     await prefs.remove(_pkceVerifierKey);
-    state = state.copyWith(clearUser: true, isLoading: false);
+    state = state.copyWith(clearUser: true, isLoading: false, isGuestMode: false);
   }
 }
 
