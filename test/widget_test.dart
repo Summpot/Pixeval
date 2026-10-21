@@ -415,9 +415,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(LoginGuidePage), findsOneWidget);
-    expect(find.text('Pixiv 登录指引'), findsOneWidget);
-    expect(find.text('为什么必须登录 Pixiv？'), findsOneWidget);
-    expect(find.text('网络与免代理设置'), findsAtLeastNWidgets(1));
+    expect(find.text('欢迎使用 Pixeval'), findsOneWidget);
+    expect(find.text('登录您的 Pixiv 账号以同步收藏与关注'), findsOneWidget);
+    expect(find.text('打开 Pixiv 网页登录'), findsOneWidget);
+    expect(find.text('遇到登录问题？查看排错指南'), findsOneWidget);
     expect(find.text('OAuth 网页授权登录'), findsOneWidget);
     expect(find.text('Refresh Token 登录'), findsOneWidget);
     expect(find.text('暂不登录，以访客模式浏览'), findsOneWidget);
@@ -425,12 +426,12 @@ void main() {
     // Tap Refresh Token tab to test tab switching
     await tester.tap(find.text('Refresh Token 登录'));
     await tester.pumpAndSettle();
-    expect(find.text('使用已有 Refresh Token 登录'), findsOneWidget);
+    expect(find.text('使用 Token 登录'), findsOneWidget);
 
     // Switch back to OAuth tab
     await tester.tap(find.text('OAuth 网页授权登录'));
     await tester.pumpAndSettle();
-    expect(find.text('生成授权并在浏览器打开'), findsOneWidget);
+    expect(find.text('打开 Pixiv 网页登录'), findsOneWidget);
   });
 
   testWidgets('HomeShell navigation bar tabs smoke test in guest mode', (
