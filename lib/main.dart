@@ -15,6 +15,7 @@ import 'src/rust/frb_generated.dart';
 import 'src/rust/stream_helpers.dart';
 import 'src/state/auth_state.dart';
 import 'src/ui/home_shell.dart';
+import 'src/ui/login_page.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
@@ -64,9 +65,14 @@ Future<void> main() async {
 }
 
 class PixevalApp extends ConsumerStatefulWidget {
-  const PixevalApp({super.key, this.rustLibInitialized = true});
+  const PixevalApp({
+    super.key,
+    this.rustLibInitialized = true,
+    this.initialGuestMode = false,
+  });
 
   final bool rustLibInitialized;
+  final bool initialGuestMode;
 
   @override
   ConsumerState<PixevalApp> createState() => _PixevalAppState();
@@ -88,6 +94,11 @@ class _PixevalAppState extends ConsumerState<PixevalApp>
     WidgetsBinding.instance.addObserver(this);
     if (widget.rustLibInitialized) {
       _listenSessionEvents();
+    }
+    if (widget.initialGuestMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.read(authProvider.notifier).enterGuestMode();
+      });
     }
     _authSub = ref.listenManual(authProvider, (_, _) => _drainLinks());
     _initDeeplinkChannel();
@@ -209,6 +220,48 @@ class _PixevalAppState extends ConsumerState<PixevalApp>
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+
+    Widget homeWidget;
+    if (!widget.rustLibInitialized) {
+      homeWidget = Scaffold(
+        appBar: AppBar(title: const Text('Pixeval Initialization Error')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                const Text(
+                  'Failed to load Rust native library (libpixeval_flutter_bridge.so).',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Please verify native binaries are compiled for this platform ABI.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } else if (authState.isLoading) {
+      homeWidget = const Scaffold(
+        body: Center(
+          child: SizedBox.shrink(),
+        ),
+      );
+    } else if (authState.isLoggedIn || authState.isGuestMode) {
+      homeWidget = const HomeShell();
+    } else {
+      homeWidget = const LoginGuidePage();
+    }
+
     return MaterialApp(
       navigatorKey: navigatorKey,
       scaffoldMessengerKey: scaffoldMessengerKey,
@@ -228,34 +281,7 @@ class _PixevalAppState extends ConsumerState<PixevalApp>
         useMaterial3: true,
       ),
       themeMode: ThemeMode.system,
-      home: widget.rustLibInitialized
-          ? const HomeShell()
-          : Scaffold(
-              appBar: AppBar(title: const Text('Pixeval Initialization Error')),
-              body: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Failed to load Rust native library (libpixeval_flutter_bridge.so).',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Please verify native binaries are compiled for this platform ABI.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+      home: homeWidget,
     );
   }
 }
