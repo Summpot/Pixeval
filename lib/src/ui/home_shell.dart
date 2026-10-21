@@ -396,7 +396,7 @@ class ProfileTab extends ConsumerWidget {
                 ] else ...[
                   ListTile(
                     leading: const Icon(Icons.login),
-                    title: const Text('Pixiv 账号登录 (全屏指引)'),
+                    title: const Text('Pixiv 账号登录'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       Navigator.of(context).push(
@@ -528,7 +528,7 @@ class _UnauthenticatedTabPrompt extends StatelessWidget {
                 );
               },
               icon: const Icon(Icons.login_rounded),
-              label: const Text('前往全屏登录指引'),
+              label: const Text('前往登录'),
             ),
             const SizedBox(height: 10),
             OutlinedButton.icon(
