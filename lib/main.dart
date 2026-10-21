@@ -170,22 +170,17 @@ class _PixevalAppState extends ConsumerState<PixevalApp>
   }
 
   Future<void> _receiveLink(String text) async {
-    final raw = RegExp(r'(?:https?://|pixiv://)[^\s<>]+')
+    final raw = RegExp(r'(?:https?://|pixiv://|intent://)[^\s<>]+')
         .firstMatch(text)
         ?.group(0);
-    final uri = Uri.tryParse(raw ?? text.trim());
+    final link = (raw ?? text).trim();
+    final uri = Uri.tryParse(link);
     if (uri == null || !mounted) return;
-    final callback =
-        (uri.scheme == 'pixiv' &&
-            uri.host == 'account' &&
-            uri.path == '/login') ||
-        (uri.scheme == 'https' &&
-            uri.host == 'app-api.pixiv.net' &&
-            uri.path == '/web/v1/users/auth/pixiv/callback');
+    final callback = isPixivCallbackUrl(link);
     if (callback) {
       final success = await ref
           .read(authProvider.notifier)
-          .completeOAuthCallback(uri);
+          .loginWithOAuthInput(link);
       if (success && mounted) {
         navigatorKey.currentState?.popUntil((route) => route.isFirst);
         _drainLinks();
