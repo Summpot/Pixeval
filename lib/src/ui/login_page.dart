@@ -27,6 +27,7 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
   final _formKeyOAuth = GlobalKey<FormState>();
 
   PkceAuthParamsDto? _pkceParams;
+  String? _savedVerifier;
   String? _lastPastedClipboard;
 
   @override
@@ -34,6 +35,21 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 2, vsync: this);
+    _loadExistingVerifier();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _checkClipboardForCallback();
+    });
+  }
+
+  Future<void> _loadExistingVerifier() async {
+    try {
+      final verifier = await ref.read(authProvider.notifier).getSavedVerifier();
+      if (verifier != null && verifier.isNotEmpty && mounted) {
+        setState(() {
+          _savedVerifier = verifier;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -53,28 +69,22 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
   }
 
   Future<void> _checkClipboardForCallback() async {
+    if (ref.read(authProvider).isLoading) return;
     try {
       final data = await Clipboard.getData(Clipboard.kTextPlain);
       final text = data?.text?.trim();
       if (text == null || text.isEmpty) return;
 
-      final isCallback = text.contains('code=') ||
-          text.startsWith('pixiv://') ||
-          text.contains('app-api.pixiv.net');
-
-      if (isCallback && text != _lastPastedClipboard && mounted) {
+      if (isPixivCallbackUrl(text) && text != _lastPastedClipboard && mounted) {
         _lastPastedClipboard = text;
         _callbackUrlController.text = text;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('已自动识别剪贴板中的 Pixiv 授权回调！'),
-            action: SnackBarAction(
-              label: '立即登录',
-              onPressed: _handleOAuthLogin,
-            ),
-            duration: const Duration(seconds: 6),
+          const SnackBar(
+            content: Text('已自动识别剪贴板中的 Pixiv 授权回调，正在登录...'),
+            duration: Duration(seconds: 4),
           ),
         );
+        await _handleOAuthLogin();
       }
     } catch (_) {}
   }
@@ -87,19 +97,22 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
       if (!mounted) return;
       setState(() {
         _pkceParams = params;
+        _savedVerifier = params.codeVerifier;
       });
-      await Clipboard.setData(ClipboardData(text: params.authUrl));
       final opened = await launchUrl(
         Uri.parse(params.authUrl),
         mode: LaunchMode.externalApplication,
       );
+      if (!opened) {
+        await Clipboard.setData(ClipboardData(text: params.authUrl));
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               opened
                   ? '已在浏览器打开 Pixiv 授权页，完成授权后复制网址返回。'
-                  : '授权链接已复制到剪贴板，请在浏览器中打开。',
+                  : '无法自动打开浏览器，授权链接已复制到剪贴板，请手动打开浏览器访问。',
             ),
           ),
         );
@@ -113,13 +126,18 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
     }
   }
 
-  Future<void> _handleOAuthLogin() async {
-    if (_pkceParams == null) {
+  Future<void> _copyAuthUrl() async {
+    final url = _pkceParams?.authUrl;
+    if (url == null) return;
+    await Clipboard.setData(ClipboardData(text: url));
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先点击“生成授权并在浏览器打开”发起授权流程')),
+        const SnackBar(content: Text('授权链接已复制到剪贴板')),
       );
-      return;
     }
+  }
+
+  Future<void> _handleOAuthLogin() async {
     final rawInput = _callbackUrlController.text.trim();
     if (rawInput.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -128,27 +146,11 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
       return;
     }
 
-    String code = rawInput;
-    if (rawInput.contains('code=')) {
-      final uri = Uri.tryParse(rawInput);
-      if (uri != null && uri.queryParameters.containsKey('code')) {
-        code = uri.queryParameters['code']!;
-      } else {
-        final match = RegExp(r'code=([^&]+)').firstMatch(rawInput);
-        if (match != null) {
-          code = match.group(1)!;
-        }
-      }
-    }
-
-    if (code.contains('#')) {
-      code = code.split('#').first;
-    }
-    code = Uri.decodeComponent(code).trim();
-
+    final activeVerifier = _pkceParams?.codeVerifier ?? _savedVerifier;
     final success = await ref
         .read(authProvider.notifier)
-        .loginWithCode(code, _pkceParams!.codeVerifier);
+        .loginWithOAuthInput(rawInput, activeVerifier);
+
     if (success && mounted) {
       if (widget.isModal && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
@@ -501,6 +503,11 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
     ColorScheme colorScheme,
     AuthState authState,
   ) {
+    final activeVerifier = _pkceParams?.codeVerifier ?? _savedVerifier;
+    final isVerifierReady = activeVerifier != null && activeVerifier.isNotEmpty;
+    final inputTrim = _callbackUrlController.text.trim();
+    final isLoginUrl = inputTrim.contains('/web/v1/login') || inputTrim.contains('code_challenge=');
+
     return Form(
       key: _formKeyOAuth,
       child: Column(
@@ -520,10 +527,10 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
                   onPressed: authState.isLoading ? null : _generatePkce,
                   icon: const Icon(Icons.open_in_browser_rounded),
                   label: Text(
-                    _pkceParams == null ? '生成授权并在浏览器打开' : '重新生成授权链接',
+                    isVerifierReady ? '重新生成授权链接' : '生成授权并在浏览器打开',
                   ),
                 ),
-                if (_pkceParams != null) ...[
+                if (isVerifierReady) ...[
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -547,7 +554,7 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            '授权链接就绪 (Verifier: ${_pkceParams!.codeVerifier.substring(0, 8)}...)',
+                            '授权链接就绪 (Verifier: ${activeVerifier.length >= 8 ? activeVerifier.substring(0, 8) : activeVerifier}...)',
                             style: const TextStyle(
                               fontSize: 12,
                               color: Colors.green,
@@ -555,6 +562,16 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
                             ),
                           ),
                         ),
+                        if (_pkceParams?.authUrl != null)
+                          TextButton(
+                            onPressed: _copyAuthUrl,
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Text('复制链接', style: TextStyle(fontSize: 12)),
+                          ),
                       ],
                     ),
                   ),
@@ -622,26 +639,67 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
+                if (isLoginUrl) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                    ),
+                    child: const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 18),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '提示：当前输入框中是发起授权的登录链接（包含 code_challenge），而非授权完成后的回调链接。\n请在打开的浏览器中完成登录，若网页提示【无法打开网页】，复制浏览器地址栏中包含 code= 的完整网址即可。',
+                            style: TextStyle(color: Colors.orange, fontSize: 12, height: 1.3),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (authState.errorMessage != null) ...[
                   const SizedBox(height: 8),
-                  Text(
-                    authState.errorMessage!,
-                    style: const TextStyle(color: Colors.red, fontSize: 13),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.error_outline_rounded, color: Colors.red, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            authState.errorMessage!,
+                            style: const TextStyle(color: Colors.red, fontSize: 13, height: 1.35),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
                 const SizedBox(height: 14),
                 FilledButton.icon(
                   onPressed: authState.isLoading ? null : _handleOAuthLogin,
                   icon: authState.isLoading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.login_rounded),
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.login_rounded),
                   label: Text(
                     authState.isLoading ? '正在验证并换取 Token...' : '完成授权并登录',
                   ),
