@@ -73,8 +73,7 @@ class ExploreTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final feed = ref.watch(recommendedFeedProvider);
-    final notifier = ref.read(recommendedFeedProvider.notifier);
+    final authState = ref.watch(authProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -88,21 +87,36 @@ class ExploreTab extends ConsumerWidget {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => notifier.refresh(),
-          ),
+          if (authState.isLoggedIn)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () => ref.read(recommendedFeedProvider.notifier).refresh(),
+            ),
         ],
       ),
-      body: ArtworkWaterfall(
-        items: feed.items,
-        isLoading: feed.isLoading,
-        isRefreshing: feed.isRefreshing,
-        errorMessage: feed.errorMessage,
-        onRefresh: () => notifier.refresh(),
-        onLoadMore: () => notifier.loadMore(),
-        onBookmarkToggle: (id, bookmarked) => notifier.toggleItemBookmark(id, bookmarked),
-      ),
+      body: !authState.isLoggedIn
+          ? const _UnauthenticatedTabPrompt(
+              icon: Icons.lock_person_outlined,
+              title: '需要登录 Pixiv 账号',
+              description:
+                  'Pixiv 官方现已全面限制未登录访问。登录后即可畅快浏览每日精选推荐、相关画作与海量作品。',
+            )
+          : Consumer(
+              builder: (context, ref, _) {
+                final feed = ref.watch(recommendedFeedProvider);
+                final notifier = ref.read(recommendedFeedProvider.notifier);
+                return ArtworkWaterfall(
+                  items: feed.items,
+                  isLoading: feed.isLoading,
+                  isRefreshing: feed.isRefreshing,
+                  errorMessage: feed.errorMessage,
+                  onRefresh: () => notifier.refresh(),
+                  onLoadMore: () => notifier.loadMore(),
+                  onBookmarkToggle: (id, bookmarked) =>
+                      notifier.toggleItemBookmark(id, bookmarked),
+                );
+              },
+            ),
     );
   }
 }
@@ -126,8 +140,7 @@ class _RankingsTabState extends ConsumerState<RankingsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final feed = ref.watch(rankingFeedProvider);
-    final notifier = ref.read(rankingFeedProvider.notifier);
+    final authState = ref.watch(authProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -141,10 +154,11 @@ class _RankingsTabState extends ConsumerState<RankingsTab> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => notifier.refresh(),
-          ),
+          if (authState.isLoggedIn)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () => ref.read(rankingFeedProvider.notifier).refresh(),
+            ),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
@@ -157,30 +171,46 @@ class _RankingsTabState extends ConsumerState<RankingsTab> {
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final mode = _modes[index];
-                final isSelected = notifier.mode == mode.$1;
+                final isSelected = ref.watch(rankingFeedProvider.notifier).mode == mode.$1;
                 return ChoiceChip(
                   label: Text(mode.$2),
                   selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      notifier.setMode(mode.$1);
-                    }
-                  },
+                  onSelected: authState.isLoggedIn
+                      ? (selected) {
+                          if (selected) {
+                            ref.read(rankingFeedProvider.notifier).setMode(mode.$1);
+                          }
+                        }
+                      : null,
                 );
               },
             ),
           ),
         ),
       ),
-      body: ArtworkWaterfall(
-        items: feed.items,
-        isLoading: feed.isLoading,
-        isRefreshing: feed.isRefreshing,
-        errorMessage: feed.errorMessage,
-        onRefresh: () => notifier.refresh(),
-        onLoadMore: () => notifier.loadMore(),
-        onBookmarkToggle: (id, bookmarked) => notifier.toggleItemBookmark(id, bookmarked),
-      ),
+      body: !authState.isLoggedIn
+          ? const _UnauthenticatedTabPrompt(
+              icon: Icons.leaderboard_outlined,
+              title: '登录以查看 Pixiv 排行榜',
+              description:
+                  'Pixiv 排行榜接口需要账号身份鉴权。登录后即可畅快浏览日榜、周榜、月榜、新人榜及男女向榜单。',
+            )
+          : Consumer(
+              builder: (context, ref, _) {
+                final feed = ref.watch(rankingFeedProvider);
+                final notifier = ref.read(rankingFeedProvider.notifier);
+                return ArtworkWaterfall(
+                  items: feed.items,
+                  isLoading: feed.isLoading,
+                  isRefreshing: feed.isRefreshing,
+                  errorMessage: feed.errorMessage,
+                  onRefresh: () => notifier.refresh(),
+                  onLoadMore: () => notifier.loadMore(),
+                  onBookmarkToggle: (id, bookmarked) =>
+                      notifier.toggleItemBookmark(id, bookmarked),
+                );
+              },
+            ),
     );
   }
 }
@@ -232,7 +262,9 @@ class ProfileTab extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          user != null ? '@${user.account}' : 'Sign in to sync your Pixiv content',
+                          user != null
+                              ? '@${user.account}'
+                              : '登录 Pixiv 账号以同步画师关注与作品收藏',
                           style: TextStyle(color: Colors.grey[600], fontSize: 13),
                         ),
                         if (user != null && user.isPremium) ...[
@@ -364,12 +396,12 @@ class ProfileTab extends ConsumerWidget {
                 ] else ...[
                   ListTile(
                     leading: const Icon(Icons.login),
-                    title: const Text('Sign In with Pixiv OAuth'),
+                    title: const Text('Pixiv 账号登录 (全屏指引)'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => const LoginPage(),
+                          builder: (_) => const LoginGuidePage(isModal: true),
                         ),
                       );
                     },
@@ -393,25 +425,10 @@ class FollowFeedsTab extends ConsumerWidget {
     if (!auth.isLoggedIn) {
       return Scaffold(
         appBar: AppBar(title: const Text('Follow Feeds')),
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.lock_outline, size: 64, color: Colors.grey),
-              const SizedBox(height: 16),
-              const Text('Sign in to view artwork feeds from artists you follow'),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const LoginPage()),
-                  );
-                },
-                icon: const Icon(Icons.login),
-                label: const Text('Sign In'),
-              ),
-            ],
-          ),
+        body: const _UnauthenticatedTabPrompt(
+          icon: Icons.dynamic_feed_rounded,
+          title: '登录查看已关注画师动态',
+          description: '登录您的 Pixiv 账号即可自动同步关注列表，实时追更关注画师的最新作品。',
         ),
       );
     }
@@ -445,6 +462,88 @@ class FollowFeedsTab extends ConsumerWidget {
         onRefresh: () => notifier.refresh(),
         onLoadMore: () => notifier.loadMore(),
         onBookmarkToggle: (id, bookmarked) => notifier.toggleItemBookmark(id, bookmarked),
+      ),
+    );
+  }
+}
+
+class _UnauthenticatedTabPrompt extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+
+  const _UnauthenticatedTabPrompt({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer.withValues(alpha: 0.4),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 54, color: colorScheme.primary),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 380),
+              child: Text(
+                description,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const LoginGuidePage(isModal: true),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.login_rounded),
+              label: const Text('前往全屏登录指引'),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const NetworkSettingsPage(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.network_check_rounded),
+              label: const Text('网络与免代理设置'),
+            ),
+          ],
+        ),
       ),
     );
   }
