@@ -24,10 +24,10 @@ pub fn separate_rgba_to_planar(src: &[u8], dst: &mut [u8]) {
     {
         unsafe {
             neon_separate_rgba(src, dst);
-            return;
         }
     }
 
+    #[cfg(not(target_arch = "aarch64"))]
     scalar_separate_rgba(src, dst);
 }
 
@@ -54,10 +54,10 @@ pub fn combine_planar_to_bgra(src_planar: &[u8], dst_bgra: &mut [u8]) {
     {
         unsafe {
             neon_combine_planar_to_bgra(src_planar, dst_bgra);
-            return;
         }
     }
 
+    #[cfg(not(target_arch = "aarch64"))]
     scalar_combine_planar_to_bgra(src_planar, dst_bgra);
 }
 
@@ -243,10 +243,10 @@ unsafe fn neon_combine_planar_to_bgra(src: &[u8], dst: &mut [u8]) {
     let mut i = 0;
     while i + 16 <= num_pixels {
         unsafe {
-            let vr = vst1q_u8(r.as_ptr().add(i));
-            let vg = vst1q_u8(g.as_ptr().add(i));
-            let vb = vst1q_u8(b.as_ptr().add(i));
-            let va = vst1q_u8(a.as_ptr().add(i));
+            let vr = vld1q_u8(r.as_ptr().add(i));
+            let vg = vld1q_u8(g.as_ptr().add(i));
+            let vb = vld1q_u8(b.as_ptr().add(i));
+            let va = vld1q_u8(a.as_ptr().add(i));
 
             // Write as BGRA
             let bgra = uint8x16x4_t(vb, vg, vr, va);
