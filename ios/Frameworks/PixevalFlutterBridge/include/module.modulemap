@@ -1,0 +1,4 @@
+module PixevalFlutterBridge {
+    header "PixevalFlutterBridge.h"
+    export *
+}
