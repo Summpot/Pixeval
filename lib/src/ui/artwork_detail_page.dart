@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:extended_image/extended_image.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../constants/app_assets.dart';
 import '../image/rust_image_provider.dart';
 import '../rust/api/feed.dart';
 import '../state/download_state.dart';
@@ -263,10 +264,15 @@ class _ArtworkDetailPageState extends ConsumerState<ArtworkDetailPage> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(
-                                    Icons.broken_image_outlined,
-                                    size: 48,
-                                    color: Colors.grey,
+                                  Image.asset(
+                                    AppAssets.imageNotAvailable,
+                                    width: 64,
+                                    height: 64,
+                                    errorBuilder: (_, _, _) => const Icon(
+                                      Icons.broken_image_outlined,
+                                      size: 48,
+                                      color: Colors.grey,
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(

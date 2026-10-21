@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "io.github.pixeval" "\0"
-            VALUE "FileDescription", "pixeval_flutter" "\0"
+            VALUE "FileDescription", "Pixeval" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "pixeval_flutter" "\0"
+            VALUE "InternalName", "pixeval" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 io.github.pixeval. All rights reserved." "\0"
             VALUE "OriginalFilename", "pixeval_flutter.exe" "\0"
-            VALUE "ProductName", "pixeval_flutter" "\0"
+            VALUE "ProductName", "Pixeval" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
