@@ -1,5 +1,5 @@
 name: pixeval_flutter
-description: "A new Flutter project."
+description: "Pixeval cross-platform client built with Flutter."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -67,6 +67,11 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/
+    - assets/icons/
+    - assets/platforms/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

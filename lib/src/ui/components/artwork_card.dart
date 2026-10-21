@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:extended_image/extended_image.dart';
 
+import '../../constants/app_assets.dart';
 import '../../image/rust_image_provider.dart';
 import '../../rust/api/feed.dart';
 import '../artwork_detail_page.dart';
@@ -88,10 +89,15 @@ class ArtworkCard extends StatelessWidget {
                           case LoadState.failed:
                             return Container(
                               color: Colors.grey.withValues(alpha: 0.15),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.broken_image_outlined,
-                                  color: Colors.grey,
+                              child: Center(
+                                child: Image.asset(
+                                  AppAssets.imageNotAvailable,
+                                  width: 48,
+                                  height: 48,
+                                  errorBuilder: (_, _, _) => const Icon(
+                                    Icons.broken_image_outlined,
+                                    color: Colors.grey,
+                                  ),
                                 ),
                               ),
                             );

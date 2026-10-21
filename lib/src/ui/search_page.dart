@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../constants/app_assets.dart';
 import '../image/rust_image_provider.dart';
 import '../rust/api/booru.dart';
 import '../rust/api/feed.dart';
@@ -320,26 +321,61 @@ class _SearchPageState extends ConsumerState<_SearchView> {
                     children: [
                       DropdownButton<String>(
                         value: platform,
-                        items: const [
+                        items: [
                           DropdownMenuItem(
                             value: 'yandere',
-                            child: Text('Yande.re'),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(AppAssets.platformYandere, width: 20, height: 20),
+                                const SizedBox(width: 8),
+                                const Text('Yande.re'),
+                              ],
+                            ),
                           ),
                           DropdownMenuItem(
                             value: 'danbooru',
-                            child: Text('Danbooru'),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(AppAssets.platformDanbooru, width: 20, height: 20),
+                                const SizedBox(width: 8),
+                                const Text('Danbooru'),
+                              ],
+                            ),
                           ),
                           DropdownMenuItem(
                             value: 'gelbooru',
-                            child: Text('Gelbooru'),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(AppAssets.platformGelbooru, width: 20, height: 20),
+                                const SizedBox(width: 8),
+                                const Text('Gelbooru'),
+                              ],
+                            ),
                           ),
                           DropdownMenuItem(
                             value: 'rule34',
-                            child: Text('Rule34'),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(AppAssets.platformRule34, width: 20, height: 20),
+                                const SizedBox(width: 8),
+                                const Text('Rule34'),
+                              ],
+                            ),
                           ),
                           DropdownMenuItem(
                             value: 'sankaku',
-                            child: Text('Sankaku'),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(AppAssets.platformSankaku, width: 20, height: 20),
+                                const SizedBox(width: 8),
+                                const Text('Sankaku'),
+                              ],
+                            ),
                           ),
                         ],
                         onChanged: (val) {
