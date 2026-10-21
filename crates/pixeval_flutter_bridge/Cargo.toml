@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [lib]
+name = "pixeval_flutter_bridge"
 crate-type = ["cdylib", "staticlib", "lib"]
 
 [dependencies]
