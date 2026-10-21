@@ -387,6 +387,22 @@ impl StorageEngine {
 
     // --- Login Users ---
 
+    pub fn set_mobile_refresh_token(&self, token: Option<String>) -> Result<(), StorageError> {
+        let conn = self.conn.lock();
+        if let Some(token) = token.filter(|t| !t.is_empty()) {
+            conn.execute("INSERT INTO MobileSession (Id, RefreshToken) VALUES (1, ?1)
+                ON CONFLICT(Id) DO UPDATE SET RefreshToken = excluded.RefreshToken", params![token])?;
+        } else {
+            conn.execute("DELETE FROM MobileSession", [])?;
+        }
+        Ok(())
+    }
+
+    pub fn get_mobile_refresh_token(&self) -> Result<Option<String>, StorageError> {
+        let conn = self.conn.lock();
+        Ok(conn.query_row("SELECT RefreshToken FROM MobileSession WHERE Id = 1", [], |r| r.get(0)).optional()?)
+    }
+
     pub fn upsert_login_user(&self, record: LoginUserRecord) -> Result<LoginUserRecord, StorageError> {
         let conn = self.conn.lock();
         // Clear conflicting records with same RefreshToken but different UserId to avoid unique constraint failure

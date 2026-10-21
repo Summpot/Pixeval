@@ -458,3 +458,16 @@ $RECYCLE.BIN/
 !.vscode/launch.json
 !.vscode/extensions.json
 /src/Pixeval/Strings/.generated
+
+##
+## Flutter & Dart
+##
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.ephemeral/
+.idea/
+*.iml
+

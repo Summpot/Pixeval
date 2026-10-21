@@ -8,6 +8,11 @@ pub fn init_schema(conn: &Connection) -> Result<()> {
         r#"
         PRAGMA foreign_keys = ON;
 
+        CREATE TABLE IF NOT EXISTS MobileSession (
+            Id INTEGER PRIMARY KEY CHECK (Id = 1),
+            RefreshToken TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS ArtworkPayloadEntry (
             ArtworkPayloadEntryId INTEGER PRIMARY KEY AUTOINCREMENT,
             SerializedArtwork TEXT NOT NULL
