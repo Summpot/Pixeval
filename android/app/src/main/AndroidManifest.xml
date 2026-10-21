@@ -41,6 +41,13 @@
                 <data android:scheme="https" android:host="pixiv.net" android:pathPrefix="/artworks"/>
                 <data android:scheme="https" android:host="pixiv.net" android:pathPrefix="/novel"/>
                 <data android:scheme="https" android:host="pixiv.net" android:pathPrefix="/users"/>
+            </intent-filter>
+
+            <!-- Pixiv Custom Scheme (OAuth Callback & App Navigation) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="pixiv"/>
             </intent-filter>
 
