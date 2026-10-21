@@ -17,6 +17,7 @@
 mono_crash.*
 
 # Build results
+android/app/src/main/jniLibs/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
