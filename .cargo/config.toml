@@ -1,3 +1,6 @@
+[build]
+target-dir = "../Pixeval_target"
+
 [env]
 CC_x86_64_pc_windows_msvc = "clang-cl"
 BOLTFFI_BINDING_EXPANSION = "1"

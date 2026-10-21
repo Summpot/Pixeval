@@ -422,6 +422,11 @@ impl DownloadManager {
         self.tasks.read().contains_key(&key)
     }
 
+    pub fn find_key_by_destination(&self, destination: &str) -> Option<DownloadTaskKey> {
+        let lock = self.tasks.read();
+        lock.keys().find(|k| k.destination == destination).cloned()
+    }
+
     pub fn set_concurrency(&self, concurrency: u32) {
         let c = (concurrency as usize).max(1);
         let old = self.concurrency_degree.swap(c, Ordering::SeqCst);

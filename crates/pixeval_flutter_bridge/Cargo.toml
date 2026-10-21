@@ -1,0 +1,36 @@
+[package]
+name = "pixeval_flutter_bridge"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "staticlib", "lib"]
+
+[dependencies]
+flutter_rust_bridge = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+pixeval_mako = { workspace = true }
+pixeval_maho = { workspace = true }
+pixeval_storage = { workspace = true }
+pixeval_cache = { workspace = true }
+pixeval_download = { workspace = true }
+pixeval_filters = { workspace = true }
+pixeval_novel = { workspace = true }
+pixeval_media = { workspace = true }
+pixeval_booru = { workspace = true }
+pixeval_saucenao = { workspace = true }
+pixeval_config = { workspace = true }
+parking_lot = { workspace = true }
+chrono = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+zip = { workspace = true }
+getrandom = "0.4"
+futures-util = { workspace = true }
+url = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(frb_expand)'] }

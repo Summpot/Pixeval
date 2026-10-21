@@ -124,8 +124,34 @@ fn url_encode(input: &str) -> String {
     url::form_urlencoded::byte_serialize(input.as_bytes()).collect()
 }
 
+#[cfg(test)]
+mod token_persistence_tests {
+    use super::*;
+    #[tokio::test]
+    async fn implicit_api_auth_persists_the_current_rotated_token() {
+        let client = MakoClient::new(MakoConfigurationDto::default()).unwrap();
+        let saved = Arc::new(parking_lot::Mutex::new(String::new()));
+        let sink = saved.clone();
+        client.set_token_persistence(Some(Arc::new(move |response| {
+            *sink.lock() = response.refresh_token.clone();
+            Ok(())
+        })));
+        client.oauth.set_token_response(TokenResponse {
+            access_token: "access".into(), refresh_token: "rotated".into(), expires_in: 3600,
+            ..Default::default()
+        });
+        assert_eq!(client.get_access_token_or_refresh().await.unwrap(), "access");
+        assert_eq!(*saved.lock(), "rotated");
+        client.set_token_persistence(Some(Arc::new(|_| Err("storage unavailable".into()))));
+        assert!(matches!(client.get_access_token_or_refresh().await, Err(MakoError::Auth { .. })));
+    }
+}
+
+type TokenPersistence = Arc<dyn Fn(&TokenResponse) -> Result<(), String> + Send + Sync>;
+
 #[derive(uniffi::Object, Clone)]
 pub struct MakoClient {
+    token_persistence: Arc<parking_lot::RwLock<Option<TokenPersistence>>>,
     http_client: Arc<parking_lot::RwLock<MahoHttpClient>>,
     oauth: Arc<OAuthManager>,
     throttler: Arc<RequestThrottler>,
@@ -194,6 +220,7 @@ impl MakoClient {
             .target_filter
             .unwrap_or_else(|| "for_android".to_string());
         Ok(Arc::new(Self {
+            token_persistence: Arc::new(parking_lot::RwLock::new(None)),
             http_client: Arc::new(parking_lot::RwLock::new(http_client)),
             oauth: Arc::new(OAuthManager::new()),
             throttler: Arc::new(RequestThrottler::new(config.cooldown_ms)),
@@ -275,7 +302,10 @@ impl MakoClient {
     pub async fn refresh_token(&self) -> Result<TokenResponse, MakoError> {
         let client = self.http_client.read().clone();
         match self.oauth.refresh(&client).await {
-            Ok(resp) => Ok(resp),
+            Ok(resp) => {
+                self.persist_token(&resp)?;
+                Ok(resp)
+            },
             Err(e) => {
                 if matches!(&e, crate::auth::AuthError::NoRefreshToken | crate::auth::AuthError::AuthFailed(..)) {
                     self.oauth.clear();
@@ -292,10 +322,12 @@ impl MakoClient {
         code_verifier: String,
     ) -> Result<TokenResponse, MakoError> {
         let client = self.http_client.read().clone();
-        Ok(self
+        let response = self
             .oauth
             .exchange_code(&client, &code, &code_verifier)
-            .await?)
+            .await?;
+        self.persist_token(&response)?;
+        Ok(response)
     }
 
     pub async fn get_illustration(&self, id: i64) -> Result<Illustration, MakoError> {
@@ -1926,10 +1958,27 @@ impl MakoClient {
 impl MakoClient {
     async fn get_access_token_or_refresh(&self) -> Result<String, MakoError> {
         if let Some(token) = self.oauth.get_valid_access_token() {
+            if let Some(response) = self.oauth.get_token_response() {
+                self.persist_token(&response)?;
+            }
             return Ok(token);
         }
         let resp = self.refresh_token().await?;
         Ok(resp.access_token)
+    }
+
+    /// Rust-only hook: credentials are saved before any refreshed session is used.
+    /// This deliberately does not change the desktop callback/FFI contract.
+    pub fn set_token_persistence(&self, persistence: Option<TokenPersistence>) {
+        *self.token_persistence.write() = persistence;
+    }
+
+    fn persist_token(&self, response: &TokenResponse) -> Result<(), MakoError> {
+        let persistence = self.token_persistence.read().clone();
+        if let Some(persist) = persistence {
+            persist(response).map_err(|message| MakoError::Auth { message })?;
+        }
+        Ok(())
     }
 
     pub async fn request_get(&self, url: &str) -> Result<MahoResponse, MakoError> {
