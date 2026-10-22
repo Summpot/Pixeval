@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:extended_image/extended_image.dart';
+
 import '../image/rust_image_provider.dart';
-import '../rust/api/feed.dart';
+import '../native/api/feed.dart';
 import '../state/history_state.dart';
 import 'artwork_detail_page.dart';
 import 'novel_reader_page.dart';
@@ -28,7 +29,9 @@ class HistoryPage extends ConsumerWidget {
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('Clear Browsing History?'),
-                    content: const Text('This will remove all locally stored browsing records.'),
+                    content: const Text(
+                      'This will remove all locally stored browsing records.',
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(ctx).pop(false),
@@ -90,7 +93,10 @@ class HistoryPage extends ConsumerWidget {
                     children: [
                       if (item.workType == 'novel') ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1,
+                          ),
                           margin: const EdgeInsets.only(right: 6),
                           decoration: BoxDecoration(
                             color: Colors.deepPurple.withValues(alpha: 0.15),
@@ -111,7 +117,10 @@ class HistoryPage extends ConsumerWidget {
                           item.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ],

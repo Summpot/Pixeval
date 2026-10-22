@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../constants/app_assets.dart';
 import '../image/rust_image_provider.dart';
-import '../rust/api/feed.dart';
+import '../native/api/feed.dart';
 import '../state/download_state.dart';
 import '../state/feed_state.dart';
 import '../state/history_state.dart';

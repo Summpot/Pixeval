@@ -1,5 +1,9 @@
 uniffi::setup_scaffolding!();
 
+pub mod app;
+pub use pixeval_filters::eval::{ArtworkMetadata, ArtworkTag};
+pub use pixeval_mako::{Illustration, IllustrationFeedPage};
+
 pixeval_cache::uniffi_reexport_scaffolding!();
 pixeval_maho::uniffi_reexport_scaffolding!();
 pixeval_filters::uniffi_reexport_scaffolding!();

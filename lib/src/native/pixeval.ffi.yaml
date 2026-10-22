@@ -1,0 +1,9 @@
+manifest: crates/pixeval_native/Cargo.toml
+package: pixeval_native
+class_name: PixevalNative
+asset_id: package:pixeval_flutter/src/native/pixeval.g.dart
+components: [pixeval_native]
+prefixes:
+  pixeval_native: ''
+engine: auto
+release_native: true

@@ -10,7 +10,9 @@ void main() {
     final environment = androidCompilerEnvironment(
       architecture: Architecture.arm,
       api: 24,
-      compiler: Directory.systemTemp.uri.resolve('ndk/toolchains/llvm/bin/clang'),
+      compiler: Directory.systemTemp.uri.resolve(
+        'ndk/toolchains/llvm/bin/clang',
+      ),
       windowsHost: false,
     );
     final linker = environment['CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER']!;
@@ -50,8 +52,8 @@ void main() {
         'Cargo.toml',
         'Cargo.lock',
         '.cargo/config.toml',
-        'crates/pixeval_flutter_bridge/Cargo.toml',
-        'crates/pixeval_flutter_bridge/rust-toolchain.toml',
+        'crates/pixeval_native/Cargo.toml',
+        'crates/pixeval_native/rust-toolchain.toml',
         'crates/pixeval_media/Cargo.toml',
       ];
       for (final path in inputs) {

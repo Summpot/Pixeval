@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../rust/api/feed.dart';
-import '../rust/api/filters.dart';
-import '../rust/api/search.dart';
+import '../native/api/feed.dart';
+import '../native/api/filters.dart';
+import '../native/api/search.dart';
 import 'feed_state.dart';
 import 'auth_state.dart';
 

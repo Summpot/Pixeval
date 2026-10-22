@@ -1,0 +1,18 @@
+{
+  "engine": "FRB 2.13.0",
+  "mode": "Dart JIT, native debug",
+  "sdk": "3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"windows_x64\"",
+  "version": {
+    "iterations": 500,
+    "mean_us": 51.532
+  },
+  "records_50": {
+    "iterations": 100,
+    "mean_us": 530.92
+  },
+  "cached_bytes_1mb": {
+    "iterations": 30,
+    "mean_us": 19961.933333333334
+  },
+  "rss_bytes": 271294464
+}
