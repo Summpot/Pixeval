@@ -261,3 +261,20 @@ rt.check(status.ref); return result;
 } finally {args.dispose(); arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
+Future<int> _u16(NativeBindings ctx, {required Counter receiver, required int delayMs, NativeCancellationToken? cancellationToken}) async {
+final _library=ctx._library;
+final rt=ctx._runtime("native_ffi_fixture");
+const engine=NativeEngine.uniffi;
+final args=UniFfiArguments();
+final arena=Arena();
+final leases=<NativeHandle>[]; try {
+final lease0=receiver._handle.acquire(engine, ctx._library); leases.add(receiver._handle);
+final status0=arena<RustCallStatus>(); final p0=_library.lookup<NativeFunction<Pointer<Void> Function(Pointer<Void>, Pointer<RustCallStatus>)>>("uniffi_native_ffi_fixture_fn_clone_counter").asFunction<Pointer<Void> Function(Pointer<Void>, Pointer<RustCallStatus>)>()(Pointer<Void>.fromAddress(lease0),status0); rt.check(status0.ref);
+args.own(() { _library.lookup<NativeFunction<Void Function(Pointer<Void>, Pointer<RustCallStatus>)>>("uniffi_native_ffi_fixture_fn_free_counter").asFunction<void Function(Pointer<Void>, Pointer<RustCallStatus>)>()(p0,status0); rt.check(status0.ref); });
+final call=_library.lookup<NativeFunction<Uint64 Function(Pointer<Void>, Uint32)>>("uniffi_native_ffi_fixture_fn_method_counter_read_later").asFunction<int Function(Pointer<Void>, int)>();
+args.transfer();
+final result=call(p0, delayMs);
+return await ctx._scheduler.run<int>(handle:result,poll:_library.lookup<NativeFunction<Void Function(Uint64, Pointer<NativeFunction<NativeWake>>, Uint64)>>("ffi_native_ffi_fixture_rust_future_poll_i64").asFunction<void Function(int, Pointer<NativeFunction<NativeWake>>, int)>(),cancel:_library.lookup<NativeFunction<Void Function(Uint64)>>("ffi_native_ffi_fixture_rust_future_cancel_i64").asFunction<void Function(int)>(),free:_library.lookup<NativeFunction<Void Function(Uint64)>>("ffi_native_ffi_fixture_rust_future_free_i64").asFunction<void Function(int)>(),cancellationToken:cancellationToken,complete:(handle) { final status=arena<RustCallStatus>(); final value=_library.lookup<NativeFunction<Int64 Function(Uint64, Pointer<RustCallStatus>)>>("ffi_native_ffi_fixture_rust_future_complete_i64").asFunction<int Function(int, Pointer<RustCallStatus>)>()(handle,status); rt.check(status.ref); return value; });
+} finally {args.dispose(); arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
+}
+

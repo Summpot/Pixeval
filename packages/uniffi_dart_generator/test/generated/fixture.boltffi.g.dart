@@ -186,7 +186,20 @@ return result;
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-Ticker _b16(NativeBindings ctx)  {
+Future<int> _b16(NativeBindings ctx, {required Counter receiver, required int delayMs, NativeCancellationToken? cancellationToken}) async {
+final _library=ctx._library;
+const engine=NativeEngine.boltffi;
+final arena=Arena();
+final leases=<NativeHandle>[]; try {
+final receiverHandle=receiver._handle.acquire(engine, ctx._library); leases.add(receiver._handle);
+final handle=_library.lookup<NativeFunction<Uint64 Function(Uint64, Uint32)>>("boltffi_method_class_native_ffi_fixture_counter_read_later").asFunction<int Function(int, int)>()(receiverHandle, delayMs);
+return await ctx._scheduler.run<int>(handle:handle,poll:(h,callback,id) { _library.lookup<NativeFunction<Int8 Function(Uint64, Uint64, Pointer<NativeFunction<NativeWake>>)>>("boltffi_async_method_class_native_ffi_fixture_counter_read_later_poll").asFunction<int Function(int, int, Pointer<NativeFunction<NativeWake>>)>()(h,id,callback); },cancel:_library.lookup<NativeFunction<Void Function(Uint64)>>("boltffi_async_method_class_native_ffi_fixture_counter_read_later_cancel").asFunction<void Function(int)>(),free:_library.lookup<NativeFunction<Void Function(Uint64)>>("boltffi_async_method_class_native_ffi_fixture_counter_read_later_free").asFunction<void Function(int)>(),cancellationToken:cancellationToken,complete:(handle) { final status=arena<BoltStatus>();
+final result=_library.lookup<NativeFunction<Int64 Function(Uint64, Pointer<BoltStatus>)>>("boltffi_async_method_class_native_ffi_fixture_counter_read_later_complete").asFunction<int Function(int, Pointer<BoltStatus>)>()(handle,status); ctx._bolt.check(status.ref);
+return result; });
+} finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
+}
+
+Ticker _b17(NativeBindings ctx)  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -196,7 +209,7 @@ return Ticker._(ctx,result,engine);
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-void _b17(NativeBindings ctx, {required Ticker receiver, required int value})  {
+void _b18(NativeBindings ctx, {required Ticker receiver, required int value})  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();

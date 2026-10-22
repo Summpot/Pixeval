@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "crates/native_ffi_fixture",
+    "packages/uniffi_dart/test/fixtures/native_ffi_fixture",
     "crates/pixeval_native",
     "crates/pixeval_filters",
     "crates/pixeval_cache",
