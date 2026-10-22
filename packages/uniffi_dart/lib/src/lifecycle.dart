@@ -6,6 +6,7 @@ enum NativeEngine { uniffi, boltffi }
 class NativeInteropException implements Exception {
   const NativeInteropException(this.message);
   final String message;
+
   @override
   String toString() => 'NativeInteropException: $message';
 }
@@ -18,13 +19,19 @@ class NativeCancelledException extends NativeInteropException {
 final class NativeCancellationToken {
   bool _cancelled = false;
   final _listeners = <void Function()>{};
+
   bool get isCancelled => _cancelled;
+
   void throwIfCancelled() {
-    if (_cancelled) throw const NativeCancelledException();
+    if (_cancelled) {
+      throw const NativeCancelledException();
+    }
   }
 
   void cancel() {
-    if (_cancelled) return;
+    if (_cancelled) {
+      return;
+    }
     _cancelled = true;
     for (final listener in List.of(_listeners)) {
       listener();
@@ -50,9 +57,12 @@ final class NativeFutureScheduler {
   NativeFutureScheduler() {
     _listener = NativeCallable<NativeWake>.listener((int id, int signal) {
       final completion = _pending.remove(id);
-      if (completion != null) completion.complete(signal);
+      if (completion != null) {
+        completion.complete(signal);
+      }
     });
   }
+
   late final NativeCallable<NativeWake> _listener;
   final _pending = <int, Completer<int>>{};
   final _cancellations = <void Function()>{};
@@ -102,14 +112,16 @@ final class NativeFutureScheduler {
           cancellationToken?.throwIfCancelled();
           return complete(handle);
         }
-        if (signal != 1)
+        if (signal != 1) {
           throw NativeInteropException('Invalid future signal: $signal');
+        }
       }
     } finally {
       unregister?.call();
       _cancellations.remove(requestCancel);
-      try {free(handle);}
-      finally {
+      try {
+        free(handle);
+      } finally {
         if (--_active == 0) {
           for (final waiter in _drained) {
             waiter.complete();
@@ -123,6 +135,7 @@ final class NativeFutureScheduler {
   /// Call after cancelling application operations. Keep callback trampolines
   /// alive until the native protocol has acknowledged all in-flight polls.
   Future<void> dispose() => _disposeFuture ??= _dispose();
+
   Future<void> _dispose() async {
     _closing = true;
     for (final cancel in _cancellations.toList()) {
@@ -147,18 +160,22 @@ final class NativeHandle {
   ) : _release = release {
     _finalizer.attach(this, (address, release), detach: this);
   }
+
   final int address;
   final NativeEngine engine;
   final Object owner;
   final void Function(int) _release;
+
   static final _finalizer = Finalizer<(int, void Function(int))>((value) {
     value.$2(value.$1);
   });
+
   int _active = 0;
   bool _closing = false;
   bool _released = false;
   Completer<void>? _disposed;
   final _disposeListeners = <void Function()>{};
+
   void Function() onDispose(void Function() listener) {
     if (_closing) {
       listener();
@@ -169,7 +186,9 @@ final class NativeHandle {
   }
 
   int acquire(NativeEngine expected, Object library) {
-    if (_closing) throw StateError('Native object has been disposed');
+    if (_closing) {
+      throw StateError('Native object has been disposed');
+    }
     if (engine != expected || !identical(owner, library)) {
       throw ArgumentError(
         'Object belongs to a different engine or native library',
@@ -180,25 +199,35 @@ final class NativeHandle {
   }
 
   void releaseCall() {
-    if (_active == 0) throw StateError('Unbalanced native object lease');
+    if (_active == 0) {
+      throw StateError('Unbalanced native object lease');
+    }
     _active--;
-    if (_closing && _active == 0) _finish();
+    if (_closing && _active == 0) {
+      _finish();
+    }
   }
 
   Future<void> dispose() {
-    if (_closing) return _disposed!.future;
+    if (_closing) {
+      return _disposed!.future;
+    }
     _closing = true;
     _disposed ??= Completer<void>();
     for (final listener in _disposeListeners.toList()) {
       listener();
     }
     _disposeListeners.clear();
-    if (_active == 0) _finish();
+    if (_active == 0) {
+      _finish();
+    }
     return _disposed!.future;
   }
 
   void _finish() {
-    if (_released) return;
+    if (_released) {
+      return;
+    }
     _released = true;
     _finalizer.detach(this);
     try {
@@ -221,7 +250,8 @@ Stream<T> nativeEventStream<T>({
   var stopped = false;
   Completer<void>? resumed;
   Future<void>? closing;
-  Future<void> close() => closing ??= () async {
+
+  Future<void> performClose() async {
     stopped = true;
     resumed?.complete();
     resumed = null;
@@ -230,21 +260,30 @@ Stream<T> nativeEventStream<T>({
     } finally {
       await dispose();
     }
-  }();
+  }
+
+  Future<void> close() => closing ??= performClose();
+
   Future<void> pump() async {
     try {
       while (!stopped) {
         if (controller.isPaused) {
           resumed ??= Completer<void>();
           await resumed!.future;
-          if (stopped) break;
+          if (stopped) {
+            break;
+          }
         }
         final item = await next();
-        if (stopped || item == null) break;
+        if (stopped || item == null) {
+          break;
+        }
         controller.add(item);
       }
     } catch (error, stack) {
-      if (!stopped) controller.addError(error, stack);
+      if (!stopped) {
+        controller.addError(error, stack);
+      }
     } finally {
       await close();
       unawaited(controller.close());

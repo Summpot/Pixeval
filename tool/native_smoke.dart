@@ -103,8 +103,9 @@ Future<void> main() async {
           .listen((event) {
             if (event is DownloadProgressEvent_Completed &&
                 event.destination == destination &&
-                !completed.isCompleted)
+                !completed.isCompleted) {
               completed.complete();
+            }
           }, onError: completed.completeError);
       try {
         await api.initDownloadManager(concurrency: 2);

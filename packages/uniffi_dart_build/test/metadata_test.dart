@@ -31,12 +31,12 @@ Uint8List coff(Uint8List metadata) {
 
 Uint8List archive(Uint8List object) {
   final header =
-      'object.o/       ' +
-      '0'.padRight(12) +
-      '0'.padRight(6) +
-      '0'.padRight(6) +
-      '100644'.padRight(8) +
-      '${object.length}'.padRight(10) +
+      'object.o/       '
+      '${'0'.padRight(12)}'
+      '${'0'.padRight(6)}'
+      '${'0'.padRight(6)}'
+      '${'100644'.padRight(8)}'
+      '${object.length.toString().padRight(10)}'
       '`\n';
   return Uint8List.fromList([
     ...ascii.encode('!<arch>\n$header'),
