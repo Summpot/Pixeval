@@ -83,13 +83,14 @@ final class DartBindingsEmitter {
         'object',
         'trait',
         'callback',
-      }.contains(item['kind']))
+      }.contains(item['kind'])) {
         final key=typeKey(item);
         final previous=types[key];
         if(previous!=null && jsonEncode(previous)!=jsonEncode(item)) {
           throw FormatException('Conflicting type declaration $key');
         }
         types[key] = item;
+      }
     }
     for (final envelope in metadata.boltffi) {
       final declarations = (envelope['bindings']['Native']['decls'] as List)
