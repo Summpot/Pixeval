@@ -37,8 +37,9 @@ final class PixevalService extends PixevalApi {
     final page = await entry.feed.nextPage();
     var items = page.items.map(presentIllustration).toList();
     final filter = entry.feed.filterQuery();
-    if (filter != null)
+    if (filter != null) {
       items = await filterArtworksByQuery(query: filter, artworks: items);
+    }
     return FeedPageResult(items: items, exhausted: page.exhausted);
   }
 
@@ -244,8 +245,9 @@ final class PixevalService extends PixevalApi {
       query: query,
       artworks: artworks.map(filterMetadata).toList(),
     );
-    if (matches.length != artworks.length)
+    if (matches.length != artworks.length) {
       throw StateError('Native filter returned an invalid result length');
+    }
     return [
       for (var i = 0; i < artworks.length; i++)
         if (matches[i]) artworks[i],

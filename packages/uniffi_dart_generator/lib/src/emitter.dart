@@ -84,9 +84,9 @@ final class DartBindingsEmitter {
         'trait',
         'callback',
       }.contains(item['kind'])) {
-        final key=typeKey(item);
-        final previous=types[key];
-        if(previous!=null && jsonEncode(previous)!=jsonEncode(item)) {
+        final key = typeKey(item);
+        final previous = types[key];
+        if (previous != null && jsonEncode(previous) != jsonEncode(item)) {
           throw FormatException('Conflicting type declaration $key');
         }
         types[key] = item;
@@ -116,12 +116,13 @@ final class DartBindingsEmitter {
         }
       }
       for (final declaration in declarations) {
-        if (declaration.containsKey('Stream'))
+        if (declaration.containsKey('Stream')) {
           streams.add({'declaration': declaration['Stream'], 'ids': ids});
+        }
         if (declaration.containsKey('Function')) {
-          final f = declaration['Function'] as Json;
-          boltFunctions[(f['symbol'] as Json)['name'] as String] = {
-            'declaration': f,
+          final functionDecl = declaration['Function'] as Json;
+          boltFunctions[(functionDecl['symbol'] as Json)['name'] as String] = {
+            'declaration': functionDecl,
             'ids': ids,
           };
         }
@@ -168,22 +169,25 @@ final class DartBindingsEmitter {
         .toList();
     final exclude = (config['exclude'] as List? ?? []).cast<String>().toSet();
     functions.removeWhere((f) => exclude.contains(qualified(f)));
-    for (final f in functions) {
-      for (final input in (f['inputs'] as List).cast<Json>()) {
+    for (final fn in functions) {
+      for (final input in (fn['inputs'] as List).cast<Json>()) {
         visit(input['type'] as Json);
       }
-      visit(f['return'] as Json);
-      if (f['throws'] != null) visit(f['throws'] as Json);
-      if (f['owner'] != null)
-        visit({'kind': 'object', 'module': f['module'], 'name': f['owner']});
+      visit(fn['return'] as Json);
+      if (fn['throws'] != null) {
+        visit(fn['throws'] as Json);
+      }
+      if (fn['owner'] != null) {
+        visit({'kind': 'object', 'module': fn['module'], 'name': fn['owner']});
+      }
     }
     for (final entry in streams.toList()) {
-      final declaration = entry['declaration'] as Json,
-          ids = entry['ids'] as Json;
+      final declaration = entry['declaration'] as Json;
+      final ids = entry['ids'] as Json;
       final ownerId = declaration['owner'];
       final owner = ownerId == null ? null : _boltType({'Class': ownerId}, ids);
-      final item = declaration['item'] as Json,
-          plan = item.values.single as Json;
+      final item = declaration['item'] as Json;
+      final plan = item.values.single as Json;
       final type = _boltType(plan['ty'], ids);
       final component = owner == null
           ? words((metadata.boltffi.first)['package']['name'])
@@ -196,7 +200,9 @@ final class DartBindingsEmitter {
       entry['type'] = type;
       entry['component'] = component;
       visit(type);
-      if (owner != null) visit(owner);
+      if (owner != null) {
+        visit(owner);
+      }
     }
   }
   final NativeMetadata metadata;
@@ -213,18 +219,30 @@ final class DartBindingsEmitter {
   String get className => config['class_name'] as String? ?? 'NativeBindings';
   String prefix(String component) =>
       (config['prefixes'] as Map?)?[component] as String? ?? pascal(component);
-  String name(Json t) => _mappedName('${t['module']}::${t['name']}',safe('${prefix(crate(t))}${pascal(t['name'] as String)}'));
-  String _mappedName(String key,String fallback) {
-    final value=(config['names'] as Map?)?[key] as String? ?? fallback;
-    if(!RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*$').hasMatch(value) || safe(value)!=value)throw FormatException('Invalid Dart name $value for $key');
+  String name(Json t) => _mappedName(
+    '${t['module']}::${t['name']}',
+    safe('${prefix(crate(t))}${pascal(t['name'] as String)}'),
+  );
+  String _mappedName(String key, String fallback) {
+    final value = (config['names'] as Map?)?[key] as String? ?? fallback;
+    if (!RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*$').hasMatch(value) ||
+        safe(value) != value) {
+      throw FormatException('Invalid Dart name $value for $key');
+    }
     return value;
   }
+
   String qualified(Json f) =>
       '${f['module']}::${f['owner'] == null ? '' : '${f['owner']}::'}${f['name']}';
   String methodName(Json f) => camel(
     '${f['kind'] == 'constructor' ? '${f['owner']}_' : ''}${f['name']}',
   );
-  String functionName(Json f) => _mappedName(qualified(f),camel('${prefix(crate(f))}_${f['owner'] == null ? '' : '${f['owner']}_'}${f['name']}'));
+  String functionName(Json f) => _mappedName(
+    qualified(f),
+    camel(
+      '${prefix(crate(f))}_${f['owner'] == null ? '' : '${f['owner']}_'}${f['name']}',
+    ),
+  );
   void visit(Json t) {
     switch (t['kind']) {
       case 'record':
@@ -233,10 +251,13 @@ final class DartBindingsEmitter {
       case 'trait':
       case 'callback':
         final key = typeKey(t);
-        if (!needed.add(key)) return;
+        if (!needed.add(key)) {
+          return;
+        }
         final declaration = types[key];
-        if (declaration == null)
+        if (declaration == null) {
           throw FormatException('Missing cross-component type $key');
+        }
         for (final field
             in (declaration['fields'] as List? ?? []).cast<Json>()) {
           visit(field['type'] as Json);
@@ -339,36 +360,65 @@ final class DartBindingsEmitter {
       boltTypes[typeKey(t)]?['declaration']['shape'] == 'CStyle';
 
   void _validateDirectLayout(Json t) {
-    final declaration=boltTypes[typeKey(t)]!['declaration'] as Json;
-    final layout=declaration['layout'] as Json;
-    var offset=0,alignment=1;
-    final fields=(types[typeKey(t)]!['fields'] as List).cast<Json>();
-    if(fields.isEmpty)throw FormatException('Empty direct record ${typeKey(t)} cannot be represented by Dart FFI');
-    for(final field in fields) {
-      final type=field['type'] as Json;
-      final size=switch(type['kind']) {'bool'||'u8'||'i8'=>1,'u16'||'i16'=>2,'u32'||'i32'||'f32'=>4,'u64'||'i64'||'f64'=>8,_=>throw FormatException('Unsupported direct layout field ${typeKey(t)}::${field['name']}')};
-      offset=(offset+size-1)~/size*size;
-      final nativeField=(layout['fields'] as List).cast<Json>().singleWhere((f)=>words(f['key']['Named'])==field['name']);
-      if(nativeField['offset']!=offset)throw FormatException('Unsupported native field offset for ${typeKey(t)}::${field['name']}: ${nativeField['offset']}, expected $offset');
-      offset+=size;if(size>alignment)alignment=size;
+    final declaration = boltTypes[typeKey(t)]!['declaration'] as Json;
+    final layout = declaration['layout'] as Json;
+    var offset = 0;
+    var alignment = 1;
+    final fields = (types[typeKey(t)]!['fields'] as List).cast<Json>();
+    if (fields.isEmpty) {
+      throw FormatException(
+        'Empty direct record ${typeKey(t)} cannot be represented by Dart FFI',
+      );
     }
-    final size=(offset+alignment-1)~/alignment*alignment;
-    if(layout['size']!=size || layout['alignment']!=alignment)throw FormatException('Unsupported size/alignment for ${typeKey(t)}: $layout');
+    for (final field in fields) {
+      final type = field['type'] as Json;
+      final size = switch (type['kind']) {
+        'bool' || 'u8' || 'i8' => 1,
+        'u16' || 'i16' => 2,
+        'u32' || 'i32' || 'f32' => 4,
+        'u64' || 'i64' || 'f64' => 8,
+        _ => throw FormatException(
+          'Unsupported direct layout field ${typeKey(t)}::${field['name']}',
+        ),
+      };
+      offset = (offset + size - 1) ~/ size * size;
+      final nativeField = (layout['fields'] as List).cast<Json>().singleWhere(
+        (f) => words(f['key']['Named']) == field['name'],
+      );
+      if (nativeField['offset'] != offset) {
+        throw FormatException(
+          'Unsupported native field offset for ${typeKey(t)}::${field['name']}: ${nativeField['offset']}, expected $offset',
+        );
+      }
+      offset += size;
+      if (size > alignment) {
+        alignment = size;
+      }
+    }
+    final size = (offset + alignment - 1) ~/ alignment * alignment;
+    if (layout['size'] != size || layout['alignment'] != alignment) {
+      throw FormatException(
+        'Unsupported size/alignment for ${typeKey(t)}: $layout',
+      );
+    }
   }
+
   String _lookup(String symbol, String native, String dart) {
     final previous = _symbols[symbol];
-    if (previous != null && previous != (native: native, dart: dart))
+    if (previous != null && previous != (native: native, dart: dart)) {
       throw FormatException('Conflicting ABI for $symbol');
+    }
     _symbols[symbol] = (native: native, dart: dart);
     return '_library.lookup<NativeFunction<$native>>(${jsonEncode(symbol)}).asFunction<$dart>()';
   }
 
   String _decode(Json t, String reader, {String engine = 'engine'}) {
     final kind = t['kind'];
-    if (scalar(t))
+    if (scalar(t)) {
       return kind == 'void'
           ? 'null'
           : '$reader.${kind == 'bool' ? 'boolean' : kind}()';
+    }
     return switch (kind) {
       'string' => '$reader.string()',
       'bytes' => '$reader.buffer()',
@@ -397,10 +447,11 @@ final class DartBindingsEmitter {
     String engine = 'engine',
   }) {
     final kind = t['kind'];
-    if (scalar(t))
+    if (scalar(t)) {
       return kind == 'void'
           ? ''
           : '$writer.${kind == 'bool' ? 'boolean' : kind}($value);';
+    }
     return switch (kind) {
       'string' => '$writer.string($value);',
       'bytes' => '$writer.buffer($value);',
@@ -423,14 +474,23 @@ final class DartBindingsEmitter {
   String _codecWrite(Json t, String value) =>
       _encode(t, value, 'w').replaceAll('this', 'ctx');
   Map<String, String> generate() {
-    final publicNames=<String,String>{};
-    void register(String value,String key) {
-      final previous=publicNames[value];
-      if(previous!=null && previous!=key)throw FormatException('Dart name $value collides between $previous and $key; configure prefixes or names');
-      publicNames[value]=key;
+    final publicNames = <String, String>{};
+    void register(String value, String key) {
+      final previous = publicNames[value];
+      if (previous != null && previous != key) {
+        throw FormatException(
+          'Dart name $value collides between $previous and $key; configure prefixes or names',
+        );
+      }
+      publicNames[value] = key;
     }
-    for(final key in needed) {register(name(types[key]!),key);}
-    for(final f in functions) {register(functionName(f),qualified(f));}
+
+    for (final key in needed) {
+      register(name(types[key]!), key);
+    }
+    for (final f in functions) {
+      register(functionName(f), qualified(f));
+    }
     main.writeln(
       "// Generated by uniffi_dart_generator. Do not edit.\n// ignore_for_file: unused_import, unused_element, unused_field, unused_local_variable, camel_case_types, no_leading_underscores_for_local_identifiers, curly_braces_in_flow_control_structures\nimport 'dart:async';\nimport 'dart:convert';\nimport 'dart:ffi';\nimport 'dart:typed_data';\nimport 'package:ffi/ffi.dart';\nimport 'package:uniffi_dart/uniffi_dart.dart';\npart '$stem.uniffi.g.dart';\npart '$stem.boltffi.g.dart';",
     );
@@ -450,22 +510,29 @@ final class DartBindingsEmitter {
     final verified = <String>{};
     for (var index = 0; index < functions.length; index++) {
       final f = functions[index];
-      if (f['has_uniffi'] != false) uni.writeln(_emitUni(f, index));
+      if (f['has_uniffi'] != false) {
+        uni.writeln(_emitUni(f, index));
+      }
       final symbol = _boltSymbol(f);
       final b = boltFunctions[symbol];
-      if (b != null) bolt.writeln(_emitBolt(f, b, index));
+      if (b != null) {
+        bolt.writeln(_emitBolt(f, b, index));
+      }
       _emitPublic(f, index, b);
-      if (f['has_uniffi'] == false) continue;
+      if (f['has_uniffi'] == false) {
+        continue;
+      }
       final check =
           'uniffi_${crate(f)}_checksum_${f['kind'] == 'function'
               ? 'func'
               : f['kind'] == 'method'
               ? 'method'
               : 'constructor'}_${f['owner'] == null ? '' : '${(f['owner'] as String).toLowerCase()}_'}${(f['name'] as String).toLowerCase()}';
-      if (verified.add(check))
+      if (verified.add(check)) {
         verifications.writeln(
           "if (${_lookup(check, 'Uint16 Function()', 'int Function()')}() != ${f['checksum']}) throw const NativeInteropException('Checksum mismatch: $check');",
         );
+      }
       final component = crate(f);
       if (verified.add(component)) {
         final check = 'ffi_${component}_uniffi_contract_version';
@@ -501,8 +568,9 @@ final class DartBindingsEmitter {
                     as List)
                 .cast<Json>();
         for (final method in list) {
-          if (words(method['name']) == f['name'])
+          if (words(method['name']) == f['name']) {
             return words(method['symbol'] ?? method['target']);
+          }
         }
       }
       return '';
@@ -520,13 +588,19 @@ final class DartBindingsEmitter {
     final method = functionName(f);
     final mode = config['engine'] as String? ?? 'auto';
     final overrides = config['overrides'] as Map? ?? {};
-    final selected = overrides[qualified(f)] as String? ?? overrides[crate(f)] as String? ?? mode;
-    if (selected == 'boltffi' && b == null)
+    final selected =
+        overrides[qualified(f)] as String? ??
+        overrides[crate(f)] as String? ??
+        mode;
+    if (selected == 'boltffi' && b == null) {
       throw FormatException('Missing BoltFFI export for ${qualified(f)}');
-    if (selected == 'uniffi' && f['has_uniffi'] == false)
+    }
+    if (selected == 'uniffi' && f['has_uniffi'] == false) {
       throw FormatException('Missing UniFFI export for ${qualified(f)}');
-    if (!{'auto', 'dual', 'uniffi', 'boltffi'}.contains(selected))
+    }
+    if (!{'auto', 'dual', 'uniffi', 'boltffi'}.contains(selected)) {
       throw FormatException('Unknown engine mode $selected');
+    }
     final defaultBolt =
         f['has_uniffi'] == false ||
         b != null &&
@@ -545,8 +619,10 @@ final class DartBindingsEmitter {
     main.writeln(
       '$signature $method($params) {\n_ensureOpen();\nfinal selected=$dispatch;',
     );
-    if(f['kind']=='method' && {'uniffi','boltffi'}.contains(selected)) {
-      main.writeln('if(selected!=NativeEngine.$selected)throw ArgumentError("The configured engine differs from the object owner");');
+    if (f['kind'] == 'method' && {'uniffi', 'boltffi'}.contains(selected)) {
+      main.writeln(
+        'if(selected!=NativeEngine.$selected)throw ArgumentError("The configured engine differs from the object owner");',
+      );
     }
     main.writeln(
       'if (selected == NativeEngine.boltffi) { ${b == null ? "throw UnsupportedError('Missing BoltFFI export: ${qualified(f)}');" : "return _b$index(this, $values);"} }\n${f['has_uniffi'] == false ? "throw UnsupportedError('Missing UniFFI export: ${qualified(f)}');" : "return _u$index(this, $values);"}\n}',
@@ -555,18 +631,20 @@ final class DartBindingsEmitter {
 
   String _publicParams(Json f) {
     final ps = <String>[];
-    if (f['kind'] == 'method')
+    if (f['kind'] == 'method') {
       ps.add(
         'required ${name({'module': f['module'], 'name': f['owner']})} receiver',
       );
+    }
     for (final input in (f['inputs'] as List).cast<Json>()) {
       final t = input['type'] as Json;
       ps.add(
         '${t['kind'] == 'option' ? '' : 'required '}${dartType(t)} ${camel(input['name'] as String)}',
       );
     }
-    if (f['async'] == true)
+    if (f['async'] == true) {
       ps.add('NativeCancellationToken? cancellationToken');
+    }
     return ps.isEmpty ? '' : '{${ps.join(', ')}}';
   }
 
@@ -578,10 +656,11 @@ final class DartBindingsEmitter {
   ].join(', ');
   void _emitType(Json t) {
     final n = name(t), kind = t['kind'];
-    if (kind == 'callback')
+    if (kind == 'callback') {
       throw FormatException(
         'Synchronous callback ${typeKey(t)} cannot be bound safely; expose a native async receiver',
       );
+    }
     if (kind == 'object' || kind == 'trait') {
       main.writeln(
         'class $n {\n$n._(this._ctx, int address, this.engine) : _handle=NativeHandle(address, engine, _ctx._library, (value) {',
@@ -660,10 +739,11 @@ final class DartBindingsEmitter {
         bolt.writeln('final class _Direct$n extends Struct {');
         for (final field in fields) {
           final ft = field['type'] as Json;
-          if (!scalar(ft))
+          if (!scalar(ft)) {
             throw FormatException(
               'Nested direct layout is not yet supported: $n',
             );
+          }
           bolt.writeln(
             '@${nativeType(ft)}() external ${ffiDart(ft)} ${camel(field['name'] as String)};',
           );
@@ -672,7 +752,9 @@ final class DartBindingsEmitter {
       }
       return;
     }
-    if (kind != 'enum') throw FormatException('Unsupported declaration: $t');
+    if (kind != 'enum') {
+      throw FormatException('Unsupported declaration: $t');
+    }
     final variants = (t['variants'] as List).cast<Json>();
     final error = t['shape'] != 0;
     main.writeln(
@@ -802,8 +884,9 @@ final class DartBindingsEmitter {
       );
     } else if (item['Direct'] != null) {
       final nt = nativeType(t), dt = ffiDart(t);
-      if (!scalar(t) && !isDirect(t))
+      if (!scalar(t) && !isDirect(t)) {
         throw FormatException('Unsupported direct stream item $t');
+      }
       final pop = _lookup(
         words(protocol['pop_batch']),
         'UintPtr Function(Uint64, Pointer<$nt>, UintPtr)',
@@ -878,9 +961,9 @@ final class DartBindingsEmitter {
         );
         values.add('p$i');
       } else {
-        if (t['kind'] == 'string')
+        if (t['kind'] == 'string') {
           out.writeln('final bytes$i=Uint8List.fromList(utf8.encode($v));');
-        else {
+        } else {
           out.writeln(
             'final writer$i=WireWriter(); ${_encode(t, v, 'writer$i')} final bytes$i=writer$i.takeBytes();',
           );
@@ -957,33 +1040,48 @@ final class DartBindingsEmitter {
   }
 
   String _liftUni(Json t, String value) {
-    if (t['kind'] == 'void') return 'return;';
-    if (scalar(t))
+    if (t['kind'] == 'void') {
+      return 'return;';
+    }
+    if (scalar(t)) {
       return 'return ${t['kind'] == 'bool'
           ? '$value != 0'
           : t['kind'] == 'u64'
           ? 'BigInt.from($value).toUnsigned(64)'
           : value};';
-    if (t['kind'] == 'object')
+    }
+    if (t['kind'] == 'object') {
       return 'return ${name(t)}._(ctx, $value.address, engine);';
-    if (t['kind'] == 'string')
+    }
+    if (t['kind'] == 'string') {
       return 'return utf8.decode(rt.lift($value),allowMalformed:false);';
+    }
     return 'final r=WireReader(rt.lift($value)); final decoded=${_decode(t, 'r')}; r.finish(); return decoded;';
   }
 
   // BoltFFI types are resolved through IDs in the envelope, never by ABI guesses.
   Json _boltType(dynamic value, Json ids) {
     if (value is String) {
-      if (value == 'String') return {'kind': 'string'};
-      if (value == 'Bytes') return {'kind': 'bytes'};
-      if (value == 'Void') return {'kind': 'void'};
+      if (value == 'String') {
+        return {'kind': 'string'};
+      }
+      if (value == 'Bytes') {
+        return {'kind': 'bytes'};
+      }
+      if (value == 'Void') {
+        return {'kind': 'void'};
+      }
       return {'kind': value.toLowerCase()};
     }
     final t = value as Json, key = t.keys.single, inner = t[key];
-    if (key == 'Primitive') return _boltType(inner, ids);
+    if (key == 'Primitive') {
+      return _boltType(inner, ids);
+    }
     if ({'Record', 'Enum', 'Class', 'Callback'}.contains(key)) {
       final decl = ids['$key:$inner'] as Json?;
-      if (decl == null) throw FormatException('Unresolved BoltFFI type $value');
+      if (decl == null) {
+        throw FormatException('Unresolved BoltFFI type $value');
+      }
       final matches = types.values
           .where(
             (t) =>
@@ -991,10 +1089,11 @@ final class DartBindingsEmitter {
                 crate(t) == (decl['module'] as String).split('::').first,
           )
           .toList();
-      if (matches.length != 1)
+      if (matches.length != 1) {
         throw FormatException(
           'Ambiguous BoltFFI type $value: ${words(decl['name'])}',
         );
+      }
       return {
         'kind': {
           'Record': 'record',
@@ -1006,7 +1105,7 @@ final class DartBindingsEmitter {
         'name': matches.single['name'],
       };
     }
-    if ({'Optional', 'Sequence', 'Set'}.contains(key))
+    if ({'Optional', 'Sequence', 'Set'}.contains(key)) {
       return {
         'kind': {
           'Optional': 'option',
@@ -1015,12 +1114,14 @@ final class DartBindingsEmitter {
         }[key],
         'inner': _boltType(inner, ids),
       };
-    if (key == 'Map')
+    }
+    if (key == 'Map') {
       return {
         'kind': 'map',
         'key': _boltType(inner['key'], ids),
         'value': _boltType(inner['value'], ids),
       };
+    }
     throw FormatException('Unsupported BoltFFI type $value');
   }
 
@@ -1033,8 +1134,9 @@ final class DartBindingsEmitter {
         ret = f['return'] as Json;
     final execution = callable['execution'];
     final isAsync = execution is Map;
-    if (async != isAsync)
+    if (async != isAsync) {
       throw FormatException('Engine execution mismatch for ${qualified(f)}');
+    }
     out.writeln(
       '${async ? 'Future<${dartType(ret)}>' : dartType(ret)} _b$index($className ctx${_publicParams(f).isEmpty ? '' : ', ${_publicParams(f)}'}) ${async ? 'async' : ''} {\nfinal _library=ctx._library;\nconst engine=NativeEngine.boltffi;\nfinal arena=Arena();',
     );
@@ -1051,20 +1153,23 @@ final class DartBindingsEmitter {
       values.add('receiverHandle');
     }
     final params = (callable['params'] as List).cast<Json>();
-    if (params.length != (f['inputs'] as List).length)
+    if (params.length != (f['inputs'] as List).length) {
       throw FormatException(
         'Engine argument count mismatch for ${qualified(f)}',
       );
+    }
     for (var i = 0; i < params.length; i++) {
       final p = params[i], value = (p['payload'] as Json)['Value'];
-      if (value is! Map)
+      if (value is! Map) {
         throw FormatException('Unsupported BoltFFI parameter payload: $p');
+      }
       final name = camel(words(p['name'])),
           source = ((f['inputs'] as List)[i] as Json)['type'] as Json;
       if (value['Encoded'] != null) {
         final info = value['Encoded'] as Json;
-        if (info['shape'] != 'Slice')
+        if (info['shape'] != 'Slice') {
           throw FormatException('Unsupported encoded parameter shape: $info');
+        }
         out.writeln(
           'final w$i=WireWriter(endian:Endian.little); ${_encode(source, name, 'w$i')} final bytes$i=w$i.takeBytes(); final p$i=arena<Uint8>(bytes$i.isEmpty?1:bytes$i.length); p$i.asTypedList(bytes$i.length).setAll(0,bytes$i);',
         );
@@ -1075,8 +1180,9 @@ final class DartBindingsEmitter {
         final element = source['kind'] == 'bytes'
             ? <String, dynamic>{'kind': 'u8'}
             : source['inner'] as Json;
-        if (!scalar(element))
+        if (!scalar(element)) {
           throw FormatException('Unsupported direct vector element: $element');
+        }
         final nt = nativeType(element);
         out.writeln(
           'final p$i=arena<$nt>($name.isEmpty?1:$name.length); for(var n=0;n<$name.length;n++) { p$i[n]=${element['kind'] == 'u64'
@@ -1130,13 +1236,22 @@ final class DartBindingsEmitter {
         natives.addAll(['Pointer<Uint8>', 'UintPtr']);
         darts.addAll(['Pointer<Uint8>', 'int']);
         values.addAll(['p$i', 'bytes$i.length']);
-      } else if(value['Handle']!=null) {
-        final info=value['Handle'] as Json;
-        if(info['carrier']!='U64' || info['receive']!='ByRef' || info['presence']!='Required' || source['kind']!='object') {
-          throw FormatException('Unsupported BoltFFI object ownership for ${qualified(f)}: $info');
+      } else if (value['Handle'] != null) {
+        final info = value['Handle'] as Json;
+        if (info['carrier'] != 'U64' ||
+            info['receive'] != 'ByRef' ||
+            info['presence'] != 'Required' ||
+            source['kind'] != 'object') {
+          throw FormatException(
+            'Unsupported BoltFFI object ownership for ${qualified(f)}: $info',
+          );
         }
-        out.writeln('final p$i=$name._handle.acquire(engine,ctx._library);leases.add($name._handle);');
-        natives.add('Uint64');darts.add('int');values.add('p$i');
+        out.writeln(
+          'final p$i=$name._handle.acquire(engine,ctx._library);leases.add($name._handle);',
+        );
+        natives.add('Uint64');
+        darts.add('int');
+        values.add('p$i');
       } else {
         throw FormatException('Unsupported BoltFFI parameter: $p');
       }
@@ -1175,8 +1290,9 @@ final class DartBindingsEmitter {
       'ScalarOptionViaOutPointer',
       'DirectVecViaReturnSlot',
       'DirectVecViaOutPointer',
-    }.contains(planKind))
+    }.contains(planKind)) {
       throw FormatException('Unsupported BoltFFI return plan $plan');
+    }
     if (async) {
       final lookup = _lookup(
         words(declaration['symbol']),
@@ -1212,18 +1328,21 @@ final class DartBindingsEmitter {
         'return await ctx._scheduler.run<${dartType(ret)}>(handle:handle,poll:(h,callback,id) { $poll(h,id,callback); },cancel:$cancel,free:$free,cancellationToken:cancellationToken,complete:(handle) { final status=arena<BoltStatus>();',
       );
       if (hasError) {
-        if (error is! Map || !error.containsKey('EncodedViaReturnSlot'))
+        if (error is! Map || !error.containsKey('EncodedViaReturnSlot')) {
           throw FormatException('Unsupported async BoltFFI error plan $error');
+        }
         final errorType = _boltType(error['EncodedViaReturnSlot']['ty'], ids);
-        if (ret['kind'] != 'void')
+        if (ret['kind'] != 'void') {
           out.writeln('final output=arena<$returnNative>();');
+        }
         out.writeln(
           'final errorBuffer=$complete(handle,status${ret['kind'] == 'void' ? '' : ', output'}); final errorBytes=ctx._bolt.lift(errorBuffer); ctx._bolt.check(status.ref); if(errorBytes.isNotEmpty) { final r=WireReader(errorBytes,endian:Endian.little); final error=${_decode(errorType, 'r')}; r.finish(); throw error; }',
         );
-        if (ret['kind'] != 'void')
+        if (ret['kind'] != 'void') {
           out.writeln(
             'final result=${scalar(ret) || ret['kind'] == 'object' ? 'output.value' : 'output.ref'};',
           );
+        }
       } else {
         out.writeln(
           '${ret['kind'] == 'void' ? '' : 'final result='}$complete(handle,status); ctx._bolt.check(status.ref);',
@@ -1245,16 +1364,18 @@ final class DartBindingsEmitter {
         '${hasError ? 'BoltBuffer' : returnDart} Function(${darts.join(', ')})',
       );
       if (hasError) {
-        if (error is! Map || !error.containsKey('EncodedViaReturnSlot'))
+        if (error is! Map || !error.containsKey('EncodedViaReturnSlot')) {
           throw FormatException('Unsupported BoltFFI error plan $error');
+        }
         final errorType = _boltType(error['EncodedViaReturnSlot']['ty'], ids);
         out.writeln(
           'final errorBuffer=$lookup(${values.join(', ')}); if(errorBuffer.length!=0) { final r=WireReader(ctx._bolt.lift(errorBuffer),endian:Endian.little); final error=${_decode(errorType, 'r')}; r.finish(); throw error; } ctx._bolt.lift(errorBuffer);',
         );
-        if (ret['kind'] != 'void')
+        if (ret['kind'] != 'void') {
           out.writeln(
             'final result=${scalar(ret) || ret['kind'] == 'object' ? 'output.value' : 'output.ref'};',
           );
+        }
       } else {
         out.writeln(
           '${ret['kind'] == 'void' ? '' : 'final result='}$lookup(${values.join(', ')});',
@@ -1281,27 +1402,36 @@ final class DartBindingsEmitter {
     required bool encoded,
     bool directVec = false,
   }) {
-    if (t['kind'] == 'void') return 'return;';
-    if (encoded)
+    if (t['kind'] == 'void') {
+      return 'return;';
+    }
+    if (encoded) {
       return 'final r=WireReader(ctx._bolt.lift($value),endian:Endian.little); final decoded=${_decode(t, 'r')}; r.finish(); return decoded;';
+    }
     if (directVec) {
       final inner = t['kind'] == 'bytes'
           ? <String, dynamic>{'kind': 'u8'}
           : t['inner'] as Json;
-      if (!scalar(inner) || inner['kind'] == 'void')
+      if (!scalar(inner) || inner['kind'] == 'void') {
         throw FormatException(
           'Unsupported direct vector return element $inner',
         );
+      }
       return 'final bytes=ctx._bolt.lift($value); final stride=sizeOf<${nativeType(inner)}>(); if(bytes.length%stride!=0)throw const FormatException("Invalid direct vector byte length"); final r=WireReader(bytes,endian:Endian.little); return ${t['kind'] == 'bytes' ? 'bytes' : 'List.generate(bytes.length~/stride,(_)=>${_decode(inner, 'r')})'};';
     }
-    if (isCStyle(t)) return 'return _lift${name(t)}($value);';
-    if (scalar(t))
+    if (isCStyle(t)) {
+      return 'return _lift${name(t)}($value);';
+    }
+    if (scalar(t)) {
       return 'return ${t['kind'] == 'bool'
           ? '$value!=0'
           : t['kind'] == 'u64'
           ? 'BigInt.from($value).toUnsigned(64)'
           : value};';
-    if (t['kind'] == 'object') return 'return ${name(t)}._(ctx,$value,engine);';
+    }
+    if (t['kind'] == 'object') {
+      return 'return ${name(t)}._(ctx,$value,engine);';
+    }
     if (isDirect(t)) {
       final fields = (types[typeKey(t)]!['fields'] as List).cast<Json>();
       return 'return ${name(t)}(${fields.map((f) {
@@ -1340,12 +1470,13 @@ final class DartBindingsEmitter {
         'void Function(RustBuffer, Pointer<RustCallStatus>)',
       );
     }
-    if (boltFunctions.isNotEmpty)
+    if (boltFunctions.isNotEmpty) {
       _lookup(
         'boltffi_free_buf',
         'Void Function(BoltBuffer)',
         'void Function(BoltBuffer)',
       );
+    }
     for (final entry in _symbols.entries) {
       final sig = entry.value.dart;
       final pos = sig.indexOf(' Function(');

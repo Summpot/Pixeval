@@ -44,7 +44,9 @@ final class NativeLibrary {
   NativeLibrary(this.lookupAddress);
   factory NativeLibrary.dynamic(DynamicLibrary library) =>
       NativeLibrary((name) => library.lookup<Void>(name));
+
   final Pointer<Void> Function(String) lookupAddress;
+
   Pointer<T> lookup<T extends NativeType>(String name) =>
       lookupAddress(name).cast<T>();
 }
@@ -61,17 +63,22 @@ final class UniFfiRuntime {
             'ffi_${component}_rustbuffer_free',
           )
           .asFunction<_FreeDart>();
+
   final NativeLibrary library;
   final String component;
   final _AllocDart _alloc;
   final _FreeDart _free;
+
   RustBuffer lower(Uint8List bytes) => using((arena) {
     final status = arena<RustCallStatus>();
     final value = _alloc(bytes.length, status);
     check(status.ref);
-    if (bytes.isNotEmpty) value.data.asTypedList(bytes.length).setAll(0, bytes);
+    if (bytes.isNotEmpty) {
+      value.data.asTypedList(bytes.length).setAll(0, bytes);
+    }
     return value;
   });
+
   Uint8List lift(RustBuffer buffer) {
     try {
       if (buffer.length < 0 ||
@@ -90,14 +97,22 @@ final class UniFfiRuntime {
   void release(RustBuffer buffer) => using((arena) {
     final status = arena<RustCallStatus>();
     _free(buffer, status);
-    if (status.ref.code != 0)
+    if (status.ref.code != 0) {
       throw const NativeInteropException('RustBuffer free failed');
+    }
   });
+
   void check(RustCallStatus status, [Object Function(Uint8List)? decodeError]) {
-    if (status.code == 0) return;
+    if (status.code == 0) {
+      return;
+    }
     final bytes = lift(status.error);
-    if (status.code == 1 && decodeError != null) throw decodeError(bytes);
-    if (status.code == 3) throw const NativeCancelledException();
+    if (status.code == 1 && decodeError != null) {
+      throw decodeError(bytes);
+    }
+    if (status.code == 3) {
+      throw const NativeCancelledException();
+    }
     throw NativeInteropException(
       'UniFFI status ${status.code}: ${utf8.decode(bytes, allowMalformed: true)}',
     );
@@ -108,6 +123,7 @@ final class UniFfiRuntime {
 /// A conversion failure releases earlier allocations rather than leaking them.
 final class UniFfiArguments {
   final _cleanup = <void Function()>[];
+
   RustBuffer buffer(UniFfiRuntime runtime, Uint8List bytes) {
     final result = runtime.lower(bytes);
     _cleanup.add(() => runtime.release(result));
@@ -116,6 +132,7 @@ final class UniFfiArguments {
 
   void own(void Function() release) => _cleanup.add(release);
   void transfer() => _cleanup.clear();
+
   void dispose() {
     for (final release in _cleanup.reversed) {
       release();
@@ -125,8 +142,9 @@ final class UniFfiArguments {
 }
 
 int lowerNativeU64(BigInt value) {
-  if (value.isNegative || value.bitLength > 64)
+  if (value.isNegative || value.bitLength > 64) {
     throw RangeError('Value is not u64: $value');
+  }
   return value.toSigned(64).toInt();
 }
 
@@ -135,8 +153,10 @@ final class BoltFfiRuntime {
     : _free = library
           .lookup<NativeFunction<Void Function(BoltBuffer)>>('boltffi_free_buf')
           .asFunction<void Function(BoltBuffer)>();
+
   final NativeLibrary library;
   final void Function(BoltBuffer) _free;
+
   Uint8List lift(BoltBuffer buffer) {
     try {
       if (buffer.length < 0 ||
@@ -153,8 +173,12 @@ final class BoltFfiRuntime {
   }
 
   void check(BoltStatus status) {
-    if (status.code == 0) return;
-    if (status.code == 4) throw const NativeCancelledException();
+    if (status.code == 0) {
+      return;
+    }
+    if (status.code == 4) {
+      throw const NativeCancelledException();
+    }
     throw NativeInteropException('BoltFFI status ${status.code}');
   }
 }
