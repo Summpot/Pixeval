@@ -11,8 +11,9 @@ import 'package:uniffi_dart/uniffi_dart.dart';
 /// Run after build_runner: `dart run tool/benchmark_native.dart library output.json`.
 /// Payloads and iteration counts match the saved pre-migration baseline.
 Future<void> main(List<String> args) async {
-  if (args.length != 2)
+  if (args.length != 2) {
     throw ArgumentError('benchmark_native <library> <output.json>');
+  }
   final results = <Map<String, Object>>[];
   for (final engine in NativeEngine.values) {
     final api = PixevalService(
@@ -93,8 +94,9 @@ Future<void> main(List<String> args) async {
       await api.initDownloadManager(concurrency: 1);
       final event = Completer<void>(), watch = Stopwatch();
       final subscription = api.createDownloadEventStream().listen((value) {
-        if (value is DownloadProgressEvent_Completed && !event.isCompleted)
+        if (value is DownloadProgressEvent_Completed && !event.isCompleted) {
           event.complete();
+        }
       });
       await Future<void>.delayed(const Duration(milliseconds: 50));
       watch.start();

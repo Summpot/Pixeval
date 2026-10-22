@@ -68,12 +68,16 @@ class DownloadItem {
 
   String get formattedSize {
     String formatBytes(BigInt bytes) {
-      final b = bytes.toDouble();
-      if (b >= 1024 * 1024 * 1024)
-        return '${(b / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-      if (b >= 1024 * 1024)
-        return '${(b / (1024 * 1024)).toStringAsFixed(2)} MB';
-      if (b >= 1024) return '${(b / 1024).toStringAsFixed(1)} KB';
+      final bytesAsDouble = bytes.toDouble();
+      if (bytesAsDouble >= 1024 * 1024 * 1024) {
+        return '${(bytesAsDouble / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+      }
+      if (bytesAsDouble >= 1024 * 1024) {
+        return '${(bytesAsDouble / (1024 * 1024)).toStringAsFixed(2)} MB';
+      }
+      if (bytesAsDouble >= 1024) {
+        return '${(bytesAsDouble / 1024).toStringAsFixed(1)} KB';
+      }
       return '$bytes B';
     }
 

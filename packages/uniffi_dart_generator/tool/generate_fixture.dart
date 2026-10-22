@@ -1,14 +1,14 @@
 import 'dart:io';
 
 import 'package:uniffi_dart_build/uniffi_dart_build.dart';
-
-import '../lib/src/emitter.dart';
+import 'package:uniffi_dart_generator/src/emitter.dart';
 
 void main(List<String> args) {
-  if (args.length < 2 || args.length > 3)
+  if (args.length < 2 || args.length > 3) {
     throw ArgumentError(
       'generate_fixture <library> <directory> [bolt-only|uni-only]',
     );
+  }
   final meta = NativeMetadata.read(
     NativeBinary(File(args[0]).readAsBytesSync()).parse(),
   );

@@ -16,11 +16,16 @@ final class CargoConfiguration {
     this.environment = const {},
     required this.targetDirectory,
   });
-  final String manifest, package, targetDirectory;
+
+  final String manifest;
+  final String package;
+  final String targetDirectory;
   final List<String> features;
-  final bool defaultFeatures, release;
+  final bool defaultFeatures;
+  final bool release;
   final String? target;
   final Map<String, String> environment;
+
   List<String> get arguments => [
     'build',
     '--locked',
@@ -36,6 +41,7 @@ final class CargoConfiguration {
     if (!defaultFeatures) '--no-default-features',
     if (features.isNotEmpty) ...['--features', features.join(',')],
   ];
+
   String get key => sha256
       .convert(
         utf8.encode(
@@ -59,15 +65,18 @@ final class CargoArtifact {
 /// Rust syntax. Cargo retains responsibility for native dependency resolution.
 final class CargoBuilder {
   static final _running = <String, Future<CargoArtifact>>{};
+
   Future<CargoArtifact> build(CargoConfiguration config) {
     final existing = _running[config.key];
-    if (existing != null) return existing;
+    if (existing != null) {
+      return existing;
+    }
     final task = _build(config);
     _running[config.key] = task;
     unawaited(
       task.then(
         (_) => _running.remove(config.key),
-        onError: (Object _, StackTrace __) {
+        onError: (Object _, StackTrace _) {
           _running.remove(config.key);
         },
       ),
@@ -88,9 +97,9 @@ final class CargoBuilder {
         environment: config.environment,
       );
       final diagnostics = StringBuffer();
-      final err = process.stderr.transform(utf8.decoder).forEach((s) {
-        diagnostics.write(s);
-        stderr.write(s);
+      final err = process.stderr.transform(utf8.decoder).forEach((chunk) {
+        diagnostics.write(chunk);
+        stderr.write(chunk);
       });
       final files = <String>[];
       String? library;
@@ -113,24 +122,27 @@ final class CargoBuilder {
             files.add(path);
             if (path.endsWith('.dll') ||
                 path.endsWith('.so') ||
-                path.endsWith('.dylib'))
+                path.endsWith('.dylib')) {
               library = path;
+            }
           }
         }
       }
       final exit = await process.exitCode;
       await err;
-      if (exit != 0)
+      if (exit != 0) {
         throw ProcessException(
           'cargo',
           config.arguments,
           diagnostics.toString(),
           exit,
         );
-      if (library == null)
+      }
+      if (library == null) {
         throw StateError(
           'Cargo did not produce a cdylib for ${config.package}; files: $files',
         );
+      }
       return CargoArtifact(library, files);
     } finally {
       await lock.unlock();

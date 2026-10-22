@@ -13,6 +13,7 @@ dependencies:
   dart_style: ^3.1.8
   uniffi_dart_build: ^0.1.0-dev.1
 dev_dependencies:
+  ffi: ^2.1.4
   uniffi_dart: ^0.1.0-dev.1
   test: ^1.31.0
   lints: ^6.0.0

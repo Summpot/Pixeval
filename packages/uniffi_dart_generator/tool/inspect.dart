@@ -4,8 +4,9 @@ import 'dart:io';
 import 'package:uniffi_dart_build/uniffi_dart_build.dart';
 
 void main(List<String> args) {
-  if (args.length != 2)
+  if (args.length != 2) {
     throw ArgumentError('Usage: inspect <native binary> <output JSON>');
+  }
   final metadata = NativeMetadata.read(
     NativeBinary(File(args[0]).readAsBytesSync(), origin: args[0]).parse(),
   );

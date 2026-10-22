@@ -18,15 +18,19 @@ Future<void> buildNativeFfi({
   required BuildOutputBuilder output,
   required String contractPath,
 }) async {
-  if (!input.config.buildCodeAssets) return;
-  final root = p.fromUri(input.packageRoot),
-      contractFile = File(p.join(root, contractPath));
-  if (!contractFile.existsSync())
+  if (!input.config.buildCodeAssets) {
+    return;
+  }
+  final root = p.fromUri(input.packageRoot);
+  final contractFile = File(p.join(root, contractPath));
+  if (!contractFile.existsSync()) {
     throw StateError(
       'Missing $contractPath. Run dart run build_runner build first.',
     );
+  }
   final contract = jsonDecode(await contractFile.readAsString()) as Json;
-  final config = contract['configuration'] as Json, code = input.config.code;
+  final config = contract['configuration'] as Json;
+  final code = input.config.code;
   final target = switch ((code.targetOS, code.targetArchitecture)) {
     (OS.windows, Architecture.x64) => 'x86_64-pc-windows-msvc',
     (OS.android, Architecture.arm64) => 'aarch64-linux-android',
@@ -47,8 +51,9 @@ Future<void> buildNativeFfi({
   };
   if (code.targetOS == OS.android) {
     final compiler = code.cCompiler;
-    if (compiler == null)
+    if (compiler == null) {
       throw StateError('Android NDK compiler is not configured');
+    }
     final directory = p.dirname(p.fromUri(compiler.compiler));
     final clang = p.join(
       directory,
@@ -103,14 +108,18 @@ Future<void> buildNativeFfi({
       origin: artifact.library,
     ).parse(),
   );
-  dynamic canonical(dynamic v) {
-    if (v is Map)
+
+  dynamic canonical(dynamic value) {
+    if (value is Map) {
       return {
-        for (final key in v.keys.cast<String>().toList()..sort())
-          key: canonical(v[key]),
+        for (final key in value.keys.cast<String>().toList()..sort())
+          key: canonical(value[key]),
       };
-    if (v is List) return v.map(canonical).toList();
-    return v;
+    }
+    if (value is List) {
+      return value.map(canonical).toList();
+    }
+    return value;
   }
 
   final hash = sha256
@@ -122,10 +131,11 @@ Future<void> buildNativeFfi({
         ),
       )
       .toString();
-  if (hash != contract['contract_hash'])
+  if (hash != contract['contract_hash']) {
     throw StateError(
       'Native contract changed for $target. Regenerate bindings with dart run build_runner build.',
     );
+  }
   final name = (config['asset_id'] as String).split('/').skip(1).join('/');
   final destination = File(
     p.join(p.fromUri(input.outputDirectory), p.basename(artifact.library)),
@@ -148,12 +158,15 @@ Future<void> buildNativeFfi({
       followLinks: false,
     )) {
       if (entity is File &&
-          !entity.path.contains('${p.separator}target${p.separator}'))
+          !entity.path.contains('${p.separator}target${p.separator}')) {
         output.dependencies.add(entity.uri);
+      }
     }
   }
   for (final filename in ['Cargo.toml', 'Cargo.lock', '.cargo/config.toml']) {
     final file = File(p.join(root, filename));
-    if (file.existsSync()) output.dependencies.add(file.uri);
+    if (file.existsSync()) {
+      output.dependencies.add(file.uri);
+    }
   }
 }

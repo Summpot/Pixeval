@@ -206,8 +206,9 @@ void main() {
     final library = DynamicLibrary.open(path);
     final bindings = bolt_only.NativeBindings(
       NativeLibrary((symbol) {
-        if (symbol.startsWith('uniffi_') || symbol.startsWith('ffi_'))
+        if (symbol.startsWith('uniffi_') || symbol.startsWith('ffi_')) {
           throw StateError('Unexpected UniFFI dependency: $symbol');
+        }
         return library.lookup<Void>(symbol);
       }),
     );
@@ -236,8 +237,9 @@ void main() {
     final library = DynamicLibrary.open(path);
     final bindings = uni_only.NativeBindings(
       NativeLibrary((symbol) {
-        if (symbol.startsWith('boltffi_'))
+        if (symbol.startsWith('boltffi_')) {
           throw StateError('Unexpected BoltFFI dependency: $symbol');
+        }
         return library.lookup<Void>(symbol);
       }),
     );

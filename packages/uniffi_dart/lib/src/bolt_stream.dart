@@ -24,17 +24,22 @@ Stream<T> boltEventStream<T>({
   Future<void>? closing;
   var retained = false;
   void Function()? unregister;
-  Future<void> close() => closing ??= () async {
+
+  Future<void> performClose() async {
     stopped = true;
     resumed?.complete();
     resumed = null;
     final subscription = handle;
-    if (subscription != null) unsubscribe(subscription);
+    if (subscription != null) {
+      unsubscribe(subscription);
+    }
     // unsubscribe acknowledges an outstanding poll with StreamPollResult.Closed.
     // Do not free the subscription or callback while that acknowledgement is queued.
     await pending?.future;
     try {
-      if (subscription != null) free(subscription);
+      if (subscription != null) {
+        free(subscription);
+      }
     } finally {
       listener?.close();
       listener = null;
@@ -45,7 +50,10 @@ Stream<T> boltEventStream<T>({
         owner!.releaseCall();
       }
     }
-  }();
+  }
+
+  Future<void> close() => closing ??= performClose();
+
   Future<void> pump() async {
     try {
       if (owner != null) {
@@ -53,20 +61,24 @@ Stream<T> boltEventStream<T>({
         retained = true;
       }
       handle = subscribe();
-      if (handle == 0)
+      if (handle == 0) {
         throw const NativeInteropException(
           'BoltFFI stream subscription failed',
         );
+      }
       listener = NativeCallable<NativeWake>.listener((int id, int signal) {
-        if (id == generation && pending != null && !pending!.isCompleted)
+        if (id == generation && pending != null && !pending!.isCompleted) {
           pending!.complete(signal);
+        }
       });
       unregister = owner?.onDispose(() => unawaited(close()));
       while (!stopped) {
         if (controller.isPaused) {
           resumed ??= Completer<void>();
           await resumed!.future;
-          if (stopped) break;
+          if (stopped) {
+            break;
+          }
         }
         final batch = readBatch(handle!);
         if (batch.isNotEmpty) {
@@ -85,12 +97,17 @@ Stream<T> boltEventStream<T>({
         }
         final signal = await wake.future;
         pending = null;
-        if (signal == 1) break;
-        if (signal != 0)
+        if (signal == 1) {
+          break;
+        }
+        if (signal != 0) {
           throw NativeInteropException('Unknown BoltFFI stream signal $signal');
+        }
       }
     } catch (error, stack) {
-      if (!stopped) controller.addError(error, stack);
+      if (!stopped) {
+        controller.addError(error, stack);
+      }
     } finally {
       await close();
       unawaited(controller.close());

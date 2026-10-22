@@ -23,6 +23,7 @@ final class NativeFfiBuilder implements Builder {
       '.contract.json',
     ],
   };
+
   @override
   Future<void> build(BuildStep step) async {
     final config = jsonDecode(
@@ -45,8 +46,10 @@ final class NativeFfiBuilder implements Builder {
             .cast<String>();
     for (final pattern in inputs) {
       await for (final id in step.findAssets(Glob(pattern))) {
-        if (!id.path.contains('/target/') && !id.path.contains('/.dart_tool/'))
+        if (!id.path.contains('/target/') &&
+            !id.path.contains('/.dart_tool/')) {
           await step.readAsBytes(id);
+        }
       }
     }
     final manifest = p.normalize(p.join(root, config['manifest'] as String));
@@ -77,8 +80,9 @@ final class NativeFfiBuilder implements Builder {
         origin: artifact.library,
       ).parse(),
     );
-    if (metadata.uniffi.isEmpty && metadata.boltffi.isEmpty)
+    if (metadata.uniffi.isEmpty && metadata.boltffi.isEmpty) {
       throw StateError('Native library contains no supported metadata');
+    }
     final stem = p
         .basename(step.inputId.path)
         .replaceFirst(RegExp(r'\.ffi\.yaml$'), '');
@@ -101,34 +105,34 @@ final class NativeFfiBuilder implements Builder {
       step.inputId.package,
       step.inputId.path.replaceFirst(RegExp(r'\.ffi\.yaml$'), '.contract.json'),
     );
-    await step.writeAsString(
-      contractId,
-      const JsonEncoder.withIndent('  ').convert({
-            'format': 1,
-            'uniffi': '0.32',
-            'boltffi': '0.31.1',
-            'contract_hash': sha256.convert(utf8.encode(canonical)).toString(),
-            'configuration': config,
-            'components':
-                metadata.uniffi
-                    .where((i) => i['kind'] == 'namespace')
-                    .map((i) => i['module'])
-                    .toList()
-                  ..sort(),
-          }) +
-          '\n',
-    );
+    final contractContent = const JsonEncoder.withIndent('  ').convert({
+      'format': 1,
+      'uniffi': '0.32',
+      'boltffi': '0.31.1',
+      'contract_hash': sha256.convert(utf8.encode(canonical)).toString(),
+      'configuration': config,
+      'components':
+          metadata.uniffi
+              .where((i) => i['kind'] == 'namespace')
+              .map((i) => i['module'])
+              .toList()
+            ..sort(),
+    });
+    await step.writeAsString(contractId, '$contractContent\n');
   }
 }
 
 String canonicalJson(dynamic value) {
   dynamic canonical(dynamic v) {
-    if (v is Map)
+    if (v is Map) {
       return {
         for (final key in v.keys.cast<String>().toList()..sort())
           key: canonical(v[key]),
       };
-    if (v is List) return v.map(canonical).toList();
+    }
+    if (v is List) {
+      return v.map(canonical).toList();
+    }
     return v;
   }
 
