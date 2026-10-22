@@ -1,0 +1,40 @@
+[
+  {
+    "engine": "uniffi",
+    "mode": "Dart JIT, native debug",
+    "sdk": "3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"windows_x64\"",
+    "version": {
+      "iterations": 500,
+      "mean_us": 7.138
+    },
+    "records_50": {
+      "iterations": 100,
+      "mean_us": 308.64
+    },
+    "cached_bytes_1mb": {
+      "iterations": 30,
+      "mean_us": 25594.7
+    },
+    "download_and_event_us": 34428,
+    "rss_bytes": 267304960
+  },
+  {
+    "engine": "boltffi",
+    "mode": "Dart JIT, native debug",
+    "sdk": "3.13.4 (stable) (Tue Sep 15 01:01:15 2026 -0700) on \"windows_x64\"",
+    "version": {
+      "iterations": 500,
+      "mean_us": 3.29
+    },
+    "records_50": {
+      "iterations": 100,
+      "mean_us": 309.92
+    },
+    "cached_bytes_1mb": {
+      "iterations": 30,
+      "mean_us": 1793.6
+    },
+    "download_and_event_us": 27044,
+    "rss_bytes": 286855168
+  }
+]

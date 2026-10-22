@@ -7,12 +7,11 @@ import 'package:path_provider/path_provider.dart';
 
 import 'src/deeplink/deeplink_handler.dart';
 import 'src/platform/display_mode_service.dart';
-import 'src/rust/api/download.dart';
-import 'src/rust/api/events.dart';
-import 'src/rust/api/image.dart';
-import 'src/rust/api/storage.dart';
-import 'src/rust/frb_generated.dart';
-import 'src/rust/stream_helpers.dart';
+import 'src/native/api/download.dart';
+import 'src/native/api/image.dart';
+import 'src/native/api/storage.dart';
+import 'src/native/native_api.dart';
+import 'src/native/stream_helpers.dart';
 import 'src/state/auth_state.dart';
 import 'src/ui/home_shell.dart';
 import 'src/ui/login_page.dart';
@@ -30,10 +29,10 @@ Future<void> main() async {
 
   var rustLibInitialized = false;
   try {
-    await RustLib.init();
+    await NativeApi.init();
     rustLibInitialized = true;
   } catch (e, stack) {
-    debugPrint('Failed to initialize RustLib: $e\n$stack');
+    debugPrint('Failed to initialize NativeApi: $e\n$stack');
   }
 
   if (rustLibInitialized) {
@@ -59,9 +58,9 @@ Future<void> main() async {
     }
   }
 
-  runApp(ProviderScope(
-    child: PixevalApp(rustLibInitialized: rustLibInitialized),
-  ));
+  runApp(
+    ProviderScope(child: PixevalApp(rustLibInitialized: rustLibInitialized)),
+  );
 }
 
 class PixevalApp extends ConsumerStatefulWidget {
@@ -230,7 +229,7 @@ class _PixevalAppState extends ConsumerState<PixevalApp>
                 const Icon(Icons.error_outline, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
                 const Text(
-                  'Failed to load Rust native library (libpixeval_flutter_bridge.so).',
+                  'Failed to load the Pixeval native library.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
@@ -238,7 +237,9 @@ class _PixevalAppState extends ConsumerState<PixevalApp>
                 Text(
                   'Please verify native binaries are compiled for this platform ABI.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                  ),
                 ),
               ],
             ),
@@ -246,11 +247,7 @@ class _PixevalAppState extends ConsumerState<PixevalApp>
         ),
       );
     } else if (authState.isLoading) {
-      homeWidget = const Scaffold(
-        body: Center(
-          child: SizedBox.shrink(),
-        ),
-      );
+      homeWidget = const Scaffold(body: Center(child: SizedBox.shrink()));
     } else if (authState.isLoggedIn || authState.isGuestMode) {
       homeWidget = const HomeShell();
     } else {

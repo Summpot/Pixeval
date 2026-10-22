@@ -1,0 +1,12 @@
+[package]
+name = "uniffi_dart_callback_probe"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+# This dependency-free native test fixture is deliberately independent of the
+# application workspace. UniFFIDart itself contains no Rust implementation.
+[workspace]

@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../rust/api/feed.dart';
+import '../native/api/feed.dart';
 import 'auth_state.dart';
 
 IllustSummary updateIllustBookmark(IllustSummary item, bool isBookmarked) {

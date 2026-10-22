@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../constants/app_assets.dart';
-import '../rust/api/auth.dart';
+import '../native/api/auth.dart';
 import '../state/auth_state.dart';
 import 'network_settings_page.dart';
 
@@ -120,9 +120,8 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('生成授权链接失败: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('生成授权链接失败: $e')));
       }
     }
   }
@@ -132,18 +131,16 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
     if (url == null) return;
     await Clipboard.setData(ClipboardData(text: url));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('授权链接已复制到剪贴板')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('授权链接已复制到剪贴板')));
     }
   }
 
   Future<void> _handleOAuthLogin() async {
     final rawInput = _callbackUrlController.text.trim();
     if (rawInput.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入回调链接或授权码')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('请输入回调链接或授权码')));
       return;
     }
 
@@ -156,9 +153,8 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
       if (widget.isModal && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('登录成功！已自动保存凭据。')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('登录成功！已自动保存凭据。')));
     }
   }
 
@@ -168,9 +164,8 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
       final text = data?.text?.trim();
       if (text == null || text.isEmpty) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('剪贴板中没有内容')),
-          );
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text('剪贴板中没有内容')));
         }
         return;
       }
@@ -178,9 +173,8 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
       await _handleOAuthLogin();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('读取剪贴板失败: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('读取剪贴板失败: $e')));
       }
     }
   }
@@ -195,9 +189,8 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
       if (widget.isModal && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('登录成功！')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('登录成功！')));
     }
   }
 
@@ -248,7 +241,11 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.shield_outlined, color: Colors.amber, size: 20),
+                        const Icon(
+                          Icons.shield_outlined,
+                          color: Colors.amber,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -264,7 +261,11 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
                     const SizedBox(height: 6),
                     Text(
                       'Pixiv 在部分地区受到 SNI 连接干扰。Pixeval 内置了 SNI 分片与免代理直连能力，可前往进行测速与配置。',
-                      style: TextStyle(fontSize: 13, color: Colors.brown[700], height: 1.4),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.brown[700],
+                        height: 1.4,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     FilledButton.tonalIcon(
@@ -367,9 +368,7 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
             tooltip: '网络与免代理设置',
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const NetworkSettingsPage(),
-                ),
+                MaterialPageRoute(builder: (_) => const NetworkSettingsPage()),
               );
             },
           ),
@@ -385,7 +384,10 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 440),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 12.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -393,7 +395,9 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
                   const SizedBox(height: 24),
                   Container(
                     decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      color: colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.5,
+                      ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: TabBar(
@@ -429,7 +433,10 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
                         icon: const Icon(Icons.arrow_forward_rounded, size: 18),
                         label: const Text(
                           '暂不登录，以访客模式浏览',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         onPressed: () {
                           ref.read(authProvider.notifier).enterGuestMode();
@@ -513,7 +520,9 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
     final activeVerifier = _pkceParams?.codeVerifier ?? _savedVerifier;
     final isVerifierReady = activeVerifier != null && activeVerifier.isNotEmpty;
     final inputTrim = _callbackUrlController.text.trim();
-    final isLoginUrl = inputTrim.contains('/web/v1/login') || inputTrim.contains('code_challenge=');
+    final isLoginUrl =
+        inputTrim.contains('/web/v1/login') ||
+        inputTrim.contains('code_challenge=');
 
     return Form(
       key: _formKeyOAuth,
@@ -523,7 +532,9 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
           FilledButton.icon(
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: authState.isLoading ? null : _generatePkce,
             icon: const Icon(Icons.open_in_browser_rounded),
@@ -547,15 +558,26 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
           ],
           Row(
             children: [
-              Expanded(child: Divider(color: colorScheme.outlineVariant.withValues(alpha: 0.5))),
+              Expanded(
+                child: Divider(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Text(
                   '完成授权后返回',
-                  style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
-              Expanded(child: Divider(color: colorScheme.outlineVariant.withValues(alpha: 0.5))),
+              Expanded(
+                child: Divider(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -578,7 +600,9 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
                       icon: const Icon(Icons.paste_rounded),
                       tooltip: '粘贴',
                       onPressed: () async {
-                        final data = await Clipboard.getData(Clipboard.kTextPlain);
+                        final data = await Clipboard.getData(
+                          Clipboard.kTextPlain,
+                        );
                         if (data?.text != null) {
                           setState(() {
                             _callbackUrlController.text = data!.text!.trim();
@@ -586,7 +610,9 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
                         }
                       },
                     ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -602,12 +628,20 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
               child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 18),
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.orange,
+                    size: 18,
+                  ),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       '提示：当前输入框中是发起授权的登录链接（包含 code_challenge），而非授权完成后的回调链接。\n请在打开的浏览器中完成登录，若网页提示【无法打开网页】，复制浏览器地址栏中包含 code= 的完整网址即可。',
-                      style: TextStyle(color: Colors.orange, fontSize: 12, height: 1.3),
+                      style: TextStyle(
+                        color: Colors.orange,
+                        fontSize: 12,
+                        height: 1.3,
+                      ),
                     ),
                   ),
                 ],
@@ -626,12 +660,20 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.error_outline_rounded, color: Colors.red, size: 18),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: Colors.red,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       authState.errorMessage!,
-                      style: const TextStyle(color: Colors.red, fontSize: 13, height: 1.35),
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
                     ),
                   ),
                 ],
@@ -645,9 +687,13 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                  onPressed: authState.isLoading ? null : _pasteFromClipboardAndLogin,
+                  onPressed: authState.isLoading
+                      ? null
+                      : _pasteFromClipboardAndLogin,
                   icon: const Icon(Icons.content_paste_go_rounded, size: 18),
                   label: const Text('从剪贴板粘贴'),
                 ),
@@ -657,14 +703,19 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   onPressed: authState.isLoading ? null : _handleOAuthLogin,
                   icon: authState.isLoading
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Icon(Icons.login_rounded, size: 18),
                   label: Text(authState.isLoading ? '验证中...' : '完成登录'),
@@ -706,7 +757,9 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
                       icon: const Icon(Icons.paste_rounded),
                       tooltip: '粘贴',
                       onPressed: () async {
-                        final data = await Clipboard.getData(Clipboard.kTextPlain);
+                        final data = await Clipboard.getData(
+                          Clipboard.kTextPlain,
+                        );
                         if (data?.text != null) {
                           setState(() {
                             _tokenController.text = data!.text!.trim();
@@ -714,7 +767,9 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
                         }
                       },
                     ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             validator: (val) {
               if (val == null || val.trim().isEmpty) {
@@ -735,14 +790,19 @@ class _LoginGuidePageState extends ConsumerState<LoginGuidePage>
           FilledButton.icon(
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: authState.isLoading ? null : _handleTokenLogin,
             icon: authState.isLoading
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                 : const Icon(Icons.login_rounded),
             label: Text(

@@ -4,7 +4,7 @@ import 'package:extended_image/extended_image.dart';
 
 import '../../constants/app_assets.dart';
 import '../../image/rust_image_provider.dart';
-import '../../rust/api/feed.dart';
+import '../../native/api/feed.dart';
 import '../artwork_detail_page.dart';
 import 'blur_up.dart';
 

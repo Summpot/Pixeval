@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import '../../rust/api/image.dart';
-import '../../rust/api/ugoira.dart';
+
+import '../../native/api/image.dart';
+import '../../native/api/ugoira.dart';
 
 class UgoiraPlayerWidget extends StatefulWidget {
   final int illustId;
@@ -68,7 +70,9 @@ class _UgoiraPlayerWidgetState extends State<UgoiraPlayerWidget> {
 
       if (mounted) {
         setState(() {
-          _frames = extracted.frameBytes.map((b) => Uint8List.fromList(b)).toList();
+          _frames = extracted.frameBytes
+              .map((b) => Uint8List.fromList(b))
+              .toList();
           _delays = extracted.delays;
           _isLoading = false;
         });
@@ -133,7 +137,8 @@ class _UgoiraPlayerWidgetState extends State<UgoiraPlayerWidget> {
       final zipFile = File('${tempDir.path}/ugoira_${widget.illustId}.zip');
       await zipFile.writeAsBytes(_zipBytes!);
 
-      final outFile = '${tempDir.path}/ugoira_${widget.illustId}.${format.toLowerCase()}';
+      final outFile =
+          '${tempDir.path}/ugoira_${widget.illustId}.${format.toLowerCase()}';
       final delays = _metadata!.frames.map((f) => f.delay).toList();
 
       await exportUgoira(
@@ -151,10 +156,7 @@ class _UgoiraPlayerWidgetState extends State<UgoiraPlayerWidget> {
       );
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(
-          content: Text('导出失败: $e'),
-          backgroundColor: Colors.red[800],
-        ),
+        SnackBar(content: Text('导出失败: $e'), backgroundColor: Colors.red[800]),
       );
     }
   }
@@ -189,7 +191,10 @@ class _UgoiraPlayerWidgetState extends State<UgoiraPlayerWidget> {
             children: [
               const Icon(Icons.error_outline, color: Colors.red, size: 40),
               const SizedBox(height: 8),
-              Text('加载动图失败: $_errorMessage', style: const TextStyle(color: Colors.white70)),
+              Text(
+                '加载动图失败: $_errorMessage',
+                style: const TextStyle(color: Colors.white70),
+              ),
               const SizedBox(height: 8),
               FilledButton.tonal(
                 onPressed: _loadUgoira,
@@ -230,7 +235,10 @@ class _UgoiraPlayerWidgetState extends State<UgoiraPlayerWidget> {
                   children: [
                     Text(
                       '${_currentFrame + 1} / ${_frames.length}',
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
                     ),
                     Expanded(
                       child: Slider(
@@ -253,7 +261,10 @@ class _UgoiraPlayerWidgetState extends State<UgoiraPlayerWidget> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.skip_previous, color: Colors.white),
+                      icon: const Icon(
+                        Icons.skip_previous,
+                        color: Colors.white,
+                      ),
                       onPressed: () => _stepFrame(-1),
                       tooltip: '上一帧',
                     ),
@@ -291,14 +302,26 @@ class _UgoiraPlayerWidgetState extends State<UgoiraPlayerWidget> {
                     ),
                     // Export Menu
                     PopupMenuButton<String>(
-                      icon: const Icon(Icons.file_download, color: Colors.white),
+                      icon: const Icon(
+                        Icons.file_download,
+                        color: Colors.white,
+                      ),
                       tooltip: '导出动图',
                       onSelected: _export,
                       itemBuilder: (_) => [
-                        const PopupMenuItem(value: 'gif', child: Text('导出为 GIF')),
-                        const PopupMenuItem(value: 'webp', child: Text('导出为 WebP')),
+                        const PopupMenuItem(
+                          value: 'gif',
+                          child: Text('导出为 GIF'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'webp',
+                          child: Text('导出为 WebP'),
+                        ),
                         if (!Platform.isAndroid && !Platform.isIOS)
-                          const PopupMenuItem(value: 'mp4', child: Text('导出为 MP4 视频 (桌面)')),
+                          const PopupMenuItem(
+                            value: 'mp4',
+                            child: Text('导出为 MP4 视频 (桌面)'),
+                          ),
                       ],
                     ),
                   ],

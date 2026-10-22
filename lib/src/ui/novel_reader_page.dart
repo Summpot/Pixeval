@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../rust/api/novel.dart';
+
+import '../native/api/novel.dart';
 import '../state/history_state.dart';
 
 enum NovelReaderTheme {
@@ -32,11 +33,7 @@ class NovelReaderPage extends ConsumerStatefulWidget {
   final int novelId;
   final String? initialTitle;
 
-  const NovelReaderPage({
-    super.key,
-    required this.novelId,
-    this.initialTitle,
-  });
+  const NovelReaderPage({super.key, required this.novelId, this.initialTitle});
 
   @override
   ConsumerState<NovelReaderPage> createState() => _NovelReaderPageState();
@@ -84,7 +81,9 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage> {
           _content = content;
           _isLoading = false;
         });
-        ref.read(browseHistoryProvider.notifier).recordNovel(
+        ref
+            .read(browseHistoryProvider.notifier)
+            .recordNovel(
               novelId: widget.novelId,
               title: detail.title,
               coverUrl: detail.coverUrl,
@@ -128,9 +127,16 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage> {
             return Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: _theme.text.withValues(alpha: 0.12))),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: _theme.text.withValues(alpha: 0.12),
+                      ),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -176,16 +182,22 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage> {
                                   color: isCurrent
                                       ? Theme.of(context).colorScheme.primary
                                       : _theme.text.withValues(alpha: 0.5),
-                                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                                  fontWeight: isCurrent
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
                                 ),
                               ),
                               title: Text(
-                                ch.title.isEmpty ? 'Chapter ${idx + 1}' : ch.title,
+                                ch.title.isEmpty
+                                    ? 'Chapter ${idx + 1}'
+                                    : ch.title,
                                 style: TextStyle(
                                   color: isCurrent
                                       ? Theme.of(context).colorScheme.primary
                                       : _theme.text,
-                                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                                  fontWeight: isCurrent
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
                                 ),
                               ),
                               trailing: Text(
@@ -218,7 +230,9 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage> {
                                   color: isCurrent
                                       ? Theme.of(context).colorScheme.primary
                                       : _theme.text,
-                                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                                  fontWeight: isCurrent
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
                                 ),
                               ),
                               onTap: () {
@@ -271,7 +285,10 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage> {
                   // Font Family
                   Text(
                     'Font Family',
-                    style: TextStyle(color: _theme.text.withValues(alpha: 0.7), fontSize: 13),
+                    style: TextStyle(
+                      color: _theme.text.withValues(alpha: 0.7),
+                      fontSize: 13,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
@@ -295,7 +312,10 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage> {
                   // Line Height
                   Text(
                     'Line Spacing',
-                    style: TextStyle(color: _theme.text.withValues(alpha: 0.7), fontSize: 13),
+                    style: TextStyle(
+                      color: _theme.text.withValues(alpha: 0.7),
+                      fontSize: 13,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
@@ -342,17 +362,27 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.grey,
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       'Failed to load novel',
-                      style: TextStyle(color: _theme.text, fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: _theme.text,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       _errorMessage!,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: _theme.text.withValues(alpha: 0.7)),
+                      style: TextStyle(
+                        color: _theme.text.withValues(alpha: 0.7),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     FilledButton(
@@ -384,7 +414,10 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage> {
                 itemBuilder: (context, index) {
                   return SafeArea(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24.0,
+                        vertical: 20.0,
+                      ),
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
                         child: Text(
@@ -505,13 +538,20 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage> {
                       children: [
                         Text(
                           '${_currentPage + 1}',
-                          style: TextStyle(color: _theme.text, fontSize: 13, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: _theme.text,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Expanded(
                           child: Slider(
                             value: _currentPage.toDouble(),
                             min: 0,
-                            max: (pages.length - 1).toDouble().clamp(0.0, double.infinity),
+                            max: (pages.length - 1).toDouble().clamp(
+                              0.0,
+                              double.infinity,
+                            ),
                             divisions: pages.length > 1 ? pages.length - 1 : 1,
                             onChanged: (val) {
                               final target = val.round();
@@ -521,7 +561,11 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage> {
                         ),
                         Text(
                           '${pages.length}',
-                          style: TextStyle(color: _theme.text, fontSize: 13, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: _theme.text,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
@@ -541,7 +585,11 @@ class _NovelReaderPageState extends ConsumerState<NovelReaderPage> {
                           ),
                           Text(
                             '${_fontSize.round()}',
-                            style: TextStyle(color: _theme.text, fontSize: 14, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: _theme.text,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           IconButton(
                             icon: Icon(Icons.text_increase, color: _theme.text),

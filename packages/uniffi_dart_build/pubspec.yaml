@@ -1,0 +1,14 @@
+name: uniffi_dart_build
+description: Pure Dart Cargo build and Flutter native assets integration.
+version: 0.1.0-dev.1
+repository: https://github.com/Summpot/Pixeval
+environment:
+  sdk: '>=3.13.4 <4.0.0'
+dependencies:
+  crypto: ^3.0.7
+  hooks: ^2.2.0
+  code_assets: ^2.1.0
+  path: ^1.9.1
+dev_dependencies:
+  test: ^1.31.0
+  lints: ^6.0.0

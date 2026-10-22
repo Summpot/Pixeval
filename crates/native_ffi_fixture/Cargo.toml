@@ -1,0 +1,18 @@
+[package]
+name = "native_ffi_fixture"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+uniffi = { workspace = true, features = ["tokio"] }
+boltffi.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "time", "sync"] }
+thiserror.workspace = true
+async-compat.workspace = true
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ["cfg(boltffi_metadata)"] }

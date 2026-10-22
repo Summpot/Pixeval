@@ -1,26 +1,33 @@
 import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../rust/api/download.dart';
-import '../rust/api/feed.dart';
-import '../rust/stream_helpers.dart';
 
-const MethodChannel _foregroundChannel =
-    MethodChannel('io.github.pixeval.pixeval_flutter/foreground');
+import '../native/api/download.dart';
+import '../native/api/feed.dart';
+import '../native/stream_helpers.dart';
+
+const MethodChannel _foregroundChannel = MethodChannel(
+  'io.github.pixeval.pixeval_flutter/foreground',
+);
 
 void _notifyForegroundStart(String title) {
   try {
-    _foregroundChannel.invokeMethod('startService', {'title': title}).catchError((_) => null);
+    _foregroundChannel
+        .invokeMethod('startService', {'title': title})
+        .catchError((_) => null);
   } catch (_) {}
 }
 
 void _notifyForegroundUpdate(String title, int progress, int max) {
   try {
-    _foregroundChannel.invokeMethod('updateProgress', {
-      'title': title,
-      'progress': progress,
-      'max': max,
-    }).catchError((_) => null);
+    _foregroundChannel
+        .invokeMethod('updateProgress', {
+          'title': title,
+          'progress': progress,
+          'max': max,
+        })
+        .catchError((_) => null);
   } catch (_) {}
 }
 
@@ -53,7 +60,8 @@ class DownloadItem {
     this.errorMessage,
   });
 
-  bool get isRunning => state == 'Running' || state == 'Downloading' || state == 'Queued';
+  bool get isRunning =>
+      state == 'Running' || state == 'Downloading' || state == 'Queued';
   bool get isCompleted => state == 'Completed';
   bool get isPaused => state == 'Paused';
   bool get isError => state == 'Error' || state == 'Failed';
@@ -61,8 +69,10 @@ class DownloadItem {
   String get formattedSize {
     String formatBytes(BigInt bytes) {
       final b = bytes.toDouble();
-      if (b >= 1024 * 1024 * 1024) return '${(b / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-      if (b >= 1024 * 1024) return '${(b / (1024 * 1024)).toStringAsFixed(2)} MB';
+      if (b >= 1024 * 1024 * 1024)
+        return '${(b / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+      if (b >= 1024 * 1024)
+        return '${(b / (1024 * 1024)).toStringAsFixed(2)} MB';
       if (b >= 1024) return '${(b / 1024).toStringAsFixed(1)} KB';
       return '$bytes B';
     }
@@ -132,22 +142,27 @@ class DownloadNotifier extends Notifier<DownloadManagerState> {
     _subscription?.cancel();
     _subscription = getAppDownloadEventStream().listen((event) {
       event.when(
-        progressUpdated: (destination, progressPercentage, downloadedBytes, totalBytes) {
-          final current = state.items[destination];
-          if (current != null) {
-            final updated = current.copyWith(
-              progressPercentage: progressPercentage,
-              downloadedBytes: downloadedBytes,
-              totalBytes: totalBytes,
-              state: 'Running',
-            );
-            final newMap = Map<String, DownloadItem>.from(state.items);
-            newMap[destination] = updated;
-            state = state.copyWith(items: newMap);
+        progressUpdated:
+            (destination, progressPercentage, downloadedBytes, totalBytes) {
+              final current = state.items[destination];
+              if (current != null) {
+                final updated = current.copyWith(
+                  progressPercentage: progressPercentage,
+                  downloadedBytes: downloadedBytes,
+                  totalBytes: totalBytes,
+                  state: 'Running',
+                );
+                final newMap = Map<String, DownloadItem>.from(state.items);
+                newMap[destination] = updated;
+                state = state.copyWith(items: newMap);
 
-            _notifyForegroundUpdate(current.title, progressPercentage.toInt(), 100);
-          }
-        },
+                _notifyForegroundUpdate(
+                  current.title,
+                  progressPercentage.toInt(),
+                  100,
+                );
+              }
+            },
         stateChanged: (destination, taskState, errorMessage) {
           final current = state.items[destination];
           if (current != null) {
@@ -190,11 +205,15 @@ class DownloadNotifier extends Notifier<DownloadManagerState> {
   }) async {
     final downloadUrls = illust.originalPageUrls.isNotEmpty
         ? illust.originalPageUrls
-        : (illust.originalUrl.isNotEmpty ? [illust.originalUrl] : illust.pageUrls);
+        : (illust.originalUrl.isNotEmpty
+              ? [illust.originalUrl]
+              : illust.pageUrls);
 
     final url = (pageIndex < downloadUrls.length)
         ? downloadUrls[pageIndex]
-        : (illust.originalUrl.isNotEmpty ? illust.originalUrl : illust.previewUrl);
+        : (illust.originalUrl.isNotEmpty
+              ? illust.originalUrl
+              : illust.previewUrl);
 
     final ext = url.split('.').last.split('?').first;
     final filename = '${illust.id}_p$pageIndex.$ext';
@@ -258,4 +277,6 @@ class DownloadNotifier extends Notifier<DownloadManagerState> {
 }
 
 final downloadProvider =
-    NotifierProvider<DownloadNotifier, DownloadManagerState>(DownloadNotifier.new);
+    NotifierProvider<DownloadNotifier, DownloadManagerState>(
+      DownloadNotifier.new,
+    );

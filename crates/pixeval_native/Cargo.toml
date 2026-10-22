@@ -24,3 +24,16 @@ pixeval_media.workspace = true
 pixeval_booru.workspace = true
 pixeval_saucenao.workspace = true
 pixeval_update.workspace = true
+tokio = { workspace = true, features = ["full"] }
+parking_lot.workspace = true
+chrono.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+zip.workspace = true
+futures-util.workspace = true
+url.workspace = true
+async-compat.workspace = true
+getrandom = "0.4"
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ["cfg(boltffi_metadata)"] }

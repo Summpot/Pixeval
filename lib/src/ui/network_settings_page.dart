@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../state/network_state.dart';
 
 class NetworkSettingsPage extends ConsumerStatefulWidget {
   const NetworkSettingsPage({super.key});
 
   @override
-  ConsumerState<NetworkSettingsPage> createState() => _NetworkSettingsPageState();
+  ConsumerState<NetworkSettingsPage> createState() =>
+      _NetworkSettingsPageState();
 }
 
 class _NetworkSettingsPageState extends ConsumerState<NetworkSettingsPage> {
@@ -28,7 +30,13 @@ class _NetworkSettingsPageState extends ConsumerState<NetworkSettingsPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('$selected ms', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(
+                '$selected ms',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               Slider(
                 value: selected.toDouble().clamp(0.0, 500.0),
                 min: 0,
@@ -46,7 +54,10 @@ class _NetworkSettingsPageState extends ConsumerState<NetworkSettingsPage> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
             FilledButton(
               onPressed: () {
                 ref.read(networkProvider.notifier).updateSplitDelay(selected);
@@ -61,7 +72,9 @@ class _NetworkSettingsPageState extends ConsumerState<NetworkSettingsPage> {
   }
 
   void _showHostIpsDialog(BuildContext context, String currentJson) {
-    _hostIpsController.text = currentJson.isEmpty ? '{\n  "app-api.pixiv.net": ["210.140.92.140"],\n  "i.pximg.net": ["210.140.92.142"]\n}' : currentJson;
+    _hostIpsController.text = currentJson.isEmpty
+        ? '{\n  "app-api.pixiv.net": ["210.140.92.140"],\n  "i.pximg.net": ["210.140.92.142"]\n}'
+        : currentJson;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -71,7 +84,10 @@ class _NetworkSettingsPageState extends ConsumerState<NetworkSettingsPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('配置域名到静态直连 IP 列表的 JSON 映射：', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const Text(
+                '配置域名到静态直连 IP 列表的 JSON 映射：',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
               const SizedBox(height: 8),
               TextField(
                 controller: _hostIpsController,
@@ -83,10 +99,15 @@ class _NetworkSettingsPageState extends ConsumerState<NetworkSettingsPage> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
           FilledButton(
             onPressed: () {
-              ref.read(networkProvider.notifier).updateHostIps(_hostIpsController.text.trim());
+              ref
+                  .read(networkProvider.notifier)
+                  .updateHostIps(_hostIpsController.text.trim());
               Navigator.pop(ctx);
             },
             child: const Text('保存'),
@@ -103,9 +124,7 @@ class _NetworkSettingsPageState extends ConsumerState<NetworkSettingsPage> {
     final delay = (cfg?.splitDelayMs ?? BigInt.from(100)).toInt();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('网络与抗封锁配置'),
-      ),
+      appBar: AppBar(title: const Text('网络与抗封锁配置')),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
@@ -122,9 +141,8 @@ class _NetworkSettingsPageState extends ConsumerState<NetworkSettingsPage> {
                       const SizedBox(width: 8),
                       Text(
                         'Pixeval Maho 核心引擎',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -137,10 +155,14 @@ class _NetworkSettingsPageState extends ConsumerState<NetworkSettingsPage> {
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('域前置与 SNI 伪装绕过'),
-                    subtitle: const Text('拦截并分片 app-api.pixiv.net 及 i.pximg.net 的 TLS 握手'),
+                    subtitle: const Text(
+                      '拦截并分片 app-api.pixiv.net 及 i.pximg.net 的 TLS 握手',
+                    ),
                     value: cfg?.domainFrontingEnabled ?? true,
                     onChanged: (val) {
-                      ref.read(networkProvider.notifier).toggleDomainFronting(val);
+                      ref
+                          .read(networkProvider.notifier)
+                          .toggleDomainFronting(val);
                     },
                   ),
                   ListTile(
@@ -153,11 +175,15 @@ class _NetworkSettingsPageState extends ConsumerState<NetworkSettingsPage> {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('自定义 DNS / Host 静态 IP 映射'),
-                    subtitle: Text(cfg?.hostIpsJson.isNotEmpty == true && cfg?.hostIpsJson != '{}'
-                        ? '已配置静态 IP 映射'
-                        : '未配置（点击添加）'),
+                    subtitle: Text(
+                      cfg?.hostIpsJson.isNotEmpty == true &&
+                              cfg?.hostIpsJson != '{}'
+                          ? '已配置静态 IP 映射'
+                          : '未配置（点击添加）',
+                    ),
                     trailing: const Icon(Icons.dns_outlined),
-                    onTap: () => _showHostIpsDialog(context, cfg?.hostIpsJson ?? '{}'),
+                    onTap: () =>
+                        _showHostIpsDialog(context, cfg?.hostIpsJson ?? '{}'),
                   ),
                 ],
               ),
@@ -177,9 +203,8 @@ class _NetworkSettingsPageState extends ConsumerState<NetworkSettingsPage> {
                       const SizedBox(width: 8),
                       Text(
                         '连通性与延迟诊断',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -236,7 +261,9 @@ class _NetworkSettingsPageState extends ConsumerState<NetworkSettingsPage> {
                     child: FilledButton.tonalIcon(
                       onPressed: netState.isTesting
                           ? null
-                          : () => ref.read(networkProvider.notifier).testConnection(),
+                          : () => ref
+                                .read(networkProvider.notifier)
+                                .testConnection(),
                       icon: netState.isTesting
                           ? const SizedBox(
                               width: 16,
@@ -244,7 +271,9 @@ class _NetworkSettingsPageState extends ConsumerState<NetworkSettingsPage> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.refresh),
-                      label: Text(netState.isTesting ? '正在诊断直连中...' : '测试 Pixiv API 连通性'),
+                      label: Text(
+                        netState.isTesting ? '正在诊断直连中...' : '测试 Pixiv API 连通性',
+                      ),
                     ),
                   ),
                 ],

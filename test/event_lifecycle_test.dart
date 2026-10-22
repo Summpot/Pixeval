@@ -1,28 +1,24 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pixeval_flutter/src/rust/api/events.dart';
-import 'package:pixeval_flutter/src/rust/frb_generated.dart';
-import 'package:pixeval_flutter/src/rust/stream_helpers.dart';
+import 'package:pixeval_flutter/src/native/api/events.dart';
+import 'package:pixeval_flutter/src/native/native_api.dart';
+import 'package:pixeval_flutter/src/native/stream_helpers.dart';
 
 import 'widget_test.dart' as mocks;
 
-class EventApi extends mocks.MockRustLibApi {
+class EventApi extends mocks.MockPixevalApi {
   final sources = <String, StreamController<SessionEvent>>{};
   final stopped = <String>[];
   @override
-  Stream<SessionEvent> crateApiEventsCreateSessionEventStream({
-    String? streamId,
-  }) {
+  Stream<SessionEvent> createSessionEventStream({String? streamId}) {
     final controller = StreamController<SessionEvent>();
     sources[streamId!] = controller;
     return controller.stream;
   }
 
   @override
-  Future<void> crateApiEventsCancelSessionEventStream({
-    String? streamId,
-  }) async {
+  Future<void> cancelSessionEventStream({String? streamId}) async {
     stopped.add(streamId!);
     await sources[streamId]?.close();
   }
@@ -31,7 +27,7 @@ class EventApi extends mocks.MockRustLibApi {
 void main() {
   test('last broadcast listener releases Rust and a later listener opens a new source', () async {
     final api = EventApi();
-    RustLib.initMock(api: api);
+    NativeApi.initMock(api: api);
     try {
       final first = getAppSessionEventStream().listen((_) {});
       final event = Completer<SessionEvent>();
@@ -54,7 +50,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       expect(api.stopped, hasLength(2));
     } finally {
-      RustLib.dispose();
+      NativeApi.dispose();
     }
   });
 }

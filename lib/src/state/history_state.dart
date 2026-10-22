@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../rust/api/feed.dart';
-import '../rust/api/storage.dart';
+
+import '../native/api/feed.dart';
+import '../native/api/storage.dart';
 
 class BrowseHistoryNotifier extends Notifier<List<BrowseHistoryItemDto>> {
   @override
@@ -57,8 +58,8 @@ class BrowseHistoryNotifier extends Notifier<List<BrowseHistoryItemDto>> {
 
 final browseHistoryProvider =
     NotifierProvider<BrowseHistoryNotifier, List<BrowseHistoryItemDto>>(
-  BrowseHistoryNotifier.new,
-);
+      BrowseHistoryNotifier.new,
+    );
 
 class SearchHistoryNotifier extends Notifier<List<SearchHistoryItemDto>> {
   @override
@@ -98,5 +99,5 @@ class SearchHistoryNotifier extends Notifier<List<SearchHistoryItemDto>> {
 
 final searchHistoryProvider =
     NotifierProvider<SearchHistoryNotifier, List<SearchHistoryItemDto>>(
-  SearchHistoryNotifier.new,
-);
+      SearchHistoryNotifier.new,
+    );

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../rust/api/deeplink.dart';
-import '../rust/api/feed.dart';
+import '../native/api/deeplink.dart';
+import '../native/api/feed.dart';
 import '../ui/artwork_detail_page.dart';
 import '../ui/novel_reader_page.dart';
 

@@ -4,10 +4,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../constants/app_assets.dart';
 import '../image/rust_image_provider.dart';
-import '../rust/api/booru.dart';
-import '../rust/api/feed.dart';
-import '../rust/api/image.dart';
-import '../rust/api/saucenao.dart';
+import '../native/api/booru.dart';
+import '../native/api/feed.dart';
+import '../native/api/image.dart';
+import '../native/api/saucenao.dart';
 import '../state/history_state.dart';
 import '../state/search_state.dart';
 import 'artwork_detail_page.dart';
@@ -327,7 +327,11 @@ class _SearchPageState extends ConsumerState<_SearchView> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Image.asset(AppAssets.platformYandere, width: 20, height: 20),
+                                Image.asset(
+                                  AppAssets.platformYandere,
+                                  width: 20,
+                                  height: 20,
+                                ),
                                 const SizedBox(width: 8),
                                 const Text('Yande.re'),
                               ],
@@ -338,7 +342,11 @@ class _SearchPageState extends ConsumerState<_SearchView> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Image.asset(AppAssets.platformDanbooru, width: 20, height: 20),
+                                Image.asset(
+                                  AppAssets.platformDanbooru,
+                                  width: 20,
+                                  height: 20,
+                                ),
                                 const SizedBox(width: 8),
                                 const Text('Danbooru'),
                               ],
@@ -349,7 +357,11 @@ class _SearchPageState extends ConsumerState<_SearchView> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Image.asset(AppAssets.platformGelbooru, width: 20, height: 20),
+                                Image.asset(
+                                  AppAssets.platformGelbooru,
+                                  width: 20,
+                                  height: 20,
+                                ),
                                 const SizedBox(width: 8),
                                 const Text('Gelbooru'),
                               ],
@@ -360,7 +372,11 @@ class _SearchPageState extends ConsumerState<_SearchView> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Image.asset(AppAssets.platformRule34, width: 20, height: 20),
+                                Image.asset(
+                                  AppAssets.platformRule34,
+                                  width: 20,
+                                  height: 20,
+                                ),
                                 const SizedBox(width: 8),
                                 const Text('Rule34'),
                               ],
@@ -371,7 +387,11 @@ class _SearchPageState extends ConsumerState<_SearchView> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Image.asset(AppAssets.platformSankaku, width: 20, height: 20),
+                                Image.asset(
+                                  AppAssets.platformSankaku,
+                                  width: 20,
+                                  height: 20,
+                                ),
                                 const SizedBox(width: 8),
                                 const Text('Sankaku'),
                               ],

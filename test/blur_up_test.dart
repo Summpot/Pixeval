@@ -4,8 +4,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pixeval_flutter/src/rust/frb_generated.dart';
-import 'package:pixeval_flutter/src/rust/api/feed.dart';
+import 'package:pixeval_flutter/src/native/native_api.dart';
+import 'package:pixeval_flutter/src/native/api/feed.dart';
 import 'package:pixeval_flutter/src/ui/components/artwork_card.dart';
 import 'package:pixeval_flutter/src/ui/components/blur_up.dart';
 
@@ -15,14 +15,11 @@ final png = base64Decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==',
 );
 
-class ImageApi extends mocks.MockRustLibApi {
+class ImageApi extends mocks.MockPixevalApi {
   final full = Completer<Uint8List>();
   final requests = <String>[];
   @override
-  Future<Uint8List> crateApiImageFetchImage({
-    required String url,
-    String? referer,
-  }) {
+  Future<Uint8List> fetchImage({required String url, String? referer}) {
     requests.add(url);
     return url == 'full-image' ? full.future : Future.value(png);
   }
@@ -33,7 +30,7 @@ void main() {
     'card decodes an independent thumbnail while the larger image is pending',
     (tester) async {
       final api = ImageApi();
-      RustLib.initMock(api: api);
+      NativeApi.initMock(api: api);
       const item = IllustSummary(
         id: 1,
         title: 'Artwork',
@@ -77,7 +74,7 @@ void main() {
         expect(find.byType(FadeInArtwork), findsOneWidget);
         await tester.pumpWidget(const SizedBox.shrink());
       } finally {
-        RustLib.dispose();
+        NativeApi.dispose();
         PaintingBinding.instance.imageCache.clear();
       }
     },
