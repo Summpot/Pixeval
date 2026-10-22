@@ -26,7 +26,20 @@ return result;
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-Ticker _b2(NativeBindings ctx)  {
+Future<int> _b2(NativeBindings ctx, {required Counter receiver, required int delayMs, NativeCancellationToken? cancellationToken}) async {
+final _library=ctx._library;
+const engine=NativeEngine.boltffi;
+final arena=Arena();
+final leases=<NativeHandle>[]; try {
+final receiverHandle=receiver._handle.acquire(engine, ctx._library); leases.add(receiver._handle);
+final handle=_library.lookup<NativeFunction<Uint64 Function(Uint64, Uint32)>>("boltffi_method_class_native_ffi_fixture_counter_read_later").asFunction<int Function(int, int)>()(receiverHandle, delayMs);
+return await ctx._scheduler.run<int>(handle:handle,poll:(h,callback,id) { _library.lookup<NativeFunction<Int8 Function(Uint64, Uint64, Pointer<NativeFunction<NativeWake>>)>>("boltffi_async_method_class_native_ffi_fixture_counter_read_later_poll").asFunction<int Function(int, int, Pointer<NativeFunction<NativeWake>>)>()(h,id,callback); },cancel:_library.lookup<NativeFunction<Void Function(Uint64)>>("boltffi_async_method_class_native_ffi_fixture_counter_read_later_cancel").asFunction<void Function(int)>(),free:_library.lookup<NativeFunction<Void Function(Uint64)>>("boltffi_async_method_class_native_ffi_fixture_counter_read_later_free").asFunction<void Function(int)>(),cancellationToken:cancellationToken,complete:(handle) { final status=arena<BoltStatus>();
+final result=_library.lookup<NativeFunction<Int64 Function(Uint64, Pointer<BoltStatus>)>>("boltffi_async_method_class_native_ffi_fixture_counter_read_later_complete").asFunction<int Function(int, Pointer<BoltStatus>)>()(handle,status); ctx._bolt.check(status.ref);
+return result; });
+} finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
+}
+
+Ticker _b3(NativeBindings ctx)  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -36,7 +49,7 @@ return Ticker._(ctx,result,engine);
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-void _b3(NativeBindings ctx, {required Ticker receiver, required int value})  {
+void _b4(NativeBindings ctx, {required Ticker receiver, required int value})  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -47,7 +60,7 @@ return;
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-Mode _b4(NativeBindings ctx, {required Mode value})  {
+Mode _b5(NativeBindings ctx, {required Mode value})  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -57,7 +70,7 @@ return _liftMode(result);
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-BigInt? _b5(NativeBindings ctx, {BigInt? value})  {
+BigInt? _b6(NativeBindings ctx, {BigInt? value})  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -68,7 +81,7 @@ final r=WireReader(ctx._bolt.lift(result),endian:Endian.little); final decoded=r
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-Uint8List _b6(NativeBindings ctx, {required Uint8List value})  {
+Uint8List _b7(NativeBindings ctx, {required Uint8List value})  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -79,7 +92,7 @@ final r=WireReader(ctx._bolt.lift(result),endian:Endian.little); final decoded=r
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-List<BigInt> _b7(NativeBindings ctx, {required List<BigInt> value})  {
+List<BigInt> _b8(NativeBindings ctx, {required List<BigInt> value})  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -90,7 +103,7 @@ final bytes=ctx._bolt.lift(result); final stride=sizeOf<Uint64>(); if(bytes.leng
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-int _b8(NativeBindings ctx, {required int a, required int b})  {
+int _b9(NativeBindings ctx, {required int a, required int b})  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -100,7 +113,7 @@ return result;
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-BigInt _b9(NativeBindings ctx, {required BigInt value})  {
+BigInt _b10(NativeBindings ctx, {required BigInt value})  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -110,7 +123,7 @@ return BigInt.from(result).toUnsigned(64);
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-Point _b10(NativeBindings ctx, {required Point value})  {
+Point _b11(NativeBindings ctx, {required Point value})  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -123,7 +136,7 @@ return Point(x: result.x, y: result.y);
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-Payload _b11(NativeBindings ctx, {required Payload value})  {
+Payload _b12(NativeBindings ctx, {required Payload value})  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -134,7 +147,7 @@ final r=WireReader(ctx._bolt.lift(result),endian:Endian.little); final decoded=_
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-Event _b12(NativeBindings ctx, {required Event value})  {
+Event _b13(NativeBindings ctx, {required Event value})  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -145,7 +158,7 @@ final r=WireReader(ctx._bolt.lift(result),endian:Endian.little); final decoded=_
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-int _b13(NativeBindings ctx, {required int a, required int b})  {
+int _b14(NativeBindings ctx, {required int a, required int b})  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -157,7 +170,7 @@ return result;
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-String _b14(NativeBindings ctx, {required bool fail})  {
+String _b15(NativeBindings ctx, {required bool fail})  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -169,7 +182,7 @@ final r=WireReader(ctx._bolt.lift(result),endian:Endian.little); final decoded=r
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-Future<String> _b15(NativeBindings ctx, {required String value, required int delayMs, NativeCancellationToken? cancellationToken}) async {
+Future<String> _b16(NativeBindings ctx, {required String value, required int delayMs, NativeCancellationToken? cancellationToken}) async {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -182,7 +195,7 @@ final r=WireReader(ctx._bolt.lift(result),endian:Endian.little); final decoded=r
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-int _b16(NativeBindings ctx, {required Counter value})  {
+int _b17(NativeBindings ctx, {required Counter value})  {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
@@ -193,7 +206,7 @@ return result;
 } finally {arena.releaseAll(); for(final lease in leases.reversed) {lease.releaseCall();} }
 }
 
-Future<int> _b17(NativeBindings ctx, {required int a, required int b, NativeCancellationToken? cancellationToken}) async {
+Future<int> _b18(NativeBindings ctx, {required int a, required int b, NativeCancellationToken? cancellationToken}) async {
 final _library=ctx._library;
 const engine=NativeEngine.boltffi;
 final arena=Arena();
