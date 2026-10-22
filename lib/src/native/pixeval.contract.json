@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "uniffi": "0.32",
+  "boltffi": "0.31.1",
+  "contract_hash": "0d2d1ce5539b482122f41b68823e06c95379028e2b5eea92b7ed4bc9ce64e56d",
+  "configuration": {
+    "manifest": "crates/pixeval_native/Cargo.toml",
+    "package": "pixeval_native",
+    "class_name": "PixevalNative",
+    "asset_id": "package:pixeval_flutter/src/native/pixeval.g.dart",
+    "components": [
+      "pixeval_native"
+    ],
+    "prefixes": {
+      "pixeval_native": ""
+    },
+    "engine": "auto",
+    "release_native": true
+  },
+  "components": [
+    "pixeval_booru",
+    "pixeval_cache",
+    "pixeval_config",
+    "pixeval_download",
+    "pixeval_filters",
+    "pixeval_maho",
+    "pixeval_mako",
+    "pixeval_mcp",
+    "pixeval_media",
+    "pixeval_native",
+    "pixeval_novel",
+    "pixeval_plugin",
+    "pixeval_saucenao",
+    "pixeval_storage",
+    "pixeval_subscription",
+    "pixeval_update"
+  ]
+}

@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pixeval_flutter/src/rust/api/feed.dart';
-import 'package:pixeval_flutter/src/rust/api/search.dart';
-import 'package:pixeval_flutter/src/rust/frb_generated.dart';
+import 'package:pixeval_flutter/src/native/api/feed.dart';
+import 'package:pixeval_flutter/src/native/api/search.dart';
+import 'package:pixeval_flutter/src/native/native_api.dart';
 import 'package:pixeval_flutter/src/state/auth_state.dart';
 import 'package:pixeval_flutter/src/state/search_state.dart';
 import 'package:pixeval_flutter/src/ui/search_page.dart';
@@ -18,7 +18,7 @@ class StableAuth extends AuthNotifier {
   AuthState build() => const AuthState();
 }
 
-class ControlledApi extends mocks.MockRustLibApi {
+class ControlledApi extends mocks.MockPixevalApi {
   final autocomplete = Completer<List<AutocompleteTagDto>>();
   final requests = <String, Completer<FeedPageResult>>{};
   final sessions = <String>[];
@@ -26,12 +26,12 @@ class ControlledApi extends mocks.MockRustLibApi {
   bool holdSearch = false;
 
   @override
-  Future<List<AutocompleteTagDto>> crateApiSearchGetSearchAutocomplete({
+  Future<List<AutocompleteTagDto>> getSearchAutocomplete({
     required String word,
   }) => autocomplete.future;
 
   @override
-  Future<FeedPageResult> crateApiSearchSearchIllustrations({
+  Future<FeedPageResult> searchIllustrations({
     required String word,
     String? sort,
     String? searchTarget,
@@ -46,9 +46,7 @@ class ControlledApi extends mocks.MockRustLibApi {
   }
 
   @override
-  Future<void> crateApiSearchReleaseSearchSession({
-    required String sessionId,
-  }) async {
+  Future<void> releaseSearchSession({required String sessionId}) async {
     released.add(sessionId);
   }
 }
@@ -60,14 +58,14 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     api = ControlledApi();
-    RustLib.initMock(api: api);
+    NativeApi.initMock(api: api);
     container = ProviderContainer(
       overrides: [authProvider.overrideWith(StableAuth.new)],
     );
   });
   tearDown(() {
     container.dispose();
-    RustLib.dispose();
+    NativeApi.dispose();
   });
 
   for (final action in ['empty', 'clear', 'submit']) {

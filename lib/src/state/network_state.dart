@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../rust/api/network.dart';
+
+import '../native/api/network.dart';
 
 class NetworkState {
   final FlutterNetworkConfig? config;
@@ -113,4 +114,6 @@ class NetworkNotifier extends Notifier<NetworkState> {
   }
 }
 
-final networkProvider = NotifierProvider<NetworkNotifier, NetworkState>(NetworkNotifier.new);
+final networkProvider = NotifierProvider<NetworkNotifier, NetworkState>(
+  NetworkNotifier.new,
+);

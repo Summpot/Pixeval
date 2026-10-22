@@ -37,7 +37,7 @@ Iterable<Uri> workspaceConfigurationFiles(Uri root) sync* {
     'Cargo.toml',
     'Cargo.lock',
     '.cargo/config.toml',
-    'crates/pixeval_flutter_bridge/rust-toolchain.toml',
+    'crates/pixeval_native/rust-toolchain.toml',
   ]) {
     final file = File.fromUri(root.resolve(path));
     if (file.existsSync()) yield file.uri;

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:waterfall_flow/waterfall_flow.dart';
 import 'package:easy_refresh/easy_refresh.dart';
 
-import '../../rust/api/feed.dart';
+import '../../native/api/feed.dart';
 import 'artwork_card.dart';
 
 class ArtworkWaterfall extends StatelessWidget {

@@ -1,7 +1,9 @@
 import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../rust/api/image.dart';
+
+import '../native/api/image.dart';
 
 @immutable
 class RustImageKey {
@@ -9,11 +11,7 @@ class RustImageKey {
   final double scale;
   final String? referer;
 
-  const RustImageKey({
-    required this.url,
-    this.scale = 1.0,
-    this.referer,
-  });
+  const RustImageKey({required this.url, this.scale = 1.0, this.referer});
 
   @override
   bool operator ==(Object other) {
@@ -38,11 +36,7 @@ class RustImageProvider extends ImageProvider<RustImageKey> {
   final double scale;
   final String? referer;
 
-  const RustImageProvider(
-    this.url, {
-    this.scale = 1.0,
-    this.referer,
-  });
+  const RustImageProvider(this.url, {this.scale = 1.0, this.referer});
 
   @override
   Future<RustImageKey> obtainKey(ImageConfiguration configuration) {
@@ -52,7 +46,10 @@ class RustImageProvider extends ImageProvider<RustImageKey> {
   }
 
   @override
-  ImageStreamCompleter loadImage(RustImageKey key, ImageDecoderCallback decode) {
+  ImageStreamCompleter loadImage(
+    RustImageKey key,
+    ImageDecoderCallback decode,
+  ) {
     return MultiFrameImageStreamCompleter(
       codec: _loadAsync(key, decode),
       scale: key.scale,
@@ -64,12 +61,17 @@ class RustImageProvider extends ImageProvider<RustImageKey> {
     );
   }
 
-  Future<ui.Codec> _loadAsync(RustImageKey key, ImageDecoderCallback decode) async {
+  Future<ui.Codec> _loadAsync(
+    RustImageKey key,
+    ImageDecoderCallback decode,
+  ) async {
     try {
       final bytes = await fetchImage(url: key.url, referer: key.referer);
       if (bytes.isEmpty) {
         PaintingBinding.instance.imageCache.evict(key);
-        throw StateError('Received empty image payload from Rust bridge for: ${key.url}');
+        throw StateError(
+          'Received empty image payload from Rust bridge for: ${key.url}',
+        );
       }
       final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
       return await decode(buffer);

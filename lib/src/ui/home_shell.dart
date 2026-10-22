@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:extended_image/extended_image.dart';
+
 import '../image/rust_image_provider.dart';
 import '../state/auth_state.dart';
 import '../state/cache_state.dart';
@@ -32,10 +33,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (idx) {
@@ -82,15 +80,15 @@ class ExploreTab extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SearchPage()),
-              );
+              Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const SearchPage()));
             },
           ),
           if (authState.isLoggedIn)
             IconButton(
               icon: const Icon(Icons.refresh),
-              onPressed: () => ref.read(recommendedFeedProvider.notifier).refresh(),
+              onPressed: () =>
+                  ref.read(recommendedFeedProvider.notifier).refresh(),
             ),
         ],
       ),
@@ -98,8 +96,7 @@ class ExploreTab extends ConsumerWidget {
           ? const _UnauthenticatedTabPrompt(
               icon: Icons.lock_person_outlined,
               title: '需要登录 Pixiv 账号',
-              description:
-                  'Pixiv 官方现已全面限制未登录访问。登录后即可畅快浏览每日精选推荐、相关画作与海量作品。',
+              description: 'Pixiv 官方现已全面限制未登录访问。登录后即可畅快浏览每日精选推荐、相关画作与海量作品。',
             )
           : Consumer(
               builder: (context, ref, _) {
@@ -149,9 +146,8 @@ class _RankingsTabState extends ConsumerState<RankingsTab> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SearchPage()),
-              );
+              Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const SearchPage()));
             },
           ),
           if (authState.isLoggedIn)
@@ -171,14 +167,17 @@ class _RankingsTabState extends ConsumerState<RankingsTab> {
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final mode = _modes[index];
-                final isSelected = ref.watch(rankingFeedProvider.notifier).mode == mode.$1;
+                final isSelected =
+                    ref.watch(rankingFeedProvider.notifier).mode == mode.$1;
                 return ChoiceChip(
                   label: Text(mode.$2),
                   selected: isSelected,
                   onSelected: authState.isLoggedIn
                       ? (selected) {
                           if (selected) {
-                            ref.read(rankingFeedProvider.notifier).setMode(mode.$1);
+                            ref
+                                .read(rankingFeedProvider.notifier)
+                                .setMode(mode.$1);
                           }
                         }
                       : null,
@@ -192,8 +191,7 @@ class _RankingsTabState extends ConsumerState<RankingsTab> {
           ? const _UnauthenticatedTabPrompt(
               icon: Icons.leaderboard_outlined,
               title: '登录以查看 Pixiv 排行榜',
-              description:
-                  'Pixiv 排行榜接口需要账号身份鉴权。登录后即可畅快浏览日榜、周榜、月榜、新人榜及男女向榜单。',
+              description: 'Pixiv 排行榜接口需要账号身份鉴权。登录后即可畅快浏览日榜、周榜、月榜、新人榜及男女向榜单。',
             )
           : Consumer(
               builder: (context, ref, _) {
@@ -225,9 +223,7 @@ class ProfileTab extends ConsumerWidget {
     final user = authState.user;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile & Settings'),
-      ),
+      appBar: AppBar(title: const Text('Profile & Settings')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -239,7 +235,8 @@ class ProfileTab extends ConsumerWidget {
                 children: [
                   CircleAvatar(
                     radius: 30,
-                    backgroundColor: const Color(0xFF0096FA).withValues(alpha: 0.1),
+                    backgroundColor: const Color(0xFF0096FA)
+                        .withValues(alpha: 0.1),
                     child: user != null && user.avatarUrl.isNotEmpty
                         ? ClipOval(
                             child: ExtendedImage(
@@ -249,7 +246,11 @@ class ProfileTab extends ConsumerWidget {
                               fit: BoxFit.cover,
                             ),
                           )
-                        : const Icon(Icons.person, size: 36, color: Color(0xFF0096FA)),
+                        : const Icon(
+                            Icons.person,
+                            size: 36,
+                            color: Color(0xFF0096FA),
+                          ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -258,19 +259,28 @@ class ProfileTab extends ConsumerWidget {
                       children: [
                         Text(
                           user?.name ?? 'Not Logged In',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           user != null
                               ? '@${user.account}'
                               : '登录 Pixiv 账号以同步画师关注与作品收藏',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 13,
+                          ),
                         ),
                         if (user != null && user.isPremium) ...[
                           const SizedBox(height: 4),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.amber.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(4),
@@ -314,13 +324,13 @@ class ProfileTab extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.history_outlined),
                   title: const Text('Browsing History'),
-                  subtitle: const Text('Recently viewed illustrations and novels'),
+                  subtitle: const Text(
+                    'Recently viewed illustrations and novels',
+                  ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const HistoryPage(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const HistoryPage()),
                     );
                   },
                 ),
@@ -335,7 +345,9 @@ class ProfileTab extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.shield_outlined),
                   title: const Text('Anti-Blocking & Network'),
-                  subtitle: const Text('Domain Fronting, SNI Delay, Latency Diagnostics'),
+                  subtitle: const Text(
+                    'Domain Fronting, SNI Delay, Latency Diagnostics',
+                  ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.of(context).push(
@@ -359,7 +371,9 @@ class ProfileTab extends ConsumerWidget {
                             await ref.read(cacheProvider.notifier).clearCache();
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Image cache cleared')),
+                                const SnackBar(
+                                  content: Text('Image cache cleared'),
+                                ),
                               );
                             }
                           },
@@ -376,7 +390,9 @@ class ProfileTab extends ConsumerWidget {
                       try {
                         await ref.read(authProvider.notifier).refreshSession();
                         messenger.showSnackBar(
-                          const SnackBar(content: Text('Session refreshed successfully')),
+                          const SnackBar(
+                            content: Text('Session refreshed successfully'),
+                          ),
                         );
                       } catch (e) {
                         messenger.showSnackBar(
@@ -388,7 +404,10 @@ class ProfileTab extends ConsumerWidget {
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.logout, color: Colors.red),
-                    title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+                    title: const Text(
+                      'Sign Out',
+                      style: TextStyle(color: Colors.red),
+                    ),
                     onTap: () async {
                       await ref.read(authProvider.notifier).logout();
                     },
@@ -443,9 +462,8 @@ class FollowFeedsTab extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SearchPage()),
-              );
+              Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const SearchPage()));
             },
           ),
           IconButton(
@@ -461,7 +479,8 @@ class FollowFeedsTab extends ConsumerWidget {
         errorMessage: feed.errorMessage,
         onRefresh: () => notifier.refresh(),
         onLoadMore: () => notifier.loadMore(),
-        onBookmarkToggle: (id, bookmarked) => notifier.toggleItemBookmark(id, bookmarked),
+        onBookmarkToggle: (id, bookmarked) =>
+            notifier.toggleItemBookmark(id, bookmarked),
       ),
     );
   }

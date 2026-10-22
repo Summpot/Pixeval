@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../rust/api/image.dart';
+
+import '../native/api/image.dart';
 
 class CacheState {
   final int entryCount;
@@ -71,5 +72,6 @@ class CacheNotifier extends Notifier<CacheState> {
   }
 }
 
-final cacheProvider =
-    NotifierProvider<CacheNotifier, CacheState>(CacheNotifier.new);
+final cacheProvider = NotifierProvider<CacheNotifier, CacheState>(
+  CacheNotifier.new,
+);

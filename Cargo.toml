@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/native_ffi_fixture",
     "crates/pixeval_native",
     "crates/pixeval_filters",
     "crates/pixeval_cache",
@@ -16,7 +17,6 @@ members = [
     "crates/pixeval_booru",
     "crates/pixeval_saucenao",
     "crates/pixeval_update",
-    "crates/pixeval_flutter_bridge",
 ]
 resolver = "2"
 
@@ -38,7 +38,6 @@ pixeval_saucenao = { path = "crates/pixeval_saucenao" }
 pixeval_storage = { path = "crates/pixeval_storage" }
 pixeval_subscription = { path = "crates/pixeval_subscription" }
 pixeval_update = { path = "crates/pixeval_update" }
-pixeval_flutter_bridge = { path = "crates/pixeval_flutter_bridge" }
 
 # External dependencies
 async-compat = { version = "0.2", features = ["multi-thread"] }
@@ -47,7 +46,6 @@ bytes = "1"
 boltffi = { version = "=0.31.1", default-features = false }
 chrono = "0.4"
 flate2 = "1.0"
-flutter_rust_bridge = "=2.13.0"
 foyer = "0.22"
 foyer-common = "0.22"
 futures = "0.3"

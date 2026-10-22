@@ -1,61 +1,63 @@
+import 'dart:ffi';
 import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
-import 'package:pixeval_flutter/src/rust/frb_generated.dart';
-import 'package:pixeval_flutter/src/rust/api/auth.dart';
-import 'package:pixeval_flutter/src/rust/api/download.dart';
-import 'package:pixeval_flutter/src/rust/api/events.dart';
-import 'package:pixeval_flutter/src/rust/api/filters.dart';
+import 'package:pixeval_flutter/src/native/native_api.dart';
+import 'package:pixeval_flutter/src/native/api/auth.dart';
+import 'package:pixeval_flutter/src/native/api/download.dart';
+import 'package:pixeval_flutter/src/native/api/events.dart';
+import 'package:pixeval_flutter/src/native/api/filters.dart';
 
 import 'widget_test.dart' as mocks;
 
-const libraryPath = String.fromEnvironment('PIXEVAL_BRIDGE_LIBRARY');
+const libraryPath = String.fromEnvironment('PIXEVAL_NATIVE_LIBRARY');
 
 void main() {
-  group(
-    'real Rust bridge',
-    () {
-      setUpAll(
-        () => RustLib.init(externalLibrary: ExternalLibrary.open(libraryPath)),
-      );
-      tearDownAll(RustLib.dispose);
-      test('PKCE and shorthand filtering cross the real FFI', () async {
-        final params = await createPkceAuthParams();
-        expect(params.codeVerifier.length, 43);
-        final sample = await mocks.MockRustLibApi().crateApiFeedGetIllustDetail(
-          illustId: 1,
+  for (final engine in NativeEngine.values) {
+    group(
+      'real native ${engine.name}',
+      () {
+        setUpAll(
+          () => NativeApi.init(
+            library: DynamicLibrary.open(libraryPath),
+            engine: engine,
+          ),
         );
-        expect(
-          await filterArtworksByQuery(query: '#test', artworks: [sample]),
-          hasLength(1),
-        );
-        expect(
-          await filterArtworksByQuery(query: '#missing', artworks: [sample]),
-          isEmpty,
-        );
-        await expectLater(
-          filterArtworksByQuery(query: '(tag:test', artworks: [sample]),
-          throwsA(anything),
-        );
-      });
-      test('session stream subscribes without a runtime panic', () async {
-        Object? error;
-        final sub = createSessionEventStream().listen(
-          (_) {},
-          onError: (Object e) {
-            error = e;
-          },
-        );
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-        await cancelSessionEventStream();
-        await sub.cancel();
-        expect(error, isNull);
-      });
-      test(
-        'download stream delivers completion and cancels artwork-key tasks',
-        () async {
+        tearDownAll(NativeApi.dispose);
+        test('PKCE and shorthand filtering cross the real FFI', () async {
+          final params = await createPkceAuthParams();
+          expect(params.codeVerifier.length, 43);
+          final sample = await mocks.MockPixevalApi().getIllustDetail(
+            illustId: 1,
+          );
+          expect(
+            await filterArtworksByQuery(query: '#test', artworks: [sample]),
+            hasLength(1),
+          );
+          expect(
+            await filterArtworksByQuery(query: '#missing', artworks: [sample]),
+            isEmpty,
+          );
+          await expectLater(
+            filterArtworksByQuery(query: '(tag:test', artworks: [sample]),
+            throwsA(anything),
+          );
+        });
+        test('session stream subscribes without a runtime panic', () async {
+          Object? error;
+          final sub = createSessionEventStream().listen(
+            (_) {},
+            onError: (Object e) {
+              error = e;
+            },
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          await cancelSessionEventStream();
+          await sub.cancel();
+          expect(error, isNull);
+        });
+        test('download stream delivers completion and cancels artwork-key tasks', () async {
           final directory = await Directory.systemTemp.createTemp(
             'pixeval-bridge-test-',
           );
@@ -105,11 +107,11 @@ void main() {
             // Every path is created under this test-owned temporary directory.
             await directory.delete(recursive: true);
           }
-        },
-      );
-    },
-    skip: libraryPath.isEmpty
-        ? 'Set PIXEVAL_BRIDGE_LIBRARY to the freshly built native library'
-        : false,
-  );
+        });
+      },
+      skip: libraryPath.isEmpty
+          ? 'Set PIXEVAL_NATIVE_LIBRARY to the freshly built native library'
+          : false,
+    );
+  }
 }

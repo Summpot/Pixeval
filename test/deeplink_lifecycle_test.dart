@@ -5,9 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pixeval_flutter/main.dart';
-import 'package:pixeval_flutter/src/rust/api/auth.dart';
-import 'package:pixeval_flutter/src/rust/api/deeplink.dart';
-import 'package:pixeval_flutter/src/rust/frb_generated.dart';
+import 'package:pixeval_flutter/src/native/api/auth.dart';
+import 'package:pixeval_flutter/src/native/api/deeplink.dart';
+import 'package:pixeval_flutter/src/native/native_api.dart';
 import 'package:pixeval_flutter/src/state/auth_state.dart';
 
 import 'widget_test.dart' as mocks;
@@ -30,13 +30,11 @@ class PendingAuth extends AuthNotifier {
   }
 }
 
-class LinkApi extends mocks.MockRustLibApi {
+class LinkApi extends mocks.MockPixevalApi {
   final parsed = <String>[];
 
   @override
-  Future<ParsedPixivLink> crateApiDeeplinkParsePixivUrl({
-    required String url,
-  }) async {
+  Future<ParsedPixivLink> parsePixivUrl({required String url}) async {
     parsed.add(url);
     return ParsedPixivLink.unknown(rawUrl: url);
   }
@@ -48,7 +46,7 @@ void main() {
     'cold links wait for authentication; warm links use the same handler',
     (tester) async {
       final api = LinkApi();
-      RustLib.initMock(api: api);
+      NativeApi.initMock(api: api);
       final container = ProviderContainer(
         overrides: [authProvider.overrideWith(PendingAuth.new)],
       );
@@ -92,7 +90,7 @@ void main() {
           null,
         );
         container.dispose();
-        RustLib.dispose();
+        NativeApi.dispose();
       }
     },
   );

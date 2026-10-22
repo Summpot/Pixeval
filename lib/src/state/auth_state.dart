@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../rust/api/auth.dart' as api_auth;
+import '../native/api/auth.dart' as api_auth;
 
 class AuthState {
   final api_auth.UserProfile? user;
@@ -56,7 +56,10 @@ class AuthNotifier extends Notifier<AuthState> {
     return loginWithOAuthInput(callback.toString());
   }
 
-  Future<bool> loginWithOAuthInput(String rawInput, [String? explicitVerifier]) async {
+  Future<bool> loginWithOAuthInput(
+    String rawInput, [
+    String? explicitVerifier,
+  ]) async {
     await _initialization;
     if (!ref.mounted) return false;
     state = state.copyWith(isLoading: true, errorMessage: null);
@@ -126,7 +129,11 @@ class AuthNotifier extends Notifier<AuthState> {
             authResp.refreshToken != token) {
           await prefs.setString(_refreshTokenKey, authResp.refreshToken);
         }
-        state = state.copyWith(user: authResp.user, isLoading: false, isGuestMode: false);
+        state = state.copyWith(
+          user: authResp.user,
+          isLoading: false,
+          isGuestMode: false,
+        );
       } else {
         state = state.copyWith(isLoading: false);
       }
@@ -149,10 +156,17 @@ class AuthNotifier extends Notifier<AuthState> {
           ? authResp.refreshToken
           : refreshToken;
       await prefs.setString(_refreshTokenKey, tokenToSave);
-      state = state.copyWith(user: authResp.user, isLoading: false, isGuestMode: false);
+      state = state.copyWith(
+        user: authResp.user,
+        isLoading: false,
+        isGuestMode: false,
+      );
       return true;
     } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: formatAuthErrorMessage(e.toString()));
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: formatAuthErrorMessage(e.toString()),
+      );
       return false;
     }
   }
@@ -171,10 +185,17 @@ class AuthNotifier extends Notifier<AuthState> {
         await prefs.setString(_refreshTokenKey, authResp.refreshToken);
       }
       await prefs.remove(_pkceVerifierKey);
-      state = state.copyWith(user: authResp.user, isLoading: false, isGuestMode: false);
+      state = state.copyWith(
+        user: authResp.user,
+        isLoading: false,
+        isGuestMode: false,
+      );
       return true;
     } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: formatAuthErrorMessage(e.toString()));
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: formatAuthErrorMessage(e.toString()),
+      );
       return false;
     }
   }
@@ -215,7 +236,11 @@ class AuthNotifier extends Notifier<AuthState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_refreshTokenKey);
     await prefs.remove(_pkceVerifierKey);
-    state = state.copyWith(clearUser: true, isLoading: false, isGuestMode: false);
+    state = state.copyWith(
+      clearUser: true,
+      isLoading: false,
+      isGuestMode: false,
+    );
   }
 }
 
@@ -300,7 +325,8 @@ String? extractOAuthCode(String rawInput) {
       if (c.contains('#')) c = c.split('#').first;
       return Uri.decodeComponent(c).trim();
     }
-    final match = RegExp(r'[?&#]code=([^&#\s]+)').firstMatch(input) ??
+    final match =
+        RegExp(r'[?&#]code=([^&#\s]+)').firstMatch(input) ??
         RegExp(r'code=([^&#\s]+)').firstMatch(input);
     if (match != null) {
       return Uri.decodeComponent(match.group(1)!).trim();
@@ -323,7 +349,5 @@ String? extractOAuthCode(String rawInput) {
     return cleanCode;
   }
 
-  throw const FormatException(
-    '无法识别的授权码或回调链接格式，请确认复制的内容正确。',
-  );
+  throw const FormatException('无法识别的授权码或回调链接格式，请确认复制的内容正确。');
 }

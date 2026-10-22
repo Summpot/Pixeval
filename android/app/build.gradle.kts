@@ -27,6 +27,9 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // The first native FFI release is validated for Android arm64. Keep
+        // plugin JNI libraries from advertising an ABI without a Flutter engine.
+        ndk { abiFilters += "arm64-v8a" }
     }
 
     buildTypes {

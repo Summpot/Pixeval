@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,63 +7,59 @@ import 'package:pixeval_flutter/main.dart';
 import 'package:pixeval_flutter/src/deeplink/deeplink_handler.dart';
 import 'package:pixeval_flutter/src/ui/home_shell.dart';
 import 'package:pixeval_flutter/src/ui/login_page.dart';
-import 'package:pixeval_flutter/src/rust/api/auth.dart';
-import 'package:pixeval_flutter/src/rust/api/booru.dart';
-import 'package:pixeval_flutter/src/rust/api/deeplink.dart';
-import 'package:pixeval_flutter/src/rust/api/download.dart';
-import 'package:pixeval_flutter/src/rust/api/events.dart';
-import 'package:pixeval_flutter/src/rust/api/feed.dart';
-import 'package:pixeval_flutter/src/rust/api/filters.dart';
-import 'package:pixeval_flutter/src/rust/api/image.dart';
-import 'package:pixeval_flutter/src/rust/api/network.dart';
-import 'package:pixeval_flutter/src/rust/api/novel.dart';
-import 'package:pixeval_flutter/src/rust/api/saucenao.dart';
-import 'package:pixeval_flutter/src/rust/api/search.dart';
-import 'package:pixeval_flutter/src/rust/api/storage.dart';
-import 'package:pixeval_flutter/src/rust/api/ugoira.dart';
-import 'package:pixeval_flutter/src/rust/frb_generated.dart';
-import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'package:pixeval_flutter/src/native/api/auth.dart';
+import 'package:pixeval_flutter/src/native/api/booru.dart';
+import 'package:pixeval_flutter/src/native/api/deeplink.dart';
+import 'package:pixeval_flutter/src/native/api/download.dart';
+import 'package:pixeval_flutter/src/native/api/events.dart';
+import 'package:pixeval_flutter/src/native/api/feed.dart';
+import 'package:pixeval_flutter/src/native/api/filters.dart';
+import 'package:pixeval_flutter/src/native/api/image.dart';
+import 'package:pixeval_flutter/src/native/api/network.dart';
+import 'package:pixeval_flutter/src/native/api/novel.dart';
+import 'package:pixeval_flutter/src/native/api/saucenao.dart';
+import 'package:pixeval_flutter/src/native/api/search.dart';
+import 'package:pixeval_flutter/src/native/api/storage.dart';
+import 'package:pixeval_flutter/src/native/api/ugoira.dart';
+import 'package:pixeval_flutter/src/native/native_api.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Mock API for headless tests
-class MockRustLibApi extends RustLibApi {
+class MockPixevalApi extends PixevalApi {
   @override
-  Future<String> crateApiSimpleAsyncPing({required String message}) async =>
+  Future<String> asyncPing({required String message}) async =>
       'async pong mock: $message';
 
   @override
-  Future<void> crateApiSimpleInitApp() async {}
+  Future<void> initApp() async {}
 
   @override
-  Future<String> crateApiSimplePing({required String message}) async =>
-      'pong mock: $message';
+  Future<String> ping({required String message}) async => 'pong mock: $message';
 
   @override
-  Future<String> crateApiSimpleVersion() async => '0.1.0-test';
+  Future<String> version() async => '0.1.0-test';
 
   @override
-  Future<UserProfile?> crateApiAuthGetCurrentUser() async => null;
+  Future<UserProfile?> getCurrentUser() async => null;
 
   @override
-  Future<String?> crateApiAuthGetRefreshToken() async => null;
+  Future<String?> getRefreshToken() async => null;
 
   @override
-  Future<String?> crateApiAuthGetStoredRefreshToken() async => null;
+  Future<String?> getStoredRefreshToken() async => null;
 
   @override
-  Future<void> crateApiSearchReleaseSearchSession({
-    required String sessionId,
-  }) async {}
+  Future<void> releaseSearchSession({required String sessionId}) async {}
 
   @override
-  Future<PkceAuthParamsDto> crateApiAuthCreatePkceAuthParams() async =>
+  Future<PkceAuthParamsDto> createPkceAuthParams() async =>
       const PkceAuthParamsDto(
         codeVerifier: 'mock_verifier',
         authUrl: 'https://app-api.pixiv.net/web/v1/login',
       );
 
   @override
-  Future<AuthResponse> crateApiAuthLoginByCode({
+  Future<AuthResponse> loginByCode({
     required String code,
     required String codeVerifier,
   }) async => const AuthResponse(
@@ -78,7 +76,7 @@ class MockRustLibApi extends RustLibApi {
   );
 
   @override
-  Future<AuthResponse> crateApiAuthLoginByRefreshToken({
+  Future<AuthResponse> loginByRefreshToken({
     required String refreshToken,
   }) async => const AuthResponse(
     accessToken: 'mock_access',
@@ -94,32 +92,30 @@ class MockRustLibApi extends RustLibApi {
   );
 
   @override
-  Future<void> crateApiAuthLogout() async {}
+  Future<void> logout() async {}
 
   @override
-  Future<AuthResponse> crateApiAuthRefreshSession() async => const AuthResponse(
+  Future<AuthResponse> refreshSession() async => const AuthResponse(
     accessToken: 'mock_access',
     refreshToken: 'mock_refresh',
   );
 
   @override
-  Stream<SessionEvent> crateApiEventsCreateSessionEventStream({
-    String? streamId,
-  }) => const Stream.empty();
+  Stream<SessionEvent> createSessionEventStream({String? streamId}) =>
+      const Stream.empty();
 
   @override
-  Future<FlutterNetworkConfig> crateApiNetworkGetNetworkConfig() async =>
-      FlutterNetworkConfig(
-        domainFrontingEnabled: true,
-        splitDelayMs: BigInt.from(100),
-        proxyUrl: null,
-        mirrorHost: null,
-        dohUrl: null,
-        hostIpsJson: '{}',
-      );
+  Future<FlutterNetworkConfig> getNetworkConfig() async => FlutterNetworkConfig(
+    domainFrontingEnabled: true,
+    splitDelayMs: BigInt.from(100),
+    proxyUrl: null,
+    mirrorHost: null,
+    dohUrl: null,
+    hostIpsJson: '{}',
+  );
 
   @override
-  Future<ConnectivityCheckResult> crateApiNetworkTestConnectivity() async =>
+  Future<ConnectivityCheckResult> testConnectivity() async =>
       ConnectivityCheckResult(
         success: true,
         latencyMs: BigInt.from(150),
@@ -127,89 +123,84 @@ class MockRustLibApi extends RustLibApi {
       );
 
   @override
-  Future<void> crateApiNetworkUpdateNetworkConfig({
+  Future<void> updateNetworkConfig({
     required FlutterNetworkConfig config,
   }) async {}
 
   @override
-  Future<FeedPageResult> crateApiFeedGetRecommendedFeed({
-    required bool refresh,
-  }) async => const FeedPageResult(items: [], exhausted: true);
+  Future<FeedPageResult> getRecommendedFeed({required bool refresh}) async =>
+      const FeedPageResult(items: [], exhausted: true);
 
   @override
-  Future<FeedPageResult> crateApiFeedGetRankingFeed({
+  Future<FeedPageResult> getRankingFeed({
     required String mode,
     String? date,
     required bool refresh,
   }) async => const FeedPageResult(items: [], exhausted: true);
 
   @override
-  Future<FeedPageResult> crateApiFeedGetFollowFeed({
+  Future<FeedPageResult> getFollowFeed({
     required String restrict,
     required bool refresh,
   }) async => const FeedPageResult(items: [], exhausted: true);
 
   @override
-  Future<IllustSummary> crateApiFeedGetIllustDetail({
-    required PlatformInt64 illustId,
-  }) async => const IllustSummary(
-    id: 1,
-    title: 'Test Illust',
-    caption: 'Test Caption',
-    userId: 100,
-    userName: 'Test Artist',
-    userAccount: 'test_artist',
-    userAvatarUrl: '',
-    previewUrl: '',
-    originalUrl: '',
-    width: 1000,
-    height: 1000,
-    pageCount: 1,
-    isBookmarked: false,
-    totalBookmarks: 100,
-    totalViews: 500,
-    tags: ['test', 'pixiv'],
-    isR18: false,
-    isUgoira: false,
-    pageUrls: [],
-    originalPageUrls: [],
-  );
+  Future<IllustSummary> getIllustDetail({required int illustId}) async =>
+      const IllustSummary(
+        id: 1,
+        title: 'Test Illust',
+        caption: 'Test Caption',
+        userId: 100,
+        userName: 'Test Artist',
+        userAccount: 'test_artist',
+        userAvatarUrl: '',
+        previewUrl: '',
+        originalUrl: '',
+        width: 1000,
+        height: 1000,
+        pageCount: 1,
+        isBookmarked: false,
+        totalBookmarks: 100,
+        totalViews: 500,
+        tags: ['test', 'pixiv'],
+        isR18: false,
+        isUgoira: false,
+        pageUrls: [],
+        originalPageUrls: [],
+      );
 
   @override
-  Future<bool> crateApiFeedToggleBookmark({
-    required PlatformInt64 illustId,
+  Future<bool> toggleBookmark({
+    required int illustId,
     required bool isBookmarked,
   }) async => !isBookmarked;
 
   @override
-  Future<void> crateApiImageClearImageCache() async {}
+  Future<void> clearImageCache() async {}
 
   @override
-  Future<Uint8List> crateApiImageFetchImage({
-    required String url,
-    String? referer,
-  }) async => Uint8List(0);
+  Future<Uint8List> fetchImage({required String url, String? referer}) async =>
+      Uint8List(0);
 
   @override
-  Future<CacheStatsDto> crateApiImageGetCacheStats() async => CacheStatsDto(
+  Future<CacheStatsDto> getCacheStats() async => CacheStatsDto(
     entryCount: 42,
     totalAllocatedBytes: BigInt.from(1024 * 1024 * 1024),
     totalUsedBytes: BigInt.from(12 * 1024 * 1024),
   );
 
   @override
-  Future<Uint8List?> crateApiImageGetCachedImage({required String url}) async =>
-      null;
+  Future<Uint8List?> getCachedImage({required String url}) async => null;
 
   @override
-  Future<void> crateApiImageInitImageCache({
+  Future<void> initImageCache({
     required String cacheDir,
     BigInt? capacityBytes,
   }) async {}
 
   @override
-  Future<NovelContentDto> crateApiNovelGetNovelContentRendered({
-    required PlatformInt64 novelId,
+  Future<NovelContentDto> getNovelContentRendered({
+    required int novelId,
   }) async => NovelContentDto(
     id: novelId,
     pages: ['Test novel page 1', 'Test novel page 2'],
@@ -218,33 +209,32 @@ class MockRustLibApi extends RustLibApi {
   );
 
   @override
-  Future<NovelDetailDto> crateApiNovelGetNovelDetail({
-    required PlatformInt64 novelId,
-  }) async => NovelDetailDto(
-    id: novelId,
-    title: 'Test Novel',
-    caption: 'Test novel caption',
-    coverUrl: '',
-    userId: 10,
-    userName: 'Test Novelist',
-    userAccount: 'test_novelist',
-    userAvatarUrl: '',
-    pageCount: 2,
-    textLength: 1000,
-    isBookmarked: false,
-    totalBookmarks: 50,
-    tags: ['original', 'fantasy'],
-  );
+  Future<NovelDetailDto> getNovelDetail({required int novelId}) async =>
+      NovelDetailDto(
+        id: novelId,
+        title: 'Test Novel',
+        caption: 'Test novel caption',
+        coverUrl: '',
+        userId: 10,
+        userName: 'Test Novelist',
+        userAccount: 'test_novelist',
+        userAvatarUrl: '',
+        pageCount: 2,
+        textLength: 1000,
+        isBookmarked: false,
+        totalBookmarks: 50,
+        tags: ['original', 'fantasy'],
+      );
 
   @override
-  Future<List<AutocompleteTagDto>> crateApiSearchGetSearchAutocomplete({
+  Future<List<AutocompleteTagDto>> getSearchAutocomplete({
     required String word,
   }) async => [
     AutocompleteTagDto(name: word, translatedName: 'Translated $word'),
   ];
 
   @override
-  Future<FeedPageResult> crateApiSearchSearchIllustrations({
+  Future<FeedPageResult> searchIllustrations({
     required String word,
     String? sort,
     String? searchTarget,
@@ -253,7 +243,7 @@ class MockRustLibApi extends RustLibApi {
   }) async => const FeedPageResult(items: [], exhausted: true);
 
   @override
-  Future<FilterAnalysisResultDto> crateApiFiltersAnalyzeFilterQuery({
+  Future<FilterAnalysisResultDto> analyzeFilterQuery({
     required String query,
     required int caretPos,
   }) async => const FilterAnalysisResultDto(
@@ -263,13 +253,13 @@ class MockRustLibApi extends RustLibApi {
   );
 
   @override
-  Future<List<IllustSummary>> crateApiFiltersFilterArtworksByQuery({
+  Future<List<IllustSummary>> filterArtworksByQuery({
     required String query,
     required List<IllustSummary> artworks,
   }) async => artworks;
 
   @override
-  Future<BooruSearchResultDto> crateApiBooruSearchBooru({
+  Future<BooruSearchResultDto> searchBooru({
     required String platformName,
     required String tags,
     required int page,
@@ -281,24 +271,23 @@ class MockRustLibApi extends RustLibApi {
   );
 
   @override
-  Future<List<SauceNaoItemDto>> crateApiSaucenaoSearchSaucenao({
+  Future<List<SauceNaoItemDto>> searchSaucenao({
     required List<int> imageBytes,
     String? apiKey,
   }) async => [];
 
   @override
-  Future<UgoiraMetadataDto> crateApiUgoiraGetUgoiraMetadata({
-    required PlatformInt64 illustId,
-  }) async => const UgoiraMetadataDto(zipUrl: '', frames: []);
+  Future<UgoiraMetadataDto> getUgoiraMetadata({required int illustId}) async =>
+      const UgoiraMetadataDto(zipUrl: '', frames: []);
 
   @override
-  Future<UgoiraFramesDto> crateApiUgoiraExtractUgoiraFramesFromZipBytes({
+  Future<UgoiraFramesDto> extractUgoiraFramesFromZipBytes({
     required List<int> zipBytes,
     required List<int> delays,
   }) async => UgoiraFramesDto(frameBytes: [], delays: Uint32List(0));
 
   @override
-  Future<void> crateApiUgoiraExportUgoira({
+  Future<void> exportUgoira({
     required String zipPath,
     required String outputPath,
     required String formatName,
@@ -306,38 +295,34 @@ class MockRustLibApi extends RustLibApi {
   }) async {}
 
   @override
-  Future<void> crateApiStorageAddSearchHistory({
+  Future<void> addSearchHistory({
     required String keyword,
     String? translatedName,
   }) async {}
 
   @override
-  Future<void> crateApiStorageClearAllBrowseHistory() async {}
+  Future<void> clearAllBrowseHistory() async {}
 
   @override
-  Future<void> crateApiStorageClearAllSearchHistory() async {}
+  Future<void> clearAllSearchHistory() async {}
 
   @override
-  Future<bool> crateApiStorageDeleteSearchHistoryItem({
-    required String keyword,
-  }) async => true;
+  Future<bool> deleteSearchHistoryItem({required String keyword}) async => true;
 
   @override
-  Future<List<BrowseHistoryItemDto>> crateApiStorageGetBrowseHistory({
+  Future<List<BrowseHistoryItemDto>> getBrowseHistory({
     required int skip,
     required int take,
   }) async => [];
 
   @override
-  Future<List<SearchHistoryItemDto>> crateApiStorageGetSearchHistory({
-    PlatformInt64? limit,
-  }) async => [];
+  Future<List<SearchHistoryItemDto>> getSearchHistory({int? limit}) async => [];
 
   @override
-  Future<void> crateApiStorageInitStorage({required String dbPath}) async {}
+  Future<void> initStorage({required String dbPath}) async {}
 
   @override
-  Future<void> crateApiStorageRecordBrowseHistory({
+  Future<void> recordBrowseHistory({
     required String workId,
     required String title,
     required String previewUrl,
@@ -346,50 +331,35 @@ class MockRustLibApi extends RustLibApi {
   }) async {}
 
   @override
-  Future<bool> crateApiDownloadCancelDownload({
-    required String destination,
-  }) async => true;
+  Future<bool> cancelDownload({required String destination}) async => true;
 
   @override
-  Future<void> crateApiDownloadClearAllDownloads() async {}
+  Future<void> clearAllDownloads() async {}
 
   @override
-  Stream<DownloadProgressEvent> crateApiDownloadCreateDownloadEventStream({
-    String? streamId,
-  }) => const Stream.empty();
+  Stream<DownloadProgressEvent> createDownloadEventStream({String? streamId}) =>
+      const Stream.empty();
 
   @override
-  Future<void> crateApiEventsCancelSessionEventStream({
-    String? streamId,
-  }) async {}
+  Future<void> cancelSessionEventStream({String? streamId}) async {}
 
   @override
-  Future<void> crateApiDownloadCancelDownloadEventStream({
-    String? streamId,
-  }) async {}
+  Future<void> cancelDownloadEventStream({String? streamId}) async {}
 
   @override
-  Future<void> crateApiDownloadInitDownloadManager({
-    required int concurrency,
-  }) async {}
+  Future<void> initDownloadManager({required int concurrency}) async {}
 
   @override
-  Future<bool> crateApiDownloadPauseDownload({
-    required String destination,
-  }) async => true;
+  Future<bool> pauseDownload({required String destination}) async => true;
 
   @override
-  Future<bool> crateApiDownloadRemoveDownload({
-    required String destination,
-  }) async => true;
+  Future<bool> removeDownload({required String destination}) async => true;
 
   @override
-  Future<bool> crateApiDownloadResumeDownload({
-    required String destination,
-  }) async => true;
+  Future<bool> resumeDownload({required String destination}) async => true;
 
   @override
-  Future<void> crateApiDownloadStartDownload({
+  Future<void> startDownload({
     required String url,
     required String destination,
     String? artworkId,
@@ -397,15 +367,14 @@ class MockRustLibApi extends RustLibApi {
   }) async {}
 
   @override
-  Future<ParsedPixivLink> crateApiDeeplinkParsePixivUrl({
-    required String url,
-  }) async => const ParsedPixivLink.artwork(id: 12345);
+  Future<ParsedPixivLink> parsePixivUrl({required String url}) async =>
+      const ParsedPixivLink.artwork(id: 12345);
 }
 
 void main() {
   setUpAll(() {
     SharedPreferences.setMockInitialValues({});
-    RustLib.initMock(api: MockRustLibApi());
+    NativeApi.initMock(api: MockPixevalApi());
   });
 
   testWidgets('Unauthenticated startup presents full-screen LoginGuidePage', (
@@ -437,9 +406,9 @@ void main() {
   testWidgets('HomeShell navigation bar tabs smoke test in guest mode', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const ProviderScope(
-      child: PixevalApp(initialGuestMode: true),
-    ));
+    await tester.pumpWidget(
+      const ProviderScope(child: PixevalApp(initialGuestMode: true)),
+    );
     await tester.pumpAndSettle();
 
     // Verify initial Explore tab
@@ -491,9 +460,9 @@ void main() {
   testWidgets('DeeplinkHandler handles artwork link navigation', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const ProviderScope(
-      child: PixevalApp(initialGuestMode: true),
-    ));
+    await tester.pumpWidget(
+      const ProviderScope(child: PixevalApp(initialGuestMode: true)),
+    );
     await tester.pumpAndSettle();
 
     final context = tester.element(find.byType(HomeShell));
