@@ -6,6 +6,11 @@ edition = "2024"
 [lib]
 crate-type = ["cdylib", "staticlib"]
 
+[features]
+# Avalonia consumes the domain crates directly. Its export surface does not
+# include the Flutter/Compose host adapters and their frontend-owned sessions.
+desktop-frontend = []
+
 [dependencies]
 boltffi.workspace = true
 uniffi = { workspace = true, features = ["tokio"] }
@@ -28,6 +33,7 @@ tokio = { workspace = true, features = ["full"] }
 parking_lot.workspace = true
 chrono.workspace = true
 serde_json.workspace = true
+serde = { workspace = true, features = ["derive"] }
 sha2.workspace = true
 zip.workspace = true
 futures-util.workspace = true
