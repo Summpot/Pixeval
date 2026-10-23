@@ -16,7 +16,6 @@ sealed class Program
     public static void Main(string[] args)
     {
         VelopackApp.Build().Run();
-        AngleNativeLoader.EnsureLoaded();
         StoreDataMigration.TryMigrateFromMicrosoftStore();
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
