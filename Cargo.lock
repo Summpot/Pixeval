@@ -2055,6 +2055,7 @@ dependencies = [
  "pixeval_storage",
  "pixeval_subscription",
  "pixeval_update",
+ "serde",
  "serde_json",
  "sha2",
  "tokio",
