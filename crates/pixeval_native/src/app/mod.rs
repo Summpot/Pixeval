@@ -4,3 +4,5 @@ pub mod api;
 pub mod events;
 pub mod feed;
 pub mod state;
+pub mod mobile;
+mod mobile_preferences;

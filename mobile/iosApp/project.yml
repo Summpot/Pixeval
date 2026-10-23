@@ -1,0 +1,40 @@
+name: Pixeval
+options:
+  bundleIdPrefix: io.github.pixeval
+  deploymentTarget:
+    iOS: '14.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    MARKETING_VERSION: '1.0.0'
+    CURRENT_PROJECT_VERSION: '1'
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+targets:
+  Pixeval:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.pixeval.pixeval
+        FRAMEWORK_SEARCH_PATHS: $(inherited) $(SRCROOT)/../sharedApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)
+        OTHER_LDFLAGS: $(inherited) -framework PixevalMobile
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: Pixeval
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UIApplicationSupportsIndirectInputEvents: true
+        CFBundleURLTypes:
+          - CFBundleURLName: pixiv
+            CFBundleURLSchemes: [pixiv]
+    preBuildScripts:
+      - name: Build Kotlin and Rust
+        basedOnDependencyAnalysis: false
+        script: |
+          cd "$SRCROOT/.."
+          ./gradlew :sharedApp:embedAndSignAppleFrameworkForXcode

@@ -4,6 +4,9 @@
 		<FluentIconsVersion>2.1.344</FluentIconsVersion>
 		<UniFFICargoTargetDir Condition="'$(UniFFICargoTargetDir)' == ''">$(MSBuildThisFileDirectory)target</UniFFICargoTargetDir>
 		<UniFFICargoProfile Condition="'$(UniFFICargoProfile)' == ''">release</UniFFICargoProfile>
+		<!-- Match UniFFISharp's input path even when .cargo/config.toml uses a
+		     different target directory for standalone Rust development. -->
+		<UniFFICargoBuildArgs Condition="'$(UniFFICargoBuildArgs)' == ''">--target-dir &quot;$(UniFFICargoTargetDir)&quot;</UniFFICargoBuildArgs>
 	</PropertyGroup>
 
 	<!-- NativeAOT is an executable publish setting and must not reach library or analyzer projects. -->

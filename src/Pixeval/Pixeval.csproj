@@ -20,6 +20,7 @@
 		<FileVersion>$(Version)</FileVersion>
 		<InformationalVersion>$(Version)</InformationalVersion>
 		<UniFFICrateName>pixeval_native</UniFFICrateName>
+		<UniFFICargoFeatures>desktop-frontend</UniFFICargoFeatures>
 		<UniFFIEnginePrefer Condition="'$(UniFFIEnginePrefer)' == ''">Auto</UniFFIEnginePrefer>
 		<UniFFINamespace>Pixeval.Ffi;pixeval_filters=global::Pixeval.Filters;pixeval_cache=global::Pixeval.Cache;pixeval_maho=global::Pixeval.Maho;pixeval_mako=global::Pixeval.Mako;pixeval_download=global::Pixeval.Download;pixeval_storage=global::Pixeval.Storage;pixeval_subscription=global::Pixeval.Subscription;pixeval_config=global::Pixeval.Config;pixeval_mcp=global::Pixeval.Mcp;pixeval_plugin=global::Pixeval.Plugin;pixeval_novel=global::Pixeval.Novel;pixeval_media=global::Pixeval.Media;pixeval_booru=global::Pixeval.Booru;pixeval_saucenao=global::Pixeval.SauceNao;pixeval_update=global::Pixeval.Update</UniFFINamespace>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>

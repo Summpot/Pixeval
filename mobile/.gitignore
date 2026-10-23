@@ -1,0 +1,8 @@
+.gradle/
+.kotlin/
+.tools/
+**/build/
+local.properties
+**/xcuserdata/
+*.xcuserstate
+!/tooling/localization/Cargo.lock

@@ -1,0 +1,119 @@
+name: Compose mobile internal validation
+
+# This workflow only creates review artifacts. Production mobile releases keep
+# their existing entry points until mobile/ACCEPTANCE.md is fully satisfied.
+on:
+  workflow_dispatch:
+    inputs:
+      signed_android:
+        description: Sign Android artifacts with existing release credentials
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.99.0 --profile minimal
+      - name: Install Android NDK
+        run: sdkmanager 'ndk;28.2.13676358' || sdkmanager 'ndk/28.2.13676358'
+      - name: Restore release credentials
+        if: inputs.signed_android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/pixeval-release.jks"
+      - name: Build internal APK and AAB
+        if: ${{ !inputs.signed_android }}
+        run: bash gradlew :androidApp:assembleDebug :androidApp:assembleRelease :androidApp:bundleRelease :nativeBindings:jvmTest :sharedApp:jvmTest --console=plain
+      - name: Build signed APK and AAB
+        if: inputs.signed_android
+        env:
+          PIXEVAL_ANDROID_KEYSTORE: ${{ runner.temp }}/pixeval-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: bash gradlew :androidApp:assembleDebug :androidApp:assembleRelease :androidApp:bundleRelease :nativeBindings:jvmTest :sharedApp:jvmTest --console=plain
+      - uses: actions/upload-artifact@v7
+        with:
+          name: compose-android-internal
+          path: |
+            mobile/androidApp/build/outputs/apk/**/*.apk
+            mobile/androidApp/build/outputs/bundle/**/*.aab
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: compose-android-test-reports
+          path: mobile/**/build/reports/tests/
+
+  windows-debug:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.99.0 --profile minimal
+      - name: Compile shared UI and verify real native callbacks
+        run: ./gradlew.bat :desktopDebug:compileKotlinJvm :nativeBindings:jvmTest :sharedApp:jvmTest --console=plain
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: compose-windows-test-reports
+          path: mobile/**/build/reports/tests/
+
+  ios:
+    runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.4.app/Contents/Developer
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install pinned Rust and XcodeGen
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal
+          brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate --spec iosApp/project.yml --project iosApp
+      - name: Build unsigned device and simulator apps
+        run: |
+          chmod +x gradlew
+          xcodebuild -project iosApp/Pixeval.xcodeproj -scheme Pixeval -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios-simulator CODE_SIGNING_ALLOWED=NO ARCHS=arm64 build
+          xcodebuild -project iosApp/Pixeval.xcodeproj -scheme Pixeval -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/ios-device CODE_SIGNING_ALLOWED=NO ARCHS=arm64 build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: compose-ios-unsigned-internal
+          path: |
+            mobile/build/ios-simulator/Build/Products/Debug-iphonesimulator/*.app
+            mobile/build/ios-device/Build/Products/Release-iphoneos/*.app
+          if-no-files-found: error

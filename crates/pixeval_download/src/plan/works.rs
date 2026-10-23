@@ -1331,7 +1331,11 @@ fn execute_after(
             pixeval_media::manga::pack_manga(paths, archive_path, *format).map_err(|err| err.to_string())
         }
         AfterDownload::SynthesizeUgoira { format, destination, folder } => {
-            synthesize(&job, *format, destination, folder, overwrite)
+            if *format == UgoiraFormat::Mp4 && !pixeval_media::ugoira::is_mp4_supported() {
+                encode_ugoira(&job, "mp4", destination, folder, overwrite, encoder.as_deref())
+            } else {
+                synthesize(&job, *format, destination, folder, overwrite)
+            }
         }
         AfterDownload::WriteDelayCsv { path } => write_delay_csv(&job.delays_ms, path),
         AfterDownload::EncodeUgoira { extension, destination, folder } => {
@@ -1415,7 +1419,7 @@ fn encode_ugoira(
     let Some(encoder) = encoder else {
         return Err(format!("No encoder for .{extension}"));
     };
-    if ugoira_native_format(extension).is_some() {
+    if ugoira_native_format(extension).is_some_and(|format| format != UgoiraFormat::Mp4 || pixeval_media::ugoira::is_mp4_supported()) {
         return Err(format!("Native ugoira format .{extension} was not synthesized"));
     }
     let paths = job.children.iter().map(|(path, _)| path.clone()).collect();

@@ -1,5 +1,6 @@
 uniffi::setup_scaffolding!();
 
+#[cfg(not(feature = "desktop-frontend"))]
 pub mod app;
 pub use pixeval_filters::eval::{ArtworkMetadata, ArtworkTag};
 pub use pixeval_mako::{Illustration, IllustrationFeedPage};

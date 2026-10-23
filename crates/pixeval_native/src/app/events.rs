@@ -98,6 +98,11 @@ impl<T: Clone> EventHub<T> {
 pub struct SessionEventReceiver {
     inner: Arc<EventQueue<SessionEvent>>,
 }
+impl SessionEventReceiver {
+    pub(crate) fn from_hub(hub: &EventHub<SessionEvent>) -> Self {
+        Self { inner: hub.subscribe() }
+    }
+}
 #[uniffi::export(async_runtime = "tokio")]
 #[boltffi::export]
 impl SessionEventReceiver {

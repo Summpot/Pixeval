@@ -82,7 +82,8 @@ public sealed class LocalizationTest
                     Assert.IsTrue(LocalizedHelp.Instance["DownloadMacroHelp"].Length > 0);
                     Assert.AreEqual(LocalizedHelp.Instance["DownloadMacroHelp"], helpText.Markdown);
                     Assert.IsTrue(download.GetVisualDescendants().OfType<TextBlock>()
-                        .Any(text => text.Text == ((Pixeval.Download.DownloadItemSnapshot)download.DataContext!).ProgressMessage));
+                        .Any(text => text.Text == ((Pixeval.Download.DownloadItemSnapshot)download.DataContext!).ProgressMessage),
+                        $"Locale {locale}: expected '{((Pixeval.Download.DownloadItemSnapshot)download.DataContext!).ProgressMessage}', visual text=[{string.Join(" | ", download.GetVisualDescendants().OfType<TextBlock>().Select(text => text.Text ?? "<null>"))}]");
                 }
             }
             finally
