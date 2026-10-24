@@ -122,7 +122,7 @@ impl MobileRuntime {
         downloads.bind_mako(client.clone());
         downloads.set_download_policy(pixeval_download::plan::DownloadPolicy {
             overwrite: preferences.overwrite,
-            illustration_format: "Original".into(),
+            illustration_format: preferences.illustration_format.clone(),
             ugoira_format: preferences.ugoira_format.clone(),
             novel_format: preferences.novel_format.clone(),
         });
@@ -207,7 +207,7 @@ impl MobileRuntime {
         self.downloads
             .set_download_policy(pixeval_download::plan::DownloadPolicy {
                 overwrite: preferences.overwrite,
-                illustration_format: "Original".into(),
+                illustration_format: preferences.illustration_format.clone(),
                 ugoira_format: preferences.ugoira_format.clone(),
                 novel_format: preferences.novel_format.clone(),
             });
