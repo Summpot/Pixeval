@@ -1,4 +1,6 @@
+import ch.ubique.uniffi.plugin.tasks.BuildBindingsTask
 import ch.ubique.uniffi.plugin.tasks.CargoBuildTask
+import ch.ubique.uniffi.plugin.tasks.InstallBindgenTask
 import ch.ubique.uniffi.plugin.tasks.MergeLibrariesTask
 
 plugins {
@@ -38,8 +40,14 @@ uniffi {
     generateBindingsForExternalCrates.set(true)
     generateFromLibrary()
 }
-tasks.named("installBindgen") { dependsOn(rootProject.tasks.named("prepareBindgen")) }
-tasks.named("buildBindings") {
+tasks.named<InstallBindgenTask>("installBindgen") {
+    dependsOn(rootProject.tasks.named("prepareBindgen"))
+}
+tasks.named<BuildBindingsTask>("buildBindings") {
+    val externalBindgen = rootProject.file("../../Pixeval_target/uniffi_bindgen/bin/uniffi-bindgen-kotlin-multiplatform.exe")
+    if (externalBindgen.exists()) {
+        bindgen.set(externalBindgen)
+    }
     doLast {
         // Upstream emits both a constructor property named `message` and an
         // additional Throwable.message getter. Preserve the field's wire name

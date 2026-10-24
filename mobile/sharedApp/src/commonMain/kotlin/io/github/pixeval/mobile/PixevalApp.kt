@@ -4,12 +4,14 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -51,10 +53,13 @@ fun PixevalApp(controller: AppController) {
     val images = remember(controller, state.accountEpoch) { ImageRepository(controller.cache, controller.platform.imageMemoryBudgetBytes) }
     var page by rememberSaveable { mutableStateOf("browse") }
     var menu by remember { mutableStateOf(false) }
+    var bookmarkDialogWork by remember { mutableStateOf<WorkEntry?>(null) }
+    var searchFilterOpen by remember { mutableStateOf(false) }
     val pages = key(state.accountEpoch) { rememberSaveableStateHolder() }
-    val canGoBack = state.userDetail != null || state.selected != null || page != "browse"
+    val canGoBack = state.seriesOpen || state.userDetail != null || state.selected != null || page != "browse"
     val goBack by rememberUpdatedState<() -> Unit>({
         when {
+            state.seriesOpen -> controller.closeSeries()
             state.userDetail != null -> controller.closeUser()
             state.selected != null -> controller.back()
             else -> page = "browse"
@@ -76,6 +81,11 @@ fun PixevalApp(controller: AppController) {
                         FeedSource.entries.forEach { source -> DropdownMenuItem(text = { Text(text(source.label)) }, onClick = {
                             page = "browse"; menu = false; controller.selectSource(source)
                         }) }
+                        DropdownMenuItem(text = { Text(text("MainPage.Tab-Spotlight")) }, onClick = { page = "spotlight"; menu = false; controller.refreshSpotlight() })
+                        DropdownMenuItem(text = { Text("Booru 浏览") }, onClick = { page = "booru"; menu = false; controller.back() })
+                        DropdownMenuItem(text = { Text("SauceNAO 搜图") }, onClick = { page = "saucenao"; menu = false; controller.back() })
+                        DropdownMenuItem(text = { Text("YAML 布局定制") }, onClick = { page = "yaml"; menu = false; controller.back() })
+                        DropdownMenuItem(text = { Text("帮助与说明") }, onClick = { page = "help"; menu = false; controller.back() })
                         DropdownMenuItem(text = { Text(text("MainPage.Tab-Download")) }, onClick = { page = "downloads"; menu = false; controller.back(); controller.refreshDownloads() })
                         DropdownMenuItem(text = { Text(text("MainPage.Tab-Settings")) }, onClick = { page = "settings"; menu = false; controller.back() })
                         DropdownMenuItem(text = { Text(text("AppSettings.WorkSubscriptionsSettingsEntry-Header")) }, onClick = { page = "subscriptions"; menu = false; controller.back(); controller.refreshSubscriptions() })
@@ -93,6 +103,20 @@ fun PixevalApp(controller: AppController) {
                     state.user == null -> Login(controller, ::text)
                     page == "downloads" -> Downloads(controller, state, ::text)
                     page == "subscriptions" -> Subscriptions(controller, state, ::text)
+                    page == "spotlight" -> SpotlightView(
+                        controller = controller,
+                        images = images,
+                        articles = state.spotlightArticles,
+                        loading = state.spotlightLoading,
+                        exhausted = state.spotlightExhausted,
+                        currentCategory = state.spotlightCategory,
+                        onSelectCategory = controller::selectSpotlightCategory,
+                        onLoadMore = controller::loadMoreSpotlight
+                    )
+                    page == "booru" -> BooruViewer(controller, images)
+                    page == "saucenao" -> SauceNaoViewer(controller, images)
+                    page == "yaml" -> YamlEditor(controller, onBack = { page = "browse" })
+                    page == "help" -> HelpViewer(controller, onBack = { page = "browse" })
                     else -> BoxWithConstraints(Modifier.fillMaxSize()) {
                         val wide = maxWidth >= 840.dp
                         Row(Modifier.fillMaxSize()) {
@@ -100,9 +124,50 @@ fun PixevalApp(controller: AppController) {
                                 Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
                                     WorkKind.entries.forEach { kind -> FilterChip(selected = kind == state.kind, onClick = { controller.selectKind(kind) }, label = { Text(kind.name) }) }
                                 }
-                                if(state.source == FeedSource.Search) Row(Modifier.padding(8.dp)) {
-                                    OutlinedTextField(state.query, controller::setQuery, Modifier.weight(1f), singleLine = true, label = { Text(text("MainPage.Tab-Search")) })
-                                    TextButton(onClick = { controller.refresh() }) { Text("→") }
+                                if(state.source == FeedSource.Search) Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        OutlinedTextField(state.query, controller::setQuery, Modifier.weight(1f), singleLine = true, label = { Text(text("MainPage.Tab-Search")) })
+                                        Spacer(Modifier.width(4.dp))
+                                        IconButton(onClick = { searchFilterOpen = true }) { Text("⚙") }
+                                        TextButton(onClick = { controller.refresh() }) { Text("→") }
+                                    }
+                                    if (state.searchSuggestions.isNotEmpty()) {
+                                        Row(
+                                            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 4.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            val hasHistory = state.searchSuggestions.any { it.isHistory }
+                                            if (hasHistory) {
+                                                TextButton(onClick = { controller.clearSearchHistory() }) {
+                                                    Text("清除历史", style = MaterialTheme.typography.labelSmall)
+                                                }
+                                            }
+                                            state.searchSuggestions.forEach { suggestion ->
+                                                InputChip(
+                                                    selected = false,
+                                                    onClick = {
+                                                        controller.setQuery(suggestion.name)
+                                                        controller.refresh()
+                                                    },
+                                                    label = {
+                                                        val labelText = if (suggestion.isHistory) "⏱ ${suggestion.name}"
+                                                        else if (suggestion.translatedName != null) "${suggestion.name} (${suggestion.translatedName})"
+                                                        else suggestion.name
+                                                        Text(labelText, style = MaterialTheme.typography.labelSmall)
+                                                    },
+                                                    trailingIcon = if (suggestion.isHistory) {
+                                                        {
+                                                            Text(
+                                                                "×",
+                                                                modifier = Modifier.clickable { controller.deleteSearchHistory(suggestion.name) }
+                                                            )
+                                                        }
+                                                    } else null
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                                 OutlinedTextField(state.filter, controller::setFilter, Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                                     singleLine = true, label = { Text(text("WorkContainer.FilterAutoSuggestBox-PlaceholderText")) })
@@ -125,7 +190,12 @@ fun PixevalApp(controller: AppController) {
                                             RustImage(images, work.imageUrl, work.title, Modifier.fillMaxWidth().aspectRatio(ratio.coerceIn(.4f, 2f)))
                                             Text(work.title, Modifier.padding(8.dp), maxLines = 2)
                                             Text(work.author.name, Modifier.padding(horizontal = 8.dp), style = MaterialTheme.typography.bodySmall)
-                                            Row { TextButton(onClick = { controller.bookmark(work) }) { Text(if(work.bookmarked) "♥" else "♡") }; TextButton(onClick = { controller.download(work) }) { Text("↓") } }
+                                            Row {
+                                                TextButton(onClick = { controller.bookmark(work) }) { Text(if(work.bookmarked) "♥" else "♡") }
+                                                TextButton(onClick = { bookmarkDialogWork = work }) { Text("✎") }
+                                                TextButton(onClick = { controller.toggleWatchLater(work) }) { Text("⏱") }
+                                                TextButton(onClick = { controller.download(work) }) { Text("↓") }
+                                            }
                                         }
                                     }
                                     item { if(state.loading) CircularProgressIndicator() else if(!state.exhausted) TextButton(onClick = controller::loadMore) { Text("＋") } }
@@ -133,24 +203,70 @@ fun PixevalApp(controller: AppController) {
                             } }
                             state.selected?.let { selected ->
                                 if(wide) VerticalDivider()
-                                Detail(controller, state, selected, images, Modifier.weight(1f), ::text)
+                                Detail(controller, state, selected, images, Modifier.weight(1f), ::text, onEditBookmark = { bookmarkDialogWork = it })
                             }
                         }
                     }
                 }
             }
         }
-        state.userDetail?.let { detail -> AlertDialog(
-            onDismissRequest = controller::closeUser,
-            title = { Text(detail.user.name) },
-            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(detail.user.comment.orEmpty())
-                TextButton(onClick = { controller.follow(detail.user) }) { Text(text(if(detail.user.isFollowed) "UserViewerPage.Unfollow" else "UserViewerPage.Follow")) }
-                TextButton(onClick = { controller.subscribe(detail.user) }) { Text(text("WorkSubscriptionsSettingsExpander.AddSubscriptionButton-Label")) }
-            } },
-            confirmButton = { TextButton(onClick = { controller.userWorks(detail.user) }) { Text(text("MainPage.Tab-WorkPosts")) } },
-            dismissButton = { TextButton(onClick = controller::closeUser) { Text(text("ContentDialog.CancelButtonContent")) } },
-        ) }
+        bookmarkDialogWork?.let { work ->
+            BookmarkDialog(controller, work, onDismiss = { bookmarkDialogWork = null })
+        }
+        if (searchFilterOpen) {
+            SearchFilterSheet(
+                isNovel = state.kind == WorkKind.NOVEL,
+                initialFilter = state.searchFilter,
+                onDismiss = { searchFilterOpen = false },
+                onApply = { newFilter ->
+                    controller.applySearchFilter(newFilter)
+                }
+            )
+        }
+        state.userDetail?.let { detail ->
+            UserProfileSheet(
+                controller = controller,
+                images = images,
+                detail = detail,
+                onDismiss = controller::closeUser
+            )
+        }
+        if (state.seriesOpen && state.seriesQuery != null) {
+            val series = state.seriesQuery!!.detail()
+            AlertDialog(
+                onDismissRequest = controller::closeSeries,
+                title = { Text(series.title) },
+                text = {
+                    Column(Modifier.fillMaxWidth().heightIn(max = 400.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("${series.publishedContentCount ?: state.seriesWorks.size} works")
+                        LazyColumn(Modifier.weight(1f)) {
+                            items(state.seriesWorks, key = { "series:${it.simpleKind}:${it.id}" }) { item ->
+                                Card(onClick = { controller.closeSeries(); controller.open(item) }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                    Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        RustImage(images, item.imageUrl, item.title, Modifier.size(50.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(item.title, maxLines = 1)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val watched = series.id != 0L // default toggle
+                        controller.toggleSeriesWatchlist(SimpleWorkKind.ILLUSTRATION, series.id, false)
+                    }) {
+                        Text("Watch")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = controller::closeSeries) {
+                        Text(text("ContentDialog.CancelButtonContent"))
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -169,41 +285,109 @@ private fun Login(controller: AppController, text: (String) -> String) {
 }
 
 @Composable
-private fun Detail(controller: AppController, state: AppState, work: WorkEntry, images: ImageRepository, modifier: Modifier, text: (String) -> String) {
+private fun Detail(
+    controller: AppController,
+    state: AppState,
+    work: WorkEntry,
+    images: ImageRepository,
+    modifier: Modifier,
+    text: (String) -> String,
+    onEditBookmark: (WorkEntry) -> Unit
+) {
     LazyColumn(modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text(work.title, style = MaterialTheme.typography.headlineSmall); TextButton(onClick = { controller.openUser(work.author) }) { Text(work.author.name) } }
-        item { Row {
+        item { Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             TextButton(onClick = { controller.bookmark(work) }) { Text(if(work.bookmarked) "♥" else "♡") }
+            TextButton(onClick = { onEditBookmark(work) }) { Text("✎") }
+            TextButton(onClick = { controller.toggleWatchLater(work) }) { Text(if(state.isWatchLater) "⏱✓" else "⏱") }
             TextButton(onClick = { controller.download(work) }) { Text(text("EntryItem.Save")) }
             TextButton(onClick = { controller.platform.shareText("https://www.pixiv.net/${if(work is WorkEntry.NovelWork) "novel/show.php?id=" else "artworks/"}${work.id}") }) { Text(text("EntryItem.GenerateWebLink")) }
         } }
-        when(work) {
-            is WorkEntry.Illust -> {
+        work.series?.let { s ->
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Series", style = MaterialTheme.typography.labelSmall)
+                            Text(s.title, style = MaterialTheme.typography.titleMedium)
+                        }
+                        TextButton(onClick = { controller.openSeries(work.simpleKind, s.id) }) {
+                            Text("View Series")
+                        }
+                    }
+                }
+            }
+        }
+        when {
+            work.isUgoira -> item {
+                UgoiraPlayer(controller.client, controller.cache, work.id, work.title)
+            }
+            work is WorkEntry.Illust -> {
                 val urls = work.illustration.metaPages.mapNotNull { it.imageUrls.large ?: it.imageUrls.original }.ifEmpty { listOfNotNull(work.illustration.imageUrls.large ?: work.imageUrl) }
                 items(urls) { url ->
-                    var zoom by remember(url) { mutableFloatStateOf(1f) }
-                    RustImage(images, url, work.title, Modifier.fillMaxWidth().height(500.dp).pointerInput(url) {
-                        detectTransformGestures { _, _, factor, _ -> zoom = (zoom * factor).coerceIn(1f, 5f) }
-                    }.graphicsLayer { scaleX = zoom; scaleY = zoom }, width = 1440)
+                    PanZoomImage(images, url, work.title)
                 }
                 item { Text(work.illustration.tags.joinToString("  ") { "#${it.name}" }) }
             }
-            is WorkEntry.NovelWork -> item {
+            work is WorkEntry.NovelWork -> item {
                 val content = state.novelContent
                 val document = state.novelDocument
                 if (content != null && document != null) NovelReader(controller, content, document, images)
                 else CircularProgressIndicator()
             }
         }
-        item { TextButton(onClick = { controller.loadComments(work) }) { Text(text("MainPage.Tab-Comments")) } }
+        if (state.relatedWorks.isNotEmpty()) {
+            item {
+                Text("Related Works", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+            }
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().height(160.dp)) {
+                    items(state.relatedWorks, key = { "rel:${it.simpleKind}:${it.id}" }) { rel ->
+                        Card(onClick = { controller.open(rel) }, modifier = Modifier.width(120.dp).fillMaxHeight()) {
+                            RustImage(images, rel.imageUrl, rel.title, Modifier.fillMaxWidth().height(100.dp))
+                            Text(rel.title, style = MaterialTheme.typography.bodySmall, maxLines = 2, modifier = Modifier.padding(4.dp))
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(text("MainPage.Tab-Comments"), style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = { controller.loadComments(work) }) { Text("↻") }
+            }
+        }
         items(state.comments, key = { it.id }) { comment ->
-            Text(comment.user.name, style = MaterialTheme.typography.labelLarge)
-            Text(comment.comment)
+            Card(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                Column(Modifier.padding(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(comment.user.name, style = MaterialTheme.typography.labelLarge)
+                        if (comment.user.id == state.user?.id?.toLongOrNull()) {
+                            TextButton(onClick = { controller.deleteComment(work, comment.id) }) { Text("🗑") }
+                        }
+                    }
+                    Text(comment.comment)
+                }
+            }
+        }
+        if (state.comments.isNotEmpty() && !state.commentsExhausted) {
+            item {
+                Button(onClick = { controller.loadMoreComments(work) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Load More")
+                }
+            }
         }
         item {
             var comment by rememberSaveable(work.id) { mutableStateOf("") }
             OutlinedTextField(comment, { comment = it }, Modifier.fillMaxWidth(), label = { Text(text("MainPage.Tab-Comments")) })
-            TextButton(onClick = { controller.postComment(work, comment) }, enabled = comment.isNotBlank()) { Text("→") }
+            TextButton(onClick = { controller.postComment(work, comment); comment = "" }, enabled = comment.isNotBlank()) { Text("→") }
         }
     }
 }
@@ -229,13 +413,47 @@ private fun Settings(controller: AppController, state: AppState, text: (String) 
         var macro by rememberSaveable { mutableStateOf(prefs.downloadPathMacro) }
         OutlinedTextField(macro, { macro = it }, Modifier.fillMaxWidth(), label = { Text(text("AppSettings.DownloadPathMacroEntry-Header")) })
         Button(onClick = { controller.changePreferences { it.copy(downloadPathMacro = macro) } }) { Text(text("EntryItem.Save")) }
+        Text("插画/漫画打包格式:", style = MaterialTheme.typography.labelMedium)
+        Row(Modifier.horizontalScroll(rememberScrollState())) {
+            listOf("Original", "Zip", "Cbz").forEach { format ->
+                FilterChip(
+                    selected = prefs.illustrationFormat == format,
+                    onClick = { controller.changePreferences { it.copy(illustrationFormat = format) } },
+                    label = { Text(format) }
+                )
+            }
+        }
+        Text("动图导出格式:", style = MaterialTheme.typography.labelMedium)
         Row(Modifier.horizontalScroll(rememberScrollState())) {
             (listOf("Original", "Gif", "Apng", "Webp") + if(controller.platform.videoEncoder != null || controller.runtime.capabilities().mp4Export) listOf("Mp4") else emptyList()).forEach { format -> FilterChip(selected = prefs.ugoiraFormat == format,
                 onClick = { controller.changePreferences { it.copy(ugoiraFormat = format) } }, label = { Text(format) }) }
         }
+        Text("小说导出格式:", style = MaterialTheme.typography.labelMedium)
         Row(Modifier.horizontalScroll(rememberScrollState())) {
             listOf("OriginalTxt", "Md", "Html", "Epub").forEach { format -> FilterChip(selected = prefs.novelFormat == format,
                 onClick = { controller.changePreferences { it.copy(novelFormat = format) } }, label = { Text(format) }) }
+        }
+        HorizontalDivider()
+        Text("图片缓存统计与清理", style = MaterialTheme.typography.titleLarge)
+        val scope = rememberCoroutineScope()
+        var cacheStats by remember { mutableStateOf(controller.cache.stats()) }
+        var cacheNotice by remember { mutableStateOf<String?>(null) }
+        Text("缓存占用: ${cacheStats.totalUsedBytes / (1024u * 1024u)} MB / ${cacheStats.totalAllocatedBytes / (1024u * 1024u)} MB (已缓存 ${cacheStats.entryCount} 个文件)")
+        cacheNotice?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+        OutlinedButton(onClick = {
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        controller.cache.clear()
+                    }
+                    cacheStats = controller.cache.stats()
+                    cacheNotice = "缓存已清空"
+                } catch (e: Exception) {
+                    cacheNotice = e.message
+                }
+            }
+        }) {
+            Text("清空缓存")
         }
         HorizontalDivider()
         Text(text("AppSettings.SettingsGroup-Mcp-Header"), style = MaterialTheme.typography.titleLarge)
@@ -298,9 +516,10 @@ private fun DownloadRow(controller: AppController, item: uniffi.pixeval_download
             TextButton(onClick = { controller.changeDownload(item.key, "cancel") }, enabled = active || item.state == uniffi.pixeval_download.DownloadState.PAUSED) { Text(text("ContentDialog.CancelButtonContent")) }
             TextButton(onClick = { controller.changeDownload(item.key, "retry") }, enabled = item.state == uniffi.pixeval_download.DownloadState.ERROR || item.state == uniffi.pixeval_download.DownloadState.CANCELLED) { Text(text("WorkContainer.RefreshButton-Label")) }
         }
-        if (item.state == uniffi.pixeval_download.DownloadState.COMPLETED) Row {
+        if (item.state == uniffi.pixeval_download.DownloadState.COMPLETED) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(onClick = { controller.exportDownload(item) }) { Text(text("Mobile.ExportFile")) }
             TextButton(onClick = { controller.exportDownload(item, true) }) { Text(text("Mobile.ShareFile")) }
+            TextButton(onClick = { controller.exportDownload(item, gallery = true) }) { Text("Gallery") }
         }
     } }
 }

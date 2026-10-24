@@ -15,7 +15,9 @@ import java.awt.Desktop
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.net.URI
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.util.Locale
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +34,14 @@ fun main() = application {
         override fun setBackHandler(handler: (() -> Unit)?) { backAction = handler }
         override fun openUrl(url: String) { Desktop.getDesktop().browse(URI(url)) }
         override fun shareText(text: String) { Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null) }
+        override suspend fun saveToGallery(path: String) = withContext(Dispatchers.IO) {
+            val source = Path.of(path)
+            val destDir = Path.of(System.getProperty("user.home"), "Pictures", "Pixeval")
+            Files.createDirectories(destDir)
+            val target = destDir.resolve(source.fileName.toString())
+            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING)
+            Unit
+        }
     } }
     var controller by remember { mutableStateOf<AppController?>(null) }
     var startupError by remember { mutableStateOf<String?>(null) }

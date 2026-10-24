@@ -37,6 +37,10 @@ public sealed class GitHubService(NetworkSettingsGroup settings) : IDisposable
     {
         var slot = Acquire();
         try { return await operation(slot.Client).ConfigureAwait(false); }
+        catch (UniFFISharp.Exceptions.InternalException ex) when (ex.Message.Contains("status: 3"))
+        {
+            throw new OperationCanceledException("Rust operation cancelled", ex);
+        }
         finally { Release(slot); }
     }
     public void Reset()
