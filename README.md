@@ -1,46 +1,38 @@
-# pixeval_flutter
+# Pixeval
 
-A new Flutter project.
+Pixeval 是一个跨平台的 Pixiv 第三方客户端，包含 Rust 核心、Avalonia 桌面端以及 Compose Multiplatform 移动端/桌面调试宿主。
 
-## Native builds
+## 架构组成
 
-Install Flutter with Dart 3.13.4 or newer, Rustup, and the platform's native build tools.
-Android requires the NDK version configured in `android/app/build.gradle.kts`;
-iOS requires macOS and Xcode; Windows requires the Visual Studio C++ toolchain
-and Clang.
+- **Rust Core (`crates/`)**：网络请求、认证、缓存、图片与动图编解码、存储、订阅与过滤等核心业务能力。
+- **Avalonia Desktop (`src/`)**：基于 .NET 10 / Avalonia 构建的正式桌面端。
+- **Compose Multiplatform (`compose/`)**：基于 Kotlin Multiplatform 与 Compose Multiplatform 构建的移动端（Android / iOS）及桌面调试宿主（`:desktop`）。
 
-Flutter Build Hooks compile and bundle the Rust bridge automatically:
+## 构建与运行
 
-```sh
-flutter pub get
-flutter build apk --release --split-per-abi
+### Compose 端构建（Gradle）
+
+Gradle 已支持在仓库根目录直接运行（Gradle Wrapper 位于根目录）：
+
+```powershell
+# 运行 Compose 桌面宿主
+./gradlew.bat :desktop:run
+
+# 构建 Android Debug APK
+./gradlew.bat :androidApp:assembleDebug
+
+# 运行单元测试
+./gradlew.bat :nativeBindings:jvmTest :sharedApp:jvmTest
 ```
 
-The same hook runs for `flutter run`, `flutter test`, `flutter build windows`,
-and `flutter build ios`. Rustup installs the toolchain and targets pinned in
-`crates/pixeval_flutter_bridge/rust-toolchain.toml` on first use. Native outputs
-are cached by the Hooks tooling and are not committed to Git.
+### 桌面端构建（.NET）
 
-The bridge uses release builds with Thin LTO, one codegen unit per crate, and
-stripped symbols, including during Flutter debug builds. Android C dependencies
-and linking use the minimum Android API supplied by Flutter. Changes to Rust
-sources, workspace manifests, `Cargo.lock`, and `.cargo/config.toml` invalidate
-the native build cache.
+```powershell
+dotnet build src/Pixeval.Desktop/Pixeval.Desktop.csproj
+```
 
-Regenerate the Dart/Rust bindings with `flutter_rust_bridge_codegen generate`
-after changing Rust API signatures. Build Hooks compile the native library from
-the Rust sources and generated bindings.
+### Rust 核心检查
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```powershell
+cargo check --workspace
+```

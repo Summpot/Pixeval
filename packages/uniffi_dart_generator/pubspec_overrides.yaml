@@ -1,5 +1,0 @@
-dependency_overrides:
-  uniffi_dart_build:
-    path: ../uniffi_dart_build
-  uniffi_dart:
-    path: ../uniffi_dart

@@ -1,7 +1,7 @@
 name: Compose mobile internal validation
 
 # This workflow only creates review artifacts. Production mobile releases keep
-# their existing entry points until mobile/ACCEPTANCE.md is fully satisfied.
+# their existing entry points until compose/ACCEPTANCE.md is fully satisfied.
 on:
   workflow_dispatch:
     inputs:
@@ -16,9 +16,6 @@ permissions:
 jobs:
   android:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mobile
     steps:
       - uses: actions/checkout@v7
         with:
@@ -52,20 +49,17 @@ jobs:
         with:
           name: compose-android-internal
           path: |
-            mobile/androidApp/build/outputs/apk/**/*.apk
-            mobile/androidApp/build/outputs/bundle/**/*.aab
+            compose/androidApp/build/outputs/apk/**/*.apk
+            compose/androidApp/build/outputs/bundle/**/*.aab
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: compose-android-test-reports
-          path: mobile/**/build/reports/tests/
+          path: compose/**/build/reports/tests/
 
   windows-debug:
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: mobile
     steps:
       - uses: actions/checkout@v7
         with:
@@ -77,12 +71,12 @@ jobs:
       - name: Install pinned Rust
         run: rustup toolchain install 1.99.0 --profile minimal
       - name: Compile shared UI and verify real native callbacks
-        run: ./gradlew.bat :desktopDebug:compileKotlinJvm :nativeBindings:jvmTest :sharedApp:jvmTest --console=plain
+        run: ./gradlew.bat :desktop:compileKotlinJvm :nativeBindings:jvmTest :sharedApp:jvmTest --console=plain
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: compose-windows-test-reports
-          path: mobile/**/build/reports/tests/
+          path: compose/**/build/reports/tests/
 
   ios:
     runs-on: macos-26
@@ -90,7 +84,7 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_26.4.app/Contents/Developer
     defaults:
       run:
-        working-directory: mobile
+        working-directory: compose
     steps:
       - uses: actions/checkout@v7
         with:
@@ -107,13 +101,13 @@ jobs:
         run: xcodegen generate --spec iosApp/project.yml --project iosApp
       - name: Build unsigned device and simulator apps
         run: |
-          chmod +x gradlew
+          chmod +x ../gradlew gradlew
           xcodebuild -project iosApp/Pixeval.xcodeproj -scheme Pixeval -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios-simulator CODE_SIGNING_ALLOWED=NO ARCHS=arm64 build
           xcodebuild -project iosApp/Pixeval.xcodeproj -scheme Pixeval -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/ios-device CODE_SIGNING_ALLOWED=NO ARCHS=arm64 build
       - uses: actions/upload-artifact@v7
         with:
           name: compose-ios-unsigned-internal
           path: |
-            mobile/build/ios-simulator/Build/Products/Debug-iphonesimulator/*.app
-            mobile/build/ios-device/Build/Products/Release-iphoneos/*.app
+            compose/build/ios-simulator/Build/Products/Debug-iphonesimulator/*.app
+            compose/build/ios-device/Build/Products/Release-iphoneos/*.app
           if-no-files-found: error
