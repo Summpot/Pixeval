@@ -17,7 +17,6 @@
 mono_crash.*
 
 # Build results
-android/app/src/main/jniLibs/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
@@ -465,14 +464,13 @@ $RECYCLE.BIN/
 /src/Pixeval/Strings/.generated
 
 ##
-## Flutter & Dart
+## Gradle & Compose
 ##
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.packages
+.gradle/
+.kotlin/
+.tools/
 build/
-*.ephemeral/
-.idea/
+**/build/
+local.properties
 *.iml
-
+.idea/
