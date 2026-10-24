@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<AvaloniaVersion>12.1.4</AvaloniaVersion>
 		<FluentIconsVersion>2.1.344</FluentIconsVersion>
+		<UniFFICargoTargetDir Condition="'$(UniFFICargoTargetDir)' == '' and Exists('$(MSBuildThisFileDirectory)..\Pixeval_target')">$(MSBuildThisFileDirectory)..\Pixeval_target</UniFFICargoTargetDir>
 		<UniFFICargoTargetDir Condition="'$(UniFFICargoTargetDir)' == ''">$(MSBuildThisFileDirectory)target</UniFFICargoTargetDir>
 		<UniFFICargoProfile Condition="'$(UniFFICargoProfile)' == ''">release</UniFFICargoProfile>
 		<!-- Match UniFFISharp's input path even when .cargo/config.toml uses a

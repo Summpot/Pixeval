@@ -1,8 +1,12 @@
 package io.github.pixeval.pixeval
 
 import android.app.Application
+import android.content.ContentValues
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import io.github.pixeval.mobile.*
@@ -106,6 +110,37 @@ class AndroidSession(private val app: PixevalApplication) : PlatformServices {
             clipData = android.content.ClipData.newRawUri(file.name, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }, null))
+    }
+    override suspend fun saveToGallery(path: String) = withContext(Dispatchers.IO) {
+        val file = transferableFile(path)
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, file.name)
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeType(file))
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + File.separator + "Pixeval")
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+        }
+        val resolver = app.contentResolver
+        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        } else {
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        }
+        val uri = resolver.insert(collection, values) ?: error("Failed to create gallery entry")
+        try {
+            resolver.openOutputStream(uri)?.use { output ->
+                file.inputStream().use { it.copyTo(output) }
+            } ?: error("Failed to open gallery stream")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                values.clear()
+                values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                resolver.update(uri, values, null, null)
+            }
+        } catch (failure: Exception) {
+            resolver.delete(uri, null, null)
+            throw failure
+        }
     }
     private fun transferableFile(path: String): File {
         val root = File(directories.downloads).canonicalFile

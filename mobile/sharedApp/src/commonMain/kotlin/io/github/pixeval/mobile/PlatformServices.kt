@@ -17,6 +17,7 @@ interface PlatformServices {
     fun setBackHandler(handler: (() -> Unit)?) {}
     suspend fun exportFile(path: String) { error("File export is unavailable on this host") }
     suspend fun shareFile(path: String) { error("File sharing is unavailable on this host") }
+    suspend fun saveToGallery(path: String) { error("Saving to gallery is unavailable on this host") }
     fun openUrl(url: String)
     fun shareText(text: String)
 }
