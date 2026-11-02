@@ -31,6 +31,10 @@ MaterialColorUtilities、MaterialSymbols 也使用源码子模块；`Directory.B
 将主库的三个 `Shirasagi0012.*` 包引用替换为项目引用，并统一 Avalonia/SkiaSharp 版本。
 因此构建 Pixeval 不需要 GitHub Packages 凭证，也不需要修改依赖仓库的项目文件。
 
+当前渲染依赖使用 Avalonia 12.1.4、SkiaSharp 4.152.1 和 HarfBuzzSharp 14.2.1.201。
+Material Symbols 的可变字体 API 需要 SkiaSharp 4；桌面 NativeAOT 使用的
+`Summpot.StaticAvalonia` 必须包含对应版本的原生库，不能沿用 3.119.4 包。
+
 现有克隆更新依赖后运行：
 
 ```sh

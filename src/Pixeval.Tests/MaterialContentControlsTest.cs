@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,8 +21,8 @@ using Material3Expressive.Foundation.Rendering;
 using MaterialSymbols;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Utilities;
+using Pixeval.Localization;
+using Pixeval.Common;
 using Pixeval.Views.Settings;
 
 namespace Pixeval.Tests;
@@ -35,8 +34,7 @@ public sealed class MaterialContentControlsTest
     [ClassInitialize]
     public static void Initialize(TestContext _)
     {
-        I18NManager.CandidatePaths.Add(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval")));
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+        AppLocalization.Instance.SetLanguage("zh-Hans");
     }
 
     [TestMethod]

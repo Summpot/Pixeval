@@ -25,9 +25,8 @@ using ComposeAnimation;
 using Material3Expressive.Components;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Utilities;
-using Pixeval.Views.Work;
+using Pixeval.Common;
+using Pixeval.Views.Works;
 using SmoothScroll.Avalonia.Controls;
 
 namespace Pixeval.Tests;
