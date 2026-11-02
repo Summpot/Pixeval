@@ -17,7 +17,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
-		<PackageReference Include="Summpot.StaticAvalonia" Version="3.119.4-avalonia.12.1.4-r1" />
+		<PackageReference Include="Summpot.StaticAvalonia" Version="4.152.1-avalonia.12.1.4-r1" />
 	</ItemGroup>
 
 	<ItemGroup>
