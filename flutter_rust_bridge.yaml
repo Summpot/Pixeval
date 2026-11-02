@@ -1,0 +1,5 @@
+rust_root: crates/pixeval_flutter_bridge
+rust_input: crate::api
+dart_output: lib/src/rust
+dart_root: .
+web: false
