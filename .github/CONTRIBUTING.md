@@ -35,6 +35,10 @@ MaterialColorUtilities、MaterialSymbols 也使用源码子模块；`Directory.B
 Material Symbols 的可变字体 API 需要 SkiaSharp 4；桌面 NativeAOT 使用的
 `Summpot.StaticAvalonia` 必须包含对应版本的原生库，不能沿用 3.119.4 包。
 
+当前静态包版本为 `4.152.1-avalonia.12.1.4-r1`。尚未发布到 NuGet.org 时，
+可从 [经过 NativeAOT 验证的构建产物](https://github.com/Summpot/StaticAvalonia/releases/tag/package-staticavalonia-4.152.1-avalonia.12.1.4-r1-24cb13acd06de2a4)
+下载 `.nupkg`，放入 `../StaticAvalonia/out/package`；桌面项目会自动将该目录加入还原源。
+
 现有克隆更新依赖后运行：
 
 ```sh

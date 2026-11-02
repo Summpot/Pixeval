@@ -5,6 +5,11 @@
     <RestoreConfigFile>$(MSBuildThisFileDirectory)nuget.config</RestoreConfigFile>
   </PropertyGroup>
 
+  <!-- Optional local feed for the matching StaticAvalonia candidate built beside Pixeval. -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Pixeval.Desktop' And Exists('$(MSBuildThisFileDirectory)../StaticAvalonia/out/package')">
+    <RestoreAdditionalProjectSources>$(RestoreAdditionalProjectSources);$(MSBuildThisFileDirectory)../StaticAvalonia/out/package</RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
   <!-- Consume unpublished Material dependencies from pinned submodules without
        modifying their upstream project files or requiring GitHub Packages credentials. -->
   <ItemGroup Condition="'$(MSBuildProjectName)' == 'Material3Expressive'">
