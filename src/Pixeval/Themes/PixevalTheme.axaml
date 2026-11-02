@@ -8,7 +8,7 @@
     xmlns:smoothScroll="using:SmoothScroll.Avalonia.Controls"
     xmlns:tabView="using:TabView.Avalonia"
     xmlns:ui="using:FluentAvalonia.UI.Themes"
-    xmlns:utilities="using:Pixeval.Utilities">
+    xmlns:utilities="using:Pixeval.Common">
 
     <!--  Fluent supplies controls that Material has not implemented yet.  -->
     <local:PixevalFluentTheme />

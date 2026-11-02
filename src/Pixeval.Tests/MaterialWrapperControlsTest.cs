@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -24,10 +23,9 @@ using FluentIcons.Common;
 using Material3Expressive.Components;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
-using Pixeval.AppManagement.Settings;
-using Pixeval.I18N;
-using Pixeval.Models.Settings.Entries;
-using Pixeval.Utilities;
+using Pixeval.Config;
+using Pixeval.Localization;
+using Pixeval.Common;
 using Pixeval.Views.Settings;
 
 namespace Pixeval.Tests;
@@ -39,9 +37,7 @@ public sealed class MaterialWrapperControlsTest
     [ClassInitialize]
     public static void Initialize(TestContext _)
     {
-        var projectPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval"));
-        I18NManager.CandidatePaths.Add(projectPath);
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+        AppLocalization.Instance.SetLanguage("zh-Hans");
     }
 
     [TestMethod]

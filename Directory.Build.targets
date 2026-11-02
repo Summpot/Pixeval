@@ -16,11 +16,11 @@
 
   <!-- Build centrally managed submodules against Pixeval's rendering stack. -->
   <ItemGroup Condition="'$(ManagePackageVersionsCentrally)' == 'true'">
-    <PackageVersion Update="Avalonia;Avalonia.Desktop;Avalonia.Skia;Avalonia.Themes.Fluent;Avalonia.Fonts.Inter;Avalonia.Headless;Avalonia.Headless.XUnit" Version="12.1.3" />
+    <PackageVersion Update="Avalonia;Avalonia.Desktop;Avalonia.Skia;Avalonia.Themes.Fluent;Avalonia.Fonts.Inter;Avalonia.Headless;Avalonia.Headless.XUnit" Version="12.1.4" />
     <PackageVersion Update="SkiaSharp;SkiaSharp.NativeAssets.Win32;SkiaSharp.NativeAssets.macOS;SkiaSharp.NativeAssets.Linux;SkiaSharp.NativeAssets.WebAssembly" Version="4.152.1" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(MSBuildProjectName)' == 'ComposeAnimation.Runtime' Or '$(MSBuildProjectName)' == 'ComposeAnimation.Avalonia'">
-    <PackageReference Update="Avalonia" Version="12.1.3" />
+    <PackageReference Update="Avalonia" Version="12.1.4" />
   </ItemGroup>
 </Project>
