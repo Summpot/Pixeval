@@ -48,9 +48,10 @@
 		<PackageReference Include="TabView.Avalonia" Version="1.0.0" />
 		<PackageReference Include="Velopack" Version="1.2.158" />
         
-        <PackageReference Include="SkiaSharp" Version="4.152.1" />
-		<PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.152.1" />
-		<PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" Version="4.152.1" />
+        <PackageReference Include="SkiaSharp" Version="$(SkiaSharpVersion)" />
+		<PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="$(SkiaSharpVersion)" />
+		<PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" Version="$(SkiaSharpVersion)" />
+		<PackageReference Include="Shirasagi0012.SmoothScroll.Avalonia" Version="12.0.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -61,7 +62,6 @@
 		<ProjectReference Include="..\lib\Imouto\Imouto.BooruParser\Imouto.BooruParser.csproj" />
 		<ProjectReference Include="..\lib\Mako\Mako\Mako.csproj" />
 		<ProjectReference Include="..\lib\Material3Expressive.Avalonia\src\Material3Expressive\Material3Expressive.csproj" />
-		<ProjectReference Include="..\lib\SmoothScroll.Avalonia\src\SmoothScroll.Avalonia.Controls\SmoothScroll.Avalonia.Controls.csproj" />
 		<ProjectReference Include="..\Pixeval.Mcp\Pixeval.Mcp.csproj" Condition="'$(EnableMcp)' == 'true'" />
 		<ProjectReference Include="..\Pixeval.I18N\Pixeval.I18N.csproj" />
 		<!--<ProjectReference Include="..\Pixeval.Caching\Pixeval.Caching.csproj" />-->

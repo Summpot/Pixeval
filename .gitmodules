@@ -14,16 +14,6 @@
 	path = src/lib/AnimatedControls.Avalonia
 	url = https://github.com/Pixeval/AnimatedControls.Avalonia.git
 	branch = master
-[submodule "src/lib/SmoothScroll.Avalonia"]
-	path = src/lib/SmoothScroll.Avalonia
-	url = https://github.com/Shirasagi0012/SmoothScroll.Avalonia.git
-	branch = master
 [submodule "src/lib/Material3Expressive.Avalonia"]
 	path = src/lib/Material3Expressive.Avalonia
 	url = https://github.com/Shirasagi0012/Material3Expressive.Avalonia.git
-[submodule "src/lib/MaterialColorUtilities"]
-	path = src/lib/MaterialColorUtilities
-	url = https://github.com/Shirasagi0012/MaterialColorUtilities.git
-[submodule "src/lib/MaterialSymbols"]
-	path = src/lib/MaterialSymbols
-	url = https://github.com/Shirasagi0012/MaterialSymbols.git
