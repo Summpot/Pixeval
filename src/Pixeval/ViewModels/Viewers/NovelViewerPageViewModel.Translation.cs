@@ -13,9 +13,6 @@ using FluentIcons.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.Commands.Transformers;
-using Pixeval.I18N;
-using Pixeval.Models.Blocking;
-using Pixeval.Models.Extensions;
 using Pixeval.Utilities;
 
 namespace Pixeval.ViewModels.Viewers;
@@ -52,14 +49,14 @@ public sealed partial class NovelViewerPageViewModel
     [NotifyPropertyChangedFor(nameof(TranslationButtonText))]
     public partial bool IsTranslationShown { get; private set; }
 
-    public string TranslationButtonText => I18NManager.GetResource(IsTranslationShown
-        ? NovelViewerPageResources.ShowOriginal
+    public string TranslationButtonText => IsTranslationShown
+        ? Strings.NovelViewerPageShowOriginal()
         : _translatedPageMarkdowns is not null
-            ? NovelViewerPageResources.ShowTranslation
-            : NovelViewerPageResources.TranslateFullText);
+            ? Strings.NovelViewerPageShowTranslation()
+            : Strings.NovelViewerPageTranslateFullText();
 
-    private bool CanTranslate => !_disposed && !IsLoading && LoadErrorMessage is null && PageCount > 0 && IsTranslationAvailable
-        && CurrentNovel is { } novel && !BlockedContentHelper.IsBlockedPlaceholder(novel.Entry);
+    private bool CanTranslate => !_disposed && !IsLoading && LoadErrorMessage is null && PageCount > 0 && HasTranslator
+        && CurrentNovel is { } novel && !BlockedContentHelper.IsBlockedPlaceholder(novel);
 
     private static bool IsTranslatorActive(ITextTransformerCommandExtension translator) =>
         App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>().ActiveTextTransformerCommands.Contains(translator);
@@ -90,7 +87,7 @@ public sealed partial class NovelViewerPageViewModel
         var viewContainer = control is null ? null : TopLevel.GetTopLevel(control)?.ViewContainer;
         try
         {
-            viewContainer?.ShowInformation(I18NManager.GetResource(NovelViewerPageResources.ApplyingTransformerExtensions));
+            viewContainer?.ShowInformation(Strings.NovelViewerPageApplyingTransformerExtensions());
             var pages = _pageMarkdowns;
             var translatedPages = new List<string>(pages.Count);
             foreach (var page in pages)
@@ -104,7 +101,7 @@ public sealed partial class NovelViewerPageViewModel
                     return;
                 if (string.IsNullOrWhiteSpace(translated) && !string.IsNullOrWhiteSpace(page))
                 {
-                    viewContainer?.ShowError(I18NManager.GetResource(NovelViewerPageResources.TransformerExtensionFailed));
+                    viewContainer?.ShowError(Strings.NovelViewerPageTransformerExtensionFailed());
                     return;
                 }
 
@@ -118,7 +115,7 @@ public sealed partial class NovelViewerPageViewModel
                 OnPropertyChanged(nameof(CurrentMarkdown));
             else
                 IsTranslationShown = true;
-            viewContainer?.ShowSuccess(I18NManager.GetResource(NovelViewerPageResources.TransformerExtensionFinishedSuccessfully));
+            viewContainer?.ShowSuccess(Strings.NovelViewerPageTransformerExtensionFinishedSuccessfully());
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -128,7 +125,7 @@ public sealed partial class NovelViewerPageViewModel
             if (token.IsCancellationRequested)
                 return;
 
-            viewContainer?.ShowError(I18NManager.GetResource(NovelViewerPageResources.TransformerExtensionFailed), e.Message);
+            viewContainer?.ShowError(Strings.NovelViewerPageTransformerExtensionFailed(), e.Message);
             App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
                 .LogError(nameof(NovelViewerPageViewModel), e);
         }

@@ -5,6 +5,8 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import uniffi.pixeval_mako.NovelContent
@@ -37,6 +39,9 @@ internal fun NovelReader(controller: AppController, content: NovelContent, docum
         }
         document.pages[page].nodes.forEach { node -> when(node) {
             is NovelNode.Text -> SelectionContainer { Text(node.content, style = MaterialTheme.typography.bodyLarge) }
+            is NovelNode.Bold -> Text(node.content, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+            is NovelNode.Italic -> Text(node.content, style = MaterialTheme.typography.bodyLarge, fontStyle = FontStyle.Italic)
+            is NovelNode.Emphasis -> Text(node.content, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             is NovelNode.Ruby -> Text("${node.kanji}（${node.rubyText}）", style = MaterialTheme.typography.bodyLarge)
             is NovelNode.Chapter -> Text(node.title, style = MaterialTheme.typography.headlineSmall)
             is NovelNode.JumpUri -> TextButton(onClick = { controller.openLink(node.uri) }) { Text(node.title) }

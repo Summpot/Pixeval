@@ -3,6 +3,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -21,6 +24,10 @@ namespace Pixeval.Views.Viewers;
 public partial class NovelViewerPage : IconContentPage
 {
     private NovelViewerPageViewModel ViewModel => (NovelViewerPageViewModel) DataContext!;
+
+    private readonly List<ExtensionsHostModel> _observedExtensionHosts = [];
+
+    private ExtensionService ExtensionService => this.GetRequiredUiService<ExtensionService>();
 
     public NovelViewerPage() : this(null)
     {
@@ -99,7 +106,37 @@ public partial class NovelViewerPage : IconContentPage
     {
         base.OnLoaded(e);
 
+        ExtensionService.HostModels.CollectionChanged += ExtensionHostsOnCollectionChanged;
+        ObserveExtensionHosts();
         RaiseEvent(new ViewModelDisposalEventArgs(ViewModelDisposal.ViewModelDisposalEvent, ViewModel));
+    }
+
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        ExtensionService.HostModels.CollectionChanged -= ExtensionHostsOnCollectionChanged;
+        foreach (var host in _observedExtensionHosts)
+            host.PropertyChanged -= ExtensionHostOnPropertyChanged;
+        _observedExtensionHosts.Clear();
+        base.OnUnloaded(e);
+    }
+
+    private void ExtensionHostsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => ObserveExtensionHosts();
+
+    private void ObserveExtensionHosts()
+    {
+        foreach (var host in _observedExtensionHosts)
+            host.PropertyChanged -= ExtensionHostOnPropertyChanged;
+        _observedExtensionHosts.Clear();
+        _observedExtensionHosts.AddRange(ExtensionService.HostModels);
+        foreach (var host in _observedExtensionHosts)
+            host.PropertyChanged += ExtensionHostOnPropertyChanged;
+        ViewModel.RefreshTranslationAvailability();
+    }
+
+    private void ExtensionHostOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(ExtensionsHostModel.IsActive))
+            ViewModel.RefreshTranslationAvailability();
     }
 
     #endregion

@@ -104,11 +104,10 @@
                         Header="{CompiledBinding [EntryItem-OpenUserInfoPage], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup:SymbolIcon Person}" />
                     <MenuItem
-                        Command="{Binding BlockAuthorCommand, Source={markup1:Service Type={x:Type novel:WorkCommands}}, DataType={x:Type novel:WorkCommands}}"
-                        CommandParameter="{Binding}"
+                        Click="BlockAuthor_OnClicked"
                         Header="{CompiledBinding [BlockedContent-BlockAuthor], Source={x:Static loc:LocalizationManager.Instance}}"
                         Icon="{markup:SymbolIcon PersonProhibited}"
-                        IsVisible="{Binding !IsBlockedPlaceholder}" />
+                        IsVisible="{Binding IsBookmarkSupported}" />
                     <MenuItem
                         Command="{Binding OpenSeriesPageCommand, Source={markup1:Service Type={x:Type novel:WorkCommands}}, DataType={x:Type novel:WorkCommands}}"
                         CommandParameter="{Binding}"

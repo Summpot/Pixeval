@@ -33,7 +33,10 @@ fn render_single_page_markdown(
                 let replaced = normalize_newlines(content, "\n\n");
                 out.push_str(&replaced);
             }
-            NovelNode::Ruby { kanji, ruby_text } => {
+            NovelNode::Bold { content } => out.push_str(&format!("**{content}**")),
+                NovelNode::Italic { content } => out.push_str(&format!("*{content}*")),
+                NovelNode::Emphasis { content, mark } => out.push_str(&super::render_emphasis(content, mark)),
+                NovelNode::Ruby { kanji, ruby_text } => {
                 out.push_str(&format!(
                     "<ruby>{}<rp>（</rp><rt>{}</rt><rp>）</rp></ruby>",
                     html_escape(kanji),
@@ -92,6 +95,9 @@ pub fn render_export_markdown(
                     let replaced = normalize_newlines(content, "\n\n");
                     out.push_str(&replaced);
                 }
+                NovelNode::Bold { content } => out.push_str(&format!("**{content}**")),
+                NovelNode::Italic { content } => out.push_str(&format!("*{content}*")),
+                NovelNode::Emphasis { content, mark } => out.push_str(&super::render_emphasis(content, mark)),
                 NovelNode::Ruby { kanji, ruby_text } => {
                     out.push_str(&format!(
                         "<ruby>{}<rp>（</rp><rt>{}</rt><rp>）</rp></ruby>",
@@ -142,7 +148,7 @@ fn normalize_newlines(s: &str, replacement: &str) -> String {
     s.replace('\n', replacement)
 }
 
-fn html_escape(s: &str) -> String {
+pub(super) fn html_escape(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")

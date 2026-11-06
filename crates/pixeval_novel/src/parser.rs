@@ -24,6 +24,9 @@ enum TokenKind {
     JumpUri,
     Ruby,
     NewPage,
+    Bold,
+    Italic,
+    Emphasis,
 }
 
 pub struct NovelParser;
@@ -70,6 +73,27 @@ impl NovelParser {
                         nodes: std::mem::take(&mut current_nodes),
                     });
                     current_page_index += 1;
+                }
+                TokenKind::Bold | TokenKind::Italic | TokenKind::Emphasis => {
+                    let parsed = if kind == TokenKind::Emphasis {
+                        parse_ruby(remaining, token_len).map(|(node, end)| {
+                            let NovelNode::Ruby { kanji, ruby_text } = node else { unreachable!() };
+                            (NovelNode::Emphasis { content: kanji, mark: ruby_text }, end)
+                        })
+                    } else {
+                        remaining[token_len..].find(END_SINGLE_TOKEN).map(|end| {
+                            let content = remaining[token_len..token_len + end].to_string();
+                            let node = if kind == TokenKind::Bold { NovelNode::Bold { content } } else { NovelNode::Italic { content } };
+                            (node, token_len + end + 1)
+                        })
+                    };
+                    if let Some((node, end_offset)) = parsed {
+                        current_nodes.push(node);
+                        position += end_offset;
+                        run_start = position;
+                    } else {
+                        position += 1;
+                    }
                 }
                 TokenKind::Ruby => {
                     if let Some((node, end_offset)) = parse_ruby(remaining, token_len) {
@@ -148,6 +172,9 @@ fn match_token(s: &str) -> (TokenKind, usize) {
         return (TokenKind::None, 0);
     }
 
+    for (token, kind) in [("[b:", TokenKind::Bold), ("[i:", TokenKind::Italic), ("[[emphasismark:", TokenKind::Emphasis)] {
+        if s.starts_with(token) { return (kind, token.len()); }
+    }
     if s.starts_with(JUMP_URI_TOKEN) {
         return (TokenKind::JumpUri, JUMP_URI_TOKEN.len());
     }
@@ -177,17 +204,12 @@ fn match_token(s: &str) -> (TokenKind, usize) {
 }
 
 fn parse_ruby(s: &str, token_len: usize) -> Option<(NovelNode, usize)> {
-    let sep_idx = s[token_len..].find(SEPARATOR_TOKEN)?;
-    let end_idx = s[token_len + sep_idx..].find(END_DOUBLE_TOKEN)?;
-
-    let kanji_raw = &s[token_len..token_len + sep_idx];
-    let ruby_raw = &s[token_len + sep_idx + 1..token_len + sep_idx + end_idx];
-
-    let kanji = kanji_raw.trim().to_string();
-    let ruby = ruby_raw.trim().to_string();
-    let total_len = token_len + sep_idx + end_idx + END_DOUBLE_TOKEN.len();
-
-    Some((NovelNode::Ruby { kanji, ruby_text: ruby }, total_len))
+    let end_idx = s.find(END_DOUBLE_TOKEN)?;
+    let inner = s.get(token_len..end_idx)?;
+    let (kanji, ruby) = inner.split_once(SEPARATOR_TOKEN)?;
+    let (kanji, ruby) = (kanji.trim(), ruby.trim());
+    if kanji.is_empty() || ruby.is_empty() { return None; }
+    Some((NovelNode::Ruby { kanji: kanji.to_string(), ruby_text: ruby.to_string() }, end_idx + END_DOUBLE_TOKEN.len()))
 }
 
 fn parse_jump_uri(s: &str, token_len: usize) -> Option<(NovelNode, usize)> {

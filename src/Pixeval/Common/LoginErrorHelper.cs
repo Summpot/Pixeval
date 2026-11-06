@@ -6,18 +6,22 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Security.Authentication;
-using Pixeval.AppManagement;
-using Pixeval.I18N;
-using SQLite;
 
-namespace Pixeval.Utilities;
+namespace Pixeval.Common;
 
 internal static class LoginErrorHelper
 {
     public static string GetMessage(Exception exception) => IsStorageFailure(exception)
-        ? I18NManager.GetResource(LoginPageResources.StorageFailureFormatted,
-            AppInfo.ApplicationFolderPath, exception.GetBaseException().Message)
+        ? Strings.LoginPageStorageFailureFormatted(
+            AppInfo.ApplicationFolderPath, GetDetails(exception.GetBaseException()))
         : exception.GetBaseException().Message;
+
+    private static string GetDetails(Exception exception) => exception switch
+    {
+        StorageError.Database database => database.Message,
+        StorageError.ConstraintViolation constraint => constraint.Message,
+        _ => exception.Message
+    };
 
     internal static bool IsStorageFailure(Exception exception)
     {
@@ -25,7 +29,7 @@ internal static class LoginErrorHelper
         var hasNetworkFailure = false;
         for (var current = exception; current is not null; current = current.InnerException)
         {
-            if (current is SQLiteException or UnauthorizedAccessException)
+            if (current is StorageError or UnauthorizedAccessException)
                 return true;
             hasIoFailure |= current is IOException;
             hasNetworkFailure |= current is HttpRequestException or HttpIOException or SocketException or AuthenticationException;

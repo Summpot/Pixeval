@@ -4,14 +4,15 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FluentIcons.Common;
-using Mako.Model;
+using Pixeval.Mako;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement;
+using Pixeval.Services.Core;
+using Pixeval.Common.Logging;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.Commands.Transformers;
-using Pixeval.I18N;
-using Pixeval.Models.Extensions;
+using Pixeval.ViewModels.Shell;
+using Pixeval.Services.Background;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
@@ -149,16 +150,11 @@ public sealed class NovelTranslationTest
         private readonly ExtensionService _extensions = new(null!, [], [], false);
         private readonly ServiceProvider _services;
 
-        public NovelViewerPageViewModel Model { get; } = new(null!, -1, false);
+        public NovelViewerPageViewModel Model { get; } = new(null!, -1, false, null!, null!, null!);
 
         public TranslationFixture(TestTranslator? translator, List<string> pages)
         {
-            I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
-            // Supply loaded content and a managed extension without starting network/database services or loading a native DLL.
-            var novel = (NovelItemViewModel) RuntimeHelpers.GetUninitializedObject(typeof(NovelItemViewModel));
-            typeof(EntryViewModel<Novel>).GetField("<Entry>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!
-                .SetValue(novel, Novel.CreateDefault());
-            typeof(NovelViewerPageViewModel).GetProperty(nameof(Model.CurrentNovel))!.SetValue(Model, novel);
+            typeof(NovelViewerPageViewModel).GetProperty(nameof(Model.CurrentNovel))!.SetValue(Model, new Pixeval.Mako.Novel { Id = 1 });
             SetField(Model, "_pageMarkdowns", pages);
             if (translator is not null)
             {

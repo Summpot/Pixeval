@@ -33,6 +33,14 @@ public abstract partial class WorkViewViewModelBase<T, TViewModel>(AppSettings a
     public override ObservableCollection<TViewModel> View =>
         _filteredView ??= CreateFilteredView();
 
+    public void ReplaceBlockedEntries(IBlockedContentService blockedContent)
+    {
+        var snapshot = blockedContent.CaptureSnapshot();
+        for (var index = 0; index < Source.Count; index++)
+            Source[index] = BlockedContentHelper.ReplaceEntry(Source[index], snapshot);
+        SelectedEntries.Clear();
+    }
+
     public void SetSortOption(LocalSortOption sortOption)
     {
         if (_sortOption == sortOption)

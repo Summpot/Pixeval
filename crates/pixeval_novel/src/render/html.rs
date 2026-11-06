@@ -39,6 +39,9 @@ pub fn render_export_html(
                     let with_breaks = escaped.replace("\r\n", "<br/>\n").replace('\r', "<br/>\n").replace('\n', "<br/>\n");
                     out.push_str(&format!("<span>{with_breaks}</span>"));
                 }
+                NovelNode::Bold { content } => out.push_str(&format!("<strong>{}</strong>", html_escape(content))),
+                NovelNode::Italic { content } => out.push_str(&format!("<em>{}</em>", html_escape(content))),
+                NovelNode::Emphasis { content, mark } => out.push_str(&super::render_emphasis(content, mark)),
                 NovelNode::Ruby { kanji, ruby_text } => {
                     out.push_str(&format!(
                         "<ruby>{}<rp>（</rp><rt>{}</rt><rp>）</rp></ruby>",

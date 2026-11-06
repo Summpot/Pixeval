@@ -310,3 +310,26 @@ mod tests {
         assert_eq!(&epub_bytes[0..2], b"PK");
     }
 }
+
+#[cfg(test)]
+mod upstream_formatting_tests {
+    use super::*;
+
+    #[test]
+    fn renders_formatting_and_grapheme_emphasis() {
+        let text = "[b:bold][i:italic][[emphasismark:か\u{3099}👩‍💻 > ・]]";
+        let pages = render_pages_markdown(text.into(), vec![], vec![]);
+        assert!(pages[0].contains("**bold***italic*"));
+        assert_eq!(pages[0].matches("ruby-position: under").count(), 2);
+        let doc = parse_novel(text.into());
+        let html = render::html::render_export_html(&doc, "test", None, &HashMap::new(), &HashMap::new());
+        assert!(html.contains("<strong>bold</strong><em>italic</em>"));
+        assert_eq!(html.matches("ruby-position: under").count(), 2);
+    }
+
+    #[test]
+    fn malformed_ruby_does_not_consume_following_markup() {
+        let doc = parse_novel("[[rb:broken]][b:valid]".into());
+        assert!(doc.pages[0].nodes.iter().any(|node| matches!(node, NovelNode::Bold { content } if content == "valid")));
+    }
+}

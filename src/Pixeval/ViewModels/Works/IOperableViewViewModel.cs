@@ -24,6 +24,8 @@ public interface IOperableViewViewModel : ISimpleViewViewModel
 
     void SetSortOption(LocalSortOption sortOption);
 
+    void ReplaceBlockedEntries(IBlockedContentService blockedContent);
+
     Predicate<object>? UserFilter { get; set; }
 
     bool RequireAdaptiveGrid { get; }

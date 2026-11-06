@@ -132,6 +132,9 @@ ruby rt {
                         }
                     }
                 }
+                NovelNode::Bold { content } => xhtml.push_str(&format!("<strong>{}</strong>", xml_escape(content))),
+                NovelNode::Italic { content } => xhtml.push_str(&format!("<em>{}</em>", xml_escape(content))),
+                NovelNode::Emphasis { content, mark } => xhtml.push_str(&super::render_emphasis(content, mark)),
                 NovelNode::Ruby { kanji, ruby_text } => {
                     xhtml.push_str(&format!(
                         "<ruby>{}<rp>（</rp><rt>{}</rt><rp>）</rp></ruby>",

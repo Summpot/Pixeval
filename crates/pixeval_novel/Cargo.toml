@@ -9,3 +9,4 @@ uniffi = { workspace = true, features = ["tokio"] }
 serde.workspace = true
 thiserror.workspace = true
 zip.workspace = true
+unicode-segmentation = "1.12"

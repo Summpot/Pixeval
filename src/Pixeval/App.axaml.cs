@@ -216,7 +216,7 @@ public class App : Application, IAsyncDisposable
             AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
                 .LogError(nameof(LoginAsync), e);
             AppViewModel.OnTokenRefreshed(null);
-            viewContainer.ShowError(Strings.MainPageLoggingInFailed());
+            viewContainer.ShowError(Strings.MainPageLoggingInFailed(), LoginErrorHelper.GetMessage(e));
         }
 
         AppViewModel.AppServiceProvider.GetRequiredService<INavigationService>()

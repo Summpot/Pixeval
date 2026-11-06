@@ -13,6 +13,9 @@ pub enum NovelNode {
     Chapter { title: String },
     UploadImage { image_id: i64 },
     PixivImage { illust_id: i64, page: i32 },
+    Bold { content: String },
+    Italic { content: String },
+    Emphasis { content: String, mark: String },
 }
 
 #[boltffi::data]

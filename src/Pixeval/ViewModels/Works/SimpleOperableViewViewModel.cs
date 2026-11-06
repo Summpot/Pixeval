@@ -46,6 +46,15 @@ public sealed partial class SimpleOperableViewViewModel<TViewModel> : ViewModelB
     /// <inheritdoc />
     public AvaloniaList<object> SelectedEntries { get; } = [];
 
+    public void ReplaceBlockedEntries(IBlockedContentService blockedContent)
+    {
+        var snapshot = blockedContent.CaptureSnapshot();
+        for (var index = 0; index < Source.Count; index++)
+            Source[index] = BlockedContentHelper.ReplaceEntry(Source[index], snapshot);
+        SelectedEntries.Clear();
+        RefreshView();
+    }
+
     public void SetSortOption(LocalSortOption sortOption)
     {
         if (_sortOption == sortOption)

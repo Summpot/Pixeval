@@ -78,14 +78,7 @@ public partial class LoginPage : IconContentPage
         }
         catch (Exception exception)
         {
-            this.GetRequiredUiService<FileLogger>()
-                .LogError(nameof(LoginButton_OnClick), exception);
-            {
-                this.Notifications.ShowError(exception.GetType().ToString(), exception.Message);
-                _ = await this.Dialogs.CreateAcknowledgementAsync(
-                    Strings.LoginPageFetchingSessionFailedTitle(),
-                    Strings.LoginPageFetchingSessionFailedContent());
-            }
+            ShowLoginError(exception);
         }
         finally
         {
@@ -164,19 +157,18 @@ public partial class LoginPage : IconContentPage
         }
         catch (Exception exception)
         {
-            this.GetRequiredUiService<FileLogger>()
-                .LogError(nameof(OpenWebView_OnClick), exception);
-            {
-                this.Notifications.ShowError(exception.GetType().ToString(), exception.Message);
-                _ = await this.Dialogs.CreateAcknowledgementAsync(
-                    Strings.LoginPageFetchingSessionFailedTitle(),
-                    Strings.LoginPageFetchingSessionFailedContent());
-            }
+            ShowLoginError(exception);
         }
         finally
         {
             EndLogin(attempt);
         }
+    }
+
+    internal void ShowLoginError(Exception exception)
+    {
+        this.GetRequiredUiService<FileLogger>().LogError(nameof(LoginPage), exception);
+        this.Notifications.ShowError(Strings.MainPageLoggingInFailed(), LoginErrorHelper.GetMessage(exception));
     }
 
     public void LoginNavigate()
@@ -213,8 +205,7 @@ public partial class LoginPage : IconContentPage
         }
         catch (Exception exception)
         {
-            this.GetRequiredUiService<FileLogger>()
-                .LogError(nameof(LoginPageViewModel.LoadUsersAsync), exception);
+            ShowLoginError(exception);
         }
     }
 
