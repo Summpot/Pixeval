@@ -132,6 +132,10 @@
         <Style Selector="Border#FloatingToolbarPane.temporary-visible">
             <Setter Property="Opacity" Value="1" />
         </Style>
+
+        <Style Selector="Border#FloatingToolbarPane:focus-within, Border#FloatingToolbarPane.command-menu-open">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
     </ContentPage.Styles>
 
     <Grid>
@@ -211,7 +215,8 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Bottom"
                         controls:FloatingPane.IsEnabled="True"
-                        Background="{DynamicResource SystemAltMediumHighColor}"
+                        Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                        Classes.command-menu-open="{Binding #ZoomPane.IsOpen}"
                         ClipToBounds="False"
                         CornerRadius="20"
                         IsVisible="{Binding CurrentImage, Converter={x:Static ObjectConverters.IsNotNull}}">

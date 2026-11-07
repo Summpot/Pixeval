@@ -245,6 +245,7 @@ internal static class SearchCompletionValidation
         protected override void OnLoaded(RoutedEventArgs e)
         {
             base.OnLoaded(e);
+            RegisterContentDialogHost(TopLevel.GetTopLevel(this));
             Manager = new WindowNotificationManager(TopLevel.GetTopLevel(this));
             FlushPendingNotifications();
         }

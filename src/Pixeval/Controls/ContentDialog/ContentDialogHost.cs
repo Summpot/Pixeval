@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -30,6 +31,7 @@ public class ContentDialogHost : TemplatedControl
     private AdornerLayer? _adornerLayer;
     private Control? _root;
     private Panel? _dialogPanel;
+    private Control? _entryFocus;
 
     /// <summary>
     /// Defines the <see cref="IsOpen"/> property.
@@ -115,6 +117,9 @@ public class ContentDialogHost : TemplatedControl
             throw new InvalidOperationException("ContentDialogHost has not been installed.");
 
         dialog.PrepareForShow(this);
+        var previousFocus = _host.FocusManager.GetFocusedElement() as Control;
+        if (_dialogs.Count is 0)
+            _entryFocus = previousFocus;
         _dialogs.Add(dialog);
         AddDialogToPanel(dialog);
         IsOpen = true;
@@ -147,8 +152,24 @@ public class ContentDialogHost : TemplatedControl
             UpdateOpenState();
             UpdateDialogState();
 
-            if (_host is not null && wasTopmost && _dialogs.Count > 0)
-                await Dispatcher.UIThread.InvokeAsync(_dialogs[^1].FocusInitialElement, DispatcherPriority.Loaded);
+            if (_host is not null && wasTopmost)
+            {
+                var next = _dialogs.Count > 0 ? _dialogs[^1] : null;
+                var target = next is null ? _entryFocus : previousFocus;
+                if (next is null)
+                    _entryFocus = null;
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    // Never move focus to a detached launch control or a lower dialog
+                    // that was removed while the topmost confirmation was still open.
+                    if (target is { IsEffectivelyVisible: true, IsEffectivelyEnabled: true, Focusable: true }
+                        && TopLevel.GetTopLevel(target) == _host
+                        && (next is null || ReferenceEquals(target, next) || target.GetVisualAncestors().Contains(next)))
+                        target.Focus();
+                    else
+                        next?.FocusInitialElement();
+                }, DispatcherPriority.Loaded);
+            }
 
             dialog.CompleteClose(result);
         }
@@ -209,7 +230,10 @@ public class ContentDialogHost : TemplatedControl
         _adornerLayer?.Children.Remove(this);
 
         _adornerLayer = layer;
-        AdornerLayer.SetAdornedElement(this, _host);
+        // Anchor to the rendered layer, as WindowNotificationManager does. TopLevel
+        // is a composition root, so adorning it can leave a laid-out dialog invisible
+        // and absent from pointer hit testing.
+        AdornerLayer.SetAdornedElement(this, layer);
         AdornerLayer.SetIsClipEnabled(this, false);
 
         if (!_adornerLayer.Children.Contains(this))
@@ -226,6 +250,7 @@ public class ContentDialogHost : TemplatedControl
 
         _host = null;
         _adornerLayer = null;
+        _entryFocus = null;
     }
 
     private void AddDialogToPanel(ContentDialog dialog)

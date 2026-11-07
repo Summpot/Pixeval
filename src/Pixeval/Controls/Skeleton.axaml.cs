@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Animation.Easings;
 using Avalonia.Controls;
@@ -9,6 +10,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Rendering.Composition;
 using Avalonia.Rendering.Composition.Animations;
+using Avalonia.VisualTree;
 
 namespace Pixeval.Controls;
 
@@ -18,6 +20,8 @@ public sealed class Skeleton : TemplatedControl
     private const double MinShimmerWidth = 120;
 
     private Border? _shimmer;
+    private CompositionVisual? _animatedVisual;
+    private readonly List<Visual> _visibilityAncestors = [];
 
     public static readonly StyledProperty<TimeSpan> ShimmerPeriodProperty =
         AvaloniaProperty.Register<Skeleton, TimeSpan>(nameof(ShimmerPeriod), TimeSpan.FromSeconds(1.2), coerce: (_, value) => value > TimeSpan.Zero ? value : TimeSpan.FromSeconds(1.2));
@@ -28,13 +32,45 @@ public sealed class Skeleton : TemplatedControl
         set => SetValue(ShimmerPeriodProperty, value);
     }
 
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        foreach (var ancestor in this.GetVisualAncestors())
+        {
+            _visibilityAncestors.Add(ancestor);
+            ancestor.PropertyChanged += OnAncestorPropertyChanged;
+        }
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        foreach (var ancestor in _visibilityAncestors)
+            ancestor.PropertyChanged -= OnAncestorPropertyChanged;
+        _visibilityAncestors.Clear();
+        StopShimmerAnimation();
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void OnAncestorPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property == IsVisibleProperty)
+            UpdateShimmerAnimation();
+    }
+
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
     {
+        StopShimmerAnimation();
+        if (_shimmer is not null)
+            _shimmer.Loaded -= OnShimmerLoaded;
         base.OnApplyTemplate(e);
 
         _shimmer = e.NameScope.Find<Border>("PART_Shimmer");
+        if (_shimmer is not null)
+            _shimmer.Loaded += OnShimmerLoaded;
         UpdateShimmerAnimation();
     }
+
+    private void OnShimmerLoaded(object? sender, RoutedEventArgs e) => UpdateShimmerAnimation();
 
     protected override void OnLoaded(RoutedEventArgs e)
     {
@@ -58,7 +94,7 @@ public sealed class Skeleton : TemplatedControl
 
     private void UpdateShimmerAnimation()
     {
-        if (!IsLoaded || !IsVisible || _shimmer is null || Bounds is not { Width: > 0, Height: > 0 })
+        if (!IsLoaded || !IsEffectivelyVisible || _shimmer is null || Bounds is not { Width: > 0, Height: > 0 })
         {
             StopShimmerAnimation();
             return;
@@ -78,12 +114,14 @@ public sealed class Skeleton : TemplatedControl
         animation.IterationBehavior = AnimationIterationBehavior.Forever;
 
         visual.StartAnimation(nameof(CompositionVisual.Offset), animation);
+        _animatedVisual = visual;
     }
 
     private void StopShimmerAnimation()
     {
-        if (_shimmer is null || ElementComposition.GetElementVisual(_shimmer) is not { } visual)
+        if (_animatedVisual is not { } visual)
             return;
+        _animatedVisual = null;
 
         var shimmerWidth = double.Max(MinShimmerWidth, Bounds.Width * ShimmerWidthRatio);
         var parked = new Vector3D(-shimmerWidth, 0, 0);

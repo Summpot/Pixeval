@@ -73,6 +73,15 @@
                                 CornerRadius="{StaticResource ControlCornerRadius}"
                                 IsHitTestVisible="False"
                                 IsVisible="False" />
+                            <!--  Keep keyboard focus above opaque cards and selection tint.  -->
+                            <Border
+                                Name="KeyboardFocusBorder"
+                                Margin="3"
+                                BorderBrush="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.Primary}}"
+                                BorderThickness="2"
+                                CornerRadius="{StaticResource ControlCornerRadius}"
+                                IsHitTestVisible="False"
+                                IsVisible="False" />
                         </Panel>
                     </ControlTemplate>
                 </Setter.Value>
@@ -80,6 +89,9 @@
 
             <Style Selector="^:pointerover /template/ Border#StateMask">
                 <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                <Setter Property="IsVisible" Value="True" />
+            </Style>
+            <Style Selector="^:focus-visible /template/ Border#KeyboardFocusBorder">
                 <Setter Property="IsVisible" Value="True" />
             </Style>
         </ControlTheme>

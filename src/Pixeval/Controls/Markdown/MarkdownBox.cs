@@ -16,8 +16,6 @@ using Avalonia.VisualTree;
 using AvaloniaEdit;
 using ColorTextBlock.Avalonia;
 using CommunityToolkit.Mvvm.Input;
-using FluentIcons.Avalonia;
-using FluentIcons.Common;
 using Markdown.Avalonia;
 using Markdown.Avalonia.StyleCollections;
 using Markdown.Avalonia.Svg;
@@ -453,29 +451,7 @@ public class MarkdownBox : MarkdownScrollViewer
 
         langLabel.VerticalAlignment = VerticalAlignment.Center;
 
-        var copyButton = new Button
-        {
-            Content = new SymbolIcon
-            {
-                Symbol = Symbol.Clipboard,
-                FontSize = 14
-            },
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        copyButton.Classes.Add("CopyButton");
-        ToolTip.SetTip(copyButton, "复制代码");
-        copyButton.Click += async (_, _) =>
-        {
-            if (TopLevel.GetTopLevel(textEditor)?.Clipboard is { } clipboard)
-            {
-                var item = new DataTransferItem();
-                item.Set(DataFormat.Text, textEditor.Text ?? "");
-                var data = new DataTransfer();
-                data.Add(item);
-
-                await clipboard.SetDataAsync(data);
-            }
-        };
+        var copyButton = MarkdownCodeCopyButton.Create(() => textEditor.Text ?? "");
 
         var toolbar = new StackPanel
         {
@@ -489,9 +465,9 @@ public class MarkdownBox : MarkdownScrollViewer
         toolbar.Children.Add(langLabel);
         toolbar.Children.Add(copyButton);
 
-        root = new Grid();
+        root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto") };
         root.Classes.Add(CodeBlockRootClass);
-
+        Grid.SetRow(textEditor, 1);
         root.Children.Add(textEditor);
         root.Children.Add(toolbar);
 

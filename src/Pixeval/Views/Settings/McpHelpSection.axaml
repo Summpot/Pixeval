@@ -1,35 +1,51 @@
-<UserControl
+﻿<UserControl
     x:Class="Pixeval.Views.Settings.McpHelpSection"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:local="using:Pixeval.Controls"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
-    xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mcpServer="using:Pixeval.Models.McpServer"
     xmlns:pixeval="using:Pixeval"
     xmlns:settings="using:Pixeval.Views.Settings">
     <StackPanel Spacing="10">
-        <controls:SettingsExpander Header="{I18N {x:Static pixeval:HelpPageResources+McpHelpExpander.Header}}" HeaderIcon="{markup:SymbolIcon Bot}">
-            <controls:SettingsExpander.Items>
-                <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Left">
-                    <local:MarkdownBox Markdown="{I18N {x:Static pixeval:MarkdownResources.McpHelp}}" />
-                </controls:SettingsCard>
-            </controls:SettingsExpander.Items>
-        </controls:SettingsExpander>
-        <controls:SettingsExpander Description="{I18N {x:Static pixeval:HelpPageResources+McpToolsExpander.Description}}" Header="{I18N {x:Static pixeval:HelpPageResources+McpToolsExpander.Header}}">
-            <controls:SettingsExpander.HeaderIcon>
-                <PathIcon Data="{markup1:SvgPath {x:Static pixeval:SvgResources.MCP}}" />
-            </controls:SettingsExpander.HeaderIcon>
-            <m3:IconButton
-                x:Name="RefreshMcpToolsButton"
-                AutomationProperties.Name="{Binding (ToolTip.Tip), RelativeSource={RelativeSource Self}}"
-                Click="RefreshMcpToolsButton_OnClicked"
-                Symbol="Sync"
-                ToolTip.Tip="{I18N {x:Static pixeval:HelpPageResources+McpToolsRefreshButton.ToolTip}}" />
-            <controls:SettingsExpander.Items>
-                <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
+        <Expander Classes="documentation-section">
+            <Expander.Header>
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                    <m3:MaterialSymbol Symbol="SmartToy" />
+                    <TextBlock
+                        Grid.Column="1"
+                        Text="{I18N {x:Static pixeval:HelpPageResources+McpHelpExpander.Header}}"
+                        TextWrapping="Wrap" />
+                </Grid>
+            </Expander.Header>
+            <local:MarkdownBox Markdown="{I18N {x:Static pixeval:MarkdownResources.McpHelp}}" />
+        </Expander>
+        <m3:MaterialSurface Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" CornerRadius="16">
+            <Grid ColumnDefinitions="*,Auto">
+                <m3:IconButton
+                    x:Name="RefreshMcpToolsButton"
+                    Grid.Column="1"
+                    Margin="4"
+                    VerticalAlignment="Top"
+                    AutomationProperties.Name="{Binding (ToolTip.Tip), RelativeSource={RelativeSource Self}}"
+                    Click="RefreshMcpToolsButton_OnClicked"
+                    Symbol="Sync"
+                    ToolTip.Tip="{I18N {x:Static pixeval:HelpPageResources+McpToolsRefreshButton.ToolTip}}" />
+                <Expander x:Name="ToolsExpander">
+                    <Expander.Header>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                            <PathIcon Data="{markup1:SvgPath {x:Static pixeval:SvgResources.MCP}}" />
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Text="{I18N {x:Static pixeval:HelpPageResources+McpToolsExpander.Header}}" TextWrapping="Wrap" />
+                                <TextBlock
+                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                    Text="{I18N {x:Static pixeval:HelpPageResources+McpToolsExpander.Description}}"
+                                    TextWrapping="Wrap"
+                                    Theme="{StaticResource CaptionTextBlockStyle}" />
+                            </StackPanel>
+                        </Grid>
+                    </Expander.Header>
                     <StackPanel Spacing="10">
                         <TextBlock
                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"
@@ -43,10 +59,10 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="{x:Type mcpServer:McpToolItemViewModel}">
-                                    <Border
-                                        Padding="10"
+                                    <m3:MaterialSurface
+                                        Padding="16"
                                         Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
-                                        CornerRadius="{DynamicResource ControlCornerRadius}">
+                                        CornerRadius="12">
                                         <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="3">
                                             <TextBlock
                                                 FontFamily="{DynamicResource PixevalMonospaceFontFamily}"
@@ -96,13 +112,13 @@
                                                     TextWrapping="Wrap" />
                                             </StackPanel>
                                         </Grid>
-                                    </Border>
+                                    </m3:MaterialSurface>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </StackPanel>
-                </controls:SettingsCard>
-            </controls:SettingsExpander.Items>
-        </controls:SettingsExpander>
+                </Expander>
+            </Grid>
+        </m3:MaterialSurface>
     </StackPanel>
 </UserControl>

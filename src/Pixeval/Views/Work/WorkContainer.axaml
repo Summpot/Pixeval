@@ -1,4 +1,4 @@
-<UserControl
+﻿<UserControl
     x:Class="Pixeval.Views.Work.WorkContainer"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -20,7 +20,7 @@
         <DockPanel
             DockPanel.Dock="Top"
             IsVisible="{Binding !$parent[work:WorkContainer].IsCommandBarCollapsed, Mode=OneWay}"
-            LastChildFill="False">
+            LastChildFill="True">
             <!--  Non-selection toolbar (right side)  -->
             <CommandBar
                 x:Name="RightToolBar"
@@ -30,7 +30,8 @@
                 <CommandBarToggleButton
                     x:Name="SelectionToggleButton"
                     Icon="{markup:SymbolIcon Multiselect}"
-                    IsChecked="{Binding IsSelecting, Mode=OneWayToSource}"
+                    IsChecked="{Binding IsSelecting, Mode=TwoWay}"
+                    Label="{I18N {x:Static local:WorkContainerResources+SelectionButton.Label}}"
                     ToolTip.Tip="{I18N {x:Static local:WorkContainerResources+SelectionButton.Label}}" />
                 <CommandBar.SecondaryCommands>
                     <CommandBarButton
@@ -43,14 +44,15 @@
                 </CommandBar.SecondaryCommands>
             </CommandBar>
 
-            <Panel DockPanel.Dock="Left">
+            <Panel>
                 <!--  Other toolbar (invisible when selecting)  -->
-                <StackPanel
+                <WrapPanel
                     x:Name="ExtraCommandsBar"
                     VerticalAlignment="Center"
                     IsVisible="{Binding !IsSelecting}"
-                    Orientation="Horizontal"
-                    Spacing="5">
+                    ItemSpacing="5"
+                    LineSpacing="5"
+                    Orientation="Horizontal">
                     <controls:SymbolComboBox
                         x:Name="SortOptionComboBox"
                         ItemsSource="{markup1:EnumResources x:TypeArguments=options:LocalSortOption}"
@@ -58,9 +60,10 @@
                     <work:WorkFilterAutoSuggestBox
                         x:Name="WorkFilterAutoSuggestBox"
                         Width="250"
+                        MaxWidth="{Binding #ExtraCommandsBar.Bounds.Width}"
                         Analyze="AnalyzeFilter"
                         SearchRequested="WorkFilterAutoSuggestBox_OnSearchRequested" />
-                </StackPanel>
+                </WrapPanel>
 
                 <!--  Selection toolbar (visible when selecting)  -->
                 <CommandBar

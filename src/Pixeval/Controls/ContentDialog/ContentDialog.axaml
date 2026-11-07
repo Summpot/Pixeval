@@ -1,10 +1,10 @@
-<ResourceDictionary
+﻿<ResourceDictionary
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:Pixeval.Controls">
+    xmlns:controls="using:Pixeval.Controls"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia">
 
-    <Color x:Key="ContentDialogOverlayColor">#66000000</Color>
-    <SolidColorBrush x:Key="ContentDialogOverlayBrush" Color="{StaticResource ContentDialogOverlayColor}" />
+    <SolidColorBrush x:Key="ContentDialogOverlayBrush" Color="{m3:Token {x:Static m3:MaterialTokens+Comp+Scrim.ContainerColor}}" />
 
     <ControlTheme x:Key="{x:Type controls:ContentDialogHost}" TargetType="controls:ContentDialogHost">
         <Setter Property="IsVisible" Value="False" />
@@ -21,7 +21,7 @@
             </ControlTemplate>
         </Setter>
 
-        <Style Selector="^:compact /template/ Grid#PART_DialogPanel">
+        <Style Selector="^:compact /template/ Panel#PART_DialogPanel">
             <Setter Property="Margin" Value="8,8,8,0" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="VerticalAlignment" Value="Bottom" />
@@ -30,24 +30,22 @@
 
     <ControlTheme x:Key="{x:Type controls:ContentDialog}" TargetType="{x:Type controls:ContentDialog}">
         <Setter Property="Focusable" Value="True" />
+        <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle" />
         <Setter Property="FocusAdorner" Value="{x:Null}" />
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="MinWidth" Value="300" />
-        <Setter Property="MaxWidth" Value="440" />
+        <Setter Property="MinWidth" Value="{m3:Token {x:Static m3:MaterialTokens+Comp+Dialog.MinWidth}}" />
+        <Setter Property="MaxWidth" Value="{m3:Token {x:Static m3:MaterialTokens+Comp+Dialog.MaxWidth}}" />
         <Setter Property="MaxHeight" Value="720" />
         <Setter Property="Template">
             <ControlTemplate>
-                <Border
+                <m3:MaterialSurface
                     x:Name="PART_LayoutRoot"
-                    Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}"
-                    BorderBrush="{DynamicResource SurfaceStrokeColorFlyoutBrush}"
-                    BorderThickness="1"
-                    BoxShadow="0 18 44 0 #40000000"
+                    Background="{m3:Token {x:Static m3:MaterialTokens+Comp+Dialog.ContainerColor}}"
                     ClipToBounds="True"
-                    CornerRadius="8">
+                    CornerRadius="{m3:Token {x:Static m3:MaterialTokens+Comp+Dialog.ContainerShape}}">
                     <Grid
-                        Margin="24"
+                        Margin="{m3:Token {x:Static m3:MaterialTokens+Comp+Dialog.ContentPadding}}"
                         RowDefinitions="Auto,*,Auto"
                         RowSpacing="24">
                         <ContentPresenter
@@ -59,11 +57,11 @@
                             <ContentPresenter.DataTemplates>
                                 <DataTemplate DataType="{x:Type x:String}">
                                     <TextBlock
+                                        m3:MaterialText.Style="{m3:Token {x:Static m3:MaterialTokens+Comp+Dialog.HeadlineFont}}"
                                         FontFamily="{DynamicResource ContentControlThemeFontFamily}"
-                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                        Foreground="{m3:Token {x:Static m3:MaterialTokens+Comp+Dialog.HeadlineColor}}"
                                         Text="{Binding}"
-                                        TextWrapping="Wrap"
-                                        Theme="{StaticResource TitleTextBlockStyle}" />
+                                        TextWrapping="Wrap" />
                                 </DataTemplate>
                             </ContentPresenter.DataTemplates>
                         </ContentPresenter>
@@ -76,7 +74,8 @@
                                 <ContentPresenter.DataTemplates>
                                     <DataTemplate x:DataType="{x:Type x:String}" DataType="{x:Type x:String}">
                                         <TextBlock
-                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                            m3:MaterialText.Style="{m3:Token {x:Static m3:MaterialTokens+Comp+Dialog.SupportingTextFont}}"
+                                            Foreground="{m3:Token {x:Static m3:MaterialTokens+Comp+Dialog.SupportingTextColor}}"
                                             Text="{Binding}"
                                             TextWrapping="Wrap" />
                                     </DataTemplate>
@@ -84,12 +83,13 @@
                             </ContentPresenter>
                         </ScrollViewer>
 
-                        <StackPanel
+                        <WrapPanel
                             x:Name="PART_ButtonPanel"
                             Grid.Row="2"
                             HorizontalAlignment="Right"
-                            Orientation="Horizontal"
-                            Spacing="8">
+                            ItemSpacing="8"
+                            LineSpacing="8"
+                            Orientation="Horizontal">
                             <Button
                                 x:Name="PART_PrimaryButton"
                                 MinWidth="84"
@@ -118,9 +118,9 @@
                                 IsEnabled="{TemplateBinding IsCloseButtonEnabled}"
                                 IsVisible="{TemplateBinding CloseButtonText,
                                                             Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                        </StackPanel>
+                        </WrapPanel>
                     </Grid>
-                </Border>
+                </m3:MaterialSurface>
             </ControlTemplate>
         </Setter>
 
@@ -140,16 +140,16 @@
             <Setter Property="VerticalAlignment" Value="Bottom" />
         </Style>
 
-        <Style Selector="^:compact /template/ Border#PART_LayoutRoot">
-            <Setter Property="CornerRadius" Value="12,12,0,0" />
+        <Style Selector="^:compact /template/ m3|MaterialSurface#PART_LayoutRoot">
+            <Setter Property="CornerRadius" Value="28,28,0,0" />
         </Style>
 
-        <Style Selector="^:compact /template/ StackPanel#PART_ButtonPanel">
+        <Style Selector="^:compact /template/ WrapPanel#PART_ButtonPanel">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="Orientation" Value="Vertical" />
+            <Setter Property="ItemWidth" Value="{Binding $self.Bounds.Width}" />
         </Style>
 
-        <Style Selector="^:compact /template/ StackPanel#PART_ButtonPanel Button">
+        <Style Selector="^:compact /template/ WrapPanel#PART_ButtonPanel Button">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
     </ControlTheme>

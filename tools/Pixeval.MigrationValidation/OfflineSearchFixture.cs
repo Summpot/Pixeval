@@ -25,8 +25,10 @@ internal sealed class OfflineSearchFixture : IDisposable
     internal ConcurrentQueue<string> UnexpectedRequests { get; } = new();
     internal ConcurrentQueue<string> RequestLog { get; } = new();
     internal ConcurrentQueue<Uri> SearchRequests { get; } = new();
+    internal ConcurrentDictionary<string, byte[]> ImageResponses { get; } = new();
     internal bool IsPremium { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? AuthResponseFactory { get; set; }
+    internal Func<HttpRequestMessage, CancellationToken, Task<string>>? BookmarkResponseFactory { get; set; }
 
     internal OfflineSearchFixture(MakoClient client)
     {
@@ -57,6 +59,15 @@ internal sealed class OfflineSearchFixture : IDisposable
     {
         var uri = request.RequestUri ?? throw new InvalidOperationException("Missing request URI.");
         RequestLog.Enqueue($"{request.Method} {uri.PathAndQuery}");
+        if (ImageResponses.TryGetValue(uri.AbsoluteUri, out var image))
+            return new(HttpStatusCode.OK) { RequestMessage = request, Content = new ByteArrayContent(image) };
+        if (BookmarkResponseFactory is { } bookmark && uri.AbsolutePath is
+            "/v2/illust/bookmark/detail" or "/v2/novel/bookmark/detail" or "/v1/user/bookmark-tags/illust" or "/v1/user/bookmark-tags/novel")
+            return new(HttpStatusCode.OK)
+            {
+                RequestMessage = request,
+                Content = new StringContent(await bookmark(request, token).ConfigureAwait(false), Encoding.UTF8, "application/json")
+            };
         string json;
         switch (uri.AbsolutePath)
         {

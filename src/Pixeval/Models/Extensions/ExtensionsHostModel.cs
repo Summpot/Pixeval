@@ -53,7 +53,8 @@ public sealed partial class ExtensionsHostModel(
 
     public Uri? Link { get; } = Uri.TryCreate(host.ExtensionLink, UriKind.RelativeOrAbsolute, out var uri) ? uri : null;
 
-    public Uri? HelpLink { get; } = Uri.TryCreate(host.HelpLink, UriKind.RelativeOrAbsolute, out var uri) ? uri : null;
+    public Uri? HelpLink { get; } = host.HelpLink is { } helpLink && !string.IsNullOrWhiteSpace(helpLink)
+        && Uri.TryCreate(helpLink, UriKind.RelativeOrAbsolute, out var uri) ? uri : null;
 
     public string HostLibraryPath { get; init; } = "";
 

@@ -256,7 +256,15 @@ public partial class WorkContainer : UserControl
 
     private void CancelSelectionButton_OnClicked(object? sender, RoutedEventArgs e)
     {
+        var wasOpen = SelectionToolBar.IsOpen;
         WorkView.WorkListBox.UnselectAll();
+        if (wasOpen)
+        {
+            // Clearing disables the focused overflow command and every following
+            // action. Close the menu and keep keyboard focus on a live control.
+            SelectionToolBar.IsOpen = false;
+            SelectionToggleButton.Focus();
+        }
     }
 
     private void WorkFilterAutoSuggestBox_OnSearchRequested(object? sender, WorkFilterSearchRequestedEventArgs e)

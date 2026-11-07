@@ -1,9 +1,9 @@
-<Styles
+﻿<Styles
     x:Class="Pixeval.Controls.MarkdownBoxStyles"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ctxt="using:ColorTextBlock.Avalonia"
-    xmlns:icons="using:FluentIcons.Avalonia"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:mdc="using:Markdown.Avalonia.Controls">
 
     <Style Selector=".Markdown_Avalonia_MarkdownViewer ctxt|CTextBlock">
@@ -79,8 +79,9 @@
     </Style>
 
     <Style Selector=".Markdown_Avalonia_MarkdownViewer ctxt|CCode">
+        <Setter Property="MonospaceFontFamily" Value="{DynamicResource PixevalMonospaceFontFamily}" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-        <Setter Property="Background" Value="#1AF6F8FA" />
+        <Setter Property="Background" Value="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerHighest}}" />
         <Setter Property="Padding" Value="3,1" />
         <Setter Property="CornerRadius" Value="4" />
     </Style>
@@ -88,14 +89,14 @@
     <Style Selector=".Markdown_Avalonia_MarkdownViewer Border.CodeBlock">
         <Setter Property="Margin" Value="0,10" />
         <Setter Property="Padding" Value="12,10" />
-        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="CornerRadius" Value="12" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
-        <Setter Property="Background" Value="{DynamicResource LayerOnMicaBaseAltFillColorSecondaryBrush}" />
+        <Setter Property="Background" Value="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerLow}}" />
     </Style>
 
     <Style Selector=".Markdown_Avalonia_MarkdownViewer StackPanel.PixevalCodeBlockToolbar">
-        <Setter Property="Margin" Value="0,0,8,0" />
+        <Setter Property="Margin" Value="0,0,0,4" />
     </Style>
 
     <Style Selector=".Markdown_Avalonia_MarkdownViewer Label.LangInfo">
@@ -109,34 +110,6 @@
         <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="4" />
-    </Style>
-
-    <Style Selector=".Markdown_Avalonia_MarkdownViewer Button.CopyButton">
-        <Setter Property="Width" Value="28" />
-        <Setter Property="Height" Value="26" />
-        <Setter Property="MinWidth" Value="28" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="Background" Value="{DynamicResource ControlFillColorTransparentBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource ControlFillColorTransparentBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="4" />
-    </Style>
-
-    <Style Selector=".Markdown_Avalonia_MarkdownViewer Button.CopyButton:pointerover">
-        <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
-    </Style>
-
-    <Style Selector=".Markdown_Avalonia_MarkdownViewer Button.CopyButton:pressed">
-        <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}" />
-    </Style>
-
-    <Style Selector=".Markdown_Avalonia_MarkdownViewer Button.CopyButton icons|SymbolIcon">
-        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
-    </Style>
-
-    <Style Selector=".Markdown_Avalonia_MarkdownViewer Button.CopyButton:pointerover icons|SymbolIcon">
-        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
     </Style>
 
     <Style Selector=".Markdown_Avalonia_MarkdownViewer TextBlock.CodeBlock">
@@ -196,7 +169,7 @@
         <Setter Property="mdc:AutoScaleColumnDefinitions.IsEnabled" Value="True" />
     </Style>
 
-    <Style Selector=".Markdown_Avalonia_MarkdownViewer Grid.Table > Border">
+    <Style Selector=".Markdown_Avalonia_MarkdownViewer Grid.Table &gt; Border">
         <Setter Property="Margin" Value="0" />
         <Setter Property="Padding" Value="10,6" />
         <Setter Property="BorderThickness" Value="1,1,0,0" />

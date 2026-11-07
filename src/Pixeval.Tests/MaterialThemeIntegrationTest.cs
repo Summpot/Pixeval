@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,6 +25,7 @@ using ComposeAnimation;
 using Material3Expressive.Components;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
+using Pixeval.I18N;
 using Pixeval.Utilities;
 using Pixeval.Views.Work;
 using SmoothScroll.Avalonia.Controls;
@@ -516,8 +518,15 @@ public sealed class MaterialThemeIntegrationTest
 
     public sealed class MaterialTestApplication : Application
     {
-        public override void Initialize() => Styles.Add((Styles) AvaloniaXamlLoader.Load(
-            new Uri("avares://Pixeval/Themes/PixevalTheme.axaml")));
+        public override void Initialize()
+        {
+            // Match App.Initialize: localized shared styles need language resources before loading.
+            var project = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval"));
+            if (!I18NManager.CandidatePaths.Contains(project))
+                I18NManager.CandidatePaths.Add(project);
+            I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+            Styles.Add((Styles) AvaloniaXamlLoader.Load(new Uri("avares://Pixeval/Themes/PixevalTheme.axaml")));
+        }
 
         public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<MaterialTestApplication>()
             .UseSkia()

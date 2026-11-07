@@ -72,5 +72,6 @@ public class AddNewBookmarkTagItem : TemplatedControl
     {
         _textBox?.Text = "";
         IsExpanded = false;
+        _addButton?.Focus();
     }
 }

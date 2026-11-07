@@ -27,6 +27,15 @@ public sealed partial class NavigationSettingsPage : ContentPage
         ValidateCurrentText();
     }
 
+    private void EditorLayout_OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        // Keep the existing editor/document and reference controls when changing layout.
+        var narrow = e.NewSize.Width <= 720;
+        EditorLayout.Classes.Set("narrow", narrow);
+        EditorLayout.ColumnDefinitions[1].Width = new GridLength(narrow ? 0 : 320);
+        EditorLayout.ColumnSpacing = narrow ? 0 : 12;
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);

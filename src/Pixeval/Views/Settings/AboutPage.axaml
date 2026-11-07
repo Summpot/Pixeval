@@ -2,11 +2,9 @@
     x:Class="Pixeval.Views.Settings.AboutPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Pixeval.Controls"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
-    xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
     xmlns:settings="using:Pixeval.Views.Settings"
@@ -39,14 +37,15 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="{x:Type settings:Supporter}">
-                            <Border
+                            <m3:Card
                                 Width="140"
-                                Height="160"
-                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                                CornerRadius="8"
-                                Cursor="Hand"
+                                MinHeight="160"
+                                Padding="12"
+                                AutomationProperties.Name="{Binding Nickname}"
+                                Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                                IsClickable="True"
                                 Tag="{Binding ProfileUri}"
-                                Tapped="SupporterCard_OnTapped">
+                                ToolTip.Tip="{Binding ProfileUri}">
                                 <StackPanel
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
@@ -58,14 +57,19 @@
                                         local:Source.Cache="{Binding LocalProfilePicture}" />
                                     <TextBlock
                                         HorizontalAlignment="Center"
-                                        FontWeight="SemiBold"
-                                        Text="{Binding Nickname}" />
+                                        Text="{Binding Nickname}"
+                                        TextAlignment="Center"
+                                        TextWrapping="Wrap"
+                                        Theme="{StaticResource BodyStrongTextBlockStyle}" />
                                     <TextBlock
                                         HorizontalAlignment="Center"
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Text="{Binding AtName}" />
+                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                        Text="{Binding AtName}"
+                                        TextAlignment="Center"
+                                        TextWrapping="Wrap"
+                                        Theme="{StaticResource CaptionTextBlockStyle}" />
                                 </StackPanel>
-                            </Border>
+                            </m3:Card>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -80,21 +84,32 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="{x:Type settings:DependencyViewModel}">
-                            <controls:SettingsExpander
-                                Description="{Binding Author}"
-                                Header="{Binding Name}"
-                                HeaderIcon="{markup:SymbolIcon Box}">
-                                <m3:IconButton
-                                    AutomationProperties.Name="{Binding Url}"
-                                    Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                                    Symbol="OpenInNew"
-                                    Tag="{Binding Url}" />
-                                <controls:SettingsExpander.Items>
-                                    <controls:SettingsCard HorizontalContentAlignment="Left" ContentAlignment="Vertical">
+                            <m3:MaterialSurface Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" CornerRadius="16">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Expander>
+                                        <Expander.Header>
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
+                                                <TextBlock
+                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                    Text="{Binding Author}"
+                                                    TextWrapping="Wrap"
+                                                    Theme="{StaticResource CaptionTextBlockStyle}" />
+                                            </StackPanel>
+                                        </Expander.Header>
                                         <local:MarkdownBox Markdown="{Binding License}" />
-                                    </controls:SettingsCard>
-                                </controls:SettingsExpander.Items>
-                            </controls:SettingsExpander>
+                                    </Expander>
+                                    <m3:IconButton
+                                        Grid.Column="1"
+                                        Margin="4"
+                                        VerticalAlignment="Top"
+                                        AutomationProperties.Name="{Binding Url}"
+                                        Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                                        Symbol="OpenInNew"
+                                        Tag="{Binding Url}"
+                                        ToolTip.Tip="{Binding Url}" />
+                                </Grid>
+                            </m3:MaterialSurface>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

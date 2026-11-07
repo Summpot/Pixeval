@@ -14,8 +14,6 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using ColorDocument.Avalonia;
 using ColorTextBlock.Avalonia;
-using FluentIcons.Avalonia;
-using FluentIcons.Common;
 using Markdown.Avalonia;
 using Markdown.Avalonia.Parsers;
 using Markdown.Avalonia.Plugins;
@@ -169,8 +167,9 @@ internal sealed class PixevalCodeBlockElement : DocumentElement
         };
         scrollViewer.Classes.Add(CodeBlockClass);
 
-        var root = new Grid();
+        var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto") };
         root.Classes.Add(RootClass);
+        Grid.SetRow(scrollViewer, 1);
         root.Children.Add(scrollViewer);
         root.Children.Add(CreateToolbar());
 
@@ -206,30 +205,7 @@ internal sealed class PixevalCodeBlockElement : DocumentElement
             toolbar.Children.Add(langLabel);
         }
 
-        var copyButton = new Button
-        {
-            Content = new SymbolIcon
-            {
-                Symbol = Symbol.Clipboard,
-                FontSize = 14
-            },
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        copyButton.Classes.Add("CopyButton");
-        ToolTip.SetTip(copyButton, "复制代码");
-        copyButton.Click += async (_, _) =>
-        {
-            if (TopLevel.GetTopLevel(copyButton)?.Clipboard is { } clipboard)
-            {
-                var item = new DataTransferItem();
-                item.Set(DataFormat.Text, _code);
-                var data = new DataTransfer();
-                data.Add(item);
-
-                await clipboard.SetDataAsync(data);
-            }
-        };
-        toolbar.Children.Add(copyButton);
+        toolbar.Children.Add(MarkdownCodeCopyButton.Create(() => _code));
 
         return toolbar;
     }

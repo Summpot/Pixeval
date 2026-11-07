@@ -1,4 +1,4 @@
-<ContentPage
+﻿<ContentPage
     x:Class="Pixeval.Views.Settings.NavigationSettingsPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -20,8 +20,22 @@
     mc:Ignorable="d"
     d:DesignHeight="720"
     d:DesignWidth="1100">
+    <ContentPage.Styles>
+        <Style Selector="ScrollViewer#ReferenceScroller">
+            <Setter Property="Grid.Column" Value="1" />
+            <Setter Property="Grid.Row" Value="0" />
+            <Setter Property="Grid.RowSpan" Value="2" />
+        </Style>
+        <Style Selector="Grid#EditorLayout.narrow &gt; ScrollViewer#ReferenceScroller">
+            <Setter Property="Grid.Column" Value="0" />
+            <Setter Property="Grid.Row" Value="2" />
+            <Setter Property="Grid.RowSpan" Value="1" />
+            <Setter Property="MaxHeight" Value="220" />
+        </Style>
+    </ContentPage.Styles>
     <NavigationPage.TopCommandBar>
-        <CommandBar DefaultLabelPosition="Right">
+        <!--  Native overflow estimates uniform slots; reserve enough for the localized reset label.  -->
+        <CommandBar DefaultLabelPosition="Right" ItemWidthRight="240">
             <CommandBarButton
                 x:Name="CanApplyButton"
                 Click="ApplyButton_OnClicked"
@@ -46,15 +60,21 @@
         </CommandBar>
     </NavigationPage.TopCommandBar>
     <Grid
+        x:Name="EditorLayout"
+        Margin="12"
         ColumnDefinitions="*,320"
         ColumnSpacing="12"
-        RowDefinitions="*,Auto">
+        RowDefinitions="*,Auto,Auto"
+        RowSpacing="12"
+        SizeChanged="EditorLayout_OnSizeChanged">
         <Border
             Grid.Row="0"
             Grid.Column="0"
-            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+            Padding="8"
+            Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerLowest}}"
+            BorderBrush="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OutlineVariant}}"
             BorderThickness="1"
-            CornerRadius="{DynamicResource ControlCornerRadius}">
+            CornerRadius="16">
             <edit:TextEditor
                 x:Name="YamlEditor"
                 Background="Transparent"
@@ -72,21 +92,22 @@
             </edit:TextEditor>
         </Border>
 
-        <ScrollViewer
-            Grid.Row="0"
-            Grid.RowSpan="2"
-            Grid.Column="1">
+        <ScrollViewer x:Name="ReferenceScroller">
             <StackPanel Spacing="12">
                 <controls:SettingsExpander Header="{I18N {x:Static pixeval:NavigationSettingsPageResources+ReferencePages.Header}}" HeaderIcon="{markup:SymbolIcon DocumentBulletList}">
                     <controls:SettingsExpander.Items>
-                        <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
+                        <controls:SettingsCard
+                            Padding="8"
+                            HorizontalContentAlignment="Stretch"
+                            ContentAlignment="Vertical">
                             <ItemsControl ItemsSource="{x:Static utilities:NavigationPageRegistry.Pages}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="{x:Type navigation:NavigationPageDefinition}">
                                         <m3:Card
                                             HorizontalAlignment="Stretch"
+                                            AutomationProperties.Name="{Binding Header}"
                                             Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                                            Tag="{Binding StringFormat={}{0}}"
+                                            Tag="{Binding Key, StringFormat='- page: {0}'}"
                                             Theme="{StaticResource ContentCardTheme}">
                                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                                                 <fluent:SymbolIcon
@@ -112,12 +133,18 @@
                 </controls:SettingsExpander>
                 <controls:SettingsExpander Header="{I18N {x:Static pixeval:NavigationSettingsPageResources+ReferenceIcons.Header}}" HeaderIcon="{markup:SymbolIcon Icons}">
                     <controls:SettingsExpander.Items>
-                        <controls:SettingsCard HorizontalContentAlignment="Stretch" ContentAlignment="Vertical">
+                        <controls:SettingsCard
+                            Padding="8"
+                            HorizontalContentAlignment="Stretch"
+                            ContentAlignment="Vertical">
                             <ItemsControl ItemsSource="{x:Static utilities:NavigationPageRegistry.ColorSymbols}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="{x:Type common:Symbol}">
                                         <Button
+                                            Width="48"
+                                            Height="48"
                                             Padding="2"
+                                            AutomationProperties.Name="{Binding StringFormat={}{0}}"
                                             Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
                                             Tag="{Binding StringFormat={}{0}}"
                                             Theme="{StaticResource TransparentButtonStyle}"
@@ -129,9 +156,9 @@
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <controls1:AdaptiveGrid
-                                            ItemSize="30"
+                                            ItemSize="48"
                                             ItemSpacing="0"
-                                            LineSize="30"
+                                            LineSize="48"
                                             LineSpacing="0" />
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
@@ -142,11 +169,18 @@
             </StackPanel>
         </ScrollViewer>
 
-        <controls1:InfoBar
-            x:Name="StatusInfoBar"
+        <ScrollViewer
+            x:Name="DiagnosticsScroller"
             Grid.Row="1"
             Grid.Column="0"
-            IsVisible="False"
-            Mode="Error" />
+            MaxHeight="160"
+            Focusable="True"
+            HorizontalScrollBarVisibility="Disabled"
+            IsVisible="{Binding #StatusInfoBar.IsVisible}">
+            <controls1:InfoBar
+                x:Name="StatusInfoBar"
+                IsVisible="False"
+                Mode="Error" />
+        </ScrollViewer>
     </Grid>
 </ContentPage>

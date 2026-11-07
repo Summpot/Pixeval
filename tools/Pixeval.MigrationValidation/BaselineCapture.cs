@@ -74,9 +74,13 @@ internal static class BaselineCapture
                 }
                 var expanders = page.GetVisualDescendants().OfType<SettingsExpander>()
                     .Where(static expander => expander.IsEffectivelyEnabled).ToArray();
-                if (expanders.Length > 0)
+                var nativeExpanders = page.GetVisualDescendants().OfType<Expander>()
+                    .Where(static expander => expander.IsEffectivelyEnabled).ToArray();
+                if (expanders.Length > 0 || nativeExpanders.Length > 0)
                 {
                     foreach (var expander in expanders)
+                        expander.IsExpanded = true;
+                    foreach (var expander in nativeExpanders)
                         expander.IsExpanded = true;
                     await RenderAsync(window);
                     if (scroller is not null)

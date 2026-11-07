@@ -3,6 +3,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:local="using:Pixeval.Controls"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:Pixeval.Views.Markup">
 
     <Design.PreviewWith>
@@ -63,11 +64,12 @@
     </Design.PreviewWith>
 
     <ControlTheme x:Key="{x:Type local:InfoBar}" TargetType="{x:Type local:InfoBar}">
-        <Setter Property="Padding" Value="10" />
-        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+        <Setter Property="Padding" Value="16,12" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
         <Setter Property="Template">
             <ControlTemplate TargetType="{x:Type local:InfoBar}">
-                <Border
+                <m3:MaterialSurface
                     Padding="{TemplateBinding Padding}"
                     Background="{TemplateBinding Background}"
                     CornerRadius="{TemplateBinding CornerRadius}">
@@ -76,15 +78,16 @@
                             VerticalAlignment="Center"
                             DockPanel.Dock="Left"
                             Foreground="{TemplateBinding Foreground}"
-                            IconVariant="Color"
+                            IconVariant="Regular"
                             Symbol="{TemplateBinding Symbol}" />
                         <TextBlock
                             VerticalAlignment="Center"
                             Foreground="{TemplateBinding Foreground}"
                             Text="{TemplateBinding Text}"
-                            TextWrapping="Wrap" />
+                            TextWrapping="Wrap"
+                            Theme="{StaticResource BodyTextBlockStyle}" />
                     </DockPanel>
-                </Border>
+                </m3:MaterialSurface>
             </ControlTemplate>
         </Setter>
 
@@ -95,6 +98,7 @@
 
         <Style Selector="^[Mode=Info]">
             <Setter Property="Background" Value="{DynamicResource SystemFillColorAttentionBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OnSecondaryContainer}}" />
             <Setter Property="Symbol" Value="QuestionCircle" />
         </Style>
 
@@ -105,6 +109,7 @@
 
         <Style Selector="^[Mode=Error]">
             <Setter Property="Background" Value="{DynamicResource SystemFillColorCriticalBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OnErrorContainer}}" />
             <Setter Property="Symbol" Value="DismissCircle" />
         </Style>
     </ControlTheme>

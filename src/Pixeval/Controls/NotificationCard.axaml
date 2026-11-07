@@ -1,165 +1,149 @@
-<ResourceDictionary
+﻿<ResourceDictionary
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:fluent="using:FluentIcons.Avalonia"
-    xmlns:notifications="using:Avalonia.Controls.Notifications">
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
+    xmlns:notifications="using:Avalonia.Controls.Notifications"
+    xmlns:pixeval="using:Pixeval">
 
     <Design.PreviewWith>
         <StackPanel Orientation="Horizontal">
             <ThemeVariantScope RequestedThemeVariant="Light">
                 <StackPanel Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
                     <NotificationCard>
-                        <notifications:Notification Type="Success" Title="Success message" />
-                    </NotificationCard>
-                    <NotificationCard >
-                        <notifications:Notification Type="Information" Title="Information" Message="Information message" />
+                        <notifications:Notification Title="Success message" Type="Success" />
                     </NotificationCard>
                     <NotificationCard>
-                        <notifications:Notification Type="Warning" Title="Warning" Message="Warning message" />
+                        <notifications:Notification
+                            Title="Information"
+                            Message="Information message"
+                            Type="Information" />
                     </NotificationCard>
                     <NotificationCard>
-                        <notifications:Notification Type="Error" Title="Error" Message="Error message" />
+                        <notifications:Notification
+                            Title="Warning"
+                            Message="Warning message"
+                            Type="Warning" />
+                    </NotificationCard>
+                    <NotificationCard>
+                        <notifications:Notification
+                            Title="Error"
+                            Message="Error message"
+                            Type="Error" />
                     </NotificationCard>
                 </StackPanel>
             </ThemeVariantScope>
             <ThemeVariantScope RequestedThemeVariant="Dark">
                 <StackPanel Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
                     <NotificationCard>
-                        <notifications:Notification Type="Success" Title="Success message" />
+                        <notifications:Notification Title="Success message" Type="Success" />
                     </NotificationCard>
                     <NotificationCard>
-                        <notifications:Notification Type="Information" Title="Information" Message="Information message" />
+                        <notifications:Notification
+                            Title="Information"
+                            Message="Information message"
+                            Type="Information" />
                     </NotificationCard>
                     <NotificationCard>
-                        <notifications:Notification Type="Warning" Title="Warning" Message="Warning message"  />
+                        <notifications:Notification
+                            Title="Warning"
+                            Message="Warning message"
+                            Type="Warning" />
                     </NotificationCard>
                     <NotificationCard>
-                        <notifications:Notification Type="Error" Title="Error" Message="Error message"  />
+                        <notifications:Notification
+                            Title="Error"
+                            Message="Error message"
+                            Type="Error" />
                     </NotificationCard>
                 </StackPanel>
             </ThemeVariantScope>
         </StackPanel>
     </Design.PreviewWith>
 
-    <ResourceDictionary.ThemeDictionaries>
-        <ResourceDictionary x:Key="Light">
-            <SolidColorBrush Color="#ebf3fc" x:Key="ColorBrandBackground2"></SolidColorBrush>
-        </ResourceDictionary>
-        <ResourceDictionary x:Key="Dark">
-            
-            <SolidColorBrush Color="#082338" x:Key="ColorBrandBackground2"></SolidColorBrush>
-        </ResourceDictionary>
-    </ResourceDictionary.ThemeDictionaries>
-    
-    <!--
-        InfoBar.xaml / InfoBar_themeresources.xaml
-    -->
-
-    <ControlTheme x:Key="NotificationCardCloseButtonStyle" TargetType="{x:Type Button}">
-        <Setter Property="Width" Value="38" />
-        <Setter Property="Height" Value="38" />
-        <Setter Property="Margin" Value="5" />
+    <ControlTheme
+        x:Key="NotificationCardCloseButtonStyle"
+        BasedOn="{StaticResource MaterialStandardIconButtonTheme}"
+        TargetType="{x:Type m3:IconButton}">
+        <Setter Property="Margin" Value="4" />
         <Setter Property="VerticalAlignment" Value="Top" />
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
-        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
-        <Setter Property="Template">
-            <ControlTemplate TargetType="{x:Type Button}">
-                <Border
-                    x:Name="PART_Root"
-                    Background="{TemplateBinding Background}"
-                    CornerRadius="{TemplateBinding CornerRadius}">
-                    <fluent:SymbolIcon
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        FontSize="16"
-                        Foreground="{TemplateBinding Foreground}"
-                        Symbol="Dismiss" />
-                </Border>
-            </ControlTemplate>
-        </Setter>
-
-        <Style Selector="^:pointerover /template/ Border#PART_Root">
-            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
-        </Style>
-
-        <Style Selector="^:pressed /template/ Border#PART_Root">
-            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}" />
-        </Style>
+        <Setter Property="Symbol" Value="Close" />
+        <Setter Property="AutomationProperties.Name" Value="{I18N {x:Static pixeval:MiscResources.CloseNotification}}" />
+        <Setter Property="ToolTip.Tip" Value="{I18N {x:Static pixeval:MiscResources.CloseNotification}}" />
     </ControlTheme>
 
     <ControlTheme x:Key="{x:Type NotificationCard}" TargetType="{x:Type NotificationCard}">
-        <Setter Property="Width" Value="380" />
+        <Setter Property="MaxWidth" Value="380" />
         <Setter Property="Background" Value="{DynamicResource SystemFillColorAttentionBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="16" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
         <Setter Property="RenderTransformOrigin" Value="50%,100%" />
         <Setter Property="UseLayoutRounding" Value="True" />
         <Setter Property="Template">
             <ControlTemplate TargetType="{x:Type NotificationCard}">
                 <LayoutTransformControl x:Name="PART_LayoutTransformControl" UseRenderTransform="True">
-                    <Border
+                    <m3:MaterialSurface
+                        x:Name="PART_Surface"
                         Margin="12,6,12,10"
-                        BoxShadow="0 4 12 0 #33000000"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                        <Border
-                            Padding="16,0,0,0"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            ClipToBounds="True"
-                            CornerRadius="{TemplateBinding CornerRadius}">
-                            <Grid MinHeight="48" ColumnDefinitions="Auto,*,Auto">
-                                <fluent:SymbolIcon
-                                    x:Name="PART_Icon"
-                                    Margin="0,16,14,16"
-                                    VerticalAlignment="Top"
-                                    IconVariant="Color"
-                                    Symbol="QuestionCircle" />
-                                <ContentPresenter
-                                    x:Name="PART_ContentPresenter"
-                                    Grid.Column="1"
-                                    Margin="0,14,16,18"
-                                    VerticalAlignment="Center"
-                                    Content="{TemplateBinding Content}"
-                                    ContentTemplate="{TemplateBinding ContentTemplate}">
-                                    <ContentPresenter.DataTemplates>
-                                        <DataTemplate x:DataType="{x:Type notifications:INotification}" DataType="{x:Type notifications:INotification}">
-                                            <StackPanel Spacing="4">
-                                                <TextBlock
-                                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                    Text="{Binding Title}"
-                                                    TextWrapping="Wrap"
-                                                    Theme="{StaticResource BodyStrongTextBlockStyle}" />
-                                                <TextBlock
-                                                    MaxHeight="80"
-                                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                    IsVisible="{Binding Message, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                                    Text="{Binding Message}"
-                                                    TextTrimming="CharacterEllipsis"
-                                                    TextWrapping="Wrap" />
-                                            </StackPanel>
-                                        </DataTemplate>
-                                        <DataTemplate x:DataType="{x:Type x:String}" DataType="{x:Type x:String}">
+                        Padding="16,0,0,0"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        ShadowElevation="3"
+                        TextElement.Foreground="{TemplateBinding Foreground}">
+                        <Grid MinHeight="48" ColumnDefinitions="Auto,*,Auto">
+                            <fluent:SymbolIcon
+                                x:Name="PART_Icon"
+                                Margin="0,16,14,16"
+                                VerticalAlignment="Top"
+                                Foreground="{TemplateBinding Foreground}"
+                                IconVariant="Regular"
+                                Symbol="QuestionCircle" />
+                            <ContentPresenter
+                                x:Name="PART_ContentPresenter"
+                                Grid.Column="1"
+                                Margin="0,14,16,18"
+                                VerticalAlignment="Center"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}">
+                                <ContentPresenter.DataTemplates>
+                                    <DataTemplate x:DataType="{x:Type notifications:INotification}" DataType="{x:Type notifications:INotification}">
+                                        <StackPanel Spacing="4">
                                             <TextBlock
-                                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                Text="{Binding}"
+                                                Foreground="{Binding $parent[NotificationCard].Foreground}"
+                                                Text="{Binding Title}"
                                                 TextWrapping="Wrap"
                                                 Theme="{StaticResource BodyStrongTextBlockStyle}" />
-                                        </DataTemplate>
-                                    </ContentPresenter.DataTemplates>
-                                </ContentPresenter>
-                                <Button
-                                    x:Name="PART_CloseButton"
-                                    Grid.Column="2"
-                                    NotificationCard.CloseOnClick="True"
-                                    Theme="{StaticResource NotificationCardCloseButtonStyle}" />
-                            </Grid>
-                        </Border>
-                    </Border>
+                                            <TextBlock
+                                                Foreground="{Binding $parent[NotificationCard].Foreground}"
+                                                IsVisible="{Binding Message, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                MaxLines="4"
+                                                Text="{Binding Message}"
+                                                TextTrimming="CharacterEllipsis"
+                                                TextWrapping="Wrap"
+                                                Theme="{StaticResource BodyTextBlockStyle}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    <DataTemplate x:DataType="{x:Type x:String}" DataType="{x:Type x:String}">
+                                        <TextBlock
+                                            Foreground="{Binding $parent[NotificationCard].Foreground}"
+                                            Text="{Binding}"
+                                            TextWrapping="Wrap"
+                                            Theme="{StaticResource BodyStrongTextBlockStyle}" />
+                                    </DataTemplate>
+                                </ContentPresenter.DataTemplates>
+                            </ContentPresenter>
+                            <m3:IconButton
+                                x:Name="PART_CloseButton"
+                                Grid.Column="2"
+                                Foreground="{TemplateBinding Foreground}"
+                                NotificationCard.CloseOnClick="True"
+                                Theme="{StaticResource NotificationCardCloseButtonStyle}" />
+                        </Grid>
+                    </m3:MaterialSurface>
                 </LayoutTransformControl>
             </ControlTemplate>
         </Setter>
@@ -211,6 +195,8 @@
         </Style>
 
         <Style Selector="^[IsClosing=true]">
+            <!--  A dismissed card remains visible during its exit animation, but must not invoke its action twice.  -->
+            <Setter Property="IsHitTestVisible" Value="False" />
             <Style.Animations>
                 <Animation FillMode="Forward" Duration="0:0:0.35">
                     <KeyFrame Cue="100%">
@@ -221,7 +207,8 @@
         </Style>
 
         <Style Selector="^:information">
-            <Setter Property="Background" Value="{DynamicResource ColorBrandBackground2}" />
+            <Setter Property="Background" Value="{DynamicResource SystemFillColorAttentionBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OnSecondaryContainer}}" />
             <Style Selector="^ /template/ fluent|SymbolIcon#PART_Icon">
                 <Setter Property="Symbol" Value="QuestionCircle" />
             </Style>
@@ -243,6 +230,7 @@
 
         <Style Selector="^:error">
             <Setter Property="Background" Value="{DynamicResource SystemFillColorCriticalBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OnErrorContainer}}" />
             <Style Selector="^ /template/ fluent|SymbolIcon#PART_Icon">
                 <Setter Property="Symbol" Value="DismissCircle" />
             </Style>

@@ -304,6 +304,19 @@ public class ContentDialog : ContentControl
     {
         base.OnKeyDown(e);
 
+        // Initial focus stays on the dialog so Enter retains its default-action contract.
+        // Tab navigation cycles descendants; explicitly enter that cycle from the root.
+        if (!e.Handled && e.Key is Key.Tab && ReferenceEquals(e.Source, this)
+            && e.KeyModifiers is KeyModifiers.None or KeyModifiers.Shift)
+        {
+            var target = e.KeyModifiers is KeyModifiers.Shift
+                ? FocusManager.FindLastFocusableElement(this)
+                : FocusManager.FindFirstFocusableElement(this);
+            _ = target?.Focus(NavigationMethod.Tab, e.KeyModifiers);
+            e.Handled = true;
+            return;
+        }
+
         if (e.Handled || e.KeyModifiers is not KeyModifiers.None)
             return;
 

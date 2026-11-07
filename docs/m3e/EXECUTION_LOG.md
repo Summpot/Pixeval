@@ -697,3 +697,67 @@ CI：构建固定官方 demo 后把清单中的库传给验证脚本，上传提
 - 远程 CI 未运行；Linux 本机验证等价 Bash 命令已通过，PowerShell 构建脚本的 Linux CI 执行以及 macOS/Android/iOS/Browser 平台能力未覆盖。
 
 下一轮推荐：先读取本节和 P00.05i，用现有测试/宿主复现已验收边界；优先处理 DateTimeOffset 及小数编辑模板的完整值契约，或补不依赖原生通道的账号切换/增量加载取消与失败样本。为扩展错误/导出另建可控样本。原生通道恢复后补真实页面操作，再评估 P00 是否满足 P01 的前置条件。不要仅因清单中子步骤勾选较多就标记 P00 完成。
+
+## 2026-11-08 无人值守迁移批次
+
+时间：2026-11-07 23:33 至 2026-11-08 01:05:47（Asia/Shanghai），约 93 分钟；基线 `fdd6bfdf`，分支 `feat/material3expressive-migration`，开始时工作区干净。按 §10.3 连续推进六个功能单元，七个代码提交（文档单元在完整回归后追加一次字体修复），最后集中记账。全程后台构建、headless 输入和离屏渲染，没有调用 computer use、全局输入或系统剪贴板，没有推送/发布及依赖 gitlink 变更。
+
+| 步骤 / 功能单元 | 本地代码提交 | 本轮结果 |
+| --- | --- | --- |
+| P02.04a：查看器浮动命令栏 | `61a4d00b` | 复用 Material 命令主题，保留主项/溢出项身份、切换绑定、缩放及自动播放菜单；本地化溢出入口，键盘焦点下保持可见 |
+| P04.03a：通知与 InfoBar | `5c84fad0` | Material 表面、严重度图标与 48 DIP 关闭入口；保留真实通知管理器的持久/超时/容量规则，修复关闭动画中重复执行动作 |
+| P05.01a：About/Help/MCP 文档与代码操作 | `e31321ec`、`f6d5ab1f` | 支持者键盘入口、许可独立展开/外链、帮助分区；代码复制不覆盖首行，保留完整文本/滚动链；行内代码使用应用等宽字体回退并响应资源更新 |
+| P04.01a：对话框 | `14c04cc4` | 保留结果/deferral/Closing 否决及宿主寿命；Material 表面、长按钮换行和紧凑布局；修复 adorner 锚点导致的不可见/不可命中、Tab 逸出及关闭后入口焦点丢失 |
+| P04.04a：查看器状态遮罩 | `bee34777` | 保留原加载/错误绑定及 ProgressBar；错误表面与本地化进度名称，长错误可通过 Tab/PageDown/滚动完整阅读，清除状态恢复底层命中 |
+| P04.04b：详情浮动面板键盘可见性 | `879bd0dc` | 焦点进入面板时完全可见，离开后恢复既有距离淡出；锁定、停靠及单次动作保持 |
+
+依赖依据：复用先前 418 项完整基线、已有 Material 主题/字体/命令控件及对话框生命周期契约，只迁移具备对应证据的局部控件。保留专用查看器、通知管理器、ContentDialog、Markdown 渲染与设置生成机制；没有改账号、请求协议、MCP 工具/schema、持久化格式或原生扩展 ABI。P02/P04/P05 更新为实施中，父步骤与 P00/P01 的完整验收不因这些子步骤通过而放行。
+
+验证环境仍为 SDK 10.0.401、Avalonia 12.1.5、M3E `859a69e5`；Windows 与 WSL Debian 13 使用隔离数据和固定原生扩展。最终 `verify-m3e.ps1` 与 Linux 同等命令完成桌面 Debug、测试 Release 构建，完整测试各 450/450、零失败/零跳过。证据根目录：`artifacts/m3e/2026-11-07-unattended/`，最终完整回归见 `windows-complete/`、`linux-complete/`；编译警告保持原有类别，未屏蔽。
+
+页面验证：新增 `viewer-toolbar`、`documentation`、`dialogs` 三种模式均在双平台通过，每种各四组浅深/浏览模式或宽窄窗组合；受共享容器影响的 search/search-options/login 分别通过 12/9/8 组。整页捕获双平台各 42 张，文档专项保留 36 张；Windows 最终相关复测及 Linux 字体修复后的完整捕获分别见 `windows-complete/` 和 `linux-capture-fixed/`。CI 加入新模式，YAML 已解析；没有执行远程 CI。新 XAML 经 XamlStyler，相关 C# 经 whitespace 格式化，文档链接与 diff 检查通过；最终 34 个改动源码文件的跨平台 SHA-256 一致，见 `complete-source-comparison.json` 与 `verified-source-commit.txt`。
+
+关键失败均有修复前后证据：`dialog-before.log` / `dialog-layer.log` / `dialog-expanded.log`、`notifications-before.log`、`overlay-before2.log` / `overlay-final.log`、`pane-before.log` / `pane-fixed.log`。Linux 首次整页捕获因行内代码请求 Consolas 崩溃（`linux-final/capture.log`），通过 CCode 的 MonospaceFontFamily 资源入口修复，新增字体回退/资源更新用例，修复后全部 42 帧成功。关闭 MCP 的 Debug 构建首次沿用 Release 还原产物导致诊断工具扩展缺失；按该配置正常还原后构建通过（`no-mcp-restored-build.log`），没有修改源码绕过错误。
+
+未覆盖：原生 IME、系统焦点/读屏、触摸/触控板、多屏 DPI、GPU，真实外部浏览器/系统剪贴板、在线 MCP 工具获取、完整查看器失败/重试及动画矩阵。headless 托管焦点和内存剪贴板不代表这些平台契约通过。未启动或恢复桌面控制通道；原生缺口继续按具体依赖追踪。
+
+下一轮：从 P02.04 普通 CommandBar 的实际页面入口、长标签/动态溢出/禁用一致性开始，或继续 P04.04 的 Skeleton 与完整浮层生命周期；先补相应基线，再决定视觉改动。当前代码均已提交，最终文档收尾后无本轮遗留修改；不重做已验收部分，不自动恢复 computer use。
+
+## 2026-11-08：清理独立 SDK/构建环境
+
+按用户确认保留 `tools/Pixeval.MigrationValidation` 及应用数据隔离。沿用用户将 `global.json` 的 `rollForward` 改为 `latestMajor` 的修改；`verify-m3e.ps1` 改由 CLI 按该策略解析 SDK，移除精确等于 10.0.401 的重复限制。主计划及宿主用法同步更新；此前固定 SDK 的记录保留为历史证据。
+
+已删除 Windows `%LOCALAPPDATA%/PixevalMigration/dotnet-10.0.401`、临时目录中的 Windows/Linux SDK 10.0.401 安装包，以及 WSL `/home/summpot/.cache/pixeval-m3e-20261107/` 下的 `dotnet`、`source`、`extensions-build`、`extensions-fixture`。删除源码副本前将其中 `artifacts` 移至同级 `source-artifacts`；其他验收产物保留，WSL 专用目录从约 3.1 GiB 降至 8.7 MiB。保留 Debian、系统工具链、验证项目、仓库产物和个人数据；历史记录中的独立 SDK/源码路径不再可用。
+
+验证：系统 SDK `11.0.100-rc.3.26522.148`、应用 runtime `10.0.14`；共用脚本完成桌面 Debug、测试 Release 构建，固定原生扩展参与的完整测试 **450/450，零失败/零跳过**。验证宿主 Release 构建及 `inventory` 模式通过，导出 22 个导航定义、33 个页面、6 个设置组和 19 类首页来源。PowerShell 语法检查及 `git diff --check` 通过。证据：`artifacts/m3e/2026-11-08-sdk-cleanup/`。本轮未重新执行 Linux 或原生 UI 验收。
+
+## 2026-11-08 无人值守迁移批次（01:28 启动）
+
+时间：01:28–03:02（Asia/Shanghai），约 94 分钟；基线 `c8c68ccb`，分支 `feat/material3expressive-migration`，开始时工作区干净。按 §10.3 推进六个功能单元、八个功能提交；跨语言回归发现的导航/扩展页面问题分别追加到对应职责，最后一次收尾集中记账。全程使用后台构建、隔离 headless 输入和离屏渲染，未调用 computer use、全局输入或系统剪贴板；没有推送、远程发布、依赖 gitlink 变更或恢复已删除的独立 SDK/WSL 源码。
+
+| 功能单元 / 步骤 | 本地功能提交 | 本轮完成范围 |
+| --- | --- | --- |
+| 普通命令栏，P02.04b | `d2090cf0` | 共享本地化溢出入口、完整溢出长标签；保留命令实例/参数、CanExecute、Toggle 双向状态与动态次级项 |
+| 导航编辑器，P06.06a | `54aa1895`、`f76daf9b` | Material 编辑边界、宽窄布局、诊断/参考区滚动；保留同一编辑器、选区、撤销、文件保护；页面复制输出有效 YAML；为本地化长命令预留溢出槽宽 |
+| Skeleton，P04.04c | `6cc54041` | Material 表面与 shimmer；自身/祖先隐藏、卸载和换模板停止无限动画，重新显示恢复，退订后可回收；保留真实列表/头像加载状态 |
+| 作品工具栏/选择，P08.02a/03a/04a | `7f0c2366` | 紧凑排序/筛选布局，选择开关双向同步；全选/反选/清空、刷新、替换源及附加命令；不透明卡片上可见的键盘焦点与回收检查 |
+| 扩展管理，P05.02a | `ac175e21`、`fc6bc235` | Material 卡片、长名称/作者、具名启停、优先级和待卸载/取消的文件往返；管理栏长标签可读；空串/空白帮助地址隐藏入口，有效帮助目标保留 |
+| 收藏标签，P03.04a | `80c61b81` | 紧凑新增编辑器、具名图标、长标签/去重/取消/隐私和十标签上限；真实 Flyout 尺寸适配、异步确认去重、失败重试、Escape/迟到完成与事件退订 |
+
+收尾同时将新增标签输入的 `Watermark` 改为 Avalonia 12 的等价 `PlaceholderText`，保持同一翻译资源，消除本轮引入的 AVLN5001；该改动已包含在最终四语言标签检查和构建中，不为一行兼容性清理另拆提交。新增字符串写入四语言 JSON，并通过原 `Language.tt` 生成资源标识。T4 工具仅装在 artifacts 工具目录；默认临时目录权限失败后使用本批次临时目录完成生成，没有手改生成文件。
+
+依赖依据：复用 SDK 清理后 450 项完整基线、既有 Material 主题及真实命令/列表/编辑器实现，补对应行为证据后实施局部迁移。没有替换虚拟化、数据源、导航键/图标序列化、扩展 ABI、账号协议或 MCP schema。父步骤及 P00/P01 的完整验收没有因本轮子步骤通过而放行。
+
+证据根目录：`artifacts/m3e/2026-11-08-unattended/`。系统 SDK `11.0.100-rc.3.26522.148`、应用 runtime `10.0.14`，Avalonia `12.1.5`、M3E `859a69e563b2a01fc87a26255ee11c1d89959677`。最终 `./scripts/verify-m3e.ps1 -OutputDirectory artifacts/m3e/2026-11-08-unattended/windows-complete -ExtensionFixture <固定 C++ demo DLL>` 完成桌面 Debug、测试 Release 构建，分别 0 错误/6 和 201 个警告；完整测试 **462/462，零失败、零跳过**，TRX 和工具链/依赖/原生样本记录均在 `windows-complete/`。警告数量受增量构建范围影响；规范化警告文本与 SDK 清理基线相比没有新增项，见 `warning-delta.txt`，未屏蔽既有警告。
+
+最终本地 `dotnet publish src/Pixeval.Desktop/Pixeval.Desktop.csproj -c Release -r win-x64 --self-contained true -o artifacts/m3e/2026-11-08-unattended/native-aot-complete` 成功。`native-aot-complete-header.json` 和 SHA256 记录确认 x64 PE32+、CLR 头 RVA 为零；没有启动该可执行文件。既有依赖的 IL2026/IL3050 等裁剪/动态代码警告仍保留在构建日志中，编译成功不等于原生启动或完整裁剪运行时矩阵通过。
+
+四语言验证使用新增 `PIXEVAL_MIGRATION_CULTURE`，由真实 App 资源加载语言，记录实际文化/runtime/OS；不存在的翻译语言被拒绝，单项缺译仍遵守产品回退规则。`zh-Hans/en-US/fr-FR/ru-RU` 各通过 navigation 42 条契约、extension-management 4 组、work-selection 12 组、bookmark-tags 10 组。最终路径与数量见 `locale-validation-summary.json`；俄语导航在 `localized-final-ru-RU-navigation/`，其他最终样本在 `locale-review-<culture>-<mode>/`。覆盖浅深主题、宽窄窗、作品三种布局和插画/小说标签；托管扩展元数据与原生 ABI 样本分开，文本哨兵没有作为 DLL 加载。
+
+受共享控件影响的页面回归保留在 `final-*`：整页捕获 42 帧、查看器工具栏 4 组、搜索 12 组、高级搜索 9 组/19 个实际引擎请求、登录 8 组均通过。局部语言修正后的导航/扩展截图由上述最终专项目录补充。`native-extension-final/` 验证固定 C++ 样本的 15 个接口、8 类设置、Unicode/字节流及 YAML 类型往返；最终完整测试继续包含原生样本。普通命令栏相关测试 34 项、Skeleton/主题/来源寿命 19 项、作品键盘焦点 2 项亦有专项日志，并已纳入完整回归。未重复运行不使用本轮实际模板的旧文本性能样本；动画时钟/回收有专项断言，GPU 和完整业务页面性能仍待验收。
+
+关键失败与修复证据：导航参考复制原先输出记录对象字符串（`navigation-copy-before.log`），紧凑工具栏筛选框覆盖右侧命令（`work-compact-before.log`），收藏新标签输入超出窄窗（`bookmark-before.log`），提交时禁用焦点控件使 Escape 路由丢失（`bookmark-lifetime2.log`）。跨语言检查又发现俄语“插入文件夹”位于窗口外（`locale-ru-RU-navigation.log`），以及空帮助地址产生无效入口（`localized-final-ru-RU-extension-management.log`）；最终专项均验证修复。收藏标签有意触发回调失败，保留 App 异常日志并断言可恢复重试，不把该固定异常误记为产品失败。
+
+验证宿主新增模式及俄语导航回归已接入 CI；工作流 YAML 和四段 PowerShell 语法检查通过，未执行远程 CI。改动 XAML 经 XamlStyler，相关 C# 经 whitespace 格式化；文档链接及 `git diff --check` 通过。`verified-source-hashes.json` 保存 31 个改动源码/宿主/CI 文件的 SHA256，最终检查与验证时一致。构建/测试/headless 进程正常退出，常规构建服务器可继续驻留；本轮代码和文档均由本地提交收尾，验证产物保留。
+
+未覆盖与下一步：本轮 WSL Debian 没有系统 dotnet/rsync，未重建已删除环境，也没有重新验证 Linux；macOS/移动端/Browser 和远程 CI 同样未运行。原生 IME、系统焦点/剪贴板/读屏、触摸、DPI、GPU、实际收藏或批量业务写入、扩展安装/帮助或目录实际打开/重启删除仍待验收。导航及扩展页的槽宽配置只恢复已测语言/默认字体下的可达性，上游普通命令栏不逐项测量宽度的缺口仍存在，P02.04 不勾选完成。下一批可独立处理普通栏实际测量/字体缩放方案，或为 P08 批量业务、分页/账号切换与取消建立固定服务样本；继续沿用后台验证，不自动恢复 computer use。

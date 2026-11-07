@@ -20,11 +20,12 @@ try {
         }
         $env:PIXEVAL_TEST_EXTENSION_FIXTURE = $ExtensionFixture
     }
-    $expectedSdk = (Get-Content global.json -Raw | ConvertFrom-Json).sdk.version
+    # Let the CLI apply global.json, including its rollForward policy.
     $actualSdk = & $Dotnet --version
-    if ($LASTEXITCODE -ne 0 -or $actualSdk -ne $expectedSdk) {
-        throw "Expected SDK $expectedSdk; resolved '$actualSdk'. Pass -Dotnet with the pinned SDK executable."
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Could not resolve an SDK using global.json. Install an SDK allowed by its version and rollForward policy.'
     }
+    Write-Host "Using SDK $actualSdk (resolved by global.json)."
 
     if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
         $OutputDirectory = Join-Path $repoRoot ('artifacts/m3e/' + (Get-Date -Format 'yyyy-MM-dd-HHmmss'))

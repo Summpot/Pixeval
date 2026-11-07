@@ -1,21 +1,8 @@
 <ResourceDictionary
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:Pixeval.Controls">
-    <ResourceDictionary.ThemeDictionaries>
-        <ResourceDictionary x:Key="Light">
-            <SolidColorBrush x:Key="SkeletonBackgroundBrush" Color="#26000000" />
-            <Color x:Key="SkeletonShimmerEdgeColor">#00FFFFFF</Color>
-            <Color x:Key="SkeletonShimmerShoulderColor">#33FFFFFF</Color>
-            <Color x:Key="SkeletonShimmerCenterColor">#80FFFFFF</Color>
-        </ResourceDictionary>
-        <ResourceDictionary x:Key="Dark">
-            <SolidColorBrush x:Key="SkeletonBackgroundBrush" Color="#18FFFFFF" />
-            <Color x:Key="SkeletonShimmerEdgeColor">#00FFFFFF</Color>
-            <Color x:Key="SkeletonShimmerShoulderColor">#14FFFFFF</Color>
-            <Color x:Key="SkeletonShimmerCenterColor">#2EFFFFFF</Color>
-        </ResourceDictionary>
-    </ResourceDictionary.ThemeDictionaries>
+    xmlns:controls="using:Pixeval.Controls"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia">
 
     <Design.PreviewWith>
         <ContentControl
@@ -27,8 +14,8 @@
     </Design.PreviewWith>
 
     <ControlTheme x:Key="{x:Type controls:Skeleton}" TargetType="{x:Type controls:Skeleton}">
-        <Setter Property="Background" Value="{DynamicResource SkeletonBackgroundBrush}" />
-        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+        <Setter Property="Background" Value="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerHighest}}" />
+        <Setter Property="CornerRadius" Value="12" />
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="VerticalAlignment" Value="Stretch" />
         <Setter Property="Template">
@@ -42,15 +29,14 @@
                             Name="PART_Shimmer"
                             HorizontalAlignment="Left"
                             IsHitTestVisible="False"
+                            Opacity="0.12"
                             RenderTransform="skew(-18deg)"
                             RenderTransformOrigin="50%,50%">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
-                                    <GradientStop Offset="0" Color="{DynamicResource SkeletonShimmerEdgeColor}" />
-                                    <GradientStop Offset="0.25" Color="{DynamicResource SkeletonShimmerShoulderColor}" />
-                                    <GradientStop Offset="0.5" Color="{DynamicResource SkeletonShimmerCenterColor}" />
-                                    <GradientStop Offset="0.75" Color="{DynamicResource SkeletonShimmerShoulderColor}" />
-                                    <GradientStop Offset="1" Color="{DynamicResource SkeletonShimmerEdgeColor}" />
+                                    <GradientStop Offset="0" Color="Transparent" />
+                                    <GradientStop Offset="0.5" Color="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OnSurface}}" />
+                                    <GradientStop Offset="1" Color="Transparent" />
                                 </LinearGradientBrush>
                             </Border.Background>
                         </Border>

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 using Avalonia;
@@ -6,6 +7,7 @@ using Avalonia.Headless;
 using Pixeval;
 using Pixeval.AppManagement;
 using Pixeval.AppManagement.Settings;
+using Pixeval.I18N;
 using Pixeval.Models.Options;
 using Pixeval.Utilities;
 
@@ -17,11 +19,11 @@ internal static class Program
     public static int Main(string[] args)
     {
         if (args.Length is < 2 or > 3
-            || args[0] is not ("inventory" or "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "login" or "ui")
+            || args[0] is not ("inventory" or "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "login" or "work-selection" or "extension-management" or "bookmark-tags" or "viewer-toolbar" or "documentation" or "dialogs" or "ui")
             || args[0] is "extensions" && args.Length is not 3
             || args.Length is 3 && args[0] is not ("extensions" or "ui"))
         {
-            Console.Error.WriteLine("Usage: Pixeval.MigrationValidation <inventory|capture|benchmark|navigation|extensions|search|search-options|login|ui> <new evidence directory> [native fixture library: required for extensions, optional for ui]");
+            Console.Error.WriteLine("Usage: Pixeval.MigrationValidation <inventory|capture|benchmark|navigation|extensions|search|search-options|login|work-selection|extension-management|bookmark-tags|viewer-toolbar|documentation|dialogs|ui> <new evidence directory> [native fixture library: required for extensions, optional for ui]");
             return 1;
         }
 
@@ -35,7 +37,9 @@ internal static class Program
         var dataDirectory = Path.Combine(outputDirectory, "data");
         AppContext.SetData("Pixeval.ApplicationDataDirectory", dataDirectory);
         var settings = new AppSettings();
-        settings.ApplicationSettings.CultureName = "zh-Hans";
+        var culture = CultureInfo.GetCultureInfo(Environment.GetEnvironmentVariable("PIXEVAL_MIGRATION_CULTURE") ?? "zh-Hans");
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = culture;
+        settings.ApplicationSettings.CultureName = culture.Name;
         settings.ApplicationSettings.Theme = ApplicationTheme.Light;
         settings.DownloadSettings.DownloadPathMacro = Path.Combine(dataDirectory, "Downloads", "@{id}.@{ext}");
         AppInfo.SaveAppSettings(settings);
@@ -59,7 +63,7 @@ internal static class Program
                 .StartWithClassicDesktopLifetime([]);
         }
 
-        if (args[0] is "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "login")
+        if (args[0] is "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "login" or "work-selection" or "extension-management" or "bookmark-tags" or "viewer-toolbar" or "documentation" or "dialogs")
         {
             RunHeadlessAsync(args[0], outputDirectory).GetAwaiter().GetResult();
             return 0;
@@ -72,6 +76,7 @@ internal static class Program
             .SetupWithoutStarting();
         try
         {
+            WriteValidationContext(outputDirectory);
             MigrationInventory.Export(Path.Combine(outputDirectory, "inventory.json"));
             return 0;
         }
@@ -90,6 +95,7 @@ internal static class Program
         {
             try
             {
+                WriteValidationContext(directory);
                 MigrationInventory.Export(Path.Combine(directory, "inventory.json"));
                 switch (mode)
                 {
@@ -114,6 +120,24 @@ internal static class Program
                     case "login":
                         await LoginLifetimeValidation.RunAsync(directory);
                         break;
+                    case "work-selection":
+                        await WorkSelectionValidation.RunAsync(directory);
+                        break;
+                    case "extension-management":
+                        await ExtensionManagementValidation.RunAsync(directory);
+                        break;
+                    case "bookmark-tags":
+                        await BookmarkTagsValidation.RunAsync(directory);
+                        break;
+                    case "viewer-toolbar":
+                        await ViewerToolbarValidation.RunAsync(directory);
+                        break;
+                    case "documentation":
+                        await DocumentationValidation.RunAsync(directory);
+                        break;
+                    case "dialogs":
+                        await DialogValidation.RunAsync(directory);
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(mode));
                 }
@@ -124,6 +148,21 @@ internal static class Program
                 await App.AppViewModel.DisposeAsync();
             }
         }, default);
+    }
+
+    private static void WriteValidationContext(string directory)
+    {
+        var requested = CultureInfo.GetCultureInfo(App.AppViewModel.AppSettings.ApplicationSettings.CultureName);
+        if (!I18NManager.AvailableCultures.ContainsKey(requested))
+            throw new ArgumentException($"The validation culture '{requested.Name}' has no installed translation.");
+        if (CultureInfo.CurrentUICulture.Name != requested.Name)
+            throw new InvalidOperationException($"Requested culture '{requested.Name}' changed to '{CultureInfo.CurrentUICulture.Name}'.");
+        File.WriteAllLines(Path.Combine(directory, "validation-context.txt"),
+        [
+            $"Culture: {CultureInfo.CurrentUICulture.Name}",
+            $"Runtime: {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}",
+            $"OS: {System.Runtime.InteropServices.RuntimeInformation.OSDescription}"
+        ]);
     }
 
     public sealed class InventoryApplication : App

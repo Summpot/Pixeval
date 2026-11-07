@@ -1,4 +1,4 @@
-<views:IconContentPage
+﻿<views:IconContentPage
     x:Class="Pixeval.Views.ExtensionsPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -6,6 +6,7 @@
     xmlns:converters="using:Pixeval.Views.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:extensions="using:Pixeval.Models.Extensions"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
@@ -14,21 +15,28 @@
     d:DesignHeight="800"
     d:DesignWidth="600">
     <DockPanel>
-        <StackPanel
+        <WrapPanel
             Margin="20"
             DockPanel.Dock="Top"
-            Orientation="Horizontal"
-            Spacing="20">
-            <TextBlock Text="{I18N {x:Static pixeval:ExtensionsPageResources+TitleTextBlock.Text}}" Theme="{StaticResource TitleTextBlockStyle}" />
+            ItemSpacing="20"
+            LineSpacing="8"
+            Orientation="Horizontal">
+            <TextBlock
+                MaxWidth="{Binding $parent[WrapPanel].Bounds.Width}"
+                Text="{I18N {x:Static pixeval:ExtensionsPageResources+TitleTextBlock.Text}}"
+                TextWrapping="Wrap"
+                Theme="{StaticResource TitleTextBlockStyle}" />
             <TextBlock VerticalAlignment="Bottom" Theme="{StaticResource SubtitleTextBlockStyle}">
                 <Run Text="{I18N {x:Static pixeval:ExtensionsPageResources+SubtitleTextBlock.Text}}" />
                 <Run Text="{x:Static extensions:ExtensionService.CurrentVersion}" />
             </TextBlock>
-        </StackPanel>
+        </WrapPanel>
         <CommandBar
+            x:Name="ManagementCommandBar"
             DefaultLabelPosition="Right"
             DockPanel.Dock="Top"
-            IsDynamicOverflowEnabled="True">
+            IsDynamicOverflowEnabled="True"
+            ItemWidthRight="320">
             <CommandBarButton
                 Click="AddExtensionsOnClick"
                 Icon="{markup:SymbolIcon PlugConnectedAdd}"
@@ -50,32 +58,40 @@
             <ItemsControl ItemsSource="{Binding $parent[views:ExtensionsPage].Models}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="{x:Type extensions:ExtensionsHostModel}">
-                        <controls:SettingsCard Description="{Binding Description}" HeaderIcon="{Binding Icon}">
+                        <controls:SettingsCard
+                            Margin="0,0,0,8"
+                            Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerLow}}"
+                            BorderBrush="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OutlineVariant}}"
+                            CornerRadius="16"
+                            Description="{Binding Description}"
+                            HeaderIcon="{Binding Icon}">
                             <controls:SettingsCard.Header>
-                                <Grid ColumnDefinitions="200,Auto" ColumnSpacing="10">
+                                <StackPanel Spacing="4">
                                     <HyperlinkButton
-                                        Grid.Column="0"
-                                        Padding="0"
+                                        Padding="4,2"
                                         HorizontalContentAlignment="Left"
                                         Content="{Binding Name}"
+                                        CornerRadius="4"
                                         FontWeight="Bold"
                                         NavigateUri="{Binding Link}" />
                                     <TextBlock
-                                        Grid.Column="1"
-                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                        Text="{Binding Author}" />
-                                </Grid>
+                                        Foreground="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OnSurfaceVariant}}"
+                                        Text="{Binding Author}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
                             </controls:SettingsCard.Header>
                             <StackPanel Orientation="Horizontal" Spacing="10">
-                                <ToggleSwitch IsChecked="{Binding IsActive, Mode=TwoWay}" />
+                                <ToggleSwitch AutomationProperties.Name="{Binding Name}" IsChecked="{Binding IsActive, Mode=TwoWay}" />
                                 <CommandBar DefaultLabelPosition="Collapsed">
                                     <CommandBarButton
                                         Click="ExtensionsPriorityUpOnClick"
                                         Icon="{markup:SymbolIcon ChevronUp}"
+                                        Label="{I18N {x:Static pixeval:ExtensionsPageResources+ExtensionsPriorityUpButton.Label}}"
                                         ToolTip.Tip="{I18N {x:Static pixeval:ExtensionsPageResources+ExtensionsPriorityUpButton.Label}}" />
                                     <CommandBarButton
                                         Click="ExtensionsPriorityDownOnClick"
                                         Icon="{markup:SymbolIcon ChevronDown}"
+                                        Label="{I18N {x:Static pixeval:ExtensionsPageResources+ExtensionsPriorityDownButton.Label}}"
                                         ToolTip.Tip="{I18N {x:Static pixeval:ExtensionsPageResources+ExtensionsPriorityDownButton.Label}}" />
                                     <CommandBar.SecondaryCommands>
                                         <CommandBarButton

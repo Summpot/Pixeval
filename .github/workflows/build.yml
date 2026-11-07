@@ -54,18 +54,25 @@ jobs:
           dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll extensions artifacts/m3e/extension-pages $fixture.library
           exit $LASTEXITCODE
 
-      - name: Verify offline navigation, search and login contracts
+      - name: Verify offline page contracts
         shell: pwsh
         run: |
           $evidenceRoot = 'artifacts/m3e/offline-pages'
           New-Item -ItemType Directory -Path $evidenceRoot -ErrorAction Stop | Out-Null
-          foreach ($mode in @('navigation', 'search', 'search-options', 'login')) {
+          foreach ($mode in @('navigation', 'search', 'search-options', 'login', 'work-selection', 'extension-management', 'bookmark-tags', 'viewer-toolbar', 'documentation', 'dialogs')) {
             $modeDirectory = Join-Path $evidenceRoot $mode
             dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll $mode $modeDirectory *> "$modeDirectory.log"
             $result = $LASTEXITCODE
             Get-Content "$modeDirectory.log" | Write-Host
             if ($result -ne 0) { exit $result }
           }
+
+          $env:PIXEVAL_MIGRATION_CULTURE = 'ru-RU'
+          $localizedDirectory = Join-Path $evidenceRoot 'navigation-ru-RU'
+          dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll navigation $localizedDirectory *> "$localizedDirectory.log"
+          $result = $LASTEXITCODE
+          Get-Content "$localizedDirectory.log" | Write-Host
+          if ($result -ne 0) { exit $result }
 
       - name: Upload validation evidence
         if: always()

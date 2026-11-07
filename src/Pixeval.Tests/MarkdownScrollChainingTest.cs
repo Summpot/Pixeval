@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
@@ -9,6 +11,8 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
+using Pixeval.I18N;
+using Pixeval.Utilities;
 using SmoothScroll.Avalonia.Controls;
 
 namespace Pixeval.Tests;
@@ -17,6 +21,13 @@ namespace Pixeval.Tests;
 [DoNotParallelize]
 public sealed class MarkdownScrollChainingTest
 {
+    [ClassInitialize]
+    public static void Initialize(TestContext _)
+    {
+        I18NManager.CandidatePaths.Add(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval")));
+        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+    }
+
     [TestMethod]
     public async Task WheelOverCodeThatFitsScrollsTheDocument()
     {

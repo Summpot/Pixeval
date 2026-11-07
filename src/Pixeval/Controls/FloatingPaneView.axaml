@@ -12,9 +12,9 @@
                         x:Name="PART_RootHost"
                         controls:FloatingPaneHost.IsEnabled="True"
                         ClipToBounds="True"
+                        DockPosition="{TemplateBinding DockPosition}"
                         DockProgress="{TemplateBinding DockProgress}"
                         DockedPaneSize="{TemplateBinding DockedPaneSize}"
-                        DockPosition="{TemplateBinding DockPosition}"
                         FloatingPaneHorizontalAlignment="{TemplateBinding PaneHorizontalAlignment}"
                         FloatingPaneMargin="{TemplateBinding FloatingPaneMargin}"
                         FloatingPaneVerticalAlignment="{TemplateBinding PaneVerticalAlignment}"
@@ -80,6 +80,10 @@
         </Style>
 
         <Style Selector="^ /template/ Border#PART_FloatingPaneBorder.temporary-visible">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
+        <Style Selector="^ /template/ Border#PART_FloatingPaneBorder:focus-within">
             <Setter Property="Opacity" Value="1" />
         </Style>
 
