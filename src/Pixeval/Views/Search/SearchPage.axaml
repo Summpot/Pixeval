@@ -50,7 +50,6 @@
                         IsTextCompletionEnabled="False"
                         ItemSelector="SearchAutoCompleteBox_OnSelectItem"
                         ItemTemplate="{StaticResource SearchCompletionTemplate}"
-                        KeyDown="SearchAutoCompleteBox_OnKeyDown"
                         MinimumPrefixLength="1"
                         PlaceholderText="{I18N {x:Static pixeval:SearchResources+SearchBox.PlaceholderText}}"
                         Tapped="SearchAutoCompleteBox_OnTapped"

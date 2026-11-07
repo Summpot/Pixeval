@@ -19,43 +19,50 @@ namespace Pixeval.Views.Login;
 
 public partial class LoginPage : IconContentPage
 {
+    // Every window shares AppViewModel.MakoClient, so an attempt supersedes any other page's attempt.
+    // Login handlers and page lifecycle callbacks access this owner on the UI thread.
+    private static LoginPage? _ActiveLoginPage;
     private CancellationTokenSource? _loadUsersCancellationTokenSource;
+    private LoginAttempt? _loginAttempt;
 
     public LoginPage() => InitializeComponent();
 
     private async void LoginButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (!TryBeginLogin())
+        if (DataContext is not LoginPageViewModel viewModel || string.IsNullOrWhiteSpace(viewModel.RefreshToken))
             return;
 
+        if (TryBeginLogin() is not { } attempt)
+            return;
+
+        var cancellationToken = attempt.Cancellation.Token;
         try
         {
-            if (DataContext is not LoginPageViewModel viewModel)
-                return;
-
-            var token = viewModel.RefreshToken;
-            if (string.IsNullOrWhiteSpace(token))
-                return;
-
-            await App.AppViewModel.MakoClient.SetTokenAsync(token);
-            await App.AppViewModel.MakoClient.ValidateTokenAsync();
+            var token = attempt.ViewModel.RefreshToken;
+            await App.AppViewModel.MakoClient.SetTokenAsync(token, cancellationToken);
+            await App.AppViewModel.MakoClient.ValidateTokenAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             LoginNavigate();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
         }
         catch (Exception exception)
         {
-            ShowLoginError(exception);
+            ShowAttemptError(attempt, exception);
         }
         finally
         {
-            EndLogin();
+            EndLogin(attempt);
         }
     }
 
     private async void OpenWebView_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (!TryBeginLogin())
+        if (TryBeginLogin() is not { } attempt)
             return;
 
+        var cancellationToken = attempt.Cancellation.Token;
         try
         {
             var verifier = PixivAuth.GetCodeVerify();
@@ -82,20 +89,25 @@ public partial class LoginPage : IconContentPage
                 return;
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             var code = HttpUtility.ParseQueryString(callbackUri.Query)["code"];
             if (string.IsNullOrWhiteSpace(code))
                 return;
-            await App.AppViewModel.MakoClient.SetCodeAsync(code, verifier);
-            await App.AppViewModel.MakoClient.ValidateTokenAsync();
+            await App.AppViewModel.MakoClient.SetCodeAsync(code, verifier, cancellationToken);
+            await App.AppViewModel.MakoClient.ValidateTokenAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             LoginNavigate();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
         }
         catch (Exception exception)
         {
-            ShowLoginError(exception);
+            ShowAttemptError(attempt, exception);
         }
         finally
         {
-            EndLogin();
+            EndLogin(attempt);
         }
     }
 
@@ -141,6 +153,7 @@ public partial class LoginPage : IconContentPage
 
     protected override void OnUnloaded(RoutedEventArgs e)
     {
+        CancelLogin();
         _loadUsersCancellationTokenSource?.Cancel();
         _loadUsersCancellationTokenSource?.Dispose();
         _loadUsersCancellationTokenSource = null;
@@ -153,20 +166,50 @@ public partial class LoginPage : IconContentPage
             box.IsDropDownOpen = true;
     }
 
-    private bool TryBeginLogin()
+    private LoginAttempt? TryBeginLogin()
     {
-        if (DataContext is not LoginPageViewModel viewModel)
-            return false;
+        if (!IsLoaded || _loginAttempt is not null || DataContext is not LoginPageViewModel { IsLoginInProgress: false } viewModel)
+            return null;
 
+        _ActiveLoginPage?.CancelLogin();
+        _loginAttempt = new(viewModel, new());
+        _ActiveLoginPage = this;
         viewModel.IsLoginInProgress = true;
-        return true;
+        return _loginAttempt;
     }
 
-    private void EndLogin()
+    private void EndLogin(LoginAttempt attempt)
     {
-        if (DataContext is not LoginPageViewModel viewModel)
+        // A remounted page can start another attempt before the canceled request finishes.
+        if (ReferenceEquals(_loginAttempt, attempt))
+        {
+            _loginAttempt = null;
+            if (ReferenceEquals(_ActiveLoginPage, this))
+                _ActiveLoginPage = null;
+            attempt.ViewModel.IsLoginInProgress = false;
+        }
+        attempt.Cancellation.Dispose();
+    }
+
+    private void CancelLogin()
+    {
+        if (_loginAttempt is not { } attempt)
             return;
 
-        viewModel.IsLoginInProgress = false;
+        _loginAttempt = null;
+        if (ReferenceEquals(_ActiveLoginPage, this))
+            _ActiveLoginPage = null;
+        attempt.Cancellation.Cancel();
+        attempt.ViewModel.IsLoginInProgress = false;
     }
+
+    private void ShowAttemptError(LoginAttempt attempt, Exception exception)
+    {
+        if (ReferenceEquals(_loginAttempt, attempt) && !attempt.Cancellation.IsCancellationRequested)
+            ShowLoginError(exception);
+        else
+            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>().LogError(nameof(LoginPage), exception);
+    }
+
+    private sealed record LoginAttempt(LoginPageViewModel ViewModel, CancellationTokenSource Cancellation);
 }

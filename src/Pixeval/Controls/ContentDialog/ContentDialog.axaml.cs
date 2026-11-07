@@ -276,11 +276,13 @@ public class ContentDialog : ContentControl
 
     internal void CompleteClose(ContentDialogResult result)
     {
-        Closed?.Invoke(this, new(result));
         _host = null;
         _completion = null;
         Interlocked.Exchange(ref _isClosing, 0);
+        Closed?.Invoke(this, new(result));
     }
+
+    internal void AbortForHostClose() => _completion?.TrySetResult(ContentDialogResult.None);
 
     internal void SetCompact(bool compact) => PseudoClasses.Set(PcCompact, compact);
 
@@ -321,45 +323,49 @@ public class ContentDialog : ContentControl
 
     private async Task RequestCloseAsync(ContentDialogResult result, ContentDialogButton button)
     {
-        if (_completion is null || _host is null)
+        if (_completion is not { } completion || _host is null)
             return;
 
         if (Interlocked.Exchange(ref _isClosing, 1) is 1)
             return;
 
-        var buttonArgs = new ContentDialogButtonClickEventArgs(button, result);
-        switch (button)
+        try
         {
-            case ContentDialogButton.Primary:
-                PrimaryButtonClick?.Invoke(this, buttonArgs);
-                break;
-            case ContentDialogButton.Secondary:
-                SecondaryButtonClick?.Invoke(this, buttonArgs);
-                break;
-            case ContentDialogButton.Close:
-                CloseButtonClick?.Invoke(this, buttonArgs);
-                break;
+            var buttonArgs = new ContentDialogButtonClickEventArgs(button, result);
+            switch (button)
+            {
+                case ContentDialogButton.Primary:
+                    PrimaryButtonClick?.Invoke(this, buttonArgs);
+                    break;
+                case ContentDialogButton.Secondary:
+                    SecondaryButtonClick?.Invoke(this, buttonArgs);
+                    break;
+                case ContentDialogButton.Close:
+                    CloseButtonClick?.Invoke(this, buttonArgs);
+                    break;
+            }
+
+            var buttonWait = await Task.WhenAny(buttonArgs.WaitForDeferralsAsync(), completion.Task);
+            await buttonWait;
+
+            if (buttonArgs.Cancel || completion.Task.IsCompleted)
+                return;
+
+            var closingArgs = new ContentDialogClosingEventArgs(result);
+            Closing?.Invoke(this, closingArgs);
+            var closingWait = await Task.WhenAny(closingArgs.WaitForDeferralsAsync(), completion.Task);
+            await closingWait;
+
+            if (closingArgs.Cancel || completion.Task.IsCompleted)
+                return;
+
+            completion.TrySetResult(result);
         }
-
-        await buttonArgs.WaitForDeferralsAsync();
-
-        if (buttonArgs.Cancel)
+        finally
         {
-            Interlocked.Exchange(ref _isClosing, 0);
-            return;
+            if (ReferenceEquals(_completion, completion) && !completion.Task.IsCompleted)
+                Interlocked.Exchange(ref _isClosing, 0);
         }
-
-        var closingArgs = new ContentDialogClosingEventArgs(result);
-        Closing?.Invoke(this, closingArgs);
-        await closingArgs.WaitForDeferralsAsync();
-
-        if (closingArgs.Cancel)
-        {
-            Interlocked.Exchange(ref _isClosing, 0);
-            return;
-        }
-
-        _completion.TrySetResult(result);
     }
 
     private bool IsButtonAvailable(ContentDialogButton button) =>

@@ -43,6 +43,7 @@
     "IsReplaceableOnly": "仅可替换名词"
   },
   "Validation": {
+    "CompletionFailed": "无法获取标签补全。已保留输入内容，你仍可直接搜索，或修改关键词后重试。",
     "InvalidDateRange": {
       "Title": "日期范围无效",
       "Content": "开始日期不能晚于结束日期，且不能选择未来日期。"
@@ -54,6 +55,11 @@
     "PremiumSort": {
       "Title": "排序方式不可用",
       "Content": "收藏数降序需要 Pixiv 会员。"
+    },
+    "PremiumLength": {
+      "Title": "长度范围不可用",
+      "TextContent": "非会员可选不限或以下区间：\n≤4999、5000–19999\n20000–79999、≥80000",
+      "ReadingTimeContent": "非会员可选不限或以下分钟数：\n≤9、10–59\n60–179、≥180"
     },
     "SearchFailed": {
       "Title": "搜索失败"

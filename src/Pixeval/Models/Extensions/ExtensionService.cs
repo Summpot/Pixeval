@@ -237,6 +237,8 @@ public sealed class ExtensionService : IDisposable
             TryGetUninstallTargetRelativePath(path, out var target) ? target : "";
 
         var libraryHandle = IntPtr.Zero;
+        NativeLibrarySafeHandle? safeHandle = null;
+        var libraryReferencedByWrapper = false;
         var libraryHandleTransferredToModel = false;
         try
         {
@@ -247,6 +249,8 @@ public sealed class ExtensionService : IDisposable
                     out libraryHandle))
                 return ExtensionHostLoadResult.NativeLibraryLoadFailed;
 
+            safeHandle = new NativeLibrarySafeHandle(libraryHandle);
+
             if (!NativeLibrary.TryGetExport(libraryHandle, nameof(GetExtensionsHost), out var getExtensionsHostPtr))
                 return ExtensionHostLoadResult.MissingEntryPoint;
 
@@ -256,9 +260,18 @@ public sealed class ExtensionService : IDisposable
                 return ExtensionHostLoadResult.EntryPointInvocationFailed;
 
             var wrappers = new StrategyBasedComWrappers();
-            var rcw = (IExtensionsHost) wrappers.GetOrCreateObjectForComInstance(ppv,
-                CreateObjectFlags.UniqueInstance);
-            _ = Marshal.Release(ppv);
+            object instance;
+            try
+            {
+                instance = wrappers.GetOrCreateObjectForComInstance(ppv, CreateObjectFlags.UniqueInstance);
+                safeHandle.KeepAliveFor(instance);
+                libraryReferencedByWrapper = true;
+            }
+            finally
+            {
+                _ = Marshal.Release(ppv);
+            }
+            var rcw = (IExtensionsHost) instance;
 
             if (rcw.SdkVersion != CurrentVersion)
             {
@@ -270,7 +283,7 @@ public sealed class ExtensionService : IDisposable
                 Path.GetDirectoryName(path) ?? AppInfo.ExtensionsFolder, logger);
             model = new(rcw, GetValues(_extensionSettings, rcw.ExtensionName))
             {
-                Handle = new NativeLibrarySafeHandle(libraryHandle),
+                Handle = safeHandle,
                 HostLibraryPath = path,
                 UninstallTargetRelativePath = uninstallTargetRelativePath
             };
@@ -284,15 +297,8 @@ public sealed class ExtensionService : IDisposable
         }
         finally
         {
-            if (!libraryHandleTransferredToModel && libraryHandle != IntPtr.Zero)
-                try
-                {
-                    NativeLibrary.Free(libraryHandle);
-                }
-                catch
-                {
-                    // ignored
-                }
+            if (!libraryHandleTransferredToModel && !libraryReferencedByWrapper)
+                safeHandle?.Dispose();
         }
 
         var loadedModel = model!;
@@ -624,7 +630,7 @@ public sealed class ExtensionService : IDisposable
                     {
                         var value = values.TryGetTargetOrAddDefault(token, i.DefaultValue);
                         extensionSettingsGroup.Add(
-                            new ExtensionSettingsEntry<IColorSettingsExtension, uint>(i, value, t => t.DefaultValue,
+                            new ExtensionColorSettingsEntry(i, value, t => t.DefaultValue,
                                 i.OnValueChanged));
                         break;
                     }

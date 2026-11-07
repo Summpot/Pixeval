@@ -15,5 +15,11 @@ public sealed class PixevalFluentTheme : FluentTheme
             throw new InvalidOperationException("The Fluent theme does not contain a TextBox theme.");
 
         Resources["PixevalFluentTextBoxTheme"] = theme;
+
+        // ColorPicker's stretch-only swatch needs the native dropdown's content area.
+        if (!TryGetResource(typeof(DropDownButton), null, out var dropdownResource) || dropdownResource is not ControlTheme dropdownTheme)
+            throw new InvalidOperationException("The Fluent theme does not contain a DropDownButton theme.");
+
+        Resources["PixevalFluentDropDownButtonTheme"] = dropdownTheme;
     }
 }

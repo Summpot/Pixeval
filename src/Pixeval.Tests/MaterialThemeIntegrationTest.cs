@@ -318,7 +318,7 @@ public sealed class MaterialThemeIntegrationTest
     public async Task ExistingDialogCompletesItsPrimaryAction(bool dark)
     {
         await using var session = HeadlessUnitTestSession.StartNew(typeof(MaterialTestApplication));
-        await session.Dispatch(async () =>
+        await session.DispatchAsync(async () =>
         {
             var window = CreateWindow(out var animationFailures);
             Application.Current!.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
@@ -414,7 +414,7 @@ public sealed class MaterialThemeIntegrationTest
     public async Task MaterialWorkListScrollsAndRecyclesVisibleCards()
     {
         await using var session = HeadlessUnitTestSession.StartNew(typeof(MaterialTestApplication));
-        await session.Dispatch(async () =>
+        await session.DispatchAsync(async () =>
         {
             var window = CreateWindow(out var animationFailures);
             window.Width = 400;

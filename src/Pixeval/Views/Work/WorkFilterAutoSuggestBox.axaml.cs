@@ -66,9 +66,11 @@ public partial class WorkFilterAutoSuggestBox : UserControl
             ++end;
 
         _ = textBox.Focus();
+        // Setting CaretIndex collapses the selection in Avalonia. Position it first,
+        // then apply the diagnostic range so the highlighted text stays selected.
+        textBox.CaretIndex = end;
         textBox.SelectionStart = start;
         textBox.SelectionEnd = end;
-        textBox.CaretIndex = end;
     }
 
     public void ClearSelection()

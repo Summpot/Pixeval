@@ -28,6 +28,13 @@ namespace Pixeval.Models.Settings;
 
 public static class LocalSettingsEntryHelper
 {
+    private static IDataTemplate DoubleValueTemplate { get; } =
+        new FuncDataTemplate<INumberSettingsEntry<double>>(static (entry, _) => new DoubleSettingsValue { Entry = entry });
+
+    // A calendar-only editor would silently lose the extension's time, ticks and offset.
+    private static IDataTemplate DateTimeOffsetValueTemplate { get; } =
+        new FuncDataTemplate<ISingleValueSettingsEntry<DateTimeOffset>>(static (entry, _) => new DateTimeOffsetSettingsValue { Entry = entry });
+
     private static IDataTemplate LanguageValueTemplate { get; } =
         new FuncDataTemplate<ISingleValueSettingsEntry<string>>(static (entry, _) => new LanguageSettingsValue { Entry = entry });
 
@@ -56,6 +63,10 @@ public static class LocalSettingsEntryHelper
     {
         SettingsEntryAttribute.SettingsResourceKeysProvider = new SettingsResourceKeysProviderImpl();
 
+        // Equally specific value registrations resolve in insertion order. Keep fractional
+        // display for all application/extension doubles; the presets still handle integers.
+        _ = SettingsEntryHelper.ValueFactoryDictionary.AddValue<INumberSettingsEntry<double>>(DoubleValueTemplate);
+
         _ = SettingsEntryHelper.FactoryDictionary
             .AddPredefined()
             .AddOpenGeneric<ISingleValueSettingsEntry<ObservableCollection<string>>, StringCollectionSettingsExpander>(typeof(CollectionSettingsEntry<,>))
@@ -67,6 +78,7 @@ public static class LocalSettingsEntryHelper
             .Add<ExtensionSettingsEntry<IStringsArraySettingsExtension, ObservableCollection<string>>, StringCollectionSettingsExpander>();
 
         _ = SettingsEntryHelper.ValueFactoryDictionary
+            .AddValue<ISingleValueSettingsEntry<DateTimeOffset>>(DateTimeOffsetValueTemplate)
             .AddOpenGenericValue<ISingleValueSettingsEntry<string>>(
                 typeof(LanguageSettingsEntry<>),
                 LanguageValueTemplate)

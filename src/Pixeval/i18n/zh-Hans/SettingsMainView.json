@@ -1,4 +1,5 @@
 {
+  "InvalidDateTimeOffset": "请输入包含时间和时区的日期，例如 2026-11-07T13:24:35.1234567+05:30",
   "CheckingForUpdate": "正在检查更新",
   "UpdateDownloadProgressFormatted": "正在下载更新：{0}%",
   "UpdateDownloadReadyFormatted": "已更新完毕 {0}，请重启软件",

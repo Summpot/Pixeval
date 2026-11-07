@@ -19,7 +19,7 @@ public sealed class UpdatableAnimatedBitmapTest
     public async Task LatePreviewsCannotOverwriteAnotherUpdateOrACompletedSource()
     {
         await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerRenderingTest.ViewerTestApplication));
-        await session.Dispatch(async () =>
+        await session.DispatchAsync(async () =>
         {
             using var source = new UpdatableAnimatedBitmap();
             var firstResult = new TaskCompletionSource<IAnimatedBitmap?>(TaskCreationOptions.RunContinuationsAsynchronously);

@@ -49,7 +49,7 @@ public static class StoreDataMigration
 
     public static void TryMigrateFromMicrosoftStore()
     {
-        if (!OperatingSystem.IsWindows() || !IsVelopackInstallation)
+        if (ApplicationDataDirectory.Override is not null || !OperatingSystem.IsWindows() || !IsVelopackInstallation)
             return;
 
         var sourceRoot = GetStoreApplicationFolderPath();

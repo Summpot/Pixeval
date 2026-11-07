@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AutoSettingsPage;
+using AutoSettingsPage.Avalonia;
 using AutoSettingsPage.Models;
 using Pixeval.Controls;
 using Pixeval.Extensions.Common;
@@ -29,7 +30,10 @@ public class ExtensionSettingsEntry<TExtension, TValue>(TExtension extension, TV
         get;
         set
         {
-            if (EqualityComparer<TValue>.Default.Equals(field, value))
+            // DateTimeOffset equality normally ignores the offset, but settings persist it.
+            if (field is DateTimeOffset previous && value is DateTimeOffset next
+                    ? previous.EqualsExact(next)
+                    : EqualityComparer<TValue>.Default.Equals(field, value))
                 return;
             field = value;
             OnPropertyChanged();
@@ -51,6 +55,9 @@ public class ExtensionSettingsEntry<TExtension, TValue>(TExtension extension, TV
         values[Token] = Value;
     }
 }
+
+public class ExtensionColorSettingsEntry(IColorSettingsExtension extension, uint value, Func<IColorSettingsExtension, uint> getDefaultValue, Action<uint> onValueChanged)
+    : ExtensionSettingsEntry<IColorSettingsExtension, uint>(extension, value, getDefaultValue, onValueChanged), IColorSettingsEntry;
 
 public class ExtensionDoubleSettingsEntry(IDoubleSettingsExtension extension, double value, Func<IDoubleSettingsExtension, double> getDefaultValue, Action<double> onValueChanged)
     : ExtensionSettingsEntry<IDoubleSettingsExtension, double>(extension, value, getDefaultValue, onValueChanged), INumberSettingsEntry<double>

@@ -1,0 +1,16 @@
+﻿<NumericUpDown
+    x:Class="Pixeval.Views.Settings.DoubleSettingsValue"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:AutoSettingsPage.Models"
+    xmlns:settings="using:AutoSettingsPage.Avalonia"
+    x:DataType="{x:Type models:INumberSettingsEntry,
+                        x:TypeArguments=x:Double}"
+    MinWidth="200"
+    AutomationProperties.Name="{Binding Header}"
+    FormatString="G"
+    Increment="{Binding Step, Converter={x:Static settings:DoubleDecimalConverter.Instance}}"
+    Maximum="{Binding Max, Converter={x:Static settings:DoubleDecimalConverter.Instance}}"
+    Minimum="{Binding Min, Converter={x:Static settings:DoubleDecimalConverter.Instance}}"
+    PlaceholderText="{Binding Placeholder}"
+    Value="{Binding Value, Mode=TwoWay, Converter={x:Static settings:DoubleDecimalConverter.Instance}}" />

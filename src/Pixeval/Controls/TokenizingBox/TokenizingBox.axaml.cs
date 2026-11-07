@@ -22,6 +22,7 @@ using Avalonia.Media;
 using Avalonia.Metadata;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Pixeval.Utilities;
 
 namespace Pixeval.Controls;
 
@@ -126,6 +127,7 @@ public class TokenizingBox : TemplatedControl
     private TextBox? _textBox;
     private SelectingItemsControl? _suggestionItemsControl;
     private INotifyCollectionChanged? _notifyCollectionChanged;
+    private WeakEventListener<TokenizingBox, object?, NotifyCollectionChangedEventArgs>? _collectionChangedListener;
 
     static TokenizingBox()
     {
@@ -368,11 +370,23 @@ public class TokenizingBox : TemplatedControl
 
     private void OnItemsSourceChanged()
     {
-        _notifyCollectionChanged?.CollectionChanged -= ItemsSourceOnCollectionChanged;
+        _collectionChangedListener?.Detach();
+        _collectionChangedListener = null;
 
         _notifyCollectionChanged = ItemsSource as INotifyCollectionChanged;
 
-        _notifyCollectionChanged?.CollectionChanged += ItemsSourceOnCollectionChanged;
+        if (_notifyCollectionChanged is { } source)
+        {
+            // Settings collections outlive their editors. Keep live, even unmounted editors
+            // synchronized without letting the collection retain a discarded page.
+            var listener = new WeakEventListener<TokenizingBox, object?, NotifyCollectionChangedEventArgs>(this)
+            {
+                OnEventAction = static (editor, sender, args) => editor.ItemsSourceOnCollectionChanged(sender, args),
+                OnDetachAction = weakListener => source.CollectionChanged -= weakListener.OnEvent
+            };
+            _collectionChangedListener = listener;
+            source.CollectionChanged += listener.OnEvent;
+        }
 
         TrimToMaxCount();
         RebuildItemsHost();
@@ -475,7 +489,15 @@ public class TokenizingBox : TemplatedControl
         switch (e.Key)
         {
             case Key.Enter:
-                e.Handled = CommitSuggestion(_autoCompleteBox?.SelectedItem) || CommitText();
+                if (_autoCompleteBox?.SelectedItem is { } suggestion)
+                {
+                    // A veto applies to this submission, not just its object representation.
+                    // Do not let AutoCompleteBox accept it or retry it as plain text.
+                    _ = CommitSuggestion(suggestion);
+                    e.Handled = true;
+                }
+                else
+                    e.Handled = CommitText();
                 break;
 
             case Key.Back:
@@ -505,14 +527,16 @@ public class TokenizingBox : TemplatedControl
         if (!AddTokenCore(item, item as string))
             return false;
 
-        SetCurrentValue(TextProperty, "");
         if (_autoCompleteBox is not null)
         {
-            _autoCompleteBox.Text = "";
+            // Deselecting can restore AutoCompleteBox's pre-selection text.
+            // Clear the submitted input only after its selection state has settled.
             _autoCompleteBox.SelectedItem = null;
             _autoCompleteBox.IsDropDownOpen = false;
+            _autoCompleteBox.Text = "";
             QueueFocusTextBox();
         }
+        SetCurrentValue(TextProperty, "");
 
         return true;
     }

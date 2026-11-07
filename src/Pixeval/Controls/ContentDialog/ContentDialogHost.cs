@@ -97,6 +97,7 @@ public class ContentDialogHost : TemplatedControl
 
         _host = host;
         _host.TemplateApplied += HostOnTemplateApplied;
+        _host.Closed += HostOnClosed;
         InstallCore();
     }
 
@@ -104,7 +105,7 @@ public class ContentDialogHost : TemplatedControl
     /// Shows a dialog on this host and completes when that dialog is closed.
     /// </summary>
     /// <param name="dialog">The dialog to show.</param>
-    /// <param name="token">A token that closes the dialog with <see cref="ContentDialogResult.None"/> when canceled.</param>
+    /// <param name="token">A token that requests a close with <see cref="ContentDialogResult.None"/> when canceled. Closing handlers can veto this request.</param>
     /// <returns>The result selected by the user.</returns>
     public async Task<ContentDialogResult> ShowAsync(ContentDialog dialog, CancellationToken token = default)
     {
@@ -121,13 +122,20 @@ public class ContentDialogHost : TemplatedControl
         UpdateDialogState();
 
         var result = ContentDialogResult.None;
+        var completion = dialog.WaitForCloseAsync();
         try
         {
             await using var registration = token.Register(() =>
-                Dispatcher.UIThread.Post(() => _ = dialog.HideAsync()));
+                Dispatcher.UIThread.Post(() =>
+                {
+                    // Cancellation posted for an earlier show must not close a reused dialog.
+                    if (!completion.IsCompleted)
+                        _ = dialog.HideAsync();
+                }));
 
-            await Dispatcher.UIThread.InvokeAsync(dialog.FocusInitialElement, DispatcherPriority.Loaded);
-            result = await dialog.WaitForCloseAsync();
+            if (!completion.IsCompleted)
+                await Dispatcher.UIThread.InvokeAsync(dialog.FocusInitialElement, DispatcherPriority.Loaded);
+            result = await completion;
             return result;
         }
         finally
@@ -139,7 +147,7 @@ public class ContentDialogHost : TemplatedControl
             UpdateOpenState();
             UpdateDialogState();
 
-            if (wasTopmost && _dialogs.Count > 0)
+            if (_host is not null && wasTopmost && _dialogs.Count > 0)
                 await Dispatcher.UIThread.InvokeAsync(_dialogs[^1].FocusInitialElement, DispatcherPriority.Loaded);
 
             dialog.CompleteClose(result);
@@ -180,6 +188,15 @@ public class ContentDialogHost : TemplatedControl
 
     private void HostOnTemplateApplied(object? sender, TemplateAppliedEventArgs e) => InstallCore();
 
+    private void HostOnClosed(object? sender, EventArgs e)
+    {
+        // Once the native owner is gone there is no UI on which a close veto or deferral
+        // could be resolved. Finish each show and let its finally release panel state.
+        foreach (var dialog in _dialogs)
+            dialog.AbortForHostClose();
+        Uninstall();
+    }
+
     private void InstallCore()
     {
         if (_host is null)
@@ -202,8 +219,10 @@ public class ContentDialogHost : TemplatedControl
     private void Uninstall()
     {
         _host?.TemplateApplied -= HostOnTemplateApplied;
+        _host?.Closed -= HostOnClosed;
 
         _adornerLayer?.Children.Remove(this);
+        AdornerLayer.SetAdornedElement(this, null);
 
         _host = null;
         _adornerLayer = null;

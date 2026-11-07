@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
@@ -20,7 +21,9 @@ public sealed partial class ExtensionsHostModel(
     IExtensionsHost host,
     Dictionary<string, object?> values) : ObservableObject, IDisposable
 {
-    public IExtensionsHost Host { get; } = host;
+    private IExtensionsHost? _host = host;
+
+    public IExtensionsHost Host => _host ?? throw new ObjectDisposedException(nameof(ExtensionsHostModel));
 
     public bool IsActive
     {
@@ -67,7 +70,18 @@ public sealed partial class ExtensionsHostModel(
 
     public Symbol UninstallCommandIcon => IsPendingUninstall ? Symbol.Dismiss : Symbol.Delete;
 
-    internal NativeLibrarySafeHandle Handle { get; init; } = null!;
+    private NativeLibrarySafeHandle? _handle;
+
+    internal NativeLibrarySafeHandle? Handle
+    {
+        get => _handle;
+        init
+        {
+            _handle = value;
+            foreach (var extension in Extensions)
+                value?.KeepAliveFor(extension);
+        }
+    }
 
     private bool _isDisposed;
 
@@ -94,7 +108,7 @@ public sealed partial class ExtensionsHostModel(
 
     public Dictionary<string, object?> Values { get; } = values;
 
-    public IReadOnlyList<IExtension> Extensions { get; } = host.Extensions;
+    public IReadOnlyList<IExtension> Extensions { get; private set; } = host.Extensions;
 
     private static SymbolIcon CreateFallbackIcon() => new() { Symbol = Symbol.PuzzlePiece };
 
@@ -104,15 +118,30 @@ public sealed partial class ExtensionsHostModel(
             return;
 
         _isDisposed = true;
-        Handle.Dispose();
+        // COM wrappers may still be held by a settings page or an in-flight command.
+        // Their finalizers must release native interfaces before the library is freed.
+        _host = null;
+        Extensions = [];
+        _handle = null;
     }
 }
 
 internal sealed class NativeLibrarySafeHandle : SafeHandleZeroOrMinusOneIsInvalid
 {
+    private static readonly ConditionalWeakTable<object, List<NativeLibrarySafeHandle>> _Owners = new();
+
     public NativeLibrarySafeHandle(nint handle) : base(true)
     {
         SetHandle(handle);
+    }
+
+    internal void KeepAliveFor(object owner)
+    {
+        // Ephemeron values do not root their keys. Once every wrapper is unreachable,
+        // normal COM finalizers run before this SafeHandle's critical finalizer.
+        var handles = _Owners.GetOrCreateValue(owner);
+        lock (handles)
+            handles.Add(this);
     }
 
     protected override bool ReleaseHandle()

@@ -55,6 +55,7 @@ public class IncrementalSource<T, TViewModel> : IIncrementalSource<TViewModel>, 
     public virtual async Task<IReadOnlyCollection<TViewModel>> GetPagedItemsAsync(int pageIndex, int pageSize, CancellationToken token = default)
     {
         BeginRequest();
+        List<TViewModel>? result = null;
         try
         {
             if (IsInterrupted && _asyncEnumerable is IFetchEngine<T> engine
@@ -62,20 +63,24 @@ public class IncrementalSource<T, TViewModel> : IIncrementalSource<TViewModel>, 
                 return [];
             IsInterrupted = false;
             HasMoreItems = true;
-            var result = new List<TViewModel>(pageSize);
+            result = new List<TViewModel>(pageSize);
             var i = 0;
             while (i < pageSize)
             {
                 token.ThrowIfCancellationRequested();
+                _lifetimeCts.Token.ThrowIfCancellationRequested();
                 if (_limit is not -1 && _yieldedCounter >= _limit)
                 {
                     HasMoreItems = false;
                     return result;
                 }
 
-                if (await _asyncEnumerator.MoveNextAsync().ConfigureAwait(false))
+                var hasNext = await _asyncEnumerator.MoveNextAsync().ConfigureAwait(false);
+                // A transport may complete successfully even after its owning view has closed.
+                token.ThrowIfCancellationRequested();
+                _lifetimeCts.Token.ThrowIfCancellationRequested();
+                if (hasNext)
                 {
-                    token.ThrowIfCancellationRequested();
                     if (_asyncEnumerator.Current is { } obj && !_yieldedItems.Contains(Identifier(obj)))
                     {
                         result.Add(_factory(obj, _yieldedCounter));
@@ -102,9 +107,14 @@ public class IncrementalSource<T, TViewModel> : IIncrementalSource<TViewModel>, 
 
             return result;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
-            HasMoreItems = false;
+            if (ex is not OperationCanceledException)
+                HasMoreItems = false;
+            // Ownership transfers only when a complete page is returned to the collection.
+            // Failed and canceled pages must release every view model already created for them.
+            if (result is not null)
+                IncrementalPageLifetime.DisposeItems(result, ex);
             throw;
         }
         finally

@@ -15,6 +15,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Mako.Global.Enum;
 using Mako.Model;
+using Microsoft.Extensions.DependencyInjection;
 using Misaki;
 using Pixeval.I18N;
 using Pixeval.Models.Database;
@@ -44,6 +45,22 @@ public partial class SearchPage : IconContentPage
     public SearchPage()
     {
         InitializeComponent();
+        // AutoCompleteBox consumes Enter in its class handler before the bubbling page handler.
+        SearchAutoCompleteBox.AddHandler(KeyDownEvent, SearchAutoCompleteBox_OnKeyDown, RoutingStrategies.Tunnel);
+    }
+
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+        UpdateSearchCompletions(SearchAutoCompleteBox.Text);
+    }
+
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        ++_searchCompletionUpdateVersion;
+        _searchCompletionSource = null;
+        ClearSearchCompletionItems();
+        base.OnUnloaded(e);
     }
 
     private async void CopyButton_OnClick(object? sender, RoutedEventArgs e)
@@ -123,7 +140,7 @@ public partial class SearchPage : IconContentPage
 
     private void SearchAutoCompleteBox_OnKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key is not Key.Enter)
+        if (e.Handled || e.Key is not Key.Enter)
             return;
 
         if (SearchAutoCompleteBox.IsDropDownOpen && CommitSearchCompletion(GetSelectedSearchCompletion()))
@@ -185,12 +202,19 @@ public partial class SearchPage : IconContentPage
             .OfType<SearchCompletionItem>()
             .FirstOrDefault();
         if (completion is not null)
-            Dispatcher.UIThread.Post(() => CommitSearchCompletion(completion));
+        {
+            var version = _searchCompletionUpdateVersion;
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (IsLoaded && version == _searchCompletionUpdateVersion)
+                    CommitSearchCompletion(completion);
+            });
+        }
     }
 
     private void SearchAutoCompleteBox_OnTextChanged(object? sender, TextChangedEventArgs e)
     {
-        if (!_isUpdatingSearchCompletions)
+        if (IsLoaded && !_isUpdatingSearchCompletions)
             UpdateSearchCompletions(SearchAutoCompleteBox.Text);
     }
 
@@ -280,6 +304,13 @@ public partial class SearchPage : IconContentPage
             if (version != _searchCompletionUpdateVersion)
                 return;
 
+            // The current Mako endpoint logs transport failures and returns null for this result type.
+            if (tags is null)
+            {
+                await ShowSearchCompletionErrorAsync(source, version, token).ConfigureAwait(false);
+                return;
+            }
+
             var suggestions = immediateSuggestions
                 .Concat(tags.Select(tag => new SearchCompletionItem(
                     SearchCompletionKind.Tag,
@@ -295,6 +326,24 @@ public partial class SearchPage : IconContentPage
         catch (OperationCanceledException)
         {
         }
+        catch (Exception exception)
+        {
+            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
+                .LogError(nameof(LoadTagCompletionsAsync), exception);
+            await ShowSearchCompletionErrorAsync(source, version, token).ConfigureAwait(false);
+        }
+    }
+
+    private async Task ShowSearchCompletionErrorAsync(string source, int version, CancellationToken token)
+    {
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (IsLoaded && !token.IsCancellationRequested && version == _searchCompletionUpdateVersion
+                && string.Equals(source, SearchAutoCompleteBox.Text ?? "", StringComparison.Ordinal))
+                TopLevel.GetTopLevel(this)?.ViewContainer?.ShowError(
+                    I18NManager.GetResource(SearchResources.Validation.SearchFailed.Title),
+                    I18NManager.GetResource(SearchResources.Validation.CompletionFailed));
+        });
     }
 
     private void SetSearchCompletionItems(IReadOnlyList<SearchCompletionItem> suggestions)
@@ -317,6 +366,7 @@ public partial class SearchPage : IconContentPage
     private void ClearSearchCompletionItems()
     {
         _searchCompletionCancellationTokenSource?.Cancel();
+        _searchCompletionCancellationTokenSource?.Dispose();
         _searchCompletionCancellationTokenSource = null;
         _searchCompletionItems = [];
         _selectedSearchCompletion = null;

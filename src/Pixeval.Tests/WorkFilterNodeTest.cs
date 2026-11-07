@@ -1,17 +1,25 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Mako.Model;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Filters;
 using Pixeval.Filters.Nodes;
+using Pixeval.I18N;
 using Pixeval.Models.Filters;
+using Pixeval.Utilities;
 
 namespace Pixeval.Tests;
 
 [TestClass]
+[DoNotParallelize]
 public sealed class WorkFilterNodeTest
 {
-    private static readonly FilterLanguage _Language = WorkFilterLanguage.Instance;
+    [ClassInitialize]
+    public static void Initialize(TestContext _)
+    {
+        I18NManager.CandidatePaths.Add(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval")));
+        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+    }
 
     [TestMethod]
     public void WorkFilterNodesShouldSupportAllPredicatesAndGroups()
@@ -93,7 +101,7 @@ public sealed class WorkFilterNodeTest
 
     private static FilterNode Parse(string text)
     {
-        var analysis = _Language.Analyze(text);
+        var analysis = WorkFilterLanguage.Instance.Analyze(text);
         Assert.IsTrue(analysis.IsSuccess, text);
         return analysis.Query!.Root;
     }

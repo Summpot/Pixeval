@@ -1,0 +1,714 @@
+# Pixeval Material 3 Expressive 渐进迁移执行计划
+
+> 建立日期：2026-11-07。基线分支：`feat/material3expressive-migration`；基线提交：`858d96f7`。
+> 本文是后续多次开发使用的执行清单，不表示这些迁移已经完成。每次实施后更新步骤状态和验收证据。
+
+执行规模：18 个阶段、80 个小步骤、27 类功能契约；附录覆盖当前 104 个 XAML，并单独列出动态页面和无 XAML 行为。先读第 3 节的单步规则，再根据第 10 节台账选择下一步。
+
+## 1. 目标与边界
+
+将当前 Pixeval 的视觉、布局和交互反馈逐步统一到 Material 3 Expressive（下文简称 M3E），同时保留已有功能、数据、导航入口、键盘操作和平台能力。每个合入点都应当是可构建、可运行、可继续日常使用的版本。
+
+迁移成功不以“删除所有非 M3E 控件”为标准。具有专用行为的图像查看器、虚拟化面板、编辑器、标签页容器等，可以保留实现并使用 M3E 资源和样式。只有功能等价证据充分时，才替换行为控件。
+
+本计划基于从 `main` 派生的 C#/Avalonia 应用；不合入 `feat/rust-backend` 的后端、移动端或国际化重构，也不处理工作区中的未跟踪 `compose/`。网络服务、数据库、下载引擎、扩展协议与设置格式的重构不是本次迁移目标。
+
+“每一步不破坏功能”需要通过明确的行为契约和验收执行，不能靠主题加载成功或少量测试通过来保证。发现回归就修复或撤回该小步骤，不将功能缺失留给后续阶段补齐。
+
+## 2. 当前基线
+
+| 项目 | 已知状态 | 对计划的影响 |
+| --- | --- | --- |
+| 依赖更新 | `858d96f7` 已更新依赖；M3E 子模块指向 `859a69e563b2a01fc87a26255ee11c1d89959677` | 从这个状态继续，不重复进行依赖迁移 |
+| NuGet 化 | MaterialColorUtilities、MaterialSymbols、SmoothScroll 已移除源码子模块；颜色/图标经 M3E 引入，SmoothScroll 显式引用包 | 后续每次升级记录实际解析版本和传递依赖 |
+| M3E 来源 | 本次依赖更新时，已发布的 0.0.6 包落后于所使用的源码提交 | 暂留源码子模块；将来重新核验包内容，不把这个结论永久化 |
+| 主题入口 | `PixevalTheme.axaml` 同时加载 Fluent、TabsView、FluentAvalonia、AutoSettingsPage、编辑器/颜色选择器/SmoothScroll 与 Material 主题 | 是已有部分 M3E 的混合状态，不能直接删除回退主题 |
+| 已有 M3E 工作 | 命令栏、卡片、内联链接及若干包装控件已有 Material 样式/测试 | 先复用已有实现，识别剩余差距，避免重复替换 |
+| 兼容资源 | 当前四条规则处理回退行高、标签文字和颜色选择器布局；已核验 M3E `859a69e5` / Avalonia 12.1.5 | 对照和颜色回归证明仍需保留；具体证据见 P00.05v/w/z，不因版本更新直接删除 |
+| UI 清单 | 75 个 Views XAML、22 个 Controls XAML、7 个 Themes XAML，共 104 个 | 附录逐项分配阶段；同时覆盖动态生成页面和无 XAML 控件 |
+| 先前验证 | 桌面/测试项目构建成功；Material、Markdown 滚动、图像几何/渲染/手势相关筛选共 43 项通过 | 是依赖更新的局部证据，不是本计划的全功能基线 |
+| SDK | `global.json` 指定 .NET SDK `10.0.401`；Windows 独立 SDK 与 WSL Debian 13 均已完成构建/测试 | 系统 PATH 仍不解析该版本时使用台账中的显式 SDK 路径，不改用 preview 冒充指定工具链 |
+| CI | 当前工作流递归检出子模块，在 Windows/Ubuntu 执行构建、完整测试、固定原生扩展与离线页面契约 | 本地同等验证已通过；远程 CI 未运行，原生输入和其他平台仍需补齐 |
+
+主要入口：[主题入口](../src/Pixeval/Themes/PixevalTheme.axaml)、[兼容资源](../src/Pixeval/Themes/MaterialCompatibility.axaml)、[公共控件资源](../src/Pixeval/Themes/Controls.axaml)、[导航注册](../src/Pixeval/Utilities/NavigationPageRegistry.cs)、[动态页面辅助代码](../src/Pixeval/Utilities/AvaloniaHelper.cs)、[现有测试](../src/Pixeval.Tests)。
+
+## 3. 每个小步骤必须遵守的执行规则
+
+1. **先写清行为，再改外观。** 列出本步骤涉及的入口、命令、状态、快捷键、绑定和副作用；关联下文功能编号。迁移前存在的可见功能都必须有迁移后入口。
+2. **按完整功能单元组织提交。** 小步骤是实施与验收单元，不与 Git 提交一一对应。同一控件或流程的相关小修复、配套测试和验证中发现的问题可以一起完成后提交；不把无关功能、框架升级、协议或数据格式变更混入同一提交。全局资源变化本身就是高影响步骤，应单独验证。
+3. **保持一个有效实现。** 页面边界允许不同阶段使用各自已经可用的控件；不复制两套业务逻辑，不堆叠临时兼容层，不引入无人负责的长期双实现。现有专用控件可以作为最终保留方案。
+4. **不改变持久化契约。** 设置字段、枚举值、导航 YAML 页面键/图标值、首页卡片数据、数据库记录、下载历史和扩展配置继续可读。若确需数据迁移，拆成单独任务并先验证升级/回退，不能夹带在视觉迁移里。
+5. **保留异步和生命周期语义。** 取消、重试、错误显示、加载中禁用、迟到响应隔离、事件退订、图片/动画资源释放都属于功能。切页、切账号、关标签和关窗口不能留下后台回写。
+6. **不要为测试修改真实账户。** 自动验收使用假服务、固定样本和临时目录；收藏、关注、评论、删除等有外部副作用的人工验证只在已授权的测试场景执行。不得将生产令牌、Cookie、API Key 写入截图或日志。
+7. **遵守现有工程规范。** 保持 AOT/裁剪兼容、命令与绑定可诊断，复用已有工具和设置生成器。涉及字符串遵守 [i18n 指引](../.agents/skills/i18n/SKILL.md)，涉及 MCP 实现时再读取相应技能；不要顺手重写生成代码或扩展 ABI。
+8. **失败立即处理。** 迁移前已有失败要记录并区分；本步骤引入的失败不得归为“后续修复”。必要时撤回本步骤，前一个合入点继续可用。
+
+### 3.1 单步工作流程与完成定义
+
+`Pxx.nn` 用于追踪功能契约。先逐步实施和验证，再将相互关联的步骤合成一个可审阅、可回退的功能提交。不要为每个小修复、测试补充或记录更新单独提交，也不要将整个阶段压成一个大提交。后文的“回退边界”表示职责边界，具体提交粒度统一按 §3.2 执行。
+
+| 环节 | 必须形成的结果 |
+| --- | --- |
+| 开始前 | 确认当前分支、工作区和依赖提交；读取涉及的源码/组件 README；记录基线行为、相关测试结果与已知问题 |
+| 契约确认 | 列出功能编号、输入/输出、状态转换、焦点/键盘/指针行为、持久化和资源释放要求；补齐高风险且缺失的行为测试 |
+| 实施 | 最小范围改动；检查绑定、主题资源作用域、命令实例、模板部件和生命周期；不顺带重构业务服务 |
+| 自动验证 | 编译受影响项目；执行相关行为测试；XAML 改动运行可用的 XAML-Styler；公共主题/容器改动扩大到主题集成与相邻使用方 |
+| 交互验证 | 优先在隔离宿主内用脚本驱动真实页面的输入、命令、状态和渲染；按风险补原生平台验证，默认不占用用户桌面。截图不能代替行为断言 |
+| 合入条件 | 当前改动所需的契约验证通过，无新增功能回归、绑定错误、不可访问命令或数据损失；性能满足已记录预算；平台未覆盖项单列，不冒充通过 |
+| 记录与回退 | 功能单元验证后提交，批次结束集中记录步骤到提交的映射、关键验证证据和未覆盖项；该功能单元可独立 revert |
+
+纯资源更名等低风险修改无需编写模仿实现的测试；优先用已有行为测试和相关页面验收。对话框完成/取消、选择、虚拟化、异步竞态、输入提交、导航和手势变化则必须有针对性的行为证据。
+
+### 3.2 提交粒度与文档预算
+
+- **默认一个功能单元一个提交。** 例如，同一次颜色选择器验收发现的预览布局与标签裁切，可以连同回归测试合为一个“修复颜色选择器布局”提交；同一输入流程的提交/否决/清空问题也应一起收尾。一次提交可以对应多个小步骤。
+- **在验证完成的自然边界提交。** 先完成该单元的实现、相关测试和一次 diff 审查。不要按文件数、单个断言、几行修改或固定分钟数触发提交。90–120 分钟一轮通常以少量完整功能提交收尾（约 1–4 个可作参考），不是硬指标，不为达标拆分或囤积无关改动。
+- **需要独立回退才拆分。** 无关职责、高风险行为替换、依赖升级和数据格式变更保持独立；已经提交后才发现的新问题可以正常追加修复，不为凑粒度改写历史。
+- **批次结束统一记账。** 默认只向 `docs/m3e/EXECUTION_LOG.md` 追加一条批次摘要，包含完成项、提交映射、关键命令/结果、证据路径、剩余阻塞和下一步。工作中间结果保存在日志/产物或简短续接笔记中，不同步改多份 Markdown。
+- **各文档各负其责。** 主计划仅在步骤状态、阶段结论、范围或执行规则变化时修改；`ACCEPTANCE_CASES.md` 仅在验收契约变化时修改；验证宿主文档仅在使用方式变化时修改。测试数量和运行日志不重复抄入这些文档；清单/基准 JSON 只在实际清单或基准变化时重生成。
+- **避免提交哈希循环。** 批次记录可引用已完成的代码提交；当前文档提交用 Git 历史定位，不为补写它自己的哈希再造一个提交。批次文档可以随最后一个相关功能提交，或单独做一次收尾提交。
+
+### 3.3 默认不占用桌面的验证方式
+
+验证按以下顺序选择最小且有效的手段：
+
+1. 现有单元/集成测试、构建、静态资源和绑定检查。
+2. [验证脚本](../scripts/verify-m3e.ps1) 与 [隔离验证宿主](m3e/VALIDATION_HOST.md)：使用 `inventory`、`capture`、`navigation`、`search`、`search-options`、`login`、`extensions` 等对应模式，执行真实控件/页面的自动输入、状态断言和离屏渲染；仅在有性能影响时运行 `benchmark`。参数和样本要求以当前宿主文档/实现为准。
+3. 确需原生后端时，优先使用独立会话/测试环境中不会抢占用户焦点的脚本验证。脚本也不能通过全局 SendKeys、移动鼠标、激活/置顶窗口、修改用户剪贴板等方式绕过“不打扰桌面”的要求。
+4. 只有复杂且无法由上述方式可靠验证的原生交互，才考虑 computer use，例如真实 IME、多窗口拖放、系统 WebView 或特定触控板手势。先说明具体缺口，限定窗口、步骤和时长；无人值守且无法保证不打扰时，记入集中原生验收清单，继续其他工作。不得仅为截图、确认可启动或执行普通点击而调用 computer use。
+
+优先扩展已有宿主的可复用行为断言，不另造第二套产品 UI，也不为几个像素的修改搭建庞大的自动化框架。headless 的证明范围需如实保留：它不能证明原生 IME、系统焦点、GPU、触摸或多屏 DPI 已通过；这些缺口也不能反过来使无关的后台可验证工作全部停摆。
+
+### 3.4 取消 computer use 后的继续规则
+
+- 用户按 Esc 或取消电脑控制，默认表示**停止当前桌面控制通道**，不表示取消迁移任务。立即停止后续桌面操作；本轮不要自动重试、重新激活窗口或改用全局输入脚本抢回控制，除非用户明确要求恢复。
+- 若当前执行仍可继续，简短记录该项未完成，改用无前台输入的脚本/headless 验证；无法替代则保持该原生验收项待验收，继续下一项独立工作。禁止把取消本身当作产品测试失败或整轮任务结束条件。
+- 如果用户明确要求停止/暂停整个任务，应遵从；若取消导致执行环境直接终止整轮，代理无法在已结束的执行中继续。下次恢复时先检查工作区、最近提交和验证产物，从未完成边界接续，不重做已验收工作，也不自动恢复 computer use。
+- 待验收项按**具体契约依赖**阻塞工作：改变 IME、原生焦点或窗口行为却无法验证的改动不得宣称完成；已充分验证的无关步骤可以继续。阶段整体仍须完成其必需验收才能勾选，不因取消而降低标准。
+
+## 4. 跨阶段验收矩阵
+
+P00 先建立可重复的样本和基线；以下维度根据每个步骤的影响范围执行。公共主题、字体和窗口容器改动需覆盖所有代表页面。
+
+| 维度 | 至少检查 |
+| --- | --- |
+| 数据状态 | 未登录/已登录；加载/空/正常/失败/重试；慢请求、取消、权限不足、已删除作品；长标题、缺图、超长标签 |
+| 输入 | 鼠标左右键/悬停/滚轮；Tab/Shift+Tab、Enter/Escape、已有快捷键；中文 IME 组合输入；平台修饰键；触摸/触控板适用场景 |
+| 视觉 | 浅色/深色/跟随系统；局部主题覆盖；应用字体/系统字体回退；中文及长文本语言；100%、125%、150%、200% 缩放；窄窗/最大化/多屏 |
+| 可访问性 | 可见焦点、合理遍历顺序、可读标签/自动化名称、无颜色单独表达状态、禁用状态可辨、文本放大与实际命中区域 |
+| 滚动 | 嵌套滚动链、水平/垂直方向、程序滚动、恢复位置、末尾加载、弹出层打开时的滚动归属 |
+| 生命周期 | 重复开关页面/标签/窗口、切换账号、切换数据源、请求中离开、关闭弹窗后焦点恢复；无重复订阅/请求和迟到响应覆盖 |
+| 持久化 | 原有用户数据加载；更改后重启；导入/导出；回退至上一个迁移点；设置和导航配置未被静默重置 |
+| 平台 | Windows、Linux、macOS 桌面按现有支持范围验证；Android/iOS 按现有项目能力验证安全区/触摸/文件选择/返回键；Browser 按现有实验状态验证，不借此承诺新增平台支持 |
+
+性能基线必须实测，不能填入臆测数值。建议用固定数据测试 1,000/10,000 条列表、长小说、多页图和动画，在同一设备/构建配置下重复采样首屏时间、滚动帧耗时、图片峰值内存、关闭后保留内存和请求数。可将耗时/内存相对基线恶化 10% 作为初始调查阈值，再按测量噪声和设备调整；这不是已经达成的指标。帧耗时应结合屏幕刷新率判断。至少检查多次开关后内存是否持续增长，不能只比较一次截图。
+
+## 5. 功能保留清单
+
+下面的编号是验收索引。每个执行步骤引用这些编号，并将大项拆成可操作用例。文件名列表不能替代功能清单，因为部分页面由注册表、源生成器和设置元数据动态产生。
+
+| 编号 | 功能范围 | 必须保留的行为 | 主阶段 |
+| --- | --- | --- | --- |
+| F01 | 启动、主题、字体 | 启动/关闭生命周期；系统/浅/深主题及局部覆盖；应用字体传递到模板；文本不因固定行高裁切；动画作用域在内容使用前初始化 | P00–P01 |
+| F02 | 公共命令与图标 | 命令参数、CanExecute、Toggle 状态、Tooltip、快捷键、右键菜单；主工具栏及溢出菜单执行相同命令，不重复执行；图标不能丢失语义 | P02 |
+| F03 | 输入与验证 | 文本选择/复制粘贴/撤销、密码安全输入、IME、空值/可空日期、数字范围、错误提示、下拉选中、标签增删和清空 | P03 |
+| F04 | 对话框与反馈 | 主/次/关闭结果、异步 deferral、Closing 可取消、关闭请求归属、遮罩/层级、Escape/外部点击、焦点恢复、通知操作及消失时机 | P04 |
+| F05 | 账号与登录 | 已保存账号选择、Token 登录、WebView OAuth、取消、错误分类、状态刷新/账号切换；退出/切换后旧请求不能回写新账号 | P07 |
+| F06 | 导航与窗口 | 注册页面键、参数、NeedLogin；侧栏分组/自定义 YAML；新标签、选择/关闭及其他/左/右关闭、现有拖动行为；多窗口所有权、返回/历史行为、窗口装饰与尺寸状态 | P06、P16 |
+| F07 | 作品列表 | `LinedFlow`/`Grid`/`Masonry` 与内部布局；增量加载、重试/取消、滚动恢复、选择模式/全选/反选/清除、批量收藏/保存/浏览器；排序及筛选不变 | P08 |
+| F08 | 卡片与单项动作 | 插画/小说/用户/系列/特辑卡片；缩略图、徽章、进度、收藏状态；收藏标签/公开私密、稍后观看、下载、屏蔽作者/标签、复制及打开详情/网页 | P08、P11 |
+| F09 | 作品与用户数据源 | 推荐、新作、投稿、收藏、关注、好P友、相关作品、排行榜、系列、特辑；用户推荐/搜索/关注/粉丝/好P友；工作类型、用户 ID、日期、排行类型、收藏隐私/标签等参数 | P09 |
+| F10 | 搜索入口 | 补全请求取消；点击/Enter/选择只提交一次；固定/历史/热门标签；替换最后关键词；作品/小说/用户 ID 跳转；用户搜索和结果类型切换 | P03、P09 |
+| F11 | 高级搜索 | 共用日期启用状态、排序、AI、普通关键词合并、翻译标签、潜在违规内容选项；插画匹配/类型/比例/工具/宽高区间；小说匹配/语言/长度区间/原创/可替换/题材 | P09 |
+| F12 | SauceNao | 文件选择、剪贴板粘贴、图片预览、请求失败/限流处理、结果匹配信息与外部链接；不改变已有 API Key 配置 | P09 |
+| F13 | 首页卡片 | 19 类来源及各自参数；新增/选择/编辑/删除/取消；网格拖动/缩放/碰撞处理；标题/工具栏显示设置；预览、打开、持久化、取消加载 | P10 |
+| F14 | 用户、作品与系列详情 | 资料/介绍、复制 ID、浏览器链接、公开/私密关注与取消、屏蔽；作品/收藏/关注入口；作品标签/统计/信息面板；系列导航与监视记录 | P11 |
+| F15 | 评论与回复 | 列表/加载更多、作者跳转、回复、文本/表情/贴图、提交中状态、权限内删除、取消与错误；IME Enter 不误提交；贴图保持正确长宽比 | P11 |
+| F16 | 下载管理 | 文件夹/任务分组、状态/进度/错误；单项和批量暂停/继续/取消/重置/重试/删除记录；打开目录、原作品、错误详情；UI 重建不能重启任务 | P12 |
+| F17 | 订阅同步 | 用户/收藏/系列等现有订阅类别及工作类型参数；添加/删除、单个/全部同步、进度/取消/重试、去重；删除订阅取消关联请求；不可访问单项不终止整批 | P12 |
+| F18 | 小说阅读 | 分页/前后作品及右键操作；目录/页内跳转；Markdown、图片、链接、ruby、强调、代码块和滚动链；阅读字体/颜色/宽度/行高；收藏/稍后看/复制/下载 | P13 |
+| F19 | 小说翻译与导出 | 翻译器选择/可用状态、开关、原文和译文缓存、取消及迟到结果隔离；Html/Md/OriginalTxt 等现有格式和扩展提供的格式 | P13 |
+| F20 | 图像查看器外层 | 页数/预览滑块、前后作品、信息面板、收藏/标签/稍后看/下载/复制/另存/浏览器；原图与扩展动作；加载/失败/重试及动画播放状态 | P14 |
+| F21 | 图像核心交互 | Swipe/Continuous 模式；缩放、平移、适应/原始大小、左右旋转、镜像；鼠标/触控板/触摸手势；页切换、渐进更新保持视图；GIF/WebP/ugoira 动画和资源释放 | P15 |
+| F22 | 自动播放 | Sequential/Loop、CurrentWork/AllWorks、间隔、暂停/恢复/边界；切换作品和关闭页面取消旧任务 | P14–P15 |
+| F23 | 设置与维护 | 全部设置组和自定义编辑器；默认值、立即生效、重启保留、重置/导入/导出；缓存与搜索/浏览/下载历史清理；更新检查/下载/安装重启流程 | P06 |
+| F24 | 扩展 | 安装文件/压缩包、重复/格式/平台错误、目录、启用/禁用、优先级调整、卸载/待卸载/过期项操作、设置与帮助；图像/文本/导出扩展入口 | P05、P13–P14 |
+| F25 | 历史与稍后观看 | 当前记录规则、列表入口、清除/删除、重新打开作品、排序/滚动和空状态；不更换数据库含义 | P08 |
+| F26 | 本地化与帮助 | 所有现有字符串和回退；语言/字体选择；About、许可/支持者/链接；帮助 Markdown、MCP 帮助刷新工具/复制示例 | P01、P05–P06 |
+| F27 | MCP 与自动化 | `EnableMcp` 条件构建及设置；服务开关、端口、写工具开关、二进制资源限制；已有 JSON/schema/错误及 UI 自动化可操作性 | P06、P17 |
+
+### 5.1 设置项专项清单
+
+设置页由元数据生成，不能仅验收 15 个设置 XAML。P06 需以实际注册的设置条目为准导出清单，对每项检查：旧值显示 → 编辑/验证 → 生效 → 重启读取 → 导入/导出。
+
+| 设置组 | 必须覆盖 |
+| --- | --- |
+| Application | 语言、主题、应用字体、窗口尺寸/最大化、更新检查状态及自动下载、文件缓存启用/限额、首页行列数/标题与工具栏显示 |
+| Network | API 冷却时间；代理类型/地址；Pixiv 与 GitHub 各域名解析配置及启用方式；MirrorHost；WebCookie；无效配置与恢复 |
+| Browsing | 缩略图三种布局及尺寸；查看模式/方向；过滤目标；屏蔽/固定标签和屏蔽用户；默认信息面板；自动播放间隔/模式/范围 |
+| Search | 插画/小说排行榜选项、SauceNao API Key、默认作品类型；搜索页独立高级选项也须覆盖 |
+| Download | 下载宏及验证、现有格式、覆盖策略、并发数；订阅编辑器另见 P12 |
+| Novel | 字体、文字/背景颜色、字重、字号、行高、最大宽度以及当前实际注册的其他阅读条目 |
+| MCP | 服务开关、端口、写工具、二进制资源大小上限；启用/不启用编译配置 |
+| 维护/导航 | 重置、明文导入导出、各类缓存/历史清理；导航 YAML 应用/格式化/重置/插入文件夹/复制页面定义、诊断和无效输入保护 |
+
+以 [实际设置模型](../src/Pixeval/AppManagement/Settings) 和运行时注册条目为最终清单；新增上游设置需补进本文。不要因更换设置控件而改变原有数字单位、范围、枚举值或默认值。
+
+### 5.2 首页来源专项清单
+
+以下 19 个 `HomePageCardSourceKind` 必须逐项建立用例，不可仅测试推荐卡片：
+
+`WorkRecommended`、`WorkBookmarks`、`WorkRanking`、`WorkNew`、`WorkFollowing`、`WorkMyPixiv`、`WorkRelated`、`WorkPosts`、`WorkSearch`、`UserRecommended`、`UserSearch`、`UserFollowing`、`UserFollower`、`UserMyPixiv`、`Spotlight`、`SingleImage`、`SingleNovel`、`SingleUser`、`SingleSeries`。
+
+按来源验证 `userId`、工作类型、公开/私密、标签、排行榜/日期、作品/系列 ID、搜索文本及默认当前账号；缺参数、无效 ID、账号切换和取消编辑也要覆盖。首页布局算法与参数编辑契约先保留。
+
+## 6. 控件迁移策略与能力缺口
+
+下表是选择顺序，不是“可直接替换”的承诺。实施前阅读当前锁定版本对应 README/API 和应用调用方式。
+
+| 当前职责 | 优先方案 | 不可遗漏的差异 |
+| --- | --- | --- |
+| 普通 Button/Toggle/CheckBox/Radio/Switch | 优先使用 M3E 对原生 Avalonia 控件的主题 | 保留命令、可用状态、选中态和内容布局；不能只换颜色 |
+| 图标、文字、表面、徽章 | 复用 Material tokens 与现有包装控件；逐项选择 MaterialSymbols | 用户导航配置中的已有图标枚举/序列化值必须继续读取；不能全局枚举替换 |
+| CommandBar/浮动工具栏 | 保留原生命令栏行为，选用 M3E Inline/Icon/Stacked 主题 | 上游溢出计算存在近似槽宽；长本地化标签、缩放和窄窗口必须按实际边界测试；溢出仍是同一命令实例 |
+| TextBox/ComboBox/AutoComplete/TokenizingBox | 先迁移外观，保持输入和补全协调逻辑；评估 TextField/ExposedDropdown/Chip 等 | IME、选择事件/Enter 重复提交、验证、可空值和焦点不能改变 |
+| ContentDialog | 先保持现有异步对话框及 Host/deferral，仅迁移视觉 | M3E AlertDialog 不自动关闭；DismissRequested 是请求；不能丢失 Result、Closing 取消和任务完成语义 |
+| InfoBar/NotificationCard | 对比 Snackbar、内联错误与现有通知的职责后决定 | 持久错误不能变成看不见的短暂提示；操作按钮、重复提示与关闭时机保持 |
+| 设置页 | 保留 AutoSettingsPage/元数据生成机制，先主题化容器和编辑器 | M3E 中有 GroupBox/Expander 不等于覆盖设置注册、验证和副作用 |
+| ListBox/虚拟化布局 | 保留 WorkListBox、增量数据源和专用面板，改容器/卡片/状态样式 | 不改成非虚拟化 ItemsControl；选择身份、复用清理、滚动定位、请求数量是硬要求 |
+| ScrollViewer/SmoothScroll | 分开处理普通滚动、平滑滚动与图像滚动 | M3E 已有 ScrollViewer/ScrollBar 主题，但不能据此移除 SmoothScroll 的行为实现 |
+| TabView/窗口容器 | 先迁移顶部/侧栏/标签样式，保留现有容器 | M3E TabRow 是受控标签栏，不负责内容/选中联动；TabControl 也不自动拥有关闭、拖放或多窗口能力 |
+| 图像翻页与动画 | 保留现有 Swipe/Continuous/Single 控件并应用 Material 外层 | Carousel 不等于图像查看器；几何、渐进加载、动画解码和手势边界须独立验证 |
+| Markdown/AvaloniaEdit/ColorPicker/WebView | 保留专用控件，调整边界与颜色并检查回退主题 | 代码块滚动、编辑诊断、颜色值和 OAuth 能力不能靠普通文本/网页链接代替 |
+
+参考：[M3E 入门](../src/lib/Material3Expressive.Avalonia/docs/GETTING_STARTED.md)、[CommandBar](../src/lib/Material3Expressive.Avalonia/src/Material3Expressive/Components/CommandBar/README.md)、[AlertDialog](../src/lib/Material3Expressive.Avalonia/src/Material3Expressive/Components/AlertDialog/README.md)、[TabRow](../src/lib/Material3Expressive.Avalonia/src/Material3Expressive/Components/TabRow/README.md)。
+
+## 7. 分阶段执行路线
+
+各步骤的最新证据见 [执行台账](m3e/EXECUTION_LOG.md)。阶段序号给出默认顺序；依赖满足后可以调整低风险步骤顺序，但不能跳过相应验收。阶段前置条件需落实到本步实际使用的契约：全局主题/容器替换仍需完整的相关基线，某项原生交互缺口则不阻塞已具备基线的无关局部工作。选择跨阶段步骤时简要记录依赖成立的依据，不把整个前置阶段标记为已验收。小步骤可以进一步拆分实施，相关步骤按 §3.2 合成提交。
+
+| 阶段 | 主题 | 前置条件 | 阶段结束时的可用状态 |
+| --- | --- | --- | --- |
+| P00 | 基线与验收环境 | 当前分支 | 原应用行为可复现、差距可追踪 |
+| P01 | 主题/字体/动画基础 | P00 | 全部原页面继续可用 |
+| P02 | 基础动作控件 | P01 | 命令和菜单入口完整 |
+| P03 | 输入/选择控件 | P01、P02 | 输入/验证/提交不变 |
+| P04 | 弹窗与状态反馈 | P01–P03 | 取消/完成与焦点可靠 |
+| P05 | 关于/帮助/扩展 UI | P02、P04 | 形成低风险完整页面样本 |
+| P06 | 设置与导航编辑 | P03–P05 | 全部设置可读写、维护流程保留 |
+| P07 | 登录与账号 | P03、P04 | 账号流程和错误处理不变 |
+| P08 | 卡片/列表/历史 | P02–P04 | 大列表、选择与批量操作可靠 |
+| P09 | 数据源与搜索 | P03、P07、P08 | 所有动态列表和搜索入口可用 |
+| P10 | 首页与卡片编辑 | P06、P08、P09 | 全部来源和布局编辑可用 |
+| P11 | 详情/系列/评论 | P04、P08、P09 | 阅读之外的详情交互完整 |
+| P12 | 下载与订阅 | P06、P08、P11 | 后台任务与订阅不受 UI 改动影响 |
+| P13 | 小说阅读/翻译 | P05、P06、P11、P12 | 小说全流程可用 |
+| P14 | 图像外层界面 | P06、P11、P12 | 查看器核心保持原样，外层统一 |
+| P15 | 图像交互专项 | P14 | 专用行为保留并完成主题验收；必要时才替换内部控件 |
+| P16 | 应用外壳/标签/窗口 | P05–P15 | 全部页面在统一外壳中工作 |
+| P17 | 清理与发布验收 | 前述全部验收通过 | 依赖和回退资源都有明确去留依据 |
+
+### P00：建立功能与验证基线
+
+- [x] **P00.01** 在指定 SDK 下构建桌面/测试项目并运行完整测试，记录基线失败、警告、版本、操作系统和工作区状态；固定 M3E 提交及 NuGet 解析版本。早期缺少原生样本的跳过已由 P00.03b/P00.05g 补齐；各版结果和平台边界见台账。
+- [ ] **P00.02** 将 F01–F27 转为实际操作用例，导出运行时导航页面和设置条目；补齐生成页面、右键菜单、快捷键、隐藏条件和扩展提供的入口。现有隐藏入口不擅自开放。
+  - [x] **P00.02a** 从隔离宿主导出真实注册清单，形成 [运行时快照](m3e/BASELINE_INVENTORY.json) 与 [验收用例](m3e/ACCEPTANCE_CASES.md)；固定扩展入口和各页面实际操作仍需补齐。
+- [ ] **P00.03** 建立假服务/固定数据：正常、空、失败、慢请求、取消、权限不足、超长文本、大列表、多页图、长小说和动画；隔离真实账户/下载目录。
+  - [x] **P00.03a** 在任何 `AppInfo` 初始化前隔离测试宿主的应用数据目录；普通启动路径与 Store 选择规则保持不变。独立验证见台账。
+  - [x] **P00.03b** 从 Common 5.0.0 的固定官方源码构建 C++ 原生扩展样本；Windows/Linux 构建可复现，隔离宿主验证 ABI/转换/设置数据并捕获界面。UI 模板缺口及 Windows 卸载终结器崩溃独立跟踪，不代表 F24 完成。
+- [ ] **P00.04** 保存代表页面浅/深主题截图、操作记录和性能基线；建立 Windows 与 Linux 测试入口、其他平台构建/人工验证清单。
+  - [x] **P00.04a** Windows 与 WSL Debian 13 的 SDK 10.0.401 桌面构建/完整测试基线；平台缺口见台账。真实桌面操作、截图和性能不在此子步骤的通过范围。
+  - [x] **P00.04b** 隔离宿主捕获 11 类真实页面的浅深主题 headless 图像及布局元数据；包括原导航容器的命令栏和部分展开内容，不能代替原生操作或全条目验收。
+  - [x] **P00.04c** 固定千/万项文本卡片列表与 500 段小说的 headless 首帧、滚动、分配、容器和关闭后弱引用基线；原生 GPU、图片/动画和完整阅读器性能待验收。
+  - [x] **P00.04d** 隔离原生宿主可显式载入固定扩展；Windows 真实窗口确认日期错误/撤销、数值步进、枚举选择、颜色 RGBA/alpha、浅深/窄窗和退出保存。仅该固定用例子集已验收，完整输入矩阵仍未完成；发现颜色按钮预览缺失另行修复。
+- [ ] **P00.05** 针对盘点出的高风险缺口补充行为测试，优先异步弹窗、输入提交、账号切换、列表生命周期和导航参数；不以扩大测试数量作为目标。
+  - [x] **P00.05a** 修正 headless 异步派发的等待方式，确认 `await` 之后的断言与异常传回测试框架；重新验证现有异步 UI 用例。
+  - [x] **P00.05b** 对话框按钮/Closing 异常后允许重试，Closed 异常后清理显示状态；异常仍传回调用方，重复点击与取消 deferral 有自动回归。
+  - [x] **P00.05c** 固定对话框取消/否决、重复显示、嵌套焦点和默认按钮键盘契约；headless 自动通过，原生输入另行验收。
+  - [x] **P00.05d** 宿主关闭终结全部显示和 deferral 等待，释放窗口引用，隔离旧取消回调/迟到 deferral；保留存活宿主上的 Closing 否决行为。
+  - [x] **P00.05e** 筛选输入的 Enter/Tab/提示项/清理/已处理事件契约；修复诊断高亮被 CaretIndex 清空的问题，校正过滤节点测试的语言初始化依赖。
+  - [x] **P00.05f** 隔离真实 App 中验证导航编辑器浅深主题的格式化、平台保存快捷键、无效 YAML、重置和插入文件夹，保存无效状态截图及字节级持久化证据。
+  - [x] **P00.05g** 固定原生扩展揭示的 Windows 卸载崩溃：库寿命绑定到宿主/扩展包装器，卸载后存活接口仍可调用、最终 GC 后释放 DLL；固定样本加入双平台 CI。
+  - [x] **P00.05h** 扩展颜色设置恢复现有 ColorPicker 映射，验证浅深主题的 ARGB/alpha 双向更新和 uint 值保存；原生弹出面板交互仍待验收。
+  - [x] **P00.05i** 扩展设置经过现有 YAML 文件和重新加载宿主后恢复声明类型，保留整数/枚举、小数、ARGB、日期时间/时区和字符串集合；拒绝越界、精度损失和混合类型转换。
+  - [x] **P00.05j** 日期扩展设置对同一 UTC 时刻的不同时区使用精确相等判断，保留偏移编辑、回调、保存和重置；编辑 UI 独立验收。
+  - [ ] **P00.05k** 日期时间设置完整编辑入口：实现、固定宿主浅深主题、无效输入、撤销和生命周期自动验证完成；原生输入/缩放仍待验收，见台账。
+  - [ ] **P00.05l** 小数设置使用原 NumericUpDown 和转换器，恢复非整数显示；普通生成设置/扩展、浅深/小数点与逗号/键盘步进自动通过，原生完整输入矩阵待验收。
+  - [x] **P00.05m** 固定分页中途失败、取消与迟到响应；未交付条目释放，已关闭源不接受迟到结果，共享源保留到最后一个视图关闭；列表实际 UI 验收另行记录。
+  - [x] **P00.05n** 完整页在 UI 续体前取消、条目通知中关闭提供器时释放剩余结果；已交付条目不重复释放，清理异常向加载调用方保留。
+  - [ ] **P00.05o** 搜索补全的真实页面离线 HTTP/键盘基线已建立；修复 Enter 被控件提前消费与卸载不取消，浅深自动验证完成，原生 IME/指针/焦点矩阵待验收。
+  - [ ] **P00.05p** 搜索补全失败时保留输入/直接搜索并显示本地化错误，旧失败不通知新查询；浅深失败/恢复已自动验证，原生通知交互待验收。
+  - [ ] **P00.05q** 高级搜索 19 个固定真实引擎请求验证参数/启停/权限，修复非会员自定义长度被静默删除；浅深页面纠错与完整提示通过，原生输入仍待验收。
+  - [ ] **P00.05r** 登录尝试绑定页面生命周期，防重复提交、关闭取消、迟到账号回写和旧 finally 影响新登录；浅深离线认证/持久化/恢复通过，原生 OAuth 仍待验收。
+
+  - [ ] **P00.05s** 固定扩展的字符串键盘/撤销、布尔空格、整数步进和枚举键值绑定/文件重载自动通过；保持原预设控件，原生输入矩阵待验收。
+
+  - [x] **P00.05t** TokenizingBox 使用现有弱事件监听器，外部设置集合不保留丢弃的编辑器；保留挂载前同步、换源、重新挂载和增删去重契约。
+
+  - [ ] **P00.05u** TokenizingBox 输入契约：浅深自动验证提交/分隔符/否决/只读/删除，修复候选否决后回退成文本及成功提交恢复旧输入；Windows 原生普通标签输入通过，候选指针/IME 等仍待验收。
+
+  - [x] **P00.05v** 恢复 ColorPicker 当前颜色预览：仅内部下拉按钮保留 Fluent 拉伸模板；浅深布局及键盘打开自动通过，Windows 原生 RGBA/alpha 编辑、Escape 返回和退出保存通过。RGB/HSV 标签裁切与完整 DPI 矩阵独立跟进。
+
+  - [x] **P00.05w** 修复颜色分量页 RGB/HSV 标签裁切；限定原生命名部件 Padding，浅深独立/弹层布局和键盘切换自动通过，Windows 深色指针切换与返回焦点通过。保留原生 ColorModel/颜色值和 M3E 状态反馈。
+
+  - [ ] **P00.05x** 多登录页面共享客户端时，新尝试取消旧尝试；双窗口离线成功/失败迟到、空输入、关闭旧窗口、账号保存与唯一导航通过。原生 OAuth 与自动刷新竞争仍待验收。
+
+  - [x] **P00.05y** IPBox/IPListInput 浅深键盘基线：Tab/Shift+Tab、无效输入保留、IPv6 规范化与关闭规范化、撤销/只读/清空、添加/重复/删除/换源通过；清除过期重复提示，保留解析及设置格式。原生 IME/DPI 不包含在本子项。
+
+  - [x] **P00.05z** 对现有四条 MaterialCompatibility 规则建立固定版本自动回归；行高/标签规则在移除兼容层时仍复现不匹配，颜色布局/标签已有失败证据，因此保留并校正版本说明。仅基线审计，不标记全局 P01 完成。
+
+**验收与回退：** 此阶段不改变 UI。用例能够在原版本复现；新增测试应描述既有有效行为，不把当前缺陷固化为正确行为。若基线失败，先记录/修复为独立任务，再开始受其影响的迁移。
+
+### P01：主题、文字、字体与动画作用域
+
+- [ ] **P01.01** 明确主题加载顺序与资源覆盖关系，建立颜色/表面/文字/形状/间距/状态映射；每次只迁移一组被明确识别的资源。
+- [ ] **P01.02** 统一普通文本、标题、标签与图标的资源引用；保留应用字体和代码编辑器等宽字体，检查 CJK、emoji、长文本和固定高度容器。
+- [ ] **P01.03** 验证浅深主题、系统切换和局部主题覆盖；确认窗口动画作用域初始化及弹出层行为，尊重现有动画偏好/平台行为。
+- [ ] **P01.04** 对 `MaterialCompatibility.axaml` 每条规则建立对应回归用例；验证上游已修复的规则后逐条删除，否则保留并更新原因，不再添加无边界的全局补丁。
+
+**验收：** F01/F26；运行三个 Material 测试类，并查看设置、标签、工具栏、弹窗、编辑器和查看器代表页。不能出现裁字、不可读状态、切主题后局部仍旧色或字体不跟随。
+
+**回退边界：** 每组资源一个提交；回退该组资源，不重置用户主题/字体设置。
+
+### P02：按钮、图标、菜单与命令栏
+
+- [ ] **P02.01** 普通按钮、切换按钮、图标按钮、复选框、单选和开关逐类验收正常/悬停/按下/焦点/选中/禁用状态。
+- [ ] **P02.02** 迁移 `IconText`、徽章、收藏心形等包装控件；保留进度/动画含义和读屏名称。
+- [ ] **P02.03** 迁移菜单、上下文菜单、Tooltip 和分隔项；保持菜单构建条件、参数、快捷键和关闭/焦点行为。
+- [ ] **P02.04** 分别迁移普通及浮动 CommandBar；验证主项/溢出项、动态可见性、长标签、窄窗、缩放及 Toggle 双向状态。
+
+**验收：** F02/F08；`MaterialThemeIntegrationTest`、`MaterialWrapperControlsTest`、`KeyboardShortcutTest`。点击一次只执行一次；CanExecute=false 时所有入口一致禁用；命令不能因挤出可视区而不可达。
+
+**回退边界：** 按控件族撤回，不连带恢复已经验收的其他控件。
+
+### P03：文本、选择、标签与校验
+
+- [ ] **P03.01** 普通/安全文本与数字编辑器：选区、复制粘贴、撤销、IME、错误态、只读/禁用、清空及键盘遍历。
+- [ ] **P03.02** ComboBox、SymbolComboBox、日期/时间与可空范围输入；保留选项值、格式和启用/禁用关联。
+- [ ] **P03.03** IPBox/IPListInput、语言/字体选择器与字符串集合的外观和验证；无效输入不得被静默接受或丢弃。
+- [ ] **P03.04** TokenizingBox、TagSelector、收藏标签新增项、WorkFilterAutoSuggestBox：补全、点击/Enter 提交、删除/退格、固定标签、空值和焦点切换。
+
+**验收：** F03/F10；包装控件、快捷键、工作筛选相关测试；搜索和设置输入实际运行。对异步补全增加“旧响应晚到”和“IME 确认不触发搜索”行为用例。
+
+**回退边界：** 每种编辑器/输入流程独立，不改变其值模型与序列化。
+
+### P04：对话框、通知、浮层与加载状态
+
+- [ ] **P04.01** 先列出 ContentDialog 的结果、deferral、Closing 取消、默认按钮、嵌套/并发显示、Host 和焦点契约，再迁移其视觉。
+- [ ] **P04.02** 只有当契约全部能保持时才评估替换对话框实现；否则将现有 ContentDialog 作为最终行为控件保留。为确认、取消、异步失败、重复点击和关闭请求增加测试。
+- [ ] **P04.03** InfoBar/NotificationCard 按持久错误、可操作提示和短提示分类迁移；保留严重程度、可关闭性、动作与显示时长。
+- [ ] **P04.04** FloatingPane/FloatingDockHost、遮罩、Skeleton、ViewerStateOverlay、加载/失败/重试状态逐项迁移，校验层级、命中和资源释放。
+
+**验收：** F04；现有对话框集成用例、`FloatingDockHostTest`；对话框任务恰好完成一次，错误不会导致永远等待或误确认。弹层关闭后焦点回到原入口。
+
+**回退边界：** 弹窗与通知分别提交。不能以自动关闭模拟现有异步完成语义。
+
+### P05：关于、帮助与扩展管理
+
+- [ ] **P05.01** About/Help/MCP 帮助先完成表面、文字、链接和滚动迁移；保留许可、支持者、外部链接、刷新和复制示例。
+- [ ] **P05.02** 扩展列表、详情/设置、状态、排序操作迁移；保留上下移/置顶/置底的优先级结果。
+- [ ] **P05.03** 分别验收扩展安装（文件/压缩包）、重复和不支持错误、启停、打开目录、卸载/待卸载/过期扩展清理。
+
+**验收：** F24/F26；`ExtensionServiceTest`、Markdown 滚动测试；使用测试扩展验证安装和重启后的状态，不改变扩展接口。
+
+**回退边界：** 页面资源可单独撤回，不能为了 UI 回退删除已安装扩展或改变优先级数据。
+
+### P06：设置、维护操作与导航配置编辑
+
+- [ ] **P06.01** SettingsMainView/SettingsPage/SettingsSubView 外层、分组和导航先迁移；保留自动生成与条目注册机制。
+- [ ] **P06.02** Application、Browsing、Search、Novel 逐组迁移；按 §5.1 逐项验证值显示、修改、生效和重启。
+- [ ] **P06.03** Network 与自定义域名/IP/代理编辑器迁移；验证错误输入、局部禁用和配置恢复，不修改请求策略。
+- [ ] **P06.04** Download、屏蔽用户/标签、下载宏、MCP 条目迁移；订阅执行界面和状态交给 P12，字段先保持可编辑。
+- [ ] **P06.05** 更新检查/更新说明/自动下载及已有安装重启流程，重置、导入/导出和各类清理分别验收；测试目录中验证取消和失败，不执行真实破坏性清理。
+- [ ] **P06.06** 导航 YAML 编辑器：主题、诊断、应用/格式化/重置/插入/复制；原页面键和图标值继续可读，无效文本保留且不得覆盖有效配置。
+
+**验收：** F06/F23/F26/F27；`NestedSettingsTest`、`LegacyAppSettingsMigrationTest`、`NetworkSettingsResilienceTest`、`NavigationYamlParserTest`、`I18NResilienceTest`。导入旧配置后执行完整设置清单；敏感字段不能出现在验收材料中。
+
+**回退边界：** 每个设置组/维护流程独立提交；不改字段名与数据库格式。不能用恢复默认设置规避兼容问题。
+
+### P07：登录与账号切换
+
+- [ ] **P07.01** 登录页布局和保存账号选择迁移，保留 Token 输入、焦点/密码保护和提交禁用逻辑。
+- [ ] **P07.02** OAuth/WebView 弹窗外观迁移；验证成功、取消、关闭、超时/网络/存储错误分类及再次尝试。
+- [ ] **P07.03** 账号切换与导航登录条件联动验收；取消旧账号的相关加载并隔离迟到响应，验证空账号列表与失效凭据。
+
+**验收：** F05；`LoginFailureTest` 和补充的切换竞态用例；保留启动时现有登录行为，不借迁移改变凭据存储。
+
+**回退边界：** 只回退 UI/协调改动；不清除用户账号库。
+
+### P08：共享列表、卡片、选择与历史
+
+- [ ] **P08.01** 插画、小说、用户、系列、特辑卡片逐类迁移，保持图片缓存、徽章、收藏反馈、内容和所有单项菜单。
+- [ ] **P08.02** WorkContainer/WorkView 与 Entry 系列外层迁移，保留原有虚拟化面板和滚动容器；检查 LinedFlow/Grid/Masonry 及内部布局场景。
+- [ ] **P08.03** 选择模式、全选/反选/清空、批量收藏（标签/公开私密）、保存、浏览器动作与命令溢出逐项验收。
+- [ ] **P08.04** 排序（不排序/人气降序/发布时间升降序）、筛选、切换源、分页/增量/重试/取消和滚动恢复；检查容器复用解绑与共享源引用生命周期。
+- [ ] **P08.05** 历史、稍后观看及空/错误页迁移，保留记录规则、删除/清除与打开原作品入口。
+
+**验收：** F07/F08/F25；`WorkListBoxTest`、`VirtualizingStackPanelTest`、`AdaptiveGridTest`、`IncrementalSourceRetryTest`、`SourceLoadLifetimeTest`、`ArtworkHistoryPersistentManagerTest`、主题列表集成测试。大列表数据量增长不能导致全部实例化；选择身份不随复用漂移；无重复请求/事件。
+
+**回退边界：** 卡片、选择栏和容器分别提交。性能回归先撤回容器/模板改动，不替换数据源规避。
+
+### P09：推荐、排行榜、收藏、关系流与搜索
+
+- [ ] **P09.01** 从运行时注册表逐项验证推荐/新作/投稿/关注/好P友/相关作品与用户列表，迁移各页头部、类型选择和空状态；记录页面参数与登录限制。
+- [ ] **P09.02** 收藏页标签/隐私/订阅入口、排行榜类型/日期、系列/特辑列表分别迁移；保留切换后重新加载与旧请求取消。
+- [ ] **P09.03** 搜索主界面、固定/历史/热门标签、直接 ID 跳转、用户搜索和结果类型切换；同一用户动作只产生一次搜索。
+- [ ] **P09.04** 插画高级选项按 §5 F11 完整迁移，检查可选宽高/日期范围及非法区间。
+- [ ] **P09.05** 小说高级选项按 §5 F11 完整迁移，检查长度/语言/题材与勾选项组合的请求等价。
+- [ ] **P09.06** SauceNao 选图/粘贴/预览/加载/错误/结果卡片与链接；保留现有请求和限流处理。
+
+**验收：** F09–F12；每种路由以固定参数比较迁移前后请求和结果；筛选改变、快速连续搜索、回退、切标签后的响应归属正确。动态生成页面必须逐项出现在验收记录。
+
+**回退边界：** 每个数据源族或搜索流程独立提交，不能把高级选项删减成“暂时只保留基础搜索”。
+
+### P10：首页卡片及布局编辑
+
+- [ ] **P10.01** 普通首页展示、标题/工具栏、加载/空/错误和预览/打开动作迁移；先保持布局算法。
+- [ ] **P10.02** 卡片参数编辑器逐类迁移，按 §5.2 全部 19 类验证参数、默认账号和无效值。
+- [ ] **P10.03** 新增/选择/编辑/删除/取消、拖动/缩放、网格行列与碰撞/剩余空间处理；检查键盘焦点和操作可达性。
+- [ ] **P10.04** 保存、重启恢复、取消编辑、快速切来源/账号和页面关闭时的加载取消；不得丢失既有布局或卡片参数。
+
+**验收：** F13；`HomeCardLayoutEngineTest`、`HomeCardParameterEditorViewModelTest`；小网格、大量卡片、边界尺寸、长内容与缺失数据实际验证。
+
+**回退边界：** 展示、编辑器、拖动反馈、持久化联动分别提交；不更改首页配置格式。
+
+### P11：详情、系列、评论与回复
+
+- [ ] **P11.01** UserViewerPage/UserBasicInfoPresenter 与资料展示、公开/私密关注、取消/屏蔽、复制/网页和各类列表入口。
+- [ ] **P11.02** WorkInfoPage/Pane、IllustrationViewerInfoPane 与标签/统计/作者/系列信息；保留收藏、下载、展开/收起和联动状态。
+- [ ] **P11.03** SeriesViewerPage/WorkSeriesInfoPane 与系列导航、监视操作；区分系列监视与工作订阅，不合并其状态模型。
+- [ ] **P11.04** 评论列表/详情/回复容器：加载更多、作者跳转、现有删除条件、错误和取消。
+- [ ] **P11.05** 回复输入、表情/贴图选择、提交状态；防重复提交、IME 正确处理、贴图比例、发送失败保留文本。
+
+**验收：** F14/F15；使用假账户状态覆盖权限、已关注/未关注、删除项和空列表；网络副作用比较命令调用，不在自动测试中发布真实评论。
+
+**回退边界：** 用户/作品/系列/评论分开提交；不能更改服务返回对象来适应新的卡片结构。
+
+### P12：下载管理与订阅
+
+- [ ] **P12.01** 下载页、文件夹/任务行、选择与进度/速度/错误反馈；持续下载中进入/离开页面不改变任务生命周期。
+- [ ] **P12.02** 单项/批量暂停、继续、取消、重置、重试、删除记录、目录/原作品/错误详情；验证混合状态和可用动作。
+- [ ] **P12.03** 订阅编辑器和范围参数、增删、单个/全部同步与进度状态；同步中删除/关闭/重开正确。
+- [ ] **P12.04** 失败重试、去重、队列串并发、403/404 不可访问单项、取消迟到回调；重启后数据/任务状态与当前行为一致。
+
+**验收：** F16/F17；`DownloadManagerTest`、`ImageDownloadTaskTest`、`NovelDownloadTaskGroupTest`、`WorkSubscriptionSyncHelperTest`、`WorkSubscriptionSyncRequestQueueTest`；假服务和临时目录覆盖成功、失败、取消。下载格式维持原有能力，不承诺本次新增 EPUB/MP4 等格式。
+
+**回退边界：** UI 提交不修改队列/文件格式；回退界面时无需删除或重建下载任务。
+
+### P13：小说阅读、翻译与导出
+
+- [ ] **P13.01** 小说页标题/工具栏/信息面板、分页/前后作品/右键操作与状态页；保持导航和滚动位置语义。
+- [ ] **P13.02** Markdown 样式、图片、链接、ruby、强调/空白、页内跳转、代码块与嵌套滚动；不重写解析管线。
+- [ ] **P13.03** 阅读字体/字号/字重/前景/背景/行高/最大宽度与应用主题交互；用户自定义值优先级不变。
+- [ ] **P13.04** 翻译器选择、可用状态、开关、原文/译文缓存、取消和跨作品迟到结果隔离。
+- [ ] **P13.05** 收藏/标签/稍后看、复制/保存/浏览器、系列联动、Html/Md/OriginalTxt 及已安装扩展的导出能力。
+
+**验收：** F18/F19/F24；`NovelTranslationTest`、`MarkdownScrollChainingTest`、小说下载测试；长小说、带图片/ruby/代码块小说、快速换页和翻译中离开；链接与嵌套滚动实际运行验证。
+
+**回退边界：** 工具栏、Markdown 样式、阅读设置联动和翻译 UI 分开提交；不清理原有翻译缓存解决状态问题。
+
+### P14：图像查看器外层界面
+
+- [ ] **P14.01** IllustrationViewerPage 外框、命令栏、信息面板、加载/错误/重试及播放反馈；Single/Swipe/Continuous 内核暂保持既有实现。
+- [ ] **P14.02** 页数、PageButton、PagePreviewSlider、前后作品、键盘入口、浮动工具位置与命中；窄窗和触摸可用。
+- [ ] **P14.03** 收藏/标签/稍后看、下载/另存/复制/原图/浏览器和扩展动作；能力不足、文件选择取消与失败显示。
+- [ ] **P14.04** 自动播放模式/范围/间隔与暂停/恢复、动画播放控制；切页、切作品、关标签取消旧动作。
+
+**验收：** F20/F22/F24；图像几何/渲染/手势、`FloatingDockHostTest`、`KeyboardShortcutTest`；图片内容位置和初始适应尺寸不能因外层布局变化而回归。
+
+**回退边界：** 外层布局与动作控件单独回退，不改解码和手势模型。
+
+### P15：图像核心交互与专用控件审计
+
+- [ ] **P15.01** 为 Single/Swipe/Continuous 建立完整操作矩阵：适应/原始大小、缩放/平移、旋转/镜像、多页边界、浏览方向、鼠标/触控板/触摸。
+- [ ] **P15.02** 验证主题化后视口、滚动条、手势仲裁和动画行为。只有确有必要且等价时才更换内部控件；保留现有实现也可完成此步骤。
+- [ ] **P15.03** 渐进图像更新、缩略图→原图、切页尺寸初始化、重复源更新、GIF/WebP/ugoira 播放/暂停及解码失败。
+- [ ] **P15.04** 快速翻页/缩放/自动播放、关闭与切源取消、图片缓存/动画资源释放；与 P00 同设备性能比较。
+
+**验收：** F21/F22；`ImageViewerGeometryTest`、`ImageViewerRenderingTest`、`ImageViewerScrollGestureProfilesTest`、`SwipeControlTest`、`ProgressiveImageDecoderTest`、`SizedImageDecodeTest`、`UpdatableAnimatedBitmapTest` 及真实输入设备验收。任何手势或画质退化都阻止该步骤合入。
+
+**回退边界：** 每种查看模式、每种内部替换独立提交。禁止将“用 M3E Carousel 重写所有图像浏览”作为单一步骤。
+
+### P16：外壳、导航、标签与窗口
+
+- [ ] **P16.01** 在现有 TabViewContainer 内迁移侧栏/顶部/账号区域与自定义导航展示；保留路由、登录门控、AI 可见性及原有隐藏条件。
+- [ ] **P16.02** 标签样式、新建/选中/关闭/其他/左侧/右侧关闭，实际已有的重排/拖动/分离行为逐项盘点验收；多窗口共享状态与 ViewContainer 所有权正确。
+- [ ] **P16.03** 只有在所有标签能力都有实现和测试时才替换容器；若 M3E TabRow/TabControl 不满足，则保留 TabsView 并完成视觉整合。
+- [ ] **P16.04** WindowDrawnDecorations、拖动区、系统按钮、窗口大小/最大化/多屏 DPI/标题、弹窗归属、关闭后取消和事件释放。
+- [ ] **P16.05** 在新外壳下走遍动态注册页、登录/设置/搜索/首页/列表/详情/下载/阅读全链路；焦点快捷键不得抢占输入框或弹层。
+
+**验收：** F05/F06/F27；`TabClosePlannerTest`、`KeyboardShortcutTest`、Material 主题集成测试与真实多窗口操作。TabRow 的 SelectedIndex 与 Tab.IsSelected 不能被误认为自动联动；关闭标签后不能留下不可访问页面或被释放的数据源。
+
+**回退边界：** 侧栏、标签容器、窗口装饰分开提交；外壳放在后期是为避免多个未验收页面同时受到布局/焦点变化影响。
+
+### P17：依赖清理、跨平台和发布验收
+
+- [ ] **P17.01** 对所有旧资源、主题、包/子模块建立“直接引用 + 传递引用 + 运行时模板 + 行为职责”证据表；零使用且无回退用途后才逐项移除。
+- [ ] **P17.02** 重新检查 M3E NuGet 发布内容是否覆盖所用提交/API/修复；若满足，单独将源码引用转包并核验资源 URI、传递依赖、裁剪/AOT、还原和各平台构建。
+- [ ] **P17.03** 分别评估 Fluent/FluentAvalonia/TabsView/AutoSettingsPage/AnimatedControls/SmoothScroll 及编辑器主题去留；保留合理依赖，不设置“全部清零”指标。不移除与 UI 无关的 Mako/Imouto 等源码依赖。
+- [ ] **P17.04** 完整测试、指定 SDK 的 Release 构建、项目实际支持的发布/裁剪/AOT 配置与平台人工矩阵；验证包资源/字体/图标、条件 MCP 构建和离线/异常状态。
+- [ ] **P17.05** 用已有用户配置副本执行升级和回退验证，完成 F01–F27 全量验收、性能对比与可访问性检查；整理保留控件和已知限制，发布说明不宣称未验证的平台。
+
+**验收：** 没有因依赖移除出现资源加载失败、回退控件空白、无法编辑或命令失效；所有功能有证据或明确的基线问题记录。一个旧主题的删除失败不得阻塞其他已完成页面继续使用。
+
+**回退边界：** 一个依赖/主题一次提交，同时更新项目、解决方案、gitlink/`.gitmodules` 和构建引用；保留用户数据兼容，不通过清空环境证明可启动。
+
+## 8. 测试分层与当前覆盖
+
+已有测试可复用，但名称存在不代表覆盖了本计划描述的所有用例。每次必须查看断言并补足当前步骤实际改变的行为。
+
+| 测试层 | 现有代表 | 仍需重点补齐/人工确认 |
+| --- | --- | --- |
+| 主题与包装控件 | MaterialThemeIntegrationTest、MaterialWrapperControlsTest、MaterialContentControlsTest | 各状态、长本地化、DPI/字体、真实弹出层/窗口、读屏与焦点 |
+| 列表与生命周期 | WorkListBoxTest、VirtualizingStackPanelTest、AdaptiveGridTest、IncrementalSourceRetryTest、SourceLoadLifetimeTest | 真实滚动/触摸、所有布局、大数据性能、批量操作与快速切源 |
+| 输入与导航 | KeyboardShortcutTest、WorkFilterNodeTest、NavigationYamlParserTest、TabClosePlannerTest | IME/补全重复提交、所有运行时页面、多窗口与实际拖放 |
+| 首页 | HomeCardLayoutEngineTest、HomeCardParameterEditorViewModelTest | 19 类来源完整流程、拖动/缩放/取消与重启恢复 |
+| 设置/账号 | NestedSettingsTest、LegacyAppSettingsMigrationTest、NetworkSettingsResilienceTest、LoginFailureTest、I18NResilienceTest | 所有生成条目、OAuth、账号切换竞态、更新与文件选择流程 |
+| 下载/订阅 | DownloadManagerTest、ImageDownloadTaskTest、NovelDownloadTaskGroupTest、WorkSubscriptionSyncHelperTest、WorkSubscriptionSyncRequestQueueTest | UI 状态与动作映射、批量混合状态、页面生命周期不影响任务 |
+| 阅读/图像 | NovelTranslationTest、MarkdownScrollChainingTest、ImageViewerGeometryTest、ImageViewerRenderingTest、ImageViewerScrollGestureProfilesTest、SwipeControlTest | 真实输入设备、长文/动画性能、视口变化、原图及扩展动作 |
+| 数据/扩展 | ArtworkHistoryPersistentManagerTest、ExtensionServiceTest、FileCacheTest、UserInfoEntryDatabaseTest | 原有用户数据副本、扩展设置 UI、格式/图标值兼容、卸载重启 |
+
+### 8.1 推荐验证命令
+
+在仓库根目录执行，先安装 `global.json` 指定的 SDK 与目标平台所需工作负载。以下为待执行命令，不表示已在本计划撰写时运行。
+
+```powershell
+dotnet --version
+dotnet build src/Pixeval.Desktop/Pixeval.Desktop.csproj --configuration Debug
+dotnet build src/Pixeval.Tests/Pixeval.Tests.csproj --configuration Debug
+dotnet src/Pixeval.Tests/bin/Debug/net10.0/Pixeval.Tests.dll --filter 'FullyQualifiedName~Material' --no-ansi --progress off
+dotnet build src/Pixeval.Tests/Pixeval.Tests.csproj --configuration Release
+dotnet src/Pixeval.Tests/bin/Release/net10.0/Pixeval.Tests.dll --no-ansi --progress off
+git diff --check
+```
+
+项目使用 Microsoft.Testing.Platform；上例直接运行构建出的测试入口。CI 中现有 `dotnet test` 调用也需在 P00 用指定 SDK 核验，不套用 VSTest 参数。筛选测试按具体步骤扩大到相应类；公共资源改动至少加入主题集成与代表使用方。阶段结束执行完整测试，发布前做平台构建/交互矩阵。不要为纯文档修改运行应用测试，也不要在结果无变化时无意义重复长测试。
+
+本地缺指定 SDK/平台工作负载时，应记录“未验证”及阻塞项，不把其他 SDK、另一操作系统或编译成功当作该平台交互通过。先前 .NET 11 preview 验证只作为历史诊断记录。
+
+## 9. 依赖升级和回退制度
+
+依赖升级和功能迁移分开提交。升级前记录旧提交/版本、所需修复与 API；升级后先运行基线主题/列表/查看器/设置验证，再开始新的 UI 步骤。上游新增控件也不能自动触发应用替换。
+
+当出现回归：记录复现条件和受影响功能编号 → 判断当前小步骤与已有基线差异 → 修复并重跑相关验收，或 revert 该步骤 → 更新台账说明。共享分支不强推重写历史，不回退整个迁移分支，不覆盖其他工作区改动。依赖升级导致的回归优先回退独立依赖提交。
+
+每个阶段完成后保留一个已验收提交作为后续基线。发现新的现有功能时，先补入功能清单和对应阶段，不能以“计划中未列出”为理由删除。合入新的上游功能时，同步更新清单和测试样本。
+
+## 10. 执行台账与交接模板
+
+状态仅使用：**待执行 / 契约就绪 / 实施中 / 待验收 / 已验收 / 阻塞**。保留现有实现属于设计结论，不等于未完成；必须记录其行为职责和 M3E 整合方式。阻塞项写清依赖，不阻止没有依赖关系的其他小步骤。
+
+### 10.1 阶段状态
+
+| 阶段 | 当前状态 | 已验收步骤/提交 | 证据与未解决事项 |
+| --- | --- | --- | --- |
+| P00 | 实施中 | P00.01、P00.02a、P00.03a–b、P00.04a–c、P00.05a–j/m/n/t（见执行台账） | 历次验证结果和平台边界见执行台账；未完成的原生 IME/DPI/OAuth 等仍待验收。全局主题迁移所需基线不自动放行，无关局部步骤按 §3.4 和 §7 的具体契约依赖判断，不以原生通道可用性统一阻塞 |
+| P01 | 待执行 | — | 已有 Material 测试和兼容资源可复用 |
+| P02 | 待执行 | — | 已有部分 Material 命令栏/包装控件，先审计差距 |
+| P03 | 待执行 | — | — |
+| P04 | 待执行 | — | 重点保留异步对话框语义 |
+| P05 | 待执行 | — | — |
+| P06 | 待执行 | — | 必须包含动态生成设置项 |
+| P07 | 待执行 | — | — |
+| P08 | 待执行 | — | 不替换虚拟化和数据源算法作为默认方案 |
+| P09 | 待执行 | — | 必须包含动态生成页面 |
+| P10 | 待执行 | — | 19 类首页来源 |
+| P11 | 待执行 | — | — |
+| P12 | 待执行 | — | 后台任务生命周期保持 |
+| P13 | 待执行 | — | — |
+| P14 | 待执行 | — | — |
+| P15 | 待执行 | — | 专用查看控件可以作为最终方案保留 |
+| P16 | 待执行 | — | TabRow 不具备现有容器的全部语义 |
+| P17 | 待执行 | — | 包/子模块是否可移除需要届时重新验证 |
+
+### 10.2 批次记录模板
+
+默认每轮结束在执行台账追加一条简短摘要；发生范围/状态变化时再同步主计划。已有历史记录保留，不要求逐条重写为新模板，不再为每个小修改追加长篇记录。中途需要防止失去进度时，保存简短续接笔记即可。
+
+持续执行记录：[docs/m3e/EXECUTION_LOG.md](m3e/EXECUTION_LOG.md)。阶段和父步骤只有全部所需验收完成后才勾选；子步骤通过不代表父步骤通过。
+
+```text
+批次日期 / 实际工作时长 / 基线提交：
+完成项：步骤编号、功能单元、状态、对应代码提交（允许多对一）
+验证：关键命令、结果、证据路径；环境未变化时引用既有记录
+重要结论：行为/数据/生命周期/性能变化与回退边界，仅写有变化的项
+未覆盖或阻塞：具体契约、原因、受影响步骤；原生通道取消单列
+下一步：推荐功能单元、未提交工作与恢复所需信息
+```
+
+### 10.3 无人值守批次启动提示词
+
+以下提示词用于开启新一轮执行，替代旧版“每个小步骤独立提交、每步更新多份文档”的要求。
+
+```text
+请按 docs/M3E_MIGRATION_PLAN.md 无人值守推进 M3E 迁移，遵守其中 §3.2–3.4 的提交、验证和中断规则。
+
+本轮目标持续工作 90–120 分钟，尽量超过一小时。自行选择范围，完成一组后继续下一组；不通过等待、重复测试或无关改动凑时长。
+
+先检查工程指引、当前分支、工作区、最近提交和执行台账，保留原有未提交修改。结合实际代码选择依赖已满足的完整功能单元，不把缺少某项原生验收当成所有后续工作的统一阻塞。简要说明选择后直接实施。
+
+执行循环：选定功能单元 → 分步实现与相关验证 → 集中审查 → 提交 → 继续下一单元。
+
+提交：本提示词授权本轮相关本地提交，不授权推送/发布。一个提交包含同一功能的相关修复和配套测试，可以覆盖多个计划小步骤；不为几行改动、单个断言、截图或补写哈希单独提交。通常一轮少量完整功能提交即可，不设硬数量，不混入无关职责，不改写既有历史。
+
+文档：默认仅在本轮结束向 EXECUTION_LOG.md 追加一条批次摘要。主计划只更新实际变化的状态/范围；用例与宿主文档仅在契约或用法变化时更新。日志、截图和中间调试结果保存在验证产物中，不反复抄写到多份文档。已有证据直接引用。
+
+验证：优先已有测试、scripts/verify-m3e.ps1 和 Pixeval.MigrationValidation 的 headless/脚本模式，复用真实页面、输入事件、状态断言和离屏渲染。只运行受影响的检查；在阶段/重要边界做完整回归。不抢占桌面焦点，不移动鼠标，不使用全局 SendKeys，不改用户剪贴板；脚本也遵守此约束。
+
+computer use 仅用于确实复杂、无法可靠脚本化的原生交互。普通点击、截图、布局确认不使用它。无法无干扰地完成的原生检查，记入集中验收清单，继续不依赖它的工作；不能把 headless 结果冒充 IME/触摸/系统焦点通过。
+
+若我按 Esc 或取消 computer use，只停止该通道，不终止迁移任务。停止后本轮不自动恢复桌面控制、不换成全局输入脚本绕过取消。改用后台验证或推进独立任务；若我明确停止整个任务则遵从。若执行环境把整轮直接终止，下次恢复从工作区和产物接续，不重做已完成项、不自动重开 computer use。
+
+保持全部现有功能、命令、快捷键、数据格式、异步取消、错误处理和资源释放。专用控件允许保留实现。新回归先修复或撤回自己的功能单元，不以删功能、弱化断言或清空用户数据完成迁移。必要验证缺失的项保持待验收，但继续其他有充分证据的工作。
+
+临近结束先完成当前单元的验证、提交和一次批次记录。若所有可执行项确实阻塞，可以提前结束并给出证据。最终简报实际时长、功能提交、验证结果、未覆盖项和下一轮起点。现在开始。
+```
+
+## 11. XAML 全量归属清单
+
+下面覆盖基线中的全部 104 个 XAML 文件。每个文件的 `.axaml.cs`、ViewModel、事件处理、命令和资源使用方一并纳入相应步骤；并非每个文件都必须修改。阶段范围表示按职责拆分迁移，不是重复实施。
+
+### 11.1 Views（75 个）
+
+| 文件 | 主责阶段 |
+| --- | --- |
+| [Capability/SeriesPage.axaml](../src/Pixeval/Views/Capability/SeriesPage.axaml) | P09 |
+| [Capability/SimpleUsersPage.axaml](../src/Pixeval/Views/Capability/SimpleUsersPage.axaml) | P09 |
+| [Capability/SpotlightPage.axaml](../src/Pixeval/Views/Capability/SpotlightPage.axaml) | P09 |
+| [Capability/UserFollowingPage.axaml](../src/Pixeval/Views/Capability/UserFollowingPage.axaml) | P09 |
+| [Capability/WorkBookmarksPage.axaml](../src/Pixeval/Views/Capability/WorkBookmarksPage.axaml) | P09 |
+| [Capability/WorkFollowingPage.axaml](../src/Pixeval/Views/Capability/WorkFollowingPage.axaml) | P09 |
+| [Capability/WorkMyPixivPage.axaml](../src/Pixeval/Views/Capability/WorkMyPixivPage.axaml) | P09 |
+| [Capability/WorkRankingPage.axaml](../src/Pixeval/Views/Capability/WorkRankingPage.axaml) | P09 |
+| [Capability/WorkRelatedPage.axaml](../src/Pixeval/Views/Capability/WorkRelatedPage.axaml) | P09 |
+| [Capability/WorkTypeWorksPage.axaml](../src/Pixeval/Views/Capability/WorkTypeWorksPage.axaml) | P09 |
+| [Comment/CommentContainer.axaml](../src/Pixeval/Views/Comment/CommentContainer.axaml) | P11 |
+| [Comment/CommentItem.axaml](../src/Pixeval/Views/Comment/CommentItem.axaml) | P11 |
+| [Comment/CommentView.axaml](../src/Pixeval/Views/Comment/CommentView.axaml) | P11 |
+| [Comment/PixivReplyBar.axaml](../src/Pixeval/Views/Comment/PixivReplyBar.axaml) | P11 |
+| [Download/DownloadFolder.axaml](../src/Pixeval/Views/Download/DownloadFolder.axaml) | P12 |
+| [Download/DownloadFolderListView.axaml](../src/Pixeval/Views/Download/DownloadFolderListView.axaml) | P12 |
+| [Download/DownloadFolderView.axaml](../src/Pixeval/Views/Download/DownloadFolderView.axaml) | P12 |
+| [Download/DownloadItem.axaml](../src/Pixeval/Views/Download/DownloadItem.axaml) | P12 |
+| [Download/DownloadItemView.axaml](../src/Pixeval/Views/Download/DownloadItemView.axaml) | P12 |
+| [Download/DownloadPage.axaml](../src/Pixeval/Views/Download/DownloadPage.axaml) | P12 |
+| [Entry/EntryView.axaml](../src/Pixeval/Views/Entry/EntryView.axaml) | P08 |
+| [Entry/SeriesContainer.axaml](../src/Pixeval/Views/Entry/SeriesContainer.axaml) | P08 |
+| [Entry/SeriesItem.axaml](../src/Pixeval/Views/Entry/SeriesItem.axaml) | P08 |
+| [Entry/SeriesView.axaml](../src/Pixeval/Views/Entry/SeriesView.axaml) | P08 |
+| [Entry/SpotlightItem.axaml](../src/Pixeval/Views/Entry/SpotlightItem.axaml) | P08 |
+| [Entry/SpotlightView.axaml](../src/Pixeval/Views/Entry/SpotlightView.axaml) | P08 |
+| [Entry/UserContainer.axaml](../src/Pixeval/Views/Entry/UserContainer.axaml) | P08 |
+| [Entry/UserItem.axaml](../src/Pixeval/Views/Entry/UserItem.axaml) | P08 |
+| [Entry/UserView.axaml](../src/Pixeval/Views/Entry/UserView.axaml) | P08 |
+| [ExtensionsPage.axaml](../src/Pixeval/Views/ExtensionsPage.axaml) | P05 |
+| [HistoryPage.axaml](../src/Pixeval/Views/HistoryPage.axaml) | P08 |
+| [Home/HomePage.axaml](../src/Pixeval/Views/Home/HomePage.axaml) | P10 |
+| [Home/HomePageCardControl.axaml](../src/Pixeval/Views/Home/HomePageCardControl.axaml) | P10 |
+| [Login/LoginPage.axaml](../src/Pixeval/Views/Login/LoginPage.axaml) | P07 |
+| [Search/IllustrationSearchOptionsPage.axaml](../src/Pixeval/Views/Search/IllustrationSearchOptionsPage.axaml) | P09 |
+| [Search/NovelSearchOptionsPage.axaml](../src/Pixeval/Views/Search/NovelSearchOptionsPage.axaml) | P09 |
+| [Search/SauceNaoSearchPage.axaml](../src/Pixeval/Views/Search/SauceNaoSearchPage.axaml) | P09 |
+| [Search/SearchPage.axaml](../src/Pixeval/Views/Search/SearchPage.axaml) | P09 |
+| [Search/WorkSearchResultPage.axaml](../src/Pixeval/Views/Search/WorkSearchResultPage.axaml) | P09 |
+| [Settings/AboutPage.axaml](../src/Pixeval/Views/Settings/AboutPage.axaml) | P05 |
+| [Settings/BlockedUsersSettingsExpander.axaml](../src/Pixeval/Views/Settings/BlockedUsersSettingsExpander.axaml) | P06 |
+| [Settings/DomainFrontingSettingsExpander.axaml](../src/Pixeval/Views/Settings/DomainFrontingSettingsExpander.axaml) | P06 |
+| [Settings/DownloadMacroSettingsExpander.axaml](../src/Pixeval/Views/Settings/DownloadMacroSettingsExpander.axaml) | P06 |
+| [Settings/FontSettingsValue.axaml](../src/Pixeval/Views/Settings/FontSettingsValue.axaml) | P03、P06 |
+| [Settings/HelpPage.axaml](../src/Pixeval/Views/Settings/HelpPage.axaml) | P05 |
+| [Settings/IPListInput.axaml](../src/Pixeval/Views/Settings/IPListInput.axaml) | P03、P06 |
+| [Settings/LanguageSettingsValue.axaml](../src/Pixeval/Views/Settings/LanguageSettingsValue.axaml) | P03、P06 |
+| [Settings/McpHelpSection.axaml](../src/Pixeval/Views/Settings/McpHelpSection.axaml) | P05、P06 |
+| [Settings/NavigationSettingsPage.axaml](../src/Pixeval/Views/Settings/NavigationSettingsPage.axaml) | P06 |
+| [Settings/SettingsMainView.axaml](../src/Pixeval/Views/Settings/SettingsMainView.axaml) | P06 |
+| [Settings/SettingsPage.axaml](../src/Pixeval/Views/Settings/SettingsPage.axaml) | P06 |
+| [Settings/SettingsSubView.axaml](../src/Pixeval/Views/Settings/SettingsSubView.axaml) | P06 |
+| [Settings/StringCollectionSettingsExpander.axaml](../src/Pixeval/Views/Settings/StringCollectionSettingsExpander.axaml) | P03、P06 |
+| [Settings/WorkSubscriptionsSettingsExpander.axaml](../src/Pixeval/Views/Settings/WorkSubscriptionsSettingsExpander.axaml) | P06、P12 |
+| [ViewContainers/TabViewContainer.axaml](../src/Pixeval/Views/ViewContainers/TabViewContainer.axaml) | P16 |
+| [Viewers/CommentsPage.axaml](../src/Pixeval/Views/Viewers/CommentsPage.axaml) | P11 |
+| [Viewers/ContinuousImageViewer.axaml](../src/Pixeval/Views/Viewers/ContinuousImageViewer.axaml) | P15 |
+| [Viewers/IllustrationViewerInfoPane.axaml](../src/Pixeval/Views/Viewers/IllustrationViewerInfoPane.axaml) | P11、P14 |
+| [Viewers/IllustrationViewerPage.axaml](../src/Pixeval/Views/Viewers/IllustrationViewerPage.axaml) | P14 |
+| [Viewers/NovelViewerPage.axaml](../src/Pixeval/Views/Viewers/NovelViewerPage.axaml) | P13 |
+| [Viewers/SeriesViewerPage.axaml](../src/Pixeval/Views/Viewers/SeriesViewerPage.axaml) | P11 |
+| [Viewers/SingleImageViewer.axaml](../src/Pixeval/Views/Viewers/SingleImageViewer.axaml) | P15 |
+| [Viewers/SwipeImageViewer.axaml](../src/Pixeval/Views/Viewers/SwipeImageViewer.axaml) | P15 |
+| [Viewers/UserViewerPage.axaml](../src/Pixeval/Views/Viewers/UserViewerPage.axaml) | P11 |
+| [Viewers/WorkInfoPage.axaml](../src/Pixeval/Views/Viewers/WorkInfoPage.axaml) | P11 |
+| [Viewers/WorkInfoPane.axaml](../src/Pixeval/Views/Viewers/WorkInfoPane.axaml) | P11 |
+| [Viewers/WorkSeriesInfoPane.axaml](../src/Pixeval/Views/Viewers/WorkSeriesInfoPane.axaml) | P11 |
+| [Work/AddNewBookmarkTagItem.axaml](../src/Pixeval/Views/Work/AddNewBookmarkTagItem.axaml) | P03、P08 |
+| [Work/ArtworkSauceNaoSearchResultPage.axaml](../src/Pixeval/Views/Work/ArtworkSauceNaoSearchResultPage.axaml) | P09 |
+| [Work/IllustrationItem.axaml](../src/Pixeval/Views/Work/IllustrationItem.axaml) | P08 |
+| [Work/NovelItem.axaml](../src/Pixeval/Views/Work/NovelItem.axaml) | P08 |
+| [Work/TagSelector.axaml](../src/Pixeval/Views/Work/TagSelector.axaml) | P03、P08 |
+| [Work/WorkContainer.axaml](../src/Pixeval/Views/Work/WorkContainer.axaml) | P08 |
+| [Work/WorkFilterAutoSuggestBox.axaml](../src/Pixeval/Views/Work/WorkFilterAutoSuggestBox.axaml) | P03、P09 |
+| [Work/WorkView.axaml](../src/Pixeval/Views/Work/WorkView.axaml) | P08 |
+
+### 11.2 Controls（22 个）
+
+| 文件 | 主责阶段 |
+| --- | --- |
+| [AvatarImage.axaml](../src/Pixeval/Controls/AvatarImage.axaml) | P08、P11 |
+| [CommandBarStyles.axaml](../src/Pixeval/Controls/CommandBarStyles.axaml) | P02 |
+| [ContentDialog/ContentDialog.axaml](../src/Pixeval/Controls/ContentDialog/ContentDialog.axaml) | P04 |
+| [DigitalSignalItem.axaml](../src/Pixeval/Controls/DigitalSignalItem.axaml) | P02、P12 |
+| [FloatingCommandBarStyles.axaml](../src/Pixeval/Controls/FloatingCommandBarStyles.axaml) | P02、P14 |
+| [FloatingPaneView.axaml](../src/Pixeval/Controls/FloatingPaneView.axaml) | P04、P14 |
+| [HeartButton.axaml](../src/Pixeval/Controls/HeartButton.axaml) | P02、P08 |
+| [IconText.axaml](../src/Pixeval/Controls/IconText.axaml) | P01、P02 |
+| [InfoBar/InfoBar.axaml](../src/Pixeval/Controls/InfoBar/InfoBar.axaml) | P04 |
+| [IPBox.axaml](../src/Pixeval/Controls/IPBox.axaml) | P03 |
+| [ItemsViewListBoxStyles.axaml](../src/Pixeval/Controls/ItemsViewListBoxStyles.axaml) | P08 |
+| [Markdown/MarkdownBoxStyles.axaml](../src/Pixeval/Controls/Markdown/MarkdownBoxStyles.axaml) | P05、P13 |
+| [NotificationCard.axaml](../src/Pixeval/Controls/NotificationCard.axaml) | P04 |
+| [PageButton.axaml](../src/Pixeval/Controls/PageButton.axaml) | P14 |
+| [PagePreviewSlider.axaml](../src/Pixeval/Controls/PagePreviewSlider.axaml) | P14 |
+| [PixevalBadge.axaml](../src/Pixeval/Controls/PixevalBadge.axaml) | P02、P08 |
+| [Skeleton.axaml](../src/Pixeval/Controls/Skeleton.axaml) | P04 |
+| [SymbolComboBox.axaml](../src/Pixeval/Controls/SymbolComboBox.axaml) | P03 |
+| [TokenizingBox/TokenizingBox.axaml](../src/Pixeval/Controls/TokenizingBox/TokenizingBox.axaml) | P03 |
+| [UserBasicInfoPresenter.axaml](../src/Pixeval/Controls/UserBasicInfoPresenter.axaml) | P11 |
+| [ViewerStateOverlay.axaml](../src/Pixeval/Controls/ViewerStateOverlay.axaml) | P04、P14 |
+| [WaveProgressHeart.axaml](../src/Pixeval/Controls/WaveProgressHeart.axaml) | P02、P12 |
+
+### 11.3 Themes（7 个）
+
+| 文件 | 主责阶段 |
+| --- | --- |
+| [Brushes.axaml](../src/Pixeval/Themes/Brushes.axaml) | P01 |
+| [Colors.axaml](../src/Pixeval/Themes/Colors.axaml) | P01 |
+| [Controls.axaml](../src/Pixeval/Themes/Controls.axaml) | P01–P04、P17 |
+| [MaterialCompatibility.axaml](../src/Pixeval/Themes/MaterialCompatibility.axaml) | P01、P17 |
+| [MaterialResources.axaml](../src/Pixeval/Themes/MaterialResources.axaml) | P01 |
+| [PixevalTheme.axaml](../src/Pixeval/Themes/PixevalTheme.axaml) | P01、P17 |
+| [WindowDrawnDecorations.axaml](../src/Pixeval/Themes/WindowDrawnDecorations.axaml) | P16 |
+
+
+## 12. 无 XAML 与动态功能补充清单
+
+以下内容不会出现在 XAML 统计中，必须随使用方验收：
+
+| 范围 | 关联阶段 | 保留与检查要求 |
+| --- | --- | --- |
+| `NavigationPageRegistry`、`AvaloniaHelper`、页面属性/源生成器 | P00、P09、P16 | 导出实际注册页；推荐/新作/投稿/用户关系等动态页面与参数；NeedLogin；YAML 页面键与图标枚举兼容 |
+| `ViewContainerBase`、TabViewContainerViewModel、TabClosePlanner | P16 | 导航上下文、标签关闭计划、多窗口所有权、关闭释放和快捷键 |
+| `KeyboardShortcut` | P02、P03、P13–P16 | 精确修饰键、已处理事件优先、CanExecute、Ctrl/Cmd 与输入焦点归属 |
+| ContentDialog Host、Result、ButtonClick/Closing/Closed 和 deferral | P04 | 异步完成/取消、错误恢复与焦点层级，不能用外观相似代替契约 |
+| AdaptiveGrid、CachedVirtualizingPanel、Masonry/Virtualizing* 面板、TokenizingBoxPanel | P03、P08、P10 | 测量/排列、视口/虚拟化、位置恢复、复用和大列表性能 |
+| WorkListBox、IncrementalLoadingBehavior、Source 与图片缓存/加载行为 | P08、P14–P15 | 增量请求、取消、缓存、复用解绑、加载失败与迟到响应 |
+| FloatingDockHost、SwipeControl、SizedImageLoader、ConstrainedBox/AspectRatio | P04、P14–P15 | 浮动位置/边界、手势、图像测量与资源释放 |
+| MarkdownBox/NovelMarkdownBox、插件、TranslatableTextBlockBehavior | P05、P11、P13 | Markdown 语法、链接、ruby、GitHub alerts、代码块滚动、翻译协调 |
+| AppManagement 登录/设置/更新/首页持久化与旧数据迁移 | P06–P07、P10、P17 | UI 变更不改变数据格式、账号存储和升级策略 |
+| `Models/Navigation` YAML 解析/格式化/诊断 | P06、P16 | 保留用户配置、无效编辑内容与应用门控 |
+| 下载引擎、订阅队列、Mako/Imouto 服务与数据模型 | P08–P15 | 默认不修改；仅通过契约测试证明 UI 调用行为不变 |
+| AutoSettingsPage 元数据与自定义设置注册 | P06 | 所有生成条目和副作用都要出现在清单，不能仅按手写 XAML 验收 |
+| i18n JSON/Markdown、Language.tt、资源生成器 | 全阶段 | 现有语言与回退保持；需要改文案时按指引改默认语言/清理旧译文并生成，不能手改 Language.cs |
+| 扩展管理及图像/文本/导出扩展消费点 | P05、P13–P14、P17 | ABI、配置、优先级、错误隔离与入口保持 |
+| IPixevalMcpService、MCP 工具及条件编译入口 | P06、P17 | 服务协议和权限语义保持；只有实际修改 MCP 时才进入 MCP 专项维护范围 |
+| 桌面/Android/iOS/Browser 启动与平台集成 | P00、P07、P14、P16–P17 | 各项目现有能力范围内验证窗口/安全区、文件选择、剪贴板、浏览器、返回键、资源打包与生命周期 |
+
+开始实施时的首个任务是 **P00.01**，而不是立即全局替换主题或外壳。完成基线后，再按步骤逐项推进。

@@ -1,6 +1,7 @@
-<Styles xmlns="https://github.com/avaloniaui" xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia">
+﻿<Styles xmlns="https://github.com/avaloniaui" xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia">
     <!--
-        Upstream compatibility adjustments for Material3Expressive e8323bce.
+        Mixed-theme compatibility verified against Material3Expressive 859a69e5 and Avalonia 12.1.5.
+        MaterialCompatibilityTest and ColorPickerThemeTest cover the retained rules.
         Keep Pixeval-specific design choices in Controls.axaml or the owning control.
     -->
 
@@ -20,5 +21,23 @@
     -->
     <Style Selector="TabStripItem">
         <Setter Property="m3:MaterialText.Style" Value="{m3:Typography LabelLarge}" />
+    </Style>
+
+    <!--
+        The native color swatch has no intrinsic size. Material's dropdown centers
+        natural-size content beside its chevron, collapsing that swatch to zero.
+        Preserve the dedicated picker's stretch layout without replacing its behavior.
+    -->
+    <Style Selector="ColorPicker /template/ DropDownButton">
+        <Setter Property="Theme" Value="{StaticResource PixevalFluentDropDownButtonTheme}" />
+    </Style>
+
+    <!--
+        ColorView's RGB/HSV row follows its 32-DIP hex input. The inherited
+        Material toggle padding leaves only 12 DIP for a 20-DIP label.
+        Target its named parts: ColorPicker moves them into a separate Flyout tree.
+    -->
+    <Style Selector="RadioButton#RgbRadioButton, RadioButton#HsvRadioButton">
+        <Setter Property="Padding" Value="8,0" />
     </Style>
 </Styles>

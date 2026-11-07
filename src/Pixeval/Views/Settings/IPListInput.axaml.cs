@@ -15,7 +15,16 @@ public partial class IPListInput : StackPanel, IEntryControl<ISingleValueSetting
     /// <inheritdoc />
     public ISingleValueSettingsEntry<ObservableCollection<string>> Entry { set => DataContext = value; }
 
-    public IPListInput() => InitializeComponent();
+    public IPListInput()
+    {
+        InitializeComponent();
+        IPBox.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == Pixeval.Controls.IPBox.TextProperty)
+                DuplicatesInfoBar.IsVisible = false;
+        };
+        DataContextChanged += (_, _) => DuplicatesInfoBar.IsVisible = false;
+    }
 
     private void AddButton_OnClick(object? sender, RoutedEventArgs e)
     {
@@ -34,7 +43,8 @@ public partial class IPListInput : StackPanel, IEntryControl<ISingleValueSetting
     private void RemoveButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is ISingleValueSettingsEntry<ObservableCollection<string>> entry
-            && sender is Control { DataContext: string s })
-            _ = entry.Value.Remove(s);
+            && sender is Control { DataContext: string s }
+            && entry.Value.Remove(s))
+            DuplicatesInfoBar.IsVisible = false;
     }
 }

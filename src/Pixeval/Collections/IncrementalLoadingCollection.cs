@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -178,7 +179,7 @@ public class IncrementalLoadingCollection<IType> : ObservableCollection<IType>, 
     {
         token.ThrowIfCancellationRequested();
         var result = await Source.GetPagedItemsAsync(CurrentPageIndex, ItemsPerPage, token);
-        token.ThrowIfCancellationRequested();
+        ThrowIfPageCanceled(token, result, 0);
         CurrentPageIndex += 1;
         return result;
     }
@@ -223,23 +224,29 @@ public class IncrementalLoadingCollection<IType> : ObservableCollection<IType>, 
                 IsLoading = true;
                 data = await LoadDataAsync(token);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (ex is not OperationCanceledException && !_isDisposed)
             {
                 OnError?.Invoke(ex);
                 HasMoreItems = Source.HasMoreItems;
                 return 0;
             }
 
+            ThrowIfPageCanceled(token, data, 0);
             if (data is not { Count: not 0 })
             {
                 HasMoreItems = Source.HasMoreItems;
                 return 0;
             }
 
+            var publishedCount = 0;
             foreach (var item in data)
             {
+                // Collection notifications can close or replace the owning view during Add.
+                ThrowIfPageCanceled(token, data, publishedCount);
                 Add(item);
+                publishedCount++;
             }
+            ThrowIfPageCanceled(token, data, publishedCount);
 
             HasMoreItems = Source.HasMoreItems;
             return data.Count;
@@ -248,6 +255,17 @@ public class IncrementalLoadingCollection<IType> : ObservableCollection<IType>, 
         {
             IsLoading = false;
         }
+    }
+
+    private static void ThrowIfPageCanceled(CancellationToken token, IReadOnlyCollection<IType> data, int publishedCount)
+    {
+        if (!token.IsCancellationRequested)
+            return;
+
+        var cancellation = new OperationCanceledException(token);
+        // Published entries belong to the provider. Only release entries it never received.
+        IncrementalPageLifetime.DisposeItems(data.Skip(publishedCount), cancellation);
+        throw cancellation;
     }
 
     private Task<int>? GetRunningLoadingTask()

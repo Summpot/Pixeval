@@ -27,7 +27,7 @@ public static class AppInfo
 
     private static string ClassicApplicationFolderPath { get; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentifier);
 
-    public static string ApplicationFolderPath { get; } = AppContext.BaseDirectory.Contains(
+    public static string ApplicationFolderPath { get; } = ApplicationDataDirectory.Override ?? (AppContext.BaseDirectory.Contains(
             Path.Combine("WindowsApps", "PokerKo.4454907E5DDB5_"),
             StringComparison.OrdinalIgnoreCase)
         && !Directory.Exists(ClassicApplicationFolderPath)
@@ -38,7 +38,7 @@ public static class AppInfo
             "LocalCache",
             "Local",
             AppIdentifier)
-        : ClassicApplicationFolderPath;
+        : ClassicApplicationFolderPath);
 
     public static string SettingsFolder { get; } = Path.Combine(ApplicationFolderPath, "Settings");
 

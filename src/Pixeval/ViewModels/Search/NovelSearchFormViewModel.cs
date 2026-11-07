@@ -7,6 +7,7 @@ using Mako.Engine.Implements;
 using Mako.Global.Enum;
 using Mako.Model;
 using Pixeval.I18N;
+using Pixeval.Views;
 
 namespace Pixeval.ViewModels.Search;
 
@@ -59,6 +60,29 @@ public partial class NovelSearchFormViewModel : SearchArgumentsFormViewModelBase
             title = I18NManager.GetResource(SearchResources.Validation.InvalidNumericRange.Title);
             content = I18NManager.GetResource(SearchResources.Validation.InvalidNumericRange.Content);
             return false;
+        }
+
+        if (!(PixevalSettings.Me?.IsPremium ?? false))
+        {
+            var range = (ContentLengthMinOption.NullableInt, ContentLengthMaxOption.NullableInt);
+            // Mako otherwise clears unsupported free-account ranges during engine construction.
+            var isAllowed = ContentLengthOption switch
+            {
+                SearchNovelContentLengthOption.None => true,
+                SearchNovelContentLengthOption.TextLength or SearchNovelContentLengthOption.WordCount =>
+                    range is (null, null) or (null, 4999) or (5000, 19999) or (20000, 79999) or (80000, null),
+                SearchNovelContentLengthOption.ReadingTime =>
+                    range is (null, null) or (null, 9) or (10, 59) or (60, 179) or (180, null),
+                _ => false
+            };
+            if (!isAllowed)
+            {
+                title = I18NManager.GetResource(SearchResources.Validation.PremiumLength.Title);
+                content = I18NManager.GetResource(ContentLengthOption is SearchNovelContentLengthOption.ReadingTime
+                    ? SearchResources.Validation.PremiumLength.ReadingTimeContent
+                    : SearchResources.Validation.PremiumLength.TextContent);
+                return false;
+            }
         }
 
         title = content = "";

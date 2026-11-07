@@ -1,0 +1,862 @@
+{
+  "Navigation": [
+    {
+      "Key": "BrowsingHistory",
+      "Type": "Pixeval.Views.BrowsingHistoryPage",
+      "Icon": "History",
+      "HeaderResource": "MainPage.Tab.BrowsingHistory",
+      "NeedLogin": true
+    },
+    {
+      "Key": "Download",
+      "Type": "Pixeval.Views.Download.DownloadPage",
+      "Icon": "ArrowSquareDown",
+      "HeaderResource": "MainPage.Tab.Download",
+      "NeedLogin": true
+    },
+    {
+      "Key": "Extensions",
+      "Type": "Pixeval.Views.ExtensionsPage",
+      "Icon": "PuzzlePiece",
+      "HeaderResource": "MainPage.Tab.Extensions",
+      "NeedLogin": false
+    },
+    {
+      "Key": "Home",
+      "Type": "Pixeval.Views.Home.HomePage",
+      "Icon": "Home",
+      "HeaderResource": "MainPage.Tab.Home",
+      "NeedLogin": true
+    },
+    {
+      "Key": "Login",
+      "Type": "Pixeval.Views.Login.LoginPage",
+      "Icon": "PersonKey",
+      "HeaderResource": "MainPage.Tab.Login",
+      "NeedLogin": false
+    },
+    {
+      "Key": "RelatedUsers",
+      "Type": "Pixeval.Views.Capability.RelatedUsersPage",
+      "Icon": "PeopleCommunity",
+      "HeaderResource": "MainPage.Tab.RelatedUser",
+      "NeedLogin": true
+    },
+    {
+      "Key": "Search",
+      "Type": "Pixeval.Views.Search.SearchPage",
+      "Icon": "SearchSparkle",
+      "HeaderResource": "MainPage.Tab.Search",
+      "NeedLogin": true
+    },
+    {
+      "Key": "Series",
+      "Type": "Pixeval.Views.Capability.SeriesPage",
+      "Icon": "LayerDiagonalPerson",
+      "HeaderResource": "MainPage.Tab.Series",
+      "NeedLogin": true
+    },
+    {
+      "Key": "Settings",
+      "Type": "Pixeval.Views.Settings.SettingsPage",
+      "Icon": "Settings",
+      "HeaderResource": "MainPage.Tab.Settings",
+      "NeedLogin": false
+    },
+    {
+      "Key": "Spotlight",
+      "Type": "Pixeval.Views.Capability.SpotlightPage",
+      "Icon": "SlideTextSparkle",
+      "HeaderResource": "MainPage.Tab.Spotlight",
+      "NeedLogin": true
+    },
+    {
+      "Key": "UserFollower",
+      "Type": "Pixeval.Views.Capability.UserFollowerPage",
+      "Icon": "People",
+      "HeaderResource": "MainPage.Tab.UserFollower",
+      "NeedLogin": true
+    },
+    {
+      "Key": "UserFollowing",
+      "Type": "Pixeval.Views.Capability.UserFollowingPage",
+      "Icon": "PersonHeart",
+      "HeaderResource": "MainPage.Tab.UserFollowing",
+      "NeedLogin": true
+    },
+    {
+      "Key": "UserMyPixiv",
+      "Type": "Pixeval.Views.Capability.UserMyPixivPage",
+      "Icon": "PeopleInterwoven",
+      "HeaderResource": "MainPage.Tab.UserMyPixiv",
+      "NeedLogin": true
+    },
+    {
+      "Key": "UserRecommended",
+      "Type": "Pixeval.Views.Capability.UserRecommendedPage",
+      "Icon": "PeopleCommunity",
+      "HeaderResource": "MainPage.Tab.UserRecommended",
+      "NeedLogin": true
+    },
+    {
+      "Key": "WatchLater",
+      "Type": "Pixeval.Views.WatchLaterPage",
+      "Icon": "Clock",
+      "HeaderResource": "MainPage.Tab.WatchLater",
+      "NeedLogin": true
+    },
+    {
+      "Key": "WorkBookmarks",
+      "Type": "Pixeval.Views.Capability.WorkBookmarksPage",
+      "Icon": "Library",
+      "HeaderResource": "MainPage.Tab.WorkBookmarks",
+      "NeedLogin": true
+    },
+    {
+      "Key": "WorkFollowing",
+      "Type": "Pixeval.Views.Capability.WorkFollowingPage",
+      "Icon": "AlertUrgent",
+      "HeaderResource": "MainPage.Tab.WorkFollowing",
+      "NeedLogin": true
+    },
+    {
+      "Key": "WorkMyPixiv",
+      "Type": "Pixeval.Views.Capability.WorkMyPixivPage",
+      "Icon": "Molecule",
+      "HeaderResource": "MainPage.Tab.WorkMyPixiv",
+      "NeedLogin": true
+    },
+    {
+      "Key": "WorkNew",
+      "Type": "Pixeval.Views.Capability.WorkNewPage",
+      "Icon": "ArrowSync",
+      "HeaderResource": "MainPage.Tab.WorkNew",
+      "NeedLogin": true
+    },
+    {
+      "Key": "WorkPosts",
+      "Type": "Pixeval.Views.Capability.WorkPostsPage",
+      "Icon": "Image",
+      "HeaderResource": "MainPage.Tab.WorkPosts",
+      "NeedLogin": true
+    },
+    {
+      "Key": "WorkRanking",
+      "Type": "Pixeval.Views.Capability.WorkRankingPage",
+      "Icon": "ArrowTrendingLines",
+      "HeaderResource": "MainPage.Tab.WorkRanking",
+      "NeedLogin": true
+    },
+    {
+      "Key": "WorkRecommended",
+      "Type": "Pixeval.Views.Capability.WorkRecommendedPage",
+      "Icon": "Calendar",
+      "HeaderResource": "MainPage.Tab.WorkRecommended",
+      "NeedLogin": true
+    }
+  ],
+  "Pages": [
+    {
+      "Type": "Pixeval.Views.BrowsingHistoryPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Capability.RelatedUsersPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Capability.SeriesPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Capability.SpotlightPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Capability.UserFollowerPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Capability.UserFollowingPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Capability.UserMyPixivPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Capability.UserRecommendedPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Capability.UserSearchResultPage",
+      "InNavigation": false
+    },
+    {
+      "Type": "Pixeval.Views.Capability.WorkBookmarksPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Capability.WorkFollowingPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Capability.WorkMyPixivPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Capability.WorkNewPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Capability.WorkPostsPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Capability.WorkRankingPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Capability.WorkRecommendedPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Capability.WorkRelatedPage",
+      "InNavigation": false
+    },
+    {
+      "Type": "Pixeval.Views.Download.DownloadPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.ExtensionsPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Home.HomePage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Login.LoginPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Search.SearchPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Search.WorkSearchResultPage",
+      "InNavigation": false
+    },
+    {
+      "Type": "Pixeval.Views.Settings.AboutPage",
+      "InNavigation": false
+    },
+    {
+      "Type": "Pixeval.Views.Settings.HelpPage",
+      "InNavigation": false
+    },
+    {
+      "Type": "Pixeval.Views.Settings.SettingsPage",
+      "InNavigation": true
+    },
+    {
+      "Type": "Pixeval.Views.Viewers.CommentsPage",
+      "InNavigation": false
+    },
+    {
+      "Type": "Pixeval.Views.Viewers.IllustrationViewerPage",
+      "InNavigation": false
+    },
+    {
+      "Type": "Pixeval.Views.Viewers.NovelViewerPage",
+      "InNavigation": false
+    },
+    {
+      "Type": "Pixeval.Views.Viewers.SeriesViewerPage",
+      "InNavigation": false
+    },
+    {
+      "Type": "Pixeval.Views.Viewers.UserViewerPage",
+      "InNavigation": false
+    },
+    {
+      "Type": "Pixeval.Views.Viewers.WorkInfoPage",
+      "InNavigation": false
+    },
+    {
+      "Type": "Pixeval.Views.WatchLaterPage",
+      "InNavigation": true
+    }
+  ],
+  "Settings": [
+    {
+      "Path": "ApplicationSettings",
+      "Header": "\u5E94\u7528\u7A0B\u5E8F\u76F8\u5173\u8BBE\u7F6E",
+      "Kind": "Group",
+      "Range": null,
+      "Children": [
+        {
+          "Path": "ApplicationSettings.CultureName",
+          "Header": "\u8BED\u8A00\u8BBE\u7F6E\uFF08\u91CD\u542F\u5E94\u7528\u540E\u751F\u6548\uFF09",
+          "Kind": "LanguageSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "ApplicationSettings.Theme",
+          "Header": "\u5E94\u7528\u7A0B\u5E8F\u4E3B\u9898",
+          "Kind": "EnumSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "ApplicationSettings.AppFontFamily",
+          "Header": "\u5B57\u4F53\u8BBE\u7F6E\uFF08\u91CD\u542F\u5E94\u7528\u540E\u751F\u6548\uFF09",
+          "Kind": "FontSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "ApplicationSettings.UseFileCache",
+          "Header": "\u4F7F\u7528\u6587\u4EF6\u7F13\u5B58",
+          "Kind": "BoolSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "ApplicationSettings.FileCache",
+          "Header": "\u9650\u5236\u6587\u4EF6\u7F13\u5B58\u5927\u5C0F",
+          "Kind": "MultiValuesWithMainValueEntry",
+          "Range": null,
+          "Children": [
+            {
+              "Path": "ApplicationSettings.FileCache.LimitFileCacheSize",
+              "Header": "",
+              "Kind": "BoolSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "ApplicationSettings.FileCache.FileCacheSizeLimitInMegabytes",
+              "Header": "\u6587\u4EF6\u7F13\u5B58\u5927\u5C0F\u9650\u5236\uFF08MB\uFF09",
+              "Kind": "NumberSettingsEntry",
+              "Range": "1..1048576; step=128",
+              "Children": []
+            }
+          ]
+        },
+        {
+          "Path": "ApplicationSettings.HomePage",
+          "Header": "\u4E3B\u9875",
+          "Kind": "MultiValuesEntry",
+          "Range": null,
+          "Children": [
+            {
+              "Path": "ApplicationSettings.HomePage.HomePageRows",
+              "Header": "\u4E3B\u9875\u5E03\u5C40\u884C\u6570",
+              "Kind": "NumberSettingsEntry",
+              "Range": "1..12; step=1",
+              "Children": []
+            },
+            {
+              "Path": "ApplicationSettings.HomePage.HomePageColumns",
+              "Header": "\u4E3B\u9875\u5E03\u5C40\u5217\u6570",
+              "Kind": "NumberSettingsEntry",
+              "Range": "1..12; step=1",
+              "Children": []
+            },
+            {
+              "Path": "ApplicationSettings.HomePage.HideHomePageToolbar",
+              "Header": "\u9690\u85CF\u4E3B\u9875\u5DE5\u5177\u680F",
+              "Kind": "BoolSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "ApplicationSettings.HomePage.HideHomePageCardTitle",
+              "Header": "\u9690\u85CF\u4E3B\u9875\u5361\u7247\u6807\u9898",
+              "Kind": "BoolSettingsEntry",
+              "Range": null,
+              "Children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Path": "NetworkSettings",
+      "Header": "\u7F51\u7EDC\u8BBE\u7F6E",
+      "Kind": "Group",
+      "Range": null,
+      "Children": [
+        {
+          "Path": "NetworkSettings.ApiRequestCooldown",
+          "Header": "Pixiv API \u8BF7\u6C42\u95F4\u9694\uFF08\u6BEB\u79D2\uFF09",
+          "Kind": "NumberSettingsEntry",
+          "Range": "0..5000; step=100",
+          "Children": []
+        },
+        {
+          "Path": "NetworkSettings.PixivDomainFronting",
+          "Header": "\u542F\u7528 Pixiv \u57DF\u524D\u7F6E",
+          "Kind": "DomainFrontingSettingsEntry",
+          "Range": null,
+          "Children": [
+            {
+              "Path": "NetworkSettings.PixivDomainFronting.EnablePixivDomainFronting",
+              "Header": "",
+              "Kind": "BoolSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "NetworkSettings.PixivDomainFronting.PixivDomainFrontingType",
+              "Header": "\u57DF\u524D\u7F6E\u65B9\u5F0F",
+              "Kind": "EnumSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "NetworkSettings.PixivDomainFronting.PixivAppApiNameResolver",
+              "Header": "Pixiv \u540D\u5B57\u89E3\u6790\u5668",
+              "Kind": "IPSetSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "NetworkSettings.PixivDomainFronting.PixivImageNameResolver",
+              "Header": "",
+              "Kind": "IPSetSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "NetworkSettings.PixivDomainFronting.PixivImageNameResolver2",
+              "Header": "",
+              "Kind": "IPSetSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "NetworkSettings.PixivDomainFronting.PixivOAuthNameResolver",
+              "Header": "",
+              "Kind": "IPSetSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "NetworkSettings.PixivDomainFronting.PixivAccountNameResolver",
+              "Header": "",
+              "Kind": "IPSetSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "NetworkSettings.PixivDomainFronting.PixivWebApiNameResolver",
+              "Header": "",
+              "Kind": "IPSetSettingsEntry",
+              "Range": null,
+              "Children": []
+            }
+          ]
+        },
+        {
+          "Path": "NetworkSettings.GitHubDomainFronting",
+          "Header": "\u542F\u7528 GitHub \u57DF\u524D\u7F6E",
+          "Kind": "DomainFrontingSettingsEntry",
+          "Range": null,
+          "Children": [
+            {
+              "Path": "NetworkSettings.GitHubDomainFronting.EnableGitHubDomainFronting",
+              "Header": "",
+              "Kind": "BoolSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "NetworkSettings.GitHubDomainFronting.GitHubNameResolver",
+              "Header": "GitHub \u540D\u5B57\u89E3\u6790\u5668",
+              "Kind": "IPSetSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "NetworkSettings.GitHubDomainFronting.GitHubApiNameResolver",
+              "Header": "",
+              "Kind": "IPSetSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "NetworkSettings.GitHubDomainFronting.GitHubAvatarNameResolver",
+              "Header": "",
+              "Kind": "IPSetSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "NetworkSettings.GitHubDomainFronting.GitHubUserContentNameResolver",
+              "Header": "",
+              "Kind": "IPSetSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "NetworkSettings.GitHubDomainFronting.GitHubAssetsNameResolver",
+              "Header": "",
+              "Kind": "IPSetSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "NetworkSettings.GitHubDomainFronting.GitHubCodeloadNameResolver",
+              "Header": "",
+              "Kind": "IPSetSettingsEntry",
+              "Range": null,
+              "Children": []
+            }
+          ]
+        },
+        {
+          "Path": "NetworkSettings.ProxySettings",
+          "Header": "\u4EE3\u7406\u6A21\u5F0F",
+          "Kind": "ProxySettingsEntry",
+          "Range": null,
+          "Children": [
+            {
+              "Path": "NetworkSettings.ProxySettings.ProxyType",
+              "Header": "",
+              "Kind": "EnumSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "NetworkSettings.ProxySettings.Proxy",
+              "Header": "\u4EE3\u7406\u670D\u52A1\u5668",
+              "Kind": "StringSettingsEntry",
+              "Range": null,
+              "Children": []
+            }
+          ]
+        },
+        {
+          "Path": "NetworkSettings.MirrorHost",
+          "Header": "\u56FE\u7247\u955C\u50CF\u7AD9\u7684\u4E3B\u673A\u540D",
+          "Kind": "StringSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "NetworkSettings.WebCookie",
+          "Header": "Cookie",
+          "Kind": "StringSettingsEntry",
+          "Range": null,
+          "Children": []
+        }
+      ]
+    },
+    {
+      "Path": "BrowsingExperienceSettings",
+      "Header": "\u6D4F\u89C8\u4F53\u9A8C\u8BBE\u7F6E",
+      "Kind": "Group",
+      "Range": null,
+      "Children": [
+        {
+          "Path": "BrowsingExperienceSettings.ThumbnailLayout",
+          "Header": "\u7F29\u7565\u56FE\u89C6\u56FE\u6A21\u5F0F",
+          "Kind": "MultiValuesWithMainValueEntry",
+          "Range": null,
+          "Children": [
+            {
+              "Path": "BrowsingExperienceSettings.ThumbnailLayout.ThumbnailLayoutType",
+              "Header": "",
+              "Kind": "EnumSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "BrowsingExperienceSettings.ThumbnailLayout.IllustrationLinedFlowItemHeight",
+              "Header": "\u6D41\u5F0F\u5E03\u5C40\u884C\u9AD8",
+              "Kind": "NumberSettingsEntry",
+              "Range": "50..1000; step=10",
+              "Children": []
+            },
+            {
+              "Path": "BrowsingExperienceSettings.ThumbnailLayout.IllustrationGridItemSize",
+              "Header": "\u7F51\u683C\u5E03\u5C40\u5143\u7D20\u5BBD\u5EA6",
+              "Kind": "NumberSettingsEntry",
+              "Range": "50..1000; step=10",
+              "Children": []
+            },
+            {
+              "Path": "BrowsingExperienceSettings.ThumbnailLayout.IllustrationGridLineSize",
+              "Header": "\u7F51\u683C\u5E03\u5C40\u5143\u7D20\u9AD8\u5EA6",
+              "Kind": "NumberSettingsEntry",
+              "Range": "50..1000; step=10",
+              "Children": []
+            },
+            {
+              "Path": "BrowsingExperienceSettings.ThumbnailLayout.IllustrationMasonryColumnWidth",
+              "Header": "\u7011\u5E03\u6D41\u5E03\u5C40\u5217\u5BBD",
+              "Kind": "NumberSettingsEntry",
+              "Range": "50..1000; step=10",
+              "Children": []
+            }
+          ]
+        },
+        {
+          "Path": "BrowsingExperienceSettings.BrowseMode",
+          "Header": "\u6D4F\u89C8\u6A21\u5F0F",
+          "Kind": "EnumSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "BrowsingExperienceSettings.BrowseDirection",
+          "Header": "\u6D4F\u89C8\u65B9\u5411",
+          "Kind": "EnumSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "BrowsingExperienceSettings.AutoPlay",
+          "Header": "\u81EA\u52A8\u64AD\u653E",
+          "Kind": "MultiValuesEntry",
+          "Range": null,
+          "Children": [
+            {
+              "Path": "BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayInterval",
+              "Header": "\u81EA\u52A8\u64AD\u653E\u95F4\u9694\uFF08\u79D2\uFF09",
+              "Kind": "NumberSettingsEntry",
+              "Range": "1..60; step=1",
+              "Children": []
+            },
+            {
+              "Path": "BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayMode",
+              "Header": "\u81EA\u52A8\u64AD\u653E\u65B9\u5F0F",
+              "Kind": "EnumSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "BrowsingExperienceSettings.AutoPlay.IllustrationViewerAutoPlayScope",
+              "Header": "\u81EA\u52A8\u64AD\u653E\u8303\u56F4",
+              "Kind": "EnumSettingsEntry",
+              "Range": null,
+              "Children": []
+            }
+          ]
+        },
+        {
+          "Path": "BrowsingExperienceSettings.TargetFilter",
+          "Header": "\u4F7F\u7528\u7684 API \u5E73\u53F0",
+          "Kind": "EnumSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "BrowsingExperienceSettings.BlockedTags",
+          "Header": "\u5168\u5C40\u5C4F\u853D\u6807\u7B7E",
+          "Kind": "CollectionSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "BrowsingExperienceSettings.PinnedTags",
+          "Header": "\u56FA\u5B9A\u6807\u7B7E",
+          "Kind": "CollectionSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "BrowsingExperienceSettings.BlockedUsers",
+          "Header": "\u5168\u5C40\u5C4F\u853D\u7528\u6237",
+          "Kind": "BlockedUsersSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "BrowsingExperienceSettings.OpenWorkInfoByDefault",
+          "Header": "\u9ED8\u8BA4\u6253\u5F00\u4F5C\u54C1\u4FE1\u606F\u680F",
+          "Kind": "BoolSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "BrowsingExperienceSettings.OpenUserInfoByDefault",
+          "Header": "\u9ED8\u8BA4\u6253\u5F00\u7528\u6237\u4FE1\u606F\u680F",
+          "Kind": "BoolSettingsEntry",
+          "Range": null,
+          "Children": []
+        }
+      ]
+    },
+    {
+      "Path": "SearchSettings",
+      "Header": "\u641C\u7D22\u8BBE\u7F6E",
+      "Kind": "Group",
+      "Range": null,
+      "Children": [
+        {
+          "Path": "SearchSettings.SauceNaoApiKey",
+          "Header": "SauceNAO\u7684API Key",
+          "Kind": "StringSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "SearchSettings.DefaultSimpleWorkType",
+          "Header": "\u9ED8\u8BA4\u4F5C\u54C1\u7C7B\u578B",
+          "Kind": "EnumSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "SearchSettings.RankOptions",
+          "Header": "\u9ED8\u8BA4\u699C\u5355\u7C7B\u578B",
+          "Kind": "MultiValuesEntry",
+          "Range": null,
+          "Children": [
+            {
+              "Path": "SearchSettings.RankOptions.IllustrationRankOption",
+              "Header": "\u63D2\u753B",
+              "Kind": "EnumSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "SearchSettings.RankOptions.NovelRankOption",
+              "Header": "\u5C0F\u8BF4",
+              "Kind": "EnumSettingsEntry",
+              "Range": null,
+              "Children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Path": "DownloadSettings",
+      "Header": "\u4E0B\u8F7D\u8BBE\u7F6E",
+      "Kind": "Group",
+      "Range": null,
+      "Children": [
+        {
+          "Path": "DownloadSettings.OverwriteDownloadedFile",
+          "Header": "\u8986\u5199\u5DF2\u4E0B\u8F7D\u6587\u4EF6",
+          "Kind": "BoolSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "DownloadSettings.MaxDownloadTaskConcurrencyLevel",
+          "Header": "\u6700\u5927\u5E76\u884C\u4E0B\u8F7D\u4EFB\u52A1\u6570",
+          "Kind": "NumberSettingsEntry",
+          "Range": "1..16; step=1",
+          "Children": []
+        },
+        {
+          "Path": "DownloadSettings.DownloadPathMacro",
+          "Header": "\u9ED8\u8BA4\u7684\u4E0B\u8F7D\u4F4D\u7F6E",
+          "Kind": "DownloadMacroSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "DownloadSettings.DownloadFormats",
+          "Header": "\u4E0B\u8F7D\u4F5C\u54C1\u7684\u683C\u5F0F",
+          "Kind": "MultiValuesEntry",
+          "Range": null,
+          "Children": [
+            {
+              "Path": "DownloadSettings.DownloadFormats.IllustrationDownloadFormat",
+              "Header": "\u63D2\u753B",
+              "Kind": "IllustrationDownloadFormatSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "DownloadSettings.DownloadFormats.UgoiraDownloadFormat",
+              "Header": "\u52A8\u56FE",
+              "Kind": "UgoiraDownloadFormatSettingsEntry",
+              "Range": null,
+              "Children": []
+            },
+            {
+              "Path": "DownloadSettings.DownloadFormats.NovelDownloadFormat",
+              "Header": "\u5C0F\u8BF4",
+              "Kind": "NovelDownloadFormatSettingsEntry",
+              "Range": null,
+              "Children": []
+            }
+          ]
+        },
+        {
+          "Path": "DownloadSettings.WorkSubscriptions",
+          "Header": "\u8BA2\u9605\u5907\u4EFD\u4E0B\u8F7D",
+          "Kind": "WorkSubscriptionsSettingsEntry",
+          "Range": null,
+          "Children": []
+        }
+      ]
+    },
+    {
+      "Path": "McpSettings",
+      "Header": "MCP \u8BBE\u7F6E",
+      "Kind": "Group",
+      "Range": null,
+      "Children": [
+        {
+          "Path": "McpSettings.EnableServer",
+          "Header": "\u542F\u7528 MCP \u670D\u52A1\u5668",
+          "Kind": "BoolSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "McpSettings.Port",
+          "Header": "MCP \u7AEF\u53E3",
+          "Kind": "NumberSettingsEntry",
+          "Range": "1..65535; step=1",
+          "Children": []
+        },
+        {
+          "Path": "McpSettings.EnableWriteTools",
+          "Header": "\u542F\u7528 MCP \u5199\u5DE5\u5177",
+          "Kind": "BoolSettingsEntry",
+          "Range": null,
+          "Children": []
+        },
+        {
+          "Path": "McpSettings.MaxBinaryResourceMegabytes",
+          "Header": "MCP \u4E8C\u8FDB\u5236\u8D44\u6E90\u5927\u5C0F\u4E0A\u9650\uFF08MB\uFF09",
+          "Kind": "NumberSettingsEntry",
+          "Range": "1..2047; step=1",
+          "Children": []
+        }
+      ]
+    }
+  ],
+  "HomeCardSources": [
+    "WorkRecommended",
+    "WorkBookmarks",
+    "WorkRanking",
+    "WorkNew",
+    "WorkFollowing",
+    "WorkMyPixiv",
+    "WorkRelated",
+    "WorkPosts",
+    "WorkSearch",
+    "UserRecommended",
+    "UserSearch",
+    "UserFollowing",
+    "UserFollower",
+    "UserMyPixiv",
+    "Spotlight",
+    "SingleImage",
+    "SingleNovel",
+    "SingleUser",
+    "SingleSeries"
+  ]
+}
