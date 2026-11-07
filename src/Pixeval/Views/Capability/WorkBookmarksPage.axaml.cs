@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -11,6 +12,7 @@ using Mako.Global.Enum;
 using Mako.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
+using Pixeval.I18N;
 using Pixeval.Models.Options;
 using Pixeval.Models.Subscriptions;
 using Pixeval.Utilities;
@@ -22,7 +24,7 @@ namespace Pixeval.Views.Capability;
 public partial class WorkBookmarksPage : IconContentPage
 {
     private readonly UserBasicInfo _user;
-    private readonly string? _initialTag;
+    private CancellationTokenSource? _tagLoadCancellation;
     private bool _suppressChangeSource;
 
     public static IReadOnlyList<BookmarkTag> DefaultTags { get; } = [AllBookmarkTag.Instance, UncategorizedBookmarkTag.Instance];
@@ -39,13 +41,17 @@ public partial class WorkBookmarksPage : IconContentPage
         InitializeComponent();
 
         _user = user;
-        _initialTag = tag;
         SimpleWorkTypeComboBox.SelectedValue = simpleWorkType;
         PrivacyPolicyComboBox.SelectedValue = privacyPolicy;
         if (_user.Id != PixevalSettings.MyId)
             PrivacyPolicyComboBox.IsEnabled = PrivacyPolicyComboBox.IsVisible = false;
 
-        FetchTags();
+        if (tag is not null)
+        {
+            var selected = DefaultTags.FirstOrDefault(item => item.Name == tag) ?? new BookmarkTag { Name = tag, Count = 0 };
+            TagComboBox.ItemsSource = DefaultTags.Contains(selected) ? DefaultTags : [.. DefaultTags, selected];
+            TagComboBox.SelectedItem = selected;
+        }
         if (viewModel is not null)
         {
             WorkContainer.SetViewModel(viewModel);
@@ -71,20 +77,76 @@ public partial class WorkBookmarksPage : IconContentPage
 
     private void WorkContainer_OnRefreshRequested(object? sender, RoutedEventArgs e)
     {
+        FetchTags();
         ChangeSource();
+    }
+
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+        FetchTags();
+    }
+
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        CancelTagLoad();
+        base.OnUnloaded(e);
+    }
+
+    private void CancelTagLoad()
+    {
+        var cancellation = _tagLoadCancellation;
+        _tagLoadCancellation = null;
+        cancellation?.Cancel();
+        cancellation?.Dispose();
     }
 
     public async void FetchTags()
     {
-        var tags = await MakoHelper.GetBookmarkTagsAsync(
-            _user.Id,
-            SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>(),
-            PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>());
+        if (!IsLoaded)
+            return;
+        CancelTagLoad();
+        var cancellation = _tagLoadCancellation = new CancellationTokenSource();
+        var token = cancellation.Token;
+        try
+        {
+            var tags = await MakoHelper.GetBookmarkTagsAsync(
+                _user.Id,
+                SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>(),
+                PrivacyPolicyComboBox.GetSelectedValue<PrivacyPolicy>(), token);
+            if (!IsLoaded || token.IsCancellationRequested || !ReferenceEquals(_tagLoadCancellation, cancellation))
+                return;
 
-        _suppressChangeSource = true;
-        TagComboBox.ItemsSource = tags;
-        TagComboBox.SelectedItem = tags.FirstOrDefault(tag => tag.Name == _initialTag) ?? AllBookmarkTag.Instance;
-        _suppressChangeSource = false;
+            // Preserve the filter, but never carry a previous source's count into
+            // a completed tag list that does not contain it.
+            var selected = TagComboBox.SelectedItem as BookmarkTag ?? AllBookmarkTag.Instance;
+            if (!tags.Any(tag => tag.Name == selected.Name))
+                tags.Add(new BookmarkTag { Name = selected.Name, Count = 0 });
+            _suppressChangeSource = true;
+            try
+            {
+                TagComboBox.ItemsSource = tags;
+                TagComboBox.SelectedItem = tags.First(tag => tag.Name == selected.Name);
+            }
+            finally { _suppressChangeSource = false; }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            if (IsLoaded && !token.IsCancellationRequested && ReferenceEquals(_tagLoadCancellation, cancellation))
+            {
+                App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>().LogError(nameof(FetchTags), exception);
+                TopLevel.GetTopLevel(this)?.ViewContainer?.ShowError(I18NManager.GetResource(EntryViewerPageResources.LoadFailed), exception.Message);
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(_tagLoadCancellation, cancellation))
+                _tagLoadCancellation = null;
+            cancellation.Dispose();
+        }
     }
 
     private void ChangeSource()

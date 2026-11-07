@@ -20,10 +20,25 @@ public static class MakoHelper
 {
     public static async Task<List<BookmarkTag>> GetBookmarkTagsAsync(long uid, SimpleWorkType type, PrivacyPolicy policy, CancellationToken token = default)
     {
-        var tags = await App.AppViewModel.MakoClient.WorkBookmarkTags(type, uid, policy).ToListAsync(token);
-        tags.Insert(0, AllBookmarkTag.Instance);
-        tags.Insert(1, UncategorizedBookmarkTag.Instance);
-        return tags;
+        token.ThrowIfCancellationRequested();
+        var engine = App.AppViewModel.MakoClient.WorkBookmarkTags(type, uid, policy);
+        // Mako enumerators use EngineHandle rather than the enumeration token. This
+        // stops further MoveNext calls; an HTTP request already in flight may still finish.
+        using var registration = token.Register(engine.EngineHandle.Cancel);
+        try
+        {
+            var tags = await engine.ToListAsync(token);
+            token.ThrowIfCancellationRequested();
+            if (engine.EngineHandle.LastException is { } exception)
+                throw exception;
+            tags.Insert(0, AllBookmarkTag.Instance);
+            tags.Insert(1, UncategorizedBookmarkTag.Instance);
+            return tags;
+        }
+        finally
+        {
+            engine.EngineHandle.Complete();
+        }
     }
 
     public static string GetThumbnailUrl(this IWorkEntry workEntry, ThumbnailUrlOption option = ThumbnailUrlOption.Medium)

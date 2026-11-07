@@ -3,6 +3,7 @@
     "PlaceholderText": "输入关键字后按 Enter 开始搜索"
   },
   "AdvancedOptions": {
+    "Header": "高级搜索",
     "IllustrationTab": "Pixiv 插画",
     "NovelTab": "Pixiv 小说",
     "SauceNaoTab": "SauceNAO 以图搜图"

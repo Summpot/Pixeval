@@ -9,6 +9,7 @@
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:model="using:Mako.Model"
     xmlns:pixeval="using:Pixeval"
     xmlns:views="using:Pixeval.Views"
     xmlns:work="using:Pixeval.Views.Work"
@@ -19,16 +20,28 @@
         <work:WorkContainer.CommandBarElements>
             <ComboBox
                 x:Name="TagComboBox"
+                Width="240"
+                MinWidth="0"
+                MaxWidth="{Binding $parent[WrapPanel].Bounds.Width}"
                 VerticalAlignment="Stretch"
+                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+Source+TagTextBlock.Text}}"
                 ItemsSource="{x:Static capability:WorkBookmarksPage.DefaultTags}"
                 SelectedIndex="0"
-                SelectionChanged="TagComboBox_OnSelectionChanged" />
+                SelectionChanged="TagComboBox_OnSelectionChanged">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type model:BookmarkTag}">
+                        <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
             <controls:SymbolComboBox
                 x:Name="PrivacyPolicyComboBox"
+                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+Source+PrivacyPolicyTextBlock.Text}}"
                 ItemsSource="{markup1:EnumResources x:TypeArguments=enum:PrivacyPolicy}"
                 SelectionChanged="WorkTypeComboBox_OnSelectionChanged" />
             <controls:SymbolComboBox
                 x:Name="SimpleWorkTypeComboBox"
+                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+Source+SimpleWorkTypeTextBlock.Text}}"
                 ItemsSource="{markup1:EnumResources x:TypeArguments=enum:SimpleWorkType}"
                 SelectedValue="{x:Static views:PixevalSettings.SimpleWorkType}"
                 SelectionChanged="WorkTypeComboBox_OnSelectionChanged" />

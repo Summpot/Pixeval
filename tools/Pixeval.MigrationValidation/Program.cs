@@ -19,11 +19,11 @@ internal static class Program
     public static int Main(string[] args)
     {
         if (args.Length is < 2 or > 3
-            || args[0] is not ("inventory" or "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "login" or "work-selection" or "extension-management" or "bookmark-tags" or "viewer-toolbar" or "documentation" or "dialogs" or "ui")
+            || args[0] is not ("inventory" or "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "search-page" or "login" or "work-selection" or "extension-management" or "bookmark-tags" or "bookmark-page" or "ranking-page" or "viewer-toolbar" or "documentation" or "dialogs" or "ui")
             || args[0] is "extensions" && args.Length is not 3
             || args.Length is 3 && args[0] is not ("extensions" or "ui"))
         {
-            Console.Error.WriteLine("Usage: Pixeval.MigrationValidation <inventory|capture|benchmark|navigation|extensions|search|search-options|login|work-selection|extension-management|bookmark-tags|viewer-toolbar|documentation|dialogs|ui> <new evidence directory> [native fixture library: required for extensions, optional for ui]");
+            Console.Error.WriteLine("Usage: Pixeval.MigrationValidation <inventory|capture|benchmark|navigation|extensions|search|search-options|search-page|login|work-selection|extension-management|bookmark-tags|bookmark-page|ranking-page|viewer-toolbar|documentation|dialogs|ui> <new evidence directory> [native fixture library: required for extensions, optional for ui]");
             return 1;
         }
 
@@ -63,7 +63,7 @@ internal static class Program
                 .StartWithClassicDesktopLifetime([]);
         }
 
-        if (args[0] is "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "login" or "work-selection" or "extension-management" or "bookmark-tags" or "viewer-toolbar" or "documentation" or "dialogs")
+        if (args[0] is "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "search-page" or "login" or "work-selection" or "extension-management" or "bookmark-tags" or "bookmark-page" or "ranking-page" or "viewer-toolbar" or "documentation" or "dialogs")
         {
             RunHeadlessAsync(args[0], outputDirectory).GetAwaiter().GetResult();
             return 0;
@@ -117,6 +117,9 @@ internal static class Program
                     case "search-options":
                         await SearchArgumentsValidation.RunAsync(directory);
                         break;
+                    case "search-page":
+                        await SearchPageValidation.RunAsync(directory);
+                        break;
                     case "login":
                         await LoginLifetimeValidation.RunAsync(directory);
                         break;
@@ -128,6 +131,12 @@ internal static class Program
                         break;
                     case "bookmark-tags":
                         await BookmarkTagsValidation.RunAsync(directory);
+                        break;
+                    case "bookmark-page":
+                        await BookmarksPageValidation.RunAsync(directory);
+                        break;
+                    case "ranking-page":
+                        await RankingPageValidation.RunAsync(directory);
                         break;
                     case "viewer-toolbar":
                         await ViewerToolbarValidation.RunAsync(directory);

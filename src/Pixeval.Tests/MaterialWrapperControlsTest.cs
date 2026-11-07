@@ -75,6 +75,9 @@ public sealed class MaterialWrapperControlsTest
                 Assert.AreSame(selector.IconItemTemplate, inner.ItemTemplate);
                 Assert.AreEqual(Symbol.Book, inner.GetVisualDescendants().OfType<SymbolIcon>().Single().Symbol);
                 Assert.AreEqual("Second option", AutomationProperties.GetName(inner));
+                AutomationProperties.SetName(selector, "Search order");
+                Render(window);
+                Assert.AreEqual("Search order", AutomationProperties.GetName(inner));
                 Assert.IsTrue(selector.Bounds.Width is >= 80 and <= 120, $"Unexpected toolbar width: {selector.Bounds.Width}");
 
                 inner.IsDropDownOpen = true;
@@ -85,6 +88,10 @@ public sealed class MaterialWrapperControlsTest
                 inner.IsDropDownOpen = false;
                 Render(window);
                 Assert.AreEqual(1, selector.SelectedValue);
+                Assert.AreEqual("Search order", AutomationProperties.GetName(inner), "The field name stays stable when the selected value changes.");
+                selector.ClearValue(AutomationProperties.NameProperty);
+                Render(window);
+                Assert.AreEqual("First option", AutomationProperties.GetName(inner), "Unnamed compact selectors keep their descriptive selection fallback.");
                 Assert.AreEqual(Symbol.Image, inner.GetVisualDescendants().OfType<SymbolIcon>().Single().Symbol);
 
                 selector.IconMode = false;

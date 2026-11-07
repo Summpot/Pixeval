@@ -11,6 +11,7 @@ using System.Web;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Headless;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
@@ -29,6 +30,7 @@ internal static class LoginLifetimeValidation
 {
     internal static async Task RunAsync(string directory)
     {
+        await LoginLayoutValidation.RunAsync(directory);
         var client = App.AppViewModel.MakoClient;
         var accounts = App.AppViewModel.AppServiceProvider.GetRequiredService<LoginUserPersistentManager>();
         var requests = Channel.CreateUnbounded<PendingLogin>();
@@ -68,7 +70,9 @@ internal static class LoginLifetimeValidation
                 button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Require(!model.IsLoginInProgress && pending.Count == (sequence - 1) * 3, "Blank input leaves controls ready and starts no authentication");
                 model.RefreshToken = "fixture-old";
-                button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Require(button.Focus(NavigationMethod.Tab), "Token login action can receive keyboard focus");
+                window.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.Space, " ");
+                window.KeyRelease(Key.Space, RawInputModifiers.None, PhysicalKey.Space, " ");
                 var old = await NextAsync();
                 button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Require(old.RefreshToken is "fixture-old" && model.IsLoginInProgress, "Login captures the intended token and enters the busy state");

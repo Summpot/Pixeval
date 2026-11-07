@@ -45,6 +45,10 @@ public sealed class MarkdownScrollChainingTest
                 window.UpdateLayout();
                 Dispatcher.UIThread.RunJobs();
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+                // Frame readback drains the headless layout/render jobs before we
+                // translate the wheel point and inspect the compositor's hit target.
+                using var frame = window.CaptureRenderedFrame();
+                Assert.IsNotNull(frame);
                 var viewers = markdown.GetVisualDescendants().OfType<ScrollViewer>().ToArray();
                 var code = viewers.Single(view => view.Classes.Contains("CodeBlock"));
                 var document = viewers.First();
@@ -57,7 +61,9 @@ public sealed class MarkdownScrollChainingTest
                 Assert.IsInstanceOfType<ScrollViewerPresenter>(code.Presenter);
                 Assert.IsTrue(code.IsScrollChainingEnabled);
                 var hit = (Visual) window.InputHitTest(point)!;
-                Assert.Contains(code, hit.GetVisualAncestors().ToArray());
+                Assert.IsTrue(hit.GetVisualAncestors().Contains(code),
+                    $"Point={point}, Hit={hit.GetType().FullName}, Code={code.Bounds}, Presenter={code.Presenter?.Bounds}, "
+                    + $"Ancestors={string.Join(" -> ", hit.GetVisualAncestors().Select(visual => visual.GetType().Name))}");
 
                 window.MouseWheel(point, new Vector(0, -1));
                 Dispatcher.UIThread.RunJobs();

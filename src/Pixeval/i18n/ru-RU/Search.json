@@ -3,6 +3,7 @@
     "PlaceholderText": "Введите ключевые слова и нажмите Enter для поиска"
   },
   "AdvancedOptions": {
+    "Header": "Расширенный поиск",
     "IllustrationTab": "Иллюстрации Pixiv",
     "NovelTab": "Новеллы Pixiv",
     "SauceNaoTab": "Поиск по изображению (SauceNAO)"

@@ -29,6 +29,9 @@ internal sealed class OfflineSearchFixture : IDisposable
     internal bool IsPremium { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? AuthResponseFactory { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? BookmarkResponseFactory { get; set; }
+    internal Func<HttpRequestMessage, CancellationToken, Task<string>>? BookmarkWorksResponseFactory { get; set; }
+    internal Func<Uri, string>? TrendingResponseFactory { get; set; }
+    internal Func<Uri, string>? RankingResponseFactory { get; set; }
 
     internal OfflineSearchFixture(MakoClient client)
     {
@@ -71,6 +74,12 @@ internal sealed class OfflineSearchFixture : IDisposable
         string json;
         switch (uri.AbsolutePath)
         {
+            case "/v1/illust/ranking" or "/v1/novel/ranking" when RankingResponseFactory is { } rankings:
+                json = rankings(uri);
+                break;
+            case "/v1/user/bookmarks/illust" or "/v1/user/bookmarks/novel" when BookmarkWorksResponseFactory is { } works:
+                json = await works(request, token).ConfigureAwait(false);
+                break;
             case "/auth/token":
                 if (AuthResponseFactory is { } respond)
                 {
@@ -100,7 +109,7 @@ internal sealed class OfflineSearchFixture : IDisposable
                 break;
             case "/v1/trending-tags/illust":
             case "/v1/trending-tags/novel":
-                json = "{\"trend_tags\":[]}";
+                json = TrendingResponseFactory?.Invoke(uri) ?? "{\"trend_tags\":[]}";
                 break;
             case "/v1/search/options":
                 json = """

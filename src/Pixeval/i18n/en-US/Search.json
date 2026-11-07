@@ -3,6 +3,7 @@
     "PlaceholderText": "Enter keywords and press Enter to search"
   },
   "AdvancedOptions": {
+    "Header": "Advanced search",
     "IllustrationTab": "Pixiv Illustrations",
     "NovelTab": "Pixiv Novels",
     "SauceNaoTab": "SauceNAO Image Search"

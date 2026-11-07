@@ -761,3 +761,33 @@ CI：构建固定官方 demo 后把清单中的库传给验证脚本，上传提
 验证宿主新增模式及俄语导航回归已接入 CI；工作流 YAML 和四段 PowerShell 语法检查通过，未执行远程 CI。改动 XAML 经 XamlStyler，相关 C# 经 whitespace 格式化；文档链接及 `git diff --check` 通过。`verified-source-hashes.json` 保存 31 个改动源码/宿主/CI 文件的 SHA256，最终检查与验证时一致。构建/测试/headless 进程正常退出，常规构建服务器可继续驻留；本轮代码和文档均由本地提交收尾，验证产物保留。
 
 未覆盖与下一步：本轮 WSL Debian 没有系统 dotnet/rsync，未重建已删除环境，也没有重新验证 Linux；macOS/移动端/Browser 和远程 CI 同样未运行。原生 IME、系统焦点/剪贴板/读屏、触摸、DPI、GPU、实际收藏或批量业务写入、扩展安装/帮助或目录实际打开/重启删除仍待验收。导航及扩展页的槽宽配置只恢复已测语言/默认字体下的可达性，上游普通命令栏不逐项测量宽度的缺口仍存在，P02.04 不勾选完成。下一批可独立处理普通栏实际测量/字体缩放方案，或为 P08 批量业务、分页/账号切换与取消建立固定服务样本；继续沿用后台验证，不自动恢复 computer use。
+
+
+## 2026-11-08 无人值守迁移批次（03:20 启动）
+
+时间：03:20–05:00（Asia/Shanghai），约 100 分钟；基线 `27aaf5f3`，分支 `feat/material3expressive-migration`，开始时工作区干净。按 §10.3 自选登录、搜索及收藏/排行头部五个功能单元，形成九个代码提交；已提交后新发现的问题按原职责追加修复，最后集中记账一次。全程使用后台脚本、隔离假账号/固定 HTTP 和 headless 输入/渲染，没有调用或恢复 computer use，没有推送、远程发布、真实账号写入、依赖 gitlink 变更或重建已删除的独立 SDK/WSL 环境。
+
+| 功能单元 / 步骤 | 本地提交 | 本轮完成范围 |
+| --- | --- | --- |
+| 登录，P07.01a | `fb6dc867`、`d61d79c3`、`206427a0` | Material 表面、宽窄/短窗、账号选择与模型恢复、手工令牌修改/清空、忙碌状态；修复首字符被旧选择回写清空；内外层无障碍 Value 及变更事件遮罩，账号列表/预览使用显示名，空名称回退账号 ID，辅助写入/展开/折叠仍可用 |
+| 高级搜索，P09.04a/05a | `36bb2fb5` | 插画/小说纵向具名字段与 Material 表面；保留每页 28 条原绑定、参数矩阵、禁用值和编辑器；SymbolComboBox 将显式名称传入实际选择器，未命名时保留选项描述回退 |
+| 搜索首页，P09.03a | `cf92ac3b` | 长标签/翻译换行、热门类型响应布局与具名入口；固定/取消固定/删除、SQLite/设置往返、内存剪贴板、搜索/热门单次路由 |
+| 收藏页，P09.02a | `d78f2bc4`、`ef195ade` | 首次请求保留指定标签；宽窄选择器及完整下拉名称；新旧标签响应归属、失败重试、卸载/重挂载及加载期间选择保留；新来源缺少当前标签时不继承旧数量 |
+| 排行榜，P09.02b | `c22a11de` | 长译文及宽窄字段；默认小说入口读取小说设置；29 个受支持榜单模式、日期键入/日历点选、未来/无效日期提示、清空回退与单次刷新 |
+| Markdown 测试就绪检查 | `d4552b7f` | 命中测试前捕获实际渲染帧，排空 headless 派发/渲染工作；保留严格滚动祖先断言并补充命中诊断，未修改产品滚动逻辑 |
+
+主计划仅新增上述局部完成项及 P07/P09「实施中」状态，父步骤保持未完成；验收文档仅补实际新增契约，宿主文档补新模式及输入检查。新增资源沿用四语言 JSON 和 Language.tt 生成；法语原本缺失的搜索字段继续按既有规则回退，不把本轮新增标题翻译记作完整法语覆盖。没有改变数据格式、导航键、账号协议、扩展 ABI 或虚拟化算法。
+
+证据根目录：`artifacts/m3e/2026-11-08-batch-0320/`。系统 SDK `11.0.100-rc.3.26522.148`、应用 runtime `10.0.14`，Avalonia `12.1.5`、M3E `859a69e563b2a01fc87a26255ee11c1d89959677`。最终 `./scripts/verify-m3e.ps1 -OutputDirectory artifacts/m3e/2026-11-08-batch-0320/windows-closed -ExtensionFixture <固定 C++ demo DLL>` 完成桌面 Debug、测试 Release 构建及完整测试 **462/462，零失败、零跳过**；原生扩展样本 SHA256、依赖、工作区及 TRX 均已记录。最终源码哈希和提交单独记录。
+
+最终 `dotnet publish src/Pixeval.Desktop/Pixeval.Desktop.csproj -c Release -r win-x64 --self-contained true -o artifacts/m3e/2026-11-08-batch-0320/native-aot-closed` 成功，日志在 `native-aot-closed.log`。PE 检查确认 x64 PE32+、CLR 头 RVA/size 均为零，八个新增/修改的本地化 JSON 与发布副本逐字节一致；SHA256 见 `native-aot-closed-header.json`，没有启动 EXE。保留既有 IL2026/IL3050 等裁剪/AOT 警告；构建成功不代表原生启动及完整裁剪运行时通过。规范化警告对照见 `warning-delta.json`、`warning-baseline-confirmation.json`，增量范围带出的 CS3021/CS9113 已存在于前批日志，没有屏蔽警告；最终构建与本轮前次完整构建均为 75 条规范化唯一警告，无增减，见 `warning-closure-delta.json`。
+
+`zh-Hans/en-US/fr-FR/ru-RU` 各通过：login 4 组布局/辅助接口 + 8 组登录生命周期；search-options 8 组字段交互 + 9 组参数契约/19 个引擎请求；search-page 4 组；bookmark-page 4 组；ranking-page 4 组及小说默认入口；受共享选择器影响的 work-selection 12 组。24 个最终目录、契约与截图数量见 `locale-validation-summary.json`；登录最终为 `login-protected-<culture>/`，收藏为 `bookmark-complete-<culture>/`，排行为 `ranking-final-<culture>/`。共享控件回归另有 `search-page-completion-regression/` 12 组和 `capture-final/` 42 帧；最后的登录辅助接口修复由新登录截图补充。原生键盘/读屏未以这些托管接口测试代替。
+
+关键失败证据保留：`login-edit.log`/`login-draft.log` 的手工编辑丢失、`login-privacy-before.log` 与 `login-unnamed-before.log` 的普通/空名称账号无障碍明文暴露、`search-page-bounds-before.log` 的窄窗长标签溢出、`bookmark-before.log` 的初始标签丢失、`bookmark-count-before.log` 的旧来源数量、`ranking-before.log` 的默认小说模式异常，以及 `ranking-date/future-date-Light-360.txt` 的未来日期被编辑器接受却被引擎拒绝。日期 DisplayDateEnd 仅限制视口，现用局部 BlackoutDates 与现有日期错误事件保留合法值并提示；登录辅助接口没有继承会发布原始 Text 事件的默认 AutoCompleteBox peer。失败场景均有修复后行为断言。
+
+首次完整运行 `windows-complete/` 为 461/462，Markdown 滚轮测试命中祖先失败；单独重跑及仅增加诊断的完整运行均通过，未确定复现根因。保留原始失败，增加实际帧就绪检查后完整回归通过，最终仍为 462/462。部分宿主构建撞到仍在运行的 headless/AOT 进程而出现 Windows DLL/PDB 锁；等待进程退出后构建通过，没有绕过构建或弱化断言。标签固定失败响应产生的应用错误日志属于预期负例，均断言保留输入并可恢复。
+
+新增 search-page/bookmark-page/ranking-page 已接入现有 Windows/Ubuntu CI 模式列表；本轮只执行本地 Windows。改动 XAML 经 XamlStyler，相关 C# 经 whitespace 格式化；工作流 YAML/PowerShell、JSON、文档链接及 `git diff --check` 通过。`verified-source-hashes.json` 保存 33 个最终代码/宿主/CI 文件，`static-validation-final.json` 记录收尾检查。常规构建服务器可驻留，验证进程正常退出；本轮修改通过本地代码及一次文档提交收尾。
+
+未覆盖：原生 OAuth/WebView、IME、系统焦点/读屏/剪贴板、多屏 DPI、触摸/GPU、Linux/macOS/移动端/Browser、远程 CI；真实服务写入、完整作品分页/账号切换、收藏订阅、系列/特辑及完整搜索结果页。Mako EngineHandle 取消约束枚举和响应归属，不能中断已发出的 HTTP；空页的内部 next_url 行为未据非空固定样本外推。日期测试仅使用当前时区。下一批建议从 P07.03/P09.02 的账号切换、收藏订阅和完整作品分页取消建立固定服务基线，或继续 P09.01 动态页面；沿用后台验证，不自动恢复 computer use。

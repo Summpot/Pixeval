@@ -60,7 +60,7 @@
                         Padding="{TemplateBinding Padding}"
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch"
-                        AutomationProperties.Name="{Binding SelectedItem, RelativeSource={RelativeSource Self}}"
+                        Classes.named="{Binding (AutomationProperties.Name), RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                         ItemsSource="{TemplateBinding ItemsSource}"
                         SelectedValue="{TemplateBinding SelectedValue,
                                                         Mode=TwoWay}"
@@ -70,6 +70,12 @@
                             <Style Selector="ComboBox">
                                 <Setter Property="ItemTemplate" Value="{Binding $parent[local:SymbolComboBox].IconItemTemplate}" />
                                 <Setter Property="SelectionBoxItemTemplate" Value="{Binding $parent[local:SymbolComboBox].IconSelectionBoxTemplate}" />
+                            </Style>
+                            <Style Selector="ComboBox:not(.named)">
+                                <Setter Property="AutomationProperties.Name" Value="{Binding SelectedItem, RelativeSource={RelativeSource Self}}" />
+                            </Style>
+                            <Style Selector="ComboBox.named">
+                                <Setter Property="AutomationProperties.Name" Value="{Binding $parent[local:SymbolComboBox].(AutomationProperties.Name)}" />
                             </Style>
                             <!--  Text 模式：切换下拉项模板  -->
                             <Style Selector="ComboBox.text">

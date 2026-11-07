@@ -38,14 +38,16 @@
         <DockPanel
             Margin="20"
             HorizontalSpacing="5"
-            VerticalSpacing="5">
+            VerticalSpacing="12">
             <Expander
                 x:Name="AdvancedExpander"
                 HorizontalAlignment="Stretch"
+                AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+AdvancedOptions.Header}}"
                 DockPanel.Dock="Top">
                 <Expander.Header>
                     <AutoCompleteBox
                         x:Name="SearchAutoCompleteBox"
+                        AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+SearchBox.PlaceholderText}}"
                         FilterMode="None"
                         IsTextCompletionEnabled="False"
                         ItemSelector="SearchAutoCompleteBox_OnSelectItem"
@@ -58,7 +60,7 @@
                         TextChanged="SearchAutoCompleteBox_OnTextChanged">
                         <AutoCompleteBox.InnerRightContent>
                             <m3:IconButton
-                                AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+SauceNAO.Search}}"
+                                AutomationProperties.Name="{I18N {x:Static pixeval:MainPageResources+Tab.Search}}"
                                 Click="SearchButton_OnClick"
                                 Symbol="Search" />
                         </AutoCompleteBox.InnerRightContent>
@@ -105,12 +107,13 @@
                         <DataTemplate DataType="{x:Type database:SearchHistoryEntry}">
                             <m3:SuggestionChip Click="SearchHistoryButton_OnClick">
                                 <m3:SuggestionChip.Content>
-                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                        <TextBlock Text="{Binding Value}" />
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding Value}" TextWrapping="Wrap" />
                                         <TextBlock
                                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                             IsVisible="{Binding TranslatedName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                            Text="{Binding TranslatedName}" />
+                                            Text="{Binding TranslatedName}"
+                                            TextWrapping="Wrap" />
                                     </StackPanel>
                                 </m3:SuggestionChip.Content>
                                 <m3:SuggestionChip.ContextMenu>
@@ -135,11 +138,15 @@
                 </ItemsControl>
             </ScrollViewer>
             <DockPanel VerticalSpacing="5">
-                <DockPanel DockPanel.Dock="Top" HorizontalSpacing="10">
+                <WrapPanel
+                    DockPanel.Dock="Top"
+                    ItemSpacing="12"
+                    LineSpacing="8">
                     <TextBlock
                         VerticalAlignment="Center"
+                        m3:MaterialText.Style="{m3:Typography TitleMedium}"
                         Text="{I18N {x:Static pixeval:SearchResources+TrendingHeaderTextBlock.Text}}"
-                        Theme="{StaticResource SubtitleTextBlockStyle}" />
+                        TextWrapping="Wrap" />
                     <TabStrip
                         ItemsSource="{markup1:EnumResources x:TypeArguments=enum:SimpleWorkType}"
                         SelectedValue="{Binding SelectedTrendingTagsType, Mode=TwoWay}"
@@ -150,7 +157,7 @@
                             </DataTemplate>
                         </TabStrip.ItemTemplate>
                     </TabStrip>
-                </DockPanel>
+                </WrapPanel>
                 <ItemsControl ItemsSource="{Binding TrendingTags}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -166,8 +173,10 @@
                             <m3:Card
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
+                                AutomationProperties.Name="{Binding Tag}"
                                 Click="TrendingTagButton_OnClick"
-                                Theme="{StaticResource ContentCardTheme}">
+                                Theme="{StaticResource ContentCardTheme}"
+                                ToolTip.Tip="{Binding Tag}">
                                 <m3:Card.Content>
                                     <DockPanel VerticalSpacing="5">
                                         <TextBlock

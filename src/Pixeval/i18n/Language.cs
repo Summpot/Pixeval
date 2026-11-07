@@ -1486,6 +1486,7 @@ namespace Pixeval
         public const string SearchUser = "Search.SearchUser";
         public static class AdvancedOptions
         {
+            public const string Header = "Search.AdvancedOptions.Header";
             public const string IllustrationTab = "Search.AdvancedOptions.IllustrationTab";
             public const string NovelTab = "Search.AdvancedOptions.NovelTab";
             public const string SauceNaoTab = "Search.AdvancedOptions.SauceNaoTab";
@@ -1819,6 +1820,14 @@ namespace Pixeval
         public static class CopyTranslatedTagMenuItem
         {
             public const string Text = "WorkInfoPage.CopyTranslatedTagMenuItem.Text";
+        }
+    }
+    public static class WorkRankingPageResources
+    {
+        public static class InvalidDate
+        {
+            public const string Content = "WorkRankingPage.InvalidDate.Content";
+            public const string Title = "WorkRankingPage.InvalidDate.Title";
         }
     }
     public static class WorkSubscriptionsSettingsExpanderResources

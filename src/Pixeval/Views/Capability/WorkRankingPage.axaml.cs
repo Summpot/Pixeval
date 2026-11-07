@@ -3,17 +3,20 @@
 
 using System;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Mako;
 using Mako.Global.Enum;
 using Pixeval.Controls;
+using Pixeval.I18N;
+using Pixeval.Utilities;
 using Pixeval.ViewModels;
 
 namespace Pixeval.Views.Capability;
 
 public partial class WorkRankingPage : IconContentPage
 {
-    public WorkRankingPage() : this(PixevalSettings.SimpleWorkType, App.AppViewModel.AppSettings.SearchSettings.RankOptions.IllustrationRankOption, MaxDate)
+    public WorkRankingPage() : this(PixevalSettings.SimpleWorkType, GetDefaultRankOption(PixevalSettings.SimpleWorkType), MaxDate)
     {
     }
 
@@ -32,6 +35,22 @@ public partial class WorkRankingPage : IconContentPage
 
     public static DateTime MaxDate => MakoClient.RankingMaxDateTime.LocalDateTime;
 
+    private void RankDateTimeCalendarDatePicker_OnTemplateApplied(object? sender, TemplateAppliedEventArgs e)
+    {
+        // DisplayDateEnd limits the calendar viewport; Avalonia can extend it when
+        // parsing typed text. Blackout dates enforce the API's date limit as well.
+        if (RankDateTimeCalendarDatePicker.BlackoutDates is { } dates)
+        {
+            dates.Clear();
+            dates.Add(new(MaxDate.Date.AddDays(1), DateTime.MaxValue.Date));
+        }
+    }
+
+    private void RankDateTimeCalendarDatePicker_OnDateValidationError(object? sender, CalendarDatePickerDateValidationErrorEventArgs e) =>
+        TopLevel.GetTopLevel(this)?.ViewContainer?.ShowWarning(
+            I18NManager.GetResource(WorkRankingPageResources.InvalidDate.Title),
+            I18NManager.GetResource(WorkRankingPageResources.InvalidDate.Content, MaxDate.ToString("d")));
+
     private void SimpleWorkTypeComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
     {
         var oldRankOption = RankOptionComboBox.SelectedValue;
@@ -44,10 +63,13 @@ public partial class WorkRankingPage : IconContentPage
     {
         var selectedWorkType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>();
         RankOptionComboBox.ItemsSource = SymbolComboBoxItem.GetValues<RankOption>(selectedWorkType);
-        RankOptionComboBox.SelectedValue = selectedWorkType is SimpleWorkType.Illustration
+        RankOptionComboBox.SelectedValue = GetDefaultRankOption(selectedWorkType);
+    }
+
+    private static RankOption GetDefaultRankOption(SimpleWorkType workType) =>
+        workType is SimpleWorkType.Illustration
             ? App.AppViewModel.AppSettings.SearchSettings.RankOptions.IllustrationRankOption
             : App.AppViewModel.AppSettings.SearchSettings.RankOptions.NovelRankOption;
-    }
 
     private void RankOptionComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
     {

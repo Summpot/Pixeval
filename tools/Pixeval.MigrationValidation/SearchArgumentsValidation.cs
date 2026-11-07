@@ -30,6 +30,7 @@ internal static class SearchArgumentsValidation
 {
     internal static async Task RunAsync(string directory)
     {
+        await SearchOptionsLayoutValidation.RunAsync(directory);
         var client = App.AppViewModel.MakoClient;
         using var fixture = new OfflineSearchFixture(client);
         await LoginAsync(false);

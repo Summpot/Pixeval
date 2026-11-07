@@ -5,6 +5,8 @@
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:database="using:Pixeval.Models.Database"
+    xmlns:login="using:Pixeval.Views.Login"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
@@ -19,54 +21,96 @@
     </views:IconContentPage.DataContext>
     <views:IconContentPage.Resources>
         <DataTemplate x:DataType="{x:Type database:LoginUserEntry}" x:Key="LoginUserTemplate">
-            <controls:UserBasicInfoPresenter Margin="20,5" User="{Binding TokenUser}" />
+            <controls:UserBasicInfoPresenter
+                Margin="8,5"
+                AutomationProperties.Name="{Binding Converter={x:Static login:TokenAutoCompleteBox.AccountNameConverter}}"
+                ToolTip.Tip="{Binding Name}"
+                User="{Binding TokenUser}" />
         </DataTemplate>
     </views:IconContentPage.Resources>
-    <StackPanel
-        Width="300"
-        Margin="50"
-        VerticalAlignment="Center"
-        DockPanel.Dock="Right"
-        Spacing="10">
-        <StackPanel Orientation="Horizontal" Spacing="10">
-            <PathIcon
-                Width="82"
-                Height="29"
-                HorizontalAlignment="Left"
-                Data="{markup1:SvgPath {x:Static pixeval:SvgResources.Pixiv}}"
-                Foreground="{DynamicResource PixivLogo}" />
-            <TextBlock
-                VerticalAlignment="Center"
-                Text="{I18N {x:Static pixeval:LoginPageResources.LoginHeader}}"
-                Theme="{StaticResource SubtitleTextBlockStyle}" />
-        </StackPanel>
-        <ContentControl
-            Content="{Binding SelectedUser}"
-            ContentTemplate="{StaticResource LoginUserTemplate}"
-            IsVisible="{Binding HasSelectedUser}" />
-        <AutoCompleteBox
+    <views:IconContentPage.Styles>
+        <Style Selector="AutoCompleteBox /template/ TextBox">
+            <Setter Property="PasswordChar" Value="•" />
+            <Setter Property="RevealPassword" Value="False" />
+        </Style>
+        <Style Selector="Button.loginAction /template/ ContentPresenter">
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </views:IconContentPage.Styles>
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <m3:MaterialSurface
+            MaxWidth="440"
+            Margin="16"
+            Padding="24"
             HorizontalAlignment="Stretch"
-            FilterMode="Custom"
-            IsEnabled="{Binding !IsLoginInProgress}"
-            IsTextCompletionEnabled="False"
-            ItemFilter="{x:Static viewModels:LoginPageViewModel.LoginUserFilter}"
-            ItemSelector="{x:Static viewModels:LoginPageViewModel.LoginUserTextSelector}"
-            ItemTemplate="{StaticResource LoginUserTemplate}"
-            ItemsSource="{Binding Users}"
-            MinimumPrefixLength="0"
-            PlaceholderText="{I18N {x:Static pixeval:LoginPageResources+RefreshTokenBox.PlaceholderText}}"
-            SelectedItem="{Binding SelectedUser, Mode=TwoWay}"
-            Tapped="RefreshTokenBox_OnTapped"
-            Text="{Binding RefreshToken, Mode=TwoWay}" />
-        <Button
-            HorizontalAlignment="Stretch"
-            Click="LoginButton_OnClick"
-            Content="{I18N {x:Static pixeval:LoginPageResources+RefreshTokenButton.Content}}"
-            IsEnabled="{Binding !IsLoginInProgress}" />
-        <Button
-            HorizontalAlignment="Stretch"
-            Click="OpenWebView_OnClick"
-            Content="{I18N {x:Static pixeval:LoginPageResources+WebViewButton.Content}}"
-            IsEnabled="{Binding !IsLoginInProgress}" />
-    </StackPanel>
+            VerticalAlignment="Center"
+            Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerLow}}"
+            CornerRadius="24">
+            <StackPanel Spacing="16">
+                <WrapPanel ItemSpacing="12" LineSpacing="8">
+                    <PathIcon
+                        Width="82"
+                        Height="29"
+                        HorizontalAlignment="Left"
+                        Data="{markup1:SvgPath {x:Static pixeval:SvgResources.Pixiv}}"
+                        Foreground="{DynamicResource PixivLogo}" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        m3:MaterialText.Style="{m3:Typography HeadlineSmall}"
+                        Text="{I18N {x:Static pixeval:LoginPageResources.LoginHeader}}"
+                        TextWrapping="Wrap" />
+                </WrapPanel>
+                <ContentControl
+                    AutomationProperties.Name="{Binding SelectedUser, Converter={x:Static login:TokenAutoCompleteBox.AccountNameConverter}}"
+                    Content="{Binding SelectedUser}"
+                    ContentTemplate="{StaticResource LoginUserTemplate}"
+                    IsVisible="{Binding HasSelectedUser}" />
+                <!--
+                    The editor owns selection while typing. Feeding model deselection back here
+                    restores AutoCompleteBox's previous SearchText and loses the new token.
+                -->
+                <login:TokenAutoCompleteBox
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:LoginPageResources+RefreshTokenBox.PlaceholderText}}"
+                    FilterMode="Custom"
+                    IsEnabled="{Binding !IsLoginInProgress}"
+                    IsTextCompletionEnabled="False"
+                    ItemFilter="{x:Static viewModels:LoginPageViewModel.LoginUserFilter}"
+                    ItemSelector="{x:Static viewModels:LoginPageViewModel.LoginUserTextSelector}"
+                    ItemTemplate="{StaticResource LoginUserTemplate}"
+                    ItemsSource="{Binding Users}"
+                    MinimumPrefixLength="0"
+                    PlaceholderText="{I18N {x:Static pixeval:LoginPageResources+RefreshTokenBox.PlaceholderText}}"
+                    SelectedItem="{Binding SelectedUser, Mode=OneWayToSource}"
+                    Tapped="RefreshTokenBox_OnTapped"
+                    Text="{Binding RefreshToken, Mode=TwoWay}">
+                    <login:TokenAutoCompleteBox.Styles>
+                        <Style x:DataType="{x:Type database:LoginUserEntry}" Selector="ListBoxItem">
+                            <Setter Property="AutomationProperties.Name" Value="{Binding Converter={x:Static login:TokenAutoCompleteBox.AccountNameConverter}}" />
+                        </Style>
+                    </login:TokenAutoCompleteBox.Styles>
+                </login:TokenAutoCompleteBox>
+                <Button
+                    HorizontalAlignment="Stretch"
+                    Classes="loginAction"
+                    Click="LoginButton_OnClick"
+                    Content="{I18N {x:Static pixeval:LoginPageResources+RefreshTokenButton.Content}}"
+                    IsEnabled="{Binding !IsLoginInProgress}" />
+                <Button
+                    HorizontalAlignment="Stretch"
+                    Classes="loginAction"
+                    Click="OpenWebView_OnClick"
+                    Content="{I18N {x:Static pixeval:LoginPageResources+WebViewButton.Content}}"
+                    IsEnabled="{Binding !IsLoginInProgress}"
+                    Theme="{StaticResource MaterialOutlinedButtonTheme}" />
+                <StackPanel IsVisible="{Binding IsLoginInProgress}" Spacing="8">
+                    <ProgressBar AutomationProperties.Name="{I18N {x:Static pixeval:MainPageResources+LoggingIn.Header}}" IsIndeterminate="{Binding IsLoginInProgress}" />
+                    <TextBlock
+                        m3:MaterialText.Style="{m3:Typography BodyMedium}"
+                        Text="{I18N {x:Static pixeval:MainPageResources+LoggingIn.Header}}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </StackPanel>
+        </m3:MaterialSurface>
+    </ScrollViewer>
 </views:IconContentPage>

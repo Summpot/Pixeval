@@ -12,10 +12,13 @@ dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationVa
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll navigation artifacts/m3e/my-run/navigation
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll search artifacts/m3e/my-run/search
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll search-options artifacts/m3e/my-run/search-options
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll search-page artifacts/m3e/my-run/search-page
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll login artifacts/m3e/my-run/login
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-selection artifacts/m3e/my-run/work-selection
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll extension-management artifacts/m3e/my-run/extension-management
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll bookmark-tags artifacts/m3e/my-run/bookmark-tags
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll bookmark-page artifacts/m3e/my-run/bookmark-page
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll ranking-page artifacts/m3e/my-run/ranking-page
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll documentation artifacts/m3e/my-run/documentation
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll dialogs artifacts/m3e/my-run/dialogs
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll ui artifacts/m3e/my-run/native
@@ -92,6 +95,18 @@ dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationVa
 
 再通过 BookmarkTagSelectorFlyoutHelper 打开真实 Flyout，验证窄窗及打开时缩放、异步提交期间重复确认只执行一次、成功关闭、待处理时 Escape 关闭、迟到完成不重新打开、关闭后退订尺寸事件，以及回调失败后保留输入和恢复焦点以便重试。失败样本会经过现有 App 异常边界写日志，这是有意触发的固定异常；断言确认恢复后再次提交成功。输出 `bookmark-tag-contracts.txt`、请求记录及截图。没有真实收藏写入，且此模式不能证明原生 IME、系统弹出层或服务端保存。
 
+## bookmark-page
+
+打开真实 WorkBookmarksPage + WorkContainer，使用隔离假账号和手动完成的收藏标签 HTTP 响应，作品请求返回固定空页。验证浅深主题、360/1000 DIP 窗宽、长标签及下拉层/Escape、选择器名称、首次显式标签、全部/未分类的原 API 值，以及类型/隐私/标签改变后的精确请求参数。完成的新列表缺少当前标签时保留筛选，但不能显示旧来源的数量。
+
+新旧标签响应逆序完成，旧成功/失败不得覆盖当前列表或显示当前错误；刷新失败保留筛选并可重试，加载期间的新选择不能被请求发起时的旧值覆盖。卸载后完成旧请求，再挂载必须重新加载且保留筛选。输出 `bookmark-page-contracts.txt`、请求日志和页面/错误截图。Mako 的 EngineHandle 取消只约束枚举及响应归属，不能中断已发送的 HTTP；固定迟到非空页验证不继续下一页，不推导所有内部分页情形均已取消。订阅入口、真实作品分页、账号切换及服务端数据权限仍另行验收。
+
+## ranking-page
+
+使用真实 WorkRankingPage 和离线榜单引擎请求，覆盖两类作品的全部受支持模式、不同/相同模式时的类型切换、默认小说设置、原日期参数和单次刷新。浅深主题与宽窄窗检查所有本地化榜单名称、具名字段及编辑器保留。
+
+从真实日期编辑器键入本地化日期、以 Ctrl+Down 打开日历并通过 headless 指针点选日期；未来/无效文本必须显示本地化警告、保留先前日期且不发送无效请求，清空仍回退最新榜单日期。输出 `ranking-page-contracts.txt`、`offline-requests.txt`、日期状态与日历/警告截图。使用当前进程时区，不能代表原生弹层、其他时区、完整分页或服务端结果已验收。
+
 ## extensions
 
 使用官方 Pixeval.Extensions C++ demo，固定在 Common 5.0.0 包元数据的源码提交 `20c900a76cb427ad1dac38ed3f64463be2fd496b`。不修改 SDK 或应用依赖；不是 Rust 迁移。需要 Git、CMake 3.24+、C++20 编译器和项目指定 .NET SDK。Windows 本机 VS 2026 示例：
@@ -119,15 +134,25 @@ Linux 可省略 Generator/Architecture，由 CMake 选择本机工具链。脚�
 
 浅深主题分别执行最后关键词请求、新旧响应逆序、方向键选择/Enter 替换、数字立即入口、清空、卸载取消/迟到返回/重新挂载及普通搜索 Enter。路由容器只记录导航目标并释放其 WorkView，不把搜索结果页挂载到网络列表。生产的一秒 debounce 保持原值；完成旧 HTTP 响应后使用短暂异步派发稳定窗口，不将这段时间记作性能。
 
-还以固定 HttpRequestException 验证当前补全失败的错误通知、保留输入/直接搜索、下一查询恢复及旧失败隔离，浅深共 12 个交互组。输出 `search-validation.txt`、`offline-requests.txt`、页面及错误截图。截图不能证明原生弹出层、鼠标命中、IME 或系统焦点已验收。原生输入条件和完整历史/固定标签/ID 页面矩阵仍见 ACCEPTANCE_CASES。
+还以固定 HttpRequestException 验证当前补全失败的错误通知、保留输入/直接搜索、下一查询恢复及旧失败隔离，浅深共 12 个交互组。输出 `search-validation.txt`、`offline-requests.txt`、页面及错误截图。截图不能证明原生弹出层、鼠标命中、IME 或系统焦点已验收。原生输入条件和完整直接 ID/用户结果页矩阵仍见 ACCEPTANCE_CASES；标签首页另由 `search-page` 验证。
+
+## search-page
+
+通过真实 SearchPage、固定热门标签/图片和隔离 SQLite/设置文件验证浅深主题及 360/1000 DIP 窗宽。长固定/历史标签与翻译必须完整显示；键盘上下文菜单执行复制、固定/取消固定与删除，并核对数据库和设置文件往返。复制仅使用 headless 内存剪贴板。
+
+固定、历史和热门动作分别只路由一次，保留完整关键词及热门作品类型；高级选项折叠后普通搜索仍使用当前结果类型，窗口调整保留同一输入框。输出 `search-page-contracts.txt`、请求日志和页面截图。只记录真实结果页的导航目标并释放其列表，不装载在线结果；完整直接 ID/用户搜索及原生输入仍待验收。
 
 ## search-options
 
 使用同一完全离线 HTTP 处理器和隔离假账号，通过真实插画/小说表单模型与 Mako 引擎发出 19 个固定搜索请求，保存 `search-requests.txt`。校验关键词、日期、排序、AI、翻译/普通关键词/违规标志、匹配、类型、比例、宽高、工具、语言、原创、可替换、题材和三类长度范围。实际返回固定空页，不能用此结果证明服务端返回排序或权限。
 
+此外逐页验证 Material 表面、360/1000 DIP 窗宽、完整字段标签和实际可聚焦选择器名称；通过键盘启停日期、编辑本地化日期与数值、操作全部布尔选项和枚举选择器，并检查禁用后值保留、滚动可达及窗口调整后仍是原编辑器。布局契约单独写入 `search-options-layout-contracts.txt` 和首尾截图。
+
 三种长度维度分别覆盖非会员五种允许范围（含不限制）和会员任意范围；禁用字段保留可编辑原值，非法/未来范围及非会员热门排序有本地化拒绝。真实 SearchPage 浅深主题通过 NumericUpDown 键盘编辑与搜索按钮路由，验证非会员范围错误不导航、不丢输入，修改到合法范围后仅导航一次；两类区间提示的实际 TextLayout 不得折叠省略。保存 9 组契约及错误截图，原生 IME/DPI/所有选择器仍另行验收。
 
 ## login
+
+先验证真实 LoginPage 的浅深主题、360/1000 DIP 窗宽和短窗口滚动：令牌和内外层无障碍 Value/变更事件遮罩、账号下拉项与预览的无障碍名称（空名称回退账号 ID）、辅助接口写入/展开/折叠、已保存账号键盘选择/模型恢复、手工修改与清空、忙碌提示和禁用状态。窗口调整后保留原输入框及草稿，输出 `login-layout-contracts.txt` 与截图。
 
 复用离线 HTTP 处理器，但认证响应由验证步骤手动完成。真实 LoginPage 浅深主题分别验证空输入、忙碌时禁用输入/按钮、重复提交、卸载把取消传递到认证 HTTP、旧响应未完成即重挂载并登录新账号。令旧请求成功返回，确认旧凭据不进入当前用户/SQLite、旧 finally 不结束新尝试；随后新账号正确保存、唯一导航，重新加载账号模型取得刷新后的令牌。
 

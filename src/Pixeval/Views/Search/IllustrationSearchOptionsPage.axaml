@@ -5,6 +5,7 @@
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:enum="using:Mako.Global.Enum"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
@@ -15,139 +16,281 @@
     mc:Ignorable="d"
     d:DesignHeight="450"
     d:DesignWidth="800">
-    <StackPanel Margin="12" Spacing="12">
-        <TextBlock FontWeight="SemiBold" Text="{I18N {x:Static pixeval:SearchResources+Sections.Common}}" />
-        <Grid ColumnDefinitions="180,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Common.SortOption}}" />
-            <controls:SymbolComboBox
-                Grid.Column="1"
-                IconMode="False"
-                ItemsSource="{markup:EnumResources x:TypeArguments=enum:WorkSortOption}"
-                SelectedValue="{Binding SortOption, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Common.StartDate}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding StartDateOption.IsEnabled, Mode=TwoWay}" />
-            <CalendarDatePicker
-                Grid.Column="2"
-                IsEnabled="{Binding StartDateOption.IsEnabled}"
-                SelectedDate="{Binding StartDateOption.Value, Mode=TwoWay}"
-                SelectedDateFormat="Short" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Common.EndDate}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding EndDateOption.IsEnabled, Mode=TwoWay}" />
-            <CalendarDatePicker
-                Grid.Column="2"
-                IsEnabled="{Binding EndDateOption.IsEnabled}"
-                SelectedDate="{Binding EndDateOption.Value, Mode=TwoWay}"
-                SelectedDateFormat="Short" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Common.ShowAiWorks}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding AiType, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Common.MergePlainKeywordResults}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding MergePlainKeywordResults, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Common.IncludeTranslatedTagResults}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding IncludeTranslatedTagResults, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Common.IncludePotentialViolationWorks}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding IncludePotentialViolationWorks, Mode=TwoWay}" />
-        </Grid>
+    <ContentPage.Styles>
+        <Style Selector="CalendarDatePicker">
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+    </ContentPage.Styles>
+    <m3:MaterialSurface
+        MaxWidth="760"
+        Margin="12"
+        Padding="16"
+        HorizontalAlignment="Stretch"
+        Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerLow}}"
+        CornerRadius="16">
+        <StackPanel Spacing="16">
+            <TextBlock
+                m3:MaterialText.Style="{m3:Typography TitleMedium}"
+                Text="{I18N {x:Static pixeval:SearchResources+Sections.Common}}"
+                TextWrapping="Wrap" />
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{I18N {x:Static pixeval:SearchResources+Common.SortOption}}"
+                    TextWrapping="Wrap" />
+                <controls:SymbolComboBox
+                    Grid.Row="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Common.SortOption}}"
+                    IconMode="False"
+                    ItemsSource="{markup:EnumResources x:TypeArguments=enum:WorkSortOption}"
+                    SelectedValue="{Binding SortOption, Mode=TwoWay}" />
+            </Grid>
+            <Grid
+                ColumnDefinitions="Auto,*"
+                ColumnSpacing="12"
+                RowDefinitions="Auto,Auto"
+                RowSpacing="8">
+                <TextBlock
+                    Grid.ColumnSpan="2"
+                    VerticalAlignment="Center"
+                    Text="{I18N {x:Static pixeval:SearchResources+Common.StartDate}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Row="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Common.StartDate}}"
+                    IsChecked="{Binding StartDateOption.IsEnabled, Mode=TwoWay}" />
+                <CalendarDatePicker
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Common.StartDate}}"
+                    IsEnabled="{Binding StartDateOption.IsEnabled}"
+                    SelectedDate="{Binding StartDateOption.Value, Mode=TwoWay}"
+                    SelectedDateFormat="Short" />
+            </Grid>
+            <Grid
+                ColumnDefinitions="Auto,*"
+                ColumnSpacing="12"
+                RowDefinitions="Auto,Auto"
+                RowSpacing="8">
+                <TextBlock
+                    Grid.ColumnSpan="2"
+                    VerticalAlignment="Center"
+                    Text="{I18N {x:Static pixeval:SearchResources+Common.EndDate}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Row="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Common.EndDate}}"
+                    IsChecked="{Binding EndDateOption.IsEnabled, Mode=TwoWay}" />
+                <CalendarDatePicker
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Common.EndDate}}"
+                    IsEnabled="{Binding EndDateOption.IsEnabled}"
+                    SelectedDate="{Binding EndDateOption.Value, Mode=TwoWay}"
+                    SelectedDateFormat="Short" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{I18N {x:Static pixeval:SearchResources+Common.ShowAiWorks}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Column="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Common.ShowAiWorks}}"
+                    IsChecked="{Binding AiType, Mode=TwoWay}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{I18N {x:Static pixeval:SearchResources+Common.MergePlainKeywordResults}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Column="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Common.MergePlainKeywordResults}}"
+                    IsChecked="{Binding MergePlainKeywordResults, Mode=TwoWay}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{I18N {x:Static pixeval:SearchResources+Common.IncludeTranslatedTagResults}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Column="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Common.IncludeTranslatedTagResults}}"
+                    IsChecked="{Binding IncludeTranslatedTagResults, Mode=TwoWay}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{I18N {x:Static pixeval:SearchResources+Common.IncludePotentialViolationWorks}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Column="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Common.IncludePotentialViolationWorks}}"
+                    IsChecked="{Binding IncludePotentialViolationWorks, Mode=TwoWay}" />
+            </Grid>
 
-        <Separator />
+            <Separator />
 
-        <TextBlock FontWeight="SemiBold" Text="{I18N {x:Static pixeval:SearchResources+Sections.Illustration}}" />
-        <Grid ColumnDefinitions="180,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.MatchOption}}" />
-            <controls:SymbolComboBox
-                Grid.Column="1"
-                IconMode="False"
-                ItemsSource="{markup:EnumResources x:TypeArguments=enum:SearchIllustrationTagMatchOption}"
-                SelectedValue="{Binding MatchOption, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.ContentType}}" />
-            <controls:SymbolComboBox
-                Grid.Column="1"
-                IconMode="False"
-                ItemsSource="{markup:EnumResources x:TypeArguments=enum:SearchIllustrationContentType}"
-                SelectedValue="{Binding ContentType, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.RatioPattern}}" />
-            <controls:SymbolComboBox
-                Grid.Column="1"
-                IconMode="False"
-                ItemsSource="{markup:EnumResources x:TypeArguments=enum:SearchIllustrationRatioPattern}"
-                SelectedValue="{Binding RatioPattern, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.WidthMin}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding WidthMinOption.IsEnabled, Mode=TwoWay}" />
-            <NumericUpDown
-                Grid.Column="2"
-                AllowSpin="True"
-                ClipValueToMinMax="True"
-                FormatString="F0"
-                Increment="1"
-                IsEnabled="{Binding WidthMinOption.IsEnabled}"
-                Minimum="0"
-                Value="{Binding WidthMinOption.Value, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.WidthMax}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding WidthMaxOption.IsEnabled, Mode=TwoWay}" />
-            <NumericUpDown
-                Grid.Column="2"
-                AllowSpin="True"
-                ClipValueToMinMax="True"
-                FormatString="F0"
-                Increment="1"
-                IsEnabled="{Binding WidthMaxOption.IsEnabled}"
-                Minimum="0"
-                Value="{Binding WidthMaxOption.Value, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.HeightMin}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding HeightMinOption.IsEnabled, Mode=TwoWay}" />
-            <NumericUpDown
-                Grid.Column="2"
-                AllowSpin="True"
-                ClipValueToMinMax="True"
-                FormatString="F0"
-                Increment="1"
-                IsEnabled="{Binding HeightMinOption.IsEnabled}"
-                Minimum="0"
-                Value="{Binding HeightMinOption.Value, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.HeightMax}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding HeightMaxOption.IsEnabled, Mode=TwoWay}" />
-            <NumericUpDown
-                Grid.Column="2"
-                AllowSpin="True"
-                ClipValueToMinMax="True"
-                FormatString="F0"
-                Increment="1"
-                IsEnabled="{Binding HeightMaxOption.IsEnabled}"
-                Minimum="0"
-                Value="{Binding HeightMaxOption.Value, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{I18N {x:Static pixeval:SearchResources+Illustration.Tool}}" />
-            <ComboBox
-                Grid.Column="1"
-                HorizontalAlignment="Stretch"
-                DisplayMemberBinding="{Binding}"
-                ItemsSource="{Binding ToolItems}"
-                SelectedValue="{Binding Tool, Mode=TwoWay}"
-                SelectedValueBinding="{Binding}" />
-        </Grid>
-    </StackPanel>
+            <TextBlock
+                m3:MaterialText.Style="{m3:Typography TitleMedium}"
+                Text="{I18N {x:Static pixeval:SearchResources+Sections.Illustration}}"
+                TextWrapping="Wrap" />
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{I18N {x:Static pixeval:SearchResources+Illustration.MatchOption}}"
+                    TextWrapping="Wrap" />
+                <controls:SymbolComboBox
+                    Grid.Row="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Illustration.MatchOption}}"
+                    IconMode="False"
+                    ItemsSource="{markup:EnumResources x:TypeArguments=enum:SearchIllustrationTagMatchOption}"
+                    SelectedValue="{Binding MatchOption, Mode=TwoWay}" />
+            </Grid>
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{I18N {x:Static pixeval:SearchResources+Illustration.ContentType}}"
+                    TextWrapping="Wrap" />
+                <controls:SymbolComboBox
+                    Grid.Row="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Illustration.ContentType}}"
+                    IconMode="False"
+                    ItemsSource="{markup:EnumResources x:TypeArguments=enum:SearchIllustrationContentType}"
+                    SelectedValue="{Binding ContentType, Mode=TwoWay}" />
+            </Grid>
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{I18N {x:Static pixeval:SearchResources+Illustration.RatioPattern}}"
+                    TextWrapping="Wrap" />
+                <controls:SymbolComboBox
+                    Grid.Row="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Illustration.RatioPattern}}"
+                    IconMode="False"
+                    ItemsSource="{markup:EnumResources x:TypeArguments=enum:SearchIllustrationRatioPattern}"
+                    SelectedValue="{Binding RatioPattern, Mode=TwoWay}" />
+            </Grid>
+            <Grid
+                ColumnDefinitions="Auto,*"
+                ColumnSpacing="12"
+                RowDefinitions="Auto,Auto"
+                RowSpacing="8">
+                <TextBlock
+                    Grid.ColumnSpan="2"
+                    VerticalAlignment="Center"
+                    Text="{I18N {x:Static pixeval:SearchResources+Illustration.WidthMin}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Row="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Illustration.WidthMin}}"
+                    IsChecked="{Binding WidthMinOption.IsEnabled, Mode=TwoWay}" />
+                <NumericUpDown
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    AllowSpin="True"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Illustration.WidthMin}}"
+                    ClipValueToMinMax="True"
+                    FormatString="F0"
+                    Increment="1"
+                    IsEnabled="{Binding WidthMinOption.IsEnabled}"
+                    Minimum="0"
+                    Value="{Binding WidthMinOption.Value, Mode=TwoWay}" />
+            </Grid>
+            <Grid
+                ColumnDefinitions="Auto,*"
+                ColumnSpacing="12"
+                RowDefinitions="Auto,Auto"
+                RowSpacing="8">
+                <TextBlock
+                    Grid.ColumnSpan="2"
+                    VerticalAlignment="Center"
+                    Text="{I18N {x:Static pixeval:SearchResources+Illustration.WidthMax}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Row="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Illustration.WidthMax}}"
+                    IsChecked="{Binding WidthMaxOption.IsEnabled, Mode=TwoWay}" />
+                <NumericUpDown
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    AllowSpin="True"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Illustration.WidthMax}}"
+                    ClipValueToMinMax="True"
+                    FormatString="F0"
+                    Increment="1"
+                    IsEnabled="{Binding WidthMaxOption.IsEnabled}"
+                    Minimum="0"
+                    Value="{Binding WidthMaxOption.Value, Mode=TwoWay}" />
+            </Grid>
+            <Grid
+                ColumnDefinitions="Auto,*"
+                ColumnSpacing="12"
+                RowDefinitions="Auto,Auto"
+                RowSpacing="8">
+                <TextBlock
+                    Grid.ColumnSpan="2"
+                    VerticalAlignment="Center"
+                    Text="{I18N {x:Static pixeval:SearchResources+Illustration.HeightMin}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Row="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Illustration.HeightMin}}"
+                    IsChecked="{Binding HeightMinOption.IsEnabled, Mode=TwoWay}" />
+                <NumericUpDown
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    AllowSpin="True"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Illustration.HeightMin}}"
+                    ClipValueToMinMax="True"
+                    FormatString="F0"
+                    Increment="1"
+                    IsEnabled="{Binding HeightMinOption.IsEnabled}"
+                    Minimum="0"
+                    Value="{Binding HeightMinOption.Value, Mode=TwoWay}" />
+            </Grid>
+            <Grid
+                ColumnDefinitions="Auto,*"
+                ColumnSpacing="12"
+                RowDefinitions="Auto,Auto"
+                RowSpacing="8">
+                <TextBlock
+                    Grid.ColumnSpan="2"
+                    VerticalAlignment="Center"
+                    Text="{I18N {x:Static pixeval:SearchResources+Illustration.HeightMax}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Row="1"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Illustration.HeightMax}}"
+                    IsChecked="{Binding HeightMaxOption.IsEnabled, Mode=TwoWay}" />
+                <NumericUpDown
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    AllowSpin="True"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Illustration.HeightMax}}"
+                    ClipValueToMinMax="True"
+                    FormatString="F0"
+                    Increment="1"
+                    IsEnabled="{Binding HeightMaxOption.IsEnabled}"
+                    Minimum="0"
+                    Value="{Binding HeightMaxOption.Value, Mode=TwoWay}" />
+            </Grid>
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{I18N {x:Static pixeval:SearchResources+Illustration.Tool}}"
+                    TextWrapping="Wrap" />
+                <ComboBox
+                    Grid.Row="1"
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:SearchResources+Illustration.Tool}}"
+                    DisplayMemberBinding="{Binding}"
+                    ItemsSource="{Binding ToolItems}"
+                    SelectedValue="{Binding Tool, Mode=TwoWay}"
+                    SelectedValueBinding="{Binding}" />
+            </Grid>
+        </StackPanel>
+    </m3:MaterialSurface>
 </ContentPage>

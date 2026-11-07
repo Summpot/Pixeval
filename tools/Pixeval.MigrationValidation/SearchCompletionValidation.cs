@@ -239,6 +239,7 @@ internal static class SearchCompletionValidation
     {
         internal int Navigations { get; private set; }
         internal Type? LastPageType { get; private set; }
+        internal Action<Page>? NavigationObserver { get; init; }
         internal IEnumerable<INotification> Notifications => Manager?.GetVisualDescendants().OfType<NotificationCard>()
             .Select(card => card.Content).OfType<INotification>() ?? [];
 
@@ -254,6 +255,7 @@ internal static class SearchCompletionValidation
         {
             Navigations++;
             LastPageType = page.GetType();
+            NavigationObserver?.Invoke(page);
             foreach (var view in page.GetLogicalDescendants().OfType<WorkView>())
                 view.Dispose();
             if (page.DataContext is IDisposable disposable)
