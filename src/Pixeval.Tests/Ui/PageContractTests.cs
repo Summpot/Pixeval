@@ -111,6 +111,32 @@ public sealed class PageContractTests
     public Task ViewerToolbar() => UiTestSession.RunAsync(TestContext, ViewerToolbarValidation.RunAsync);
 
     [TestMethod]
+    public Task NovelReader() => UiTestSession.RunAsync(TestContext, NovelReaderValidation.RunAsync);
+
+    [TestMethod]
+    public Task NovelReadingSettings() => UiTestSession.RunAsync(TestContext, NovelReadingSettingsValidation.RunAsync);
+
+    [TestMethod]
+    public Task NovelMarkdown() => UiTestSession.RunAsync(TestContext, NovelMarkdownValidation.RunAsync);
+
+    [TestMethod]
+    [DataRow("zh-Hans")]
+    [DataRow("en-US")]
+    [DataRow("fr-FR")]
+    [DataRow("ru-RU")]
+    public Task NovelActions(string culture) => UiTestSession.RunAsync(TestContext, NovelActionsValidation.RunAsync, culture);
+
+    [TestMethod]
+    public Task NovelNativeExport() => UiTestSession.RunAsync(TestContext, NovelActionsValidation.RunNativeAsync, nativeExtension: true);
+
+    [TestMethod]
+    [DataRow("zh-Hans")]
+    [DataRow("en-US")]
+    [DataRow("fr-FR")]
+    [DataRow("ru-RU")]
+    public Task NovelTranslation(string culture) => UiTestSession.RunAsync(TestContext, NovelTranslationValidation.RunAsync, culture);
+
+    [TestMethod]
     public Task Documentation() => UiTestSession.RunAsync(TestContext, DocumentationValidation.RunAsync);
 
     [TestMethod]

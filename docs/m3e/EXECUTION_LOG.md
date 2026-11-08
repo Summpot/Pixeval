@@ -936,3 +936,32 @@ Windows 本地验证：完整覆盖按组执行及修复后相关复跑，去重
 Windows 本地分组执行全量测试并专项复跑，按测试 ID/数据行名称去重后 **511/511 通过、0 跳过**；包括原有 508 项、2 项组合驱动器回归和 1 项架构检查。详见 `artifacts/ui-composition-summary.json`；四组 TRX 在 `ui-composition-1/2/3/4`，下载测试修正及外壳/架构专项在 `ui-composition-closed`（9/9）。第二组的早期 Escape 失败保留为复现证据，由专项成功结果取代，不隐去失败记录。固定原生扩展仍使用此前 `fixture-script-verified/fixture.json` 指定的可信库，未访问个人账户或用户扩展。
 
 桌面 Debug 与测试 Release 构建通过，日志为 `ui-composition-desktop-build.log`、`ui-composition-final-build.log`；构建警告保留在日志。C# whitespace 格式化、文档链接及 diff 检查通过；最终源码清单在 `ui-composition-source-hashes.json`。测试仍进程内串行；本轮不扩展原生 IME、系统焦点、GPU/DPI 或其他平台的验收结论，远程 CI 未在本地替代验证。
+
+
+## 2026-11-08 无人值守迁移批次（20:13 启动）
+
+时间：20:13:24 启动（Asia/Shanghai），本轮约 119 分钟，精确结束时间与实际时长在本批 `final-state.json` 中记录。基线 `90cdb035`，分支 `feat/material3expressive-migration`，开始时工作区干净。依 §10.3 选择已有主题、扩展、正式外壳、信息面板和下载服务契约支撑的 P13，完成五个功能单元，每个单元实现、专项验证、审查后本地提交，结束统一记账。全过程后台脚本、固定 HTTP、隔离数据与正式 App/TabViewContainer 的 headless 测试；没有使用或恢复 computer use，没有全局输入、系统剪贴板操作、真实账号写入、推送或远程发布，未启动桌面/AOT 产物。子模块、依赖、持久化格式、导航键和扩展 ABI 未改动。
+
+| 功能单元 / 步骤 | 本地提交 | 本轮完成范围 |
+| --- | --- | --- |
+| 阅读布局与加载，P13.01a | `dae3ef1c` | Material 工具栏/状态栏、长标题和窄窗信息面板；分页/前后作品与右键边界；换作品清除旧正文，正文和详情失败可重试；关闭只取消阅读器等待，共享正文仍供下载使用 |
+| 阅读设置，P13.03a | `5a2e0862` | 七项真实生成设置的范围/步长、键盘编辑与原 YAML 往返；窄窗编辑器保持在卡片内，跨作品保留设置页/选中页签；字体集合替换及关闭正确退订 |
+| 翻译与扩展结果，P13.04a | `2deee8d0` | 四语言菜单/溢出、优先级、原译文缓存、失败重试、显式取消；禁用/移除、换作品、关闭隔离迟到结果；共享文字扩展结果槽按扩展串行，取消调用方不提前释放原生计算占用 |
+| 富文本与滚动，P13.02a | `a837b396` | 原解析管线的长文、ruby/强调/粗斜体/缩进、上传与作品插图、代码复制和横纵滚动链；实际指针页码/锚点/插图导航；换页到页首，主题变化与临时导航返回保留位置 |
+| 阅读动作与导出，P13.05a | `0bfb15d2` | 四语言实际收藏/私密标签、稍后看、复制/浏览器 URI；保存正文失败提示与同项重试；真实下载队列生成三种内置格式/图片，托管格式扩展优先级、禁用回退和失败清理；固定原生示例未写文件时明确判失败 |
+
+主计划将 P13 改为实施中，增加五个局部完成项，父步骤仍未勾选。F18/F19 与验证入口文档补充真实证明范围和新测试映射。新增文案覆盖四语言 JSON 并运行 Language.tt；既有法语缺译仍按原规则回退。阅读设置仅为小说页启用 compact 样式，不改变其他设置页布局。
+
+证据根目录：`artifacts/m3e/2026-11-08-batch-2013/`。SDK `11.0.100-rc.3.26522.148`、runtime `10.0.14`，Avalonia `12.1.5`，M3E `859a69e563b2a01fc87a26255ee11c1d89959677`。`./scripts/verify-m3e.ps1 -OutputDirectory artifacts/m3e/2026-11-08-batch-2013/windows-final -ExtensionFixture <固定 C++ demo DLL>` 完成桌面 Debug、测试 Release 构建，完整测试为 **525/526，1 失败、0 跳过**：俄语导航在同进程后续 App 中使用首个编辑器创建的静态可变画刷，触发跨线程访问异常。本轮所有小说用例通过。原始失败和 TRX 保留在 `windows-final/`，没有将单项重跑冒充完整通过；原生扩展 SHA256 为 `14A85A17F7B0D3002B66EC5DE5D073038237214FDC00D2F278DD4E3523DE85D6`。
+
+导航缺口诊断：临时使用不可变语法画刷后，`navigation-fixed` 和 `navigation-closed` 均为 9/10，俄语保存快捷键失败；应用日志进一步定位为 AvaloniaEdit 的 `KeyBinding.TryHandle` 跨线程访问。反编译当前已安装程序集确认编辑/光标处理器缓存静态 `List<KeyBinding>`。短双 App 专项及 `navigation-pair-diagnostic` 可以通过，不能证明完整运行正确；另有窄窗命令栏的布局时序失败，全部原始记录保留。该约束来自此前未改动的导航/第三方输入实现，完整修复涉及单独的编辑器与测试隔离设计；试验性产品和测试改动已全部撤回，本批只保留五个 P13 功能提交及统一记账。详见 `navigation-validation-gap.json`。**本轮完整回归仍为 525/526，不合并试验代码下的通过结果，不宣称全量通过。**
+
+最终 `dotnet publish src/Pixeval.Desktop/Pixeval.Desktop.csproj -c Release -r win-x64 --self-contained true -o artifacts/m3e/2026-11-08-batch-2013/native-aot-final` 本地构建成功。`native-aot-header.json` 记录 EXE SHA256、x64 PE32+、CLR 头 RVA/size 均为零，8 个语言资源发布副本与源码一致；没有启动 EXE。唯一 IL 裁剪/AOT 警告与上一份本地包记录相比 **46→46，无增减**，见 `aot-trim-warning-delta.json`；构建成功不代表原生运行时或全部 UI 回归通过。
+
+专项最终结果：`reader-errors` 21/21、`settings-final` 3/3、`translation-final` 21/21、`markdown-final` 23/23、`actions-final` 16/16，均零失败、零跳过；重复覆盖的测试不累加为新增测试数。翻译和动作分别使用 zh-Hans/en-US/fr-FR/ru-RU 数据行，设置/Markdown 覆盖实际窄宽窗口与明暗主题。TRX 关联的 UI 目录保存请求、文化/runtime、行为契约与截图。截图抽查包括俄语窄窗翻译溢出、阅读设置编辑器和富文本导航；行为结论由真实输入、请求、文件与生命周期断言提供。
+
+关键失败保留：`reader-before`/`reader-baseline` 的旧页数/正文与加载错误，`settings-pages` 的复用图标已有父级和 `settings-narrow` 的编辑器越界，`markdown-settled` 的换页保留旧滚动位置，`actions-baseline` 的保存正文异常逃出命令。最终专项验证对应修复。早期夹具对菜单键、命令栏溢出上下文、队列前插顺序及收藏标签字段的假设按实际产品契约纠正；Markdown 指针点击等待真实平滑滚动的目标位置稳定，未绕过产品链接事件或弱化导航断言。固定 C++ 格式示例本身不写文件，原生导出用例验证明确失败与文件名，不将它当作成功导出能力。
+
+新增 UI 契约均进入 Pixeval.Tests，由正式 App/UiTestSession、组合 PageTestHost 和未派生的 TabViewContainer 执行；导航目标先验证实际选中/存活，再显式关闭并返回。未恢复导出工具的平行 UI/生命周期实现。XAML 经 XamlStyler、相关 C# 经 whitespace 格式化，资源 JSON、生成常量、gitlink 和 27 个最终源码哈希见 `static-validation.json`；127 个文档本地链接通过检查。`validation-summary.json` 如实记录完整运行的失败和 12 个小说 UI 目录，不混合试验代码结果；代码提交与一次批次文档提交分开，不补写文档自身哈希。
+
+未覆盖与下一轮起点：原生 IME、系统焦点/读屏/剪贴板/浏览器、保存对话框、触摸/DPI/GPU、Linux/macOS/移动端/Browser、远程 CI 及完整应用重启仍待验收；阅读设置 YAML 往返不等同完整重启。扩展没有取消 ABI，本轮文字翻译只取消等待，串行门保持至共享结果读完；不声称停止原生计算。完整系列联动、全部富文本语法组合及成功原生格式输出仍待验收。下一批优先独立处理上述正式导航/AvaloniaEdit 跨 App 线程缺口，保持真实控制与所有编辑/快捷键断言；也可继续独立的格式扩展执行中取消基线，核对迟到文件提交和任务最终状态（`next-step-export-cancellation.json` 尚未复现，不记为已确认故障）。扩展调用结束前须保持输入/输出流有效，不能简单取消等待后提前释放。继续后台验证，不自动恢复 computer use。

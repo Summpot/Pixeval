@@ -69,11 +69,19 @@ dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationVa
 | `BookmarksPage` | `BookmarksPageValidation.cs` |
 | `RankingPage` | `RankingPageValidation.cs` |
 | `ViewerToolbar` | `ViewerToolbarValidation.cs` |
+| `NovelReader` | `NovelReaderValidation.cs` |
+| `NovelReadingSettings` | `NovelReadingSettingsValidation.cs` |
+| `NovelMarkdown` | `NovelMarkdownValidation.cs` |
+| `NovelTranslation`（四语言 DataRow） | `NovelTranslationValidation.cs` |
+| `NovelActions`（四语言 DataRow） | `NovelActionsValidation.cs` |
+| `NovelNativeExport`（需固定原生扩展样本） | `NovelActionsValidation.cs` |
 | `Documentation` | `DocumentationValidation.cs` |
 | `Dialog` | `DialogValidation.cs` |
 | `NavigationInRussian` | `NavigationEditorValidation.cs` |
 
 ## 场景契约与证明边界
+
+小说场景通过 `NovelReaderFixture` 提供固定正文、封面/插图与可控迟到响应；阅读页面、设置生成器、翻译菜单、下载队列和实际格式转换仍使用产品实现。托管扩展仅替换外部 SDK 边界。`NovelNativeExport` 使用与 `NativeExtension` 相同的固定 C++ 样本：该示例格式提供器完成调用但不写文件，因此验收的是消费者明确报告失败，不是成功原生格式导出。原生保存对话框、系统剪贴板/浏览器、扩展执行中取消和完整重启另行验收。
 
 ## inventory
 

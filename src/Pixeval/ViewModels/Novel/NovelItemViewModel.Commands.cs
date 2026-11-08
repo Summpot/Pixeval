@@ -26,7 +26,16 @@ public partial class NovelItemViewModel
         if (BlockedContentHelper.IsBlockedPlaceholder(Entry))
             return;
 
-        SaveInternalAsync(TopLevel.GetTopLevel(parameter)?.ViewContainer, await ContentAsync, App.AppViewModel.AppSettings.DownloadSettings.DownloadPathMacro);
+        var container = TopLevel.GetTopLevel(parameter)?.ViewContainer;
+        try
+        {
+            SaveInternalAsync(container, await ContentAsync, App.AppViewModel.AppSettings.DownloadSettings.DownloadPathMacro);
+        }
+        catch (Exception e)
+        {
+            container?.ShowError(I18NManager.GetResource(EntryItemResources.DownloadTaskCreationFailed), e.Message);
+            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>().LogError(nameof(NovelItemViewModel), e);
+        }
     }
 
     /// <summary>

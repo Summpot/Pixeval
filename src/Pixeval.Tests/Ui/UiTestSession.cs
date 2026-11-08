@@ -16,6 +16,14 @@ namespace Pixeval.Tests.Ui;
 
 internal static class UiTestSession
 {
+    // Headless creates and tears down a fresh App/services scope per dispatch. Keep
+    // its worker thread for the assembly: AvaloniaEdit caches dispatcher-affine
+    // KeyBindings for the process, as it does in the single-threaded desktop app.
+    private static readonly Lazy<HeadlessUnitTestSession> Session = new(() =>
+        HeadlessUnitTestSession.StartNew(typeof(UiTestApplication), AvaloniaTestIsolationLevel.PerTest));
+
+    internal static ValueTask DisposeAsync() => Session.IsValueCreated ? Session.Value.DisposeAsync() : ValueTask.CompletedTask;
+
     internal static async Task RunAsync(TestContext context, Func<string, Task> test,
         string culture = "zh-Hans", bool nativeExtension = false)
     {
@@ -25,7 +33,7 @@ internal static class UiTestSession
 
         var previous = AppContext.GetData(ApplicationDataDirectory.OverrideKey);
         var results = Environment.GetEnvironmentVariable("PIXEVAL_TEST_ARTIFACTS") ?? context.TestResultsDirectory!;
-        var directory = Path.Combine(results, "ui", context.TestName!, Guid.NewGuid().ToString("N"));
+        var directory = Path.GetFullPath(Path.Combine(results, "ui", context.TestName!, Guid.NewGuid().ToString("N")));
         Directory.CreateDirectory(directory);
         AppContext.SetData(ApplicationDataDirectory.OverrideKey, Path.Combine(directory, "data"));
         try
@@ -37,8 +45,7 @@ internal static class UiTestSession
             AppInfo.SaveAppSettings(settings);
             if (nativeExtension)
                 File.Copy(fixture!, Path.Combine(AppInfo.ExtensionsFolder, Path.GetFileName(fixture!)));
-            await using var session = HeadlessUnitTestSession.StartNew(typeof(UiTestApplication));
-            await session.DispatchAsync(async () =>
+            await Session.Value.DispatchAsync(async () =>
             {
                 try
                 {

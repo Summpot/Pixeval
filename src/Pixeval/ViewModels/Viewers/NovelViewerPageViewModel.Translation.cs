@@ -23,9 +23,13 @@ namespace Pixeval.ViewModels.Viewers;
 public sealed partial class NovelViewerPageViewModel
 {
     private List<string>? _translatedPageMarkdowns;
+    private ITextTransformerCommandExtension? _activeTranslator;
+    private CancellationTokenSource? _translationCts;
 
     public bool HasTranslator => App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>()
         .ActiveTextTransformerCommands.Any();
+
+    public bool IsTranslationAvailable => HasTranslator || _translatedPageMarkdowns is not null;
 
     public IReadOnlyList<TextTransformerExtensionCommandItem> TransformerExtensionItems =>
     [
@@ -36,8 +40,11 @@ public sealed partial class NovelViewerPageViewModel
     internal void RefreshTranslationAvailability()
     {
         OnPropertyChanged(nameof(HasTranslator));
+        OnPropertyChanged(nameof(IsTranslationAvailable));
         OnPropertyChanged(nameof(TransformerExtensionItems));
         ToggleTranslationCommand.NotifyCanExecuteChanged();
+        if (_activeTranslator is { } translator && !IsTranslatorActive(translator))
+            _translationCts?.Cancel();
     }
 
     [ObservableProperty]
@@ -51,10 +58,13 @@ public sealed partial class NovelViewerPageViewModel
             ? NovelViewerPageResources.ShowTranslation
             : NovelViewerPageResources.TranslateFullText);
 
-    private bool CanTranslate => !_disposed && !IsLoading && LoadErrorMessage is null && PageCount > 0 && HasTranslator
+    private bool CanTranslate => !_disposed && !IsLoading && LoadErrorMessage is null && PageCount > 0 && IsTranslationAvailable
         && CurrentNovel is { } novel && !BlockedContentHelper.IsBlockedPlaceholder(novel.Entry);
 
-    [RelayCommand(CanExecute = nameof(CanTranslate))]
+    private static bool IsTranslatorActive(ITextTransformerCommandExtension translator) =>
+        App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>().ActiveTextTransformerCommands.Contains(translator);
+
+    [RelayCommand(CanExecute = nameof(CanTranslate), IncludeCancelCommand = true)]
     private async Task ToggleTranslationAsync(Control? control, CancellationToken token)
     {
         if (!CanTranslate)
@@ -74,6 +84,8 @@ public sealed partial class NovelViewerPageViewModel
             return;
 
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(token, _loadingCts.Token);
+        _activeTranslator = translator;
+        _translationCts = cancellation;
         token = cancellation.Token;
         var viewContainer = control is null ? null : TopLevel.GetTopLevel(control)?.ViewContainer;
         try
@@ -84,10 +96,12 @@ public sealed partial class NovelViewerPageViewModel
             foreach (var page in pages)
             {
                 token.ThrowIfCancellationRequested();
-                // 扩展没有取消参数；停止等待并在写回前检查，避免切换小说后显示旧译文。
                 var translated = string.IsNullOrWhiteSpace(page) ? page :
-                    await translator.TransformAsync(page, TextTransformerType.Novel).WaitAsync(token);
+                    await TextTransformation.RunAsync(translator, page, TextTransformerType.Novel, token);
                 token.ThrowIfCancellationRequested();
+                // A temporarily hidden reader does not observe host changes until loaded.
+                if (!IsTranslatorActive(translator))
+                    return;
                 if (string.IsNullOrWhiteSpace(translated) && !string.IsNullOrWhiteSpace(page))
                 {
                     viewContainer?.ShowError(I18NManager.GetResource(NovelViewerPageResources.TransformerExtensionFailed));
@@ -99,6 +113,7 @@ public sealed partial class NovelViewerPageViewModel
 
             // 完整翻译成功后再切换显示，取消或异常时仍可继续阅读原文。
             _translatedPageMarkdowns = translatedPages;
+            OnPropertyChanged(nameof(IsTranslationAvailable));
             if (IsTranslationShown)
                 OnPropertyChanged(nameof(CurrentMarkdown));
             else
@@ -116,6 +131,11 @@ public sealed partial class NovelViewerPageViewModel
             viewContainer?.ShowError(I18NManager.GetResource(NovelViewerPageResources.TransformerExtensionFailed), e.Message);
             App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
                 .LogError(nameof(NovelViewerPageViewModel), e);
+        }
+        finally
+        {
+            _translationCts = null;
+            _activeTranslator = null;
         }
     }
 }

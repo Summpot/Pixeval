@@ -1,4 +1,5 @@
 {
+  "DownloadTaskCreationFailed": "Не удалось создать задачу загрузки",
   "GenerateLink": "Скопировать ссылку в приложении",
   "GenerateWebLink": "Скопировать ссылку на веб-страницу",
   "OpenInWebBrowser": "Открыть в браузере",

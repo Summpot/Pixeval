@@ -46,7 +46,7 @@ internal static class NativeExtensionValidation
         Console.WriteLine("Loaded native host, 15 extension interfaces and eight settings.");
 
         var text = service.ActiveTextTransformerCommands.Single();
-        var transformed = await text.TransformAsync("fixture 中文 🌸", TextTransformerType.Novel);
+        var transformed = await TextTransformation.RunAsync(text, "fixture 中文 🌸", TextTransformerType.Novel);
         Require(transformed is "C++ transformed: fixture 中文 🌸", "Text transformer preserves Unicode across the native boundary");
         using (var source = new MemoryStream([0, 1, 2, 127, 128, 255]))
         using (var destination = new MemoryStream())

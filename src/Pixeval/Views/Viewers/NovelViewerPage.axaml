@@ -1,4 +1,4 @@
-<views:IconContentPage
+﻿<views:IconContentPage
     x:Class="Pixeval.Views.Viewers.NovelViewerPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -7,6 +7,7 @@
     xmlns:converters="using:Pixeval.Views.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Pixeval.Views.Viewers"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -21,7 +22,12 @@
     mc:Ignorable="d"
     d:DesignHeight="600"
     d:DesignWidth="1000">
-    <Grid RowDefinitions="*,Auto,Auto">
+    <views:IconContentPage.Styles>
+        <Style Selector="controls|PageButton:focus-visible">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+    </views:IconContentPage.Styles>
+    <Grid RowDefinitions="*,Auto,Auto" SizeChanged="ReaderLayout_OnSizeChanged">
         <SplitView
             x:Name="InfoSplitView"
             Grid.Row="0"
@@ -36,10 +42,19 @@
 
             <DockPanel>
                 <CommandBar
+                    x:Name="ReaderCommands"
+                    Margin="8"
                     HorizontalAlignment="Center"
+                    Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainer}}"
                     DefaultLabelPosition="Collapsed"
                     DockPanel.Dock="Top"
                     IsDynamicOverflowEnabled="True">
+                    <CommandBarButton
+                        x:Name="ReloadButton"
+                        Command="{Binding RetryCommand}"
+                        Icon="{markup:SymbolIcon ArrowClockwise}"
+                        IsVisible="{Binding LoadErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                        Label="{I18N {x:Static pixeval:WorkContainerResources+RefreshButton.Label}}" />
                     <CommandBarButton
                         Command="{Binding CurrentNovel.BookmarkCommand, FallbackValue={x:Null}}"
                         CommandParameter="{Binding $self, Mode=OneTime}"
@@ -57,13 +72,14 @@
                         Label="{I18N {x:Static pixeval:EntryItemResources.Save}}" />
                     <CommandBarSeparator />
                     <CommandBarButton
+                        x:Name="TranslationButton"
                         Command="{Binding ToggleTranslationCommand}"
                         CommandParameter="{Binding $self, Mode=OneTime}"
                         Icon="{markup1:SymbolIconEx Symbol={markup1:EitherBinding {Binding IsTranslationShown},
                                                                                   TranslateOff,
                                                                                   TranslateAuto,
                                                                                   x:TypeArguments=common:Symbol}}"
-                        IsVisible="{Binding HasTranslator}"
+                        IsVisible="{Binding IsTranslationAvailable}"
                         Label="{Binding TranslationButtonText}">
                         <CommandBarButton.ContextMenu>
                             <ContextMenu ItemsSource="{Binding TransformerExtensionItems}">
@@ -83,7 +99,13 @@
                             </ContextMenu>
                         </CommandBarButton.ContextMenu>
                     </CommandBarButton>
-                    <CommandBarSeparator IsVisible="{Binding HasTranslator}" />
+                    <CommandBarButton
+                        x:Name="CancelTranslationButton"
+                        Command="{Binding ToggleTranslationCancelCommand}"
+                        Icon="{markup:SymbolIcon Dismiss}"
+                        IsVisible="{Binding ToggleTranslationCommand.IsRunning}"
+                        Label="{I18N {x:Static pixeval:NovelViewerPageResources.CancelTranslation}}" />
+                    <CommandBarSeparator IsVisible="{Binding IsTranslationAvailable}" />
                     <CommandBarButton
                         Command="{Binding CurrentNovel.AddToWatchLaterCommand, FallbackValue={x:Null}}"
                         CommandParameter="{Binding $self, Mode=OneTime}"
@@ -111,8 +133,9 @@
                 <Border Background="{Binding NovelBackground, Converter={x:Static converters:PixevalConverters.OptionalColorToBrush}}">
                     <Panel>
                         <controls:NovelMarkdownBox
+                            x:Name="ReaderMarkdown"
                             MaxWidth="{Binding NovelMaxWidth}"
-                            Margin="30,20"
+                            Margin="40,20"
                             HyperlinkClicked="MarkdownBox_OnHyperlinkClicked"
                             Markdown="{Binding CurrentMarkdown}"
                             MarkdownFontFamily="{Binding NovelFontFamilyObject}"
@@ -124,18 +147,26 @@
                         <controls:ViewerStateOverlay ErrorMessage="{Binding LoadErrorMessage}" IsLoading="{Binding IsLoading}" />
 
                         <controls:PageButton
+                            x:Name="PreviousPageButton"
+                            Width="40"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Stretch"
+                            AutomationProperties.Name="{Binding PrevButtonText}"
                             Command="{Binding PrevCommand}"
                             ContextRequested="PrevButton_OnRightClick"
+                            FontSize="24"
                             IsVisible="{Binding PrevButtonText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                             Symbol="ChevronLeft"
                             ToolTipText="{Binding PrevButtonText}" />
                         <controls:PageButton
+                            x:Name="NextPageButton"
+                            Width="40"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Stretch"
+                            AutomationProperties.Name="{Binding NextButtonText}"
                             Command="{Binding NextCommand}"
                             ContextRequested="NextButton_OnRightClick"
+                            FontSize="24"
                             IsVisible="{Binding NextButtonText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                             Symbol="ChevronRight"
                             ToolTipText="{Binding NextButtonText}" />
@@ -150,6 +181,7 @@
         </SplitView>
 
         <ListBox
+            x:Name="NovelList"
             Grid.Row="1"
             Height="90"
             Margin="5,0"
@@ -157,6 +189,7 @@
             HorizontalAlignment="Stretch"
             controls:IncrementalLoadingBehavior.IsEnabled="True"
             controls:IncrementalLoadingBehavior.Threshold="100"
+            AutomationProperties.Name="{I18N {x:Static pixeval:MiscResources.OpenBottomList}}"
             IsVisible="{Binding IsBottomListOpen}"
             ItemsSource="{Binding Novels}"
             ScrollViewer.HorizontalScrollBarVisibility="Auto"
@@ -168,6 +201,15 @@
                     <StackPanel Orientation="Horizontal" Spacing="5" />
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
+            <ListBox.ItemContainerTheme>
+                <ControlTheme
+                    x:DataType="{x:Type novel:NovelItemViewModel}"
+                    BasedOn="{StaticResource {x:Type ListBoxItem}}"
+                    TargetType="{x:Type ListBoxItem}">
+                    <Setter Property="AutomationProperties.Name" Value="{Binding Entry.Title}" />
+                    <Setter Property="ToolTip.Tip" Value="{Binding Entry.Title}" />
+                </ControlTheme>
+            </ListBox.ItemContainerTheme>
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="{x:Type novel:NovelItemViewModel}">
                     <Image
@@ -180,35 +222,41 @@
         </ListBox>
 
         <Border
+            x:Name="ReaderStatusBar"
             Grid.Row="2"
-            Height="48"
-            Padding="5,0"
+            MinHeight="56"
+            Margin="8"
+            Padding="8,0"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
-            Background="{DynamicResource LayerOnMicaBaseAltFillColorDefaultBrush}">
-            <Grid ColumnDefinitions="Auto,*,Auto">
-                <StackPanel
+            Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainer}}"
+            CornerRadius="16">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                <CommandBar
                     Grid.Column="0"
-                    Orientation="Horizontal"
-                    Spacing="20">
-                    <CommandBar DefaultLabelPosition="Collapsed" IsDynamicOverflowEnabled="True">
-                        <CommandBarToggleButton
-                            Icon="{markup:SymbolIcon Info}"
-                            IsChecked="{Binding #InfoSplitView.IsPaneOpen}"
-                            Label="{I18N {x:Static pixeval:EntryViewerPageResources.InfoAndComments}}" />
-                        <CommandBarToggleButton
-                            Icon="{markup:SymbolIcon PanelBottomExpand}"
-                            IsChecked="{Binding IsBottomListOpen}"
-                            Label="{I18N {x:Static pixeval:MiscResources.OpenBottomList}}" />
-                    </CommandBar>
-                    <controls:IconText
-                        MaxWidth="350"
-                        VerticalAlignment="Center"
-                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                        IsVisible="{Binding CurrentNovel.Entry.Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue={x:Null}}"
-                        Symbol="AppTitle"
-                        Text="{Binding CurrentNovel.Entry.Title, FallbackValue={x:Null}}" />
-                </StackPanel>
+                    DefaultLabelPosition="Collapsed"
+                    IsDynamicOverflowEnabled="True">
+                    <CommandBarToggleButton
+                        x:Name="InformationButton"
+                        Icon="{markup:SymbolIcon Info}"
+                        IsChecked="{Binding #InfoSplitView.IsPaneOpen}"
+                        Label="{I18N {x:Static pixeval:EntryViewerPageResources.InfoAndComments}}" />
+                    <CommandBarToggleButton
+                        x:Name="BottomListButton"
+                        Icon="{markup:SymbolIcon PanelBottomExpand}"
+                        IsChecked="{Binding IsBottomListOpen}"
+                        Label="{I18N {x:Static pixeval:MiscResources.OpenBottomList}}" />
+                </CommandBar>
+                <TextBlock
+                    x:Name="ReaderTitle"
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    m3:MaterialText.Style="{m3:Typography TitleSmall}"
+                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                    IsVisible="{Binding CurrentNovel.Entry.Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue={x:Null}}"
+                    Text="{Binding CurrentNovel.Entry.Title, FallbackValue={x:Null}}"
+                    TextTrimming="CharacterEllipsis"
+                    ToolTip.Tip="{Binding CurrentNovel.Entry.Title, FallbackValue={x:Null}}" />
 
                 <StackPanel
                     Grid.Column="2"

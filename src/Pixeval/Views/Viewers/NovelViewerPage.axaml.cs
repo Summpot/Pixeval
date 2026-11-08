@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Mako.Global.Enum;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
@@ -25,6 +26,31 @@ public partial class NovelViewerPage : IconContentPage
     private NovelViewerPageViewModel ViewModel => (NovelViewerPageViewModel) DataContext!;
 
     private readonly List<ExtensionsHostModel> _observedExtensionHosts = [];
+    private NovelViewerPageViewModel? _observedReader;
+    private (long Novel, int Page)? _readingPosition;
+
+    private void ReaderOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(NovelViewerPageViewModel.NovelId) or nameof(NovelViewerPageViewModel.CurrentPageIndex))
+            UpdateReadingPosition();
+    }
+
+    private void UpdateReadingPosition()
+    {
+        if (_observedReader is not { } model)
+            return;
+        var position = (model.NovelId, model.CurrentPageIndex);
+        if (_readingPosition == position)
+            return;
+        _readingPosition = position;
+        // Run after the Markdown binding has rebuilt the document. Theme changes,
+        // translation toggles and a temporary tab switch retain their scroll position.
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (ReferenceEquals(_observedReader, model) && _readingPosition == position)
+                ReaderMarkdown.ScrollValue = default;
+        });
+    }
 
     private static ExtensionService ExtensionService =>
         App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>();
@@ -39,6 +65,12 @@ public partial class NovelViewerPage : IconContentPage
         InitializeComponent();
     }
 
+    private void ReaderLayout_OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        InfoSplitView.DisplayMode = e.NewSize.Width < 720 ? SplitViewDisplayMode.Overlay : SplitViewDisplayMode.Inline;
+        InfoSplitView.OpenPaneLength = Math.Min(360, Math.Max(0, e.NewSize.Width));
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
@@ -49,9 +81,23 @@ public partial class NovelViewerPage : IconContentPage
             || KeyboardShortcut.TryExecute(e, Key.Down, ViewModel.NextWorkCommand);
     }
 
-    private void PrevButton_OnRightClick(object? sender, ContextRequestedEventArgs e) => ViewModel.PrevWorkCommand.Execute(null);
+    private void PrevButton_OnRightClick(object? sender, ContextRequestedEventArgs e)
+    {
+        if (ViewModel.PrevWorkCommand.CanExecute(null))
+        {
+            ViewModel.PrevWorkCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
 
-    private void NextButton_OnRightClick(object? sender, ContextRequestedEventArgs e) => ViewModel.NextWorkCommand.Execute(null);
+    private void NextButton_OnRightClick(object? sender, ContextRequestedEventArgs e)
+    {
+        if (ViewModel.NextWorkCommand.CanExecute(null))
+        {
+            ViewModel.NextWorkCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
 
     private void MarkdownBox_OnHyperlinkClicked(object? sender, MarkdownHyperlinkClickedEventArgs e)
     {
@@ -103,6 +149,9 @@ public partial class NovelViewerPage : IconContentPage
     {
         base.OnLoaded(e);
 
+        _observedReader = ViewModel;
+        _observedReader.PropertyChanged += ReaderOnPropertyChanged;
+        UpdateReadingPosition();
         ExtensionService.HostModels.CollectionChanged += ExtensionHostsOnCollectionChanged;
         ObserveExtensionHosts();
         RaiseEvent(new ViewModelDisposalEventArgs(ViewModelDisposal.ViewModelDisposalEvent, ViewModel));
@@ -110,6 +159,9 @@ public partial class NovelViewerPage : IconContentPage
 
     protected override void OnUnloaded(RoutedEventArgs e)
     {
+        if (_observedReader is { } model)
+            model.PropertyChanged -= ReaderOnPropertyChanged;
+        _observedReader = null;
         ExtensionService.HostModels.CollectionChanged -= ExtensionHostsOnCollectionChanged;
         foreach (var host in _observedExtensionHosts)
             host.PropertyChanged -= ExtensionHostOnPropertyChanged;

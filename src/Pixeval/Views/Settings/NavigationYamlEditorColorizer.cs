@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
 using Pixeval.Models.Navigation;
@@ -11,11 +12,11 @@ namespace Pixeval.Views.Settings;
 
 public sealed class NavigationYamlEditorColorizer : DocumentColorizingTransformer
 {
-    private static readonly SolidColorBrush _KeyBrush = new(Color.Parse("#569CD6"));
-    private static readonly SolidColorBrush _StringBrush = new(Color.Parse("#CE9178"));
-    private static readonly SolidColorBrush _LiteralBrush = new(Color.Parse("#B5CEA8"));
-    private static readonly SolidColorBrush _CommentBrush = new(Color.Parse("#6A9955"));
-    private static readonly SolidColorBrush _ErrorBackgroundBrush = new(Color.FromArgb(72, 224, 82, 82));
+    private static readonly ImmutableSolidColorBrush _KeyBrush = new(Color.Parse("#569CD6"));
+    private static readonly ImmutableSolidColorBrush _StringBrush = new(Color.Parse("#CE9178"));
+    private static readonly ImmutableSolidColorBrush _LiteralBrush = new(Color.Parse("#B5CEA8"));
+    private static readonly ImmutableSolidColorBrush _CommentBrush = new(Color.Parse("#6A9955"));
+    private static readonly ImmutableSolidColorBrush _ErrorBackgroundBrush = new(Color.FromArgb(72, 224, 82, 82));
 
     private IReadOnlyList<NavigationDiagnostic> _diagnostics = [];
     private int _documentLength;

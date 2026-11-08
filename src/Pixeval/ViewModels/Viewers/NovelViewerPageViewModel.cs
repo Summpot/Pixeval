@@ -5,15 +5,18 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoSettingsPage;
 using AutoSettingsPage.Avalonia;
+using AutoSettingsPage.Models;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Mako.Global.Enum;
 using Mako.Model;
 using Pixeval.AppManagement.Settings;
@@ -34,29 +37,68 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
     private readonly bool _needRefresh;
 
     private readonly ISourceView<NovelItemViewModel>? _sourceView;
+    private readonly long _initialNovelId;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ToggleTranslationCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RetryCommand))]
     public partial bool IsLoading { get; private set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ToggleTranslationCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RetryCommand))]
     public partial string? LoadErrorMessage { get; private set; }
 
     [ObservableProperty]
     public partial WorkSeriesInfoViewModel? SeriesInfo { get; private set; }
 
-    public IReadOnlyList<Page> PanePages => CurrentNovel is not { } currentNovel
-        ? []
-        : BlockedContentHelper.IsBlockedPlaceholder(currentNovel.Entry)
-            ? [new WorkInfoPage(currentNovel.Entry)]
-            :
-            [
-                new WorkInfoPage(currentNovel.Entry),
-                new CommentsPage(new CommentsViewViewModel(SimpleWorkType.Novel, currentNovel.Entry.Id)),
-                new WorkRelatedPage(currentNovel.Entry.Id, SimpleWorkType.Novel) { IsCommandBarCollapsed = true },
-                SettingsPage
-            ];
+    private readonly ObservableCollection<Page> _panePages = [];
+    private NovelItemViewModel? _paneNovel;
+
+    public IReadOnlyList<Page> PanePages
+    {
+        get
+        {
+            var current = CurrentNovel;
+            if (_disposed || ReferenceEquals(current, _paneNovel))
+                return _panePages;
+            _paneNovel = current;
+            if (current is null)
+            {
+                _panePages.Clear();
+                return _panePages;
+            }
+
+            if (_panePages.Count == 0)
+                _panePages.Add(new WorkInfoPage(current.Entry));
+            else
+                _panePages[0].DataContext = current.Entry;
+
+            if (BlockedContentHelper.IsBlockedPlaceholder(current.Entry))
+            {
+                while (_panePages.Count > 1)
+                    _panePages.RemoveAt(_panePages.Count - 1);
+                return _panePages;
+            }
+
+            var comments = new CommentsPage(new CommentsViewViewModel(SimpleWorkType.Novel, current.Entry.Id));
+            var related = new WorkRelatedPage(current.Entry.Id, SimpleWorkType.Novel) { IsCommandBarCollapsed = true };
+            if (_panePages.Count == 1)
+            {
+                _panePages.Add(comments);
+                _panePages.Add(related);
+                _panePages.Add(SettingsPage);
+            }
+            else
+            {
+                // Replace only work-specific pages. Keeping the settings page in the same
+                // collection preserves selection, editor state and its icon's visual owner.
+                _panePages[1] = comments;
+                _panePages[2] = related;
+            }
+            return _panePages;
+        }
+    }
 
     public NovelViewerPageViewModel(NovelItemViewModel novelViewModel, bool needRefresh)
     {
@@ -67,6 +109,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
     public NovelViewerPageViewModel(long id)
     {
+        _initialNovelId = id;
         _ = LoadSingleNovelAsync(id, _loadingCts.Token);
     }
 
@@ -111,7 +154,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         get;
         set
         {
-            if (value is -1)
+            if (_disposed || value < 0 || value >= WorkCount)
                 return;
             if (value == field)
                 return;
@@ -133,6 +176,8 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         get;
         set
         {
+            if (_disposed || value < 0 || value >= Math.Max(1, PageCount))
+                return;
             field = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(CurrentNovel));
@@ -159,29 +204,64 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
     #region Settings
 
     private ObservableCollection<string>? _subscribedNovelFontFamily;
+    private SettingsSubView? _settingsPage;
+    private readonly List<INotifyPropertyChanged> _readingSettingsEntries = [];
 
     private SettingsSubView SettingsPage
     {
         get
         {
+            if (_settingsPage is not null)
+                return _settingsPage;
+
             LocalSettingsEntryHelper.Initialize();
-            return new SettingsSubView(
-                SettingsBuilder.CreateGroupList(App.AppViewModel.AppSettings)
-                    .NewGroup(t => t.NovelSettings, group => group
-                        .Color(t => t.NovelBackground, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelBackground)))
-                        .Color(t => t.NovelFontColor, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelFontColor)))
-                        .Font(t => t.NovelFontFamily, t =>
-                        {
-                            t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelFontFamilyObject));
-                            _subscribedNovelFontFamily = t.Value;
-                            _subscribedNovelFontFamily.CollectionChanged += OnNovelFontFamilyChanged;
-                        })
-                        .Enum(t => t.NovelFontWeight, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelFontWeight)))
-                        .Int(t => t.NovelFontSize, 5, 100, 1, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelFontSize)))
-                        .Int(t => t.NovelLineHeight, 0, 150, 1, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelLineHeight)))
-                        .Int(t => t.NovelMaxWidth, 50, 10000, 50, t => t.PropertyChanged += (_, _) => OnPropertyChanged(nameof(NovelMaxWidth))))
-                    .Build()[0]);
+            var group = SettingsBuilder.CreateGroupList(App.AppViewModel.AppSettings)
+                .NewGroup(t => t.NovelSettings, entries => entries
+                    .Color(t => t.NovelBackground)
+                    .Color(t => t.NovelFontColor)
+                    .Font(t => t.NovelFontFamily)
+                    .Enum(t => t.NovelFontWeight)
+                    .Int(t => t.NovelFontSize, 5, 100, 1)
+                    .Int(t => t.NovelLineHeight, 0, 150, 1)
+                    .Int(t => t.NovelMaxWidth, 50, 10000, 50))
+                .Build()[0];
+            if (!_disposed)
+            {
+                foreach (var entry in group)
+                    if (entry is INotifyPropertyChanged observable)
+                    {
+                        observable.PropertyChanged += OnReadingSettingChanged;
+                        _readingSettingsEntries.Add(observable);
+                    }
+                ObserveNovelFonts();
+            }
+            return _settingsPage = new SettingsSubView(group) { Classes = { "compact" } };
         }
+    }
+
+    private void OnReadingSettingChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_disposed || e.PropertyName is not (null or "Value") || sender is not ISettingsEntry entry)
+            return;
+
+        if (entry.Token == nameof(NovelSettingsGroup.NovelFontFamily))
+        {
+            ObserveNovelFonts();
+            OnPropertyChanged(nameof(NovelFontFamilyObject));
+        }
+        else
+            OnPropertyChanged(entry.Token);
+    }
+
+    private void ObserveNovelFonts()
+    {
+        var fonts = Settings.NovelSettings.NovelFontFamily;
+        if (ReferenceEquals(fonts, _subscribedNovelFontFamily))
+            return;
+        if (_subscribedNovelFontFamily is { } previous)
+            previous.CollectionChanged -= OnNovelFontFamilyChanged;
+        _subscribedNovelFontFamily = fonts;
+        fonts.CollectionChanged += OnNovelFontFamilyChanged;
     }
 
     private static AppSettings Settings => App.AppViewModel.AppSettings;
@@ -209,6 +289,18 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
     private CancellationTokenSource _loadingCts = new();
 
+    private bool CanRetry => !_disposed && !IsLoading && LoadErrorMessage is not null;
+
+    [RelayCommand(CanExecute = nameof(CanRetry))]
+    private Task RetryAsync()
+    {
+        if (!CanRetry)
+            return Task.CompletedTask;
+        return CurrentNovel is null
+            ? LoadSingleNovelAsync(_initialNovelId, ResetLoadingToken())
+            : LoadCurrentNovelAsync();
+    }
+
     private async Task LoadSingleNovelAsync(long id, CancellationToken token)
     {
         var novel = await LoadNovelAsync(id, item => CurrentNovel = item, token);
@@ -235,7 +327,12 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
 
         IsLoading = true;
         _translatedPageMarkdowns = null;
+        OnPropertyChanged(nameof(IsTranslationAvailable));
+        _pageMarkdowns = [];
         IsTranslationShown = false;
+        CurrentPageIndex = 0;
+        OnPropertyChanged(nameof(PageCount));
+        OnPropertyChanged(nameof(IsMultiPage));
         OnPropertyChanged(nameof(TranslationButtonText));
         LoadErrorMessage = null;
         SeriesInfo = null;
@@ -251,7 +348,9 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             else
             {
                 SeriesInfo = WorkSeriesInfoViewModel.Create(currentNovel.Entry, SimpleWorkType.Novel);
-                var content = await currentNovel.ContentAsync;
+                // The item owns shared content used by readers/downloads; closing this
+                // reader cancels its wait, not another consumer's transfer.
+                var content = await currentNovel.ContentAsync.WaitAsync(token);
                 token.ThrowIfCancellationRequested();
                 if (index != CurrentWorkIndex || _disposed)
                     return;
@@ -355,6 +454,8 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             var novel = BlockedContentHelper.Replace(
                 await App.AppViewModel.MakoClient.GetNovelFromIdAsync(id, token));
             token.ThrowIfCancellationRequested();
+            if (novel.Id != id)
+                throw new InvalidOperationException(I18NManager.GetResource(EntryViewerPageResources.LoadFailed));
             var viewModel = NovelItemViewModel.CreateInstance(novel);
             onLoaded(viewModel);
             return viewModel;
@@ -398,8 +499,12 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         _disposed = true;
         IsLoading = false;
         ToggleTranslationCommand.NotifyCanExecuteChanged();
+        RetryCommand.NotifyCanExecuteChanged();
         _loadingCts.Cancel();
         _loadingCts.Dispose();
+        foreach (var entry in _readingSettingsEntries)
+            entry.PropertyChanged -= OnReadingSettingChanged;
+        _readingSettingsEntries.Clear();
         if (_subscribedNovelFontFamily is { } novelFontFamily)
         {
             novelFontFamily.CollectionChanged -= OnNovelFontFamilyChanged;

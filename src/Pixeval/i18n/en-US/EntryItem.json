@@ -1,4 +1,5 @@
 {
+  "DownloadTaskCreationFailed": "Could not create download task",
   "GenerateLink": "Copy application link",
   "GenerateWebLink": "Copy website link",
   "OpenInWebBrowser": "Open in web",

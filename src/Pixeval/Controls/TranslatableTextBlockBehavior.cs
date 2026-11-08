@@ -310,7 +310,7 @@ public static class TranslatableTextBlockBehavior
 
         try
         {
-            var result = await translator.TransformAsync(state.OriginalText, GetTextType(textBlock));
+            var result = await TextTransformation.RunAsync(translator, state.OriginalText, GetTextType(textBlock));
             if (version != state.Version || string.IsNullOrWhiteSpace(result))
                 return;
 

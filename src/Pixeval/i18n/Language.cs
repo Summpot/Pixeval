@@ -513,6 +513,7 @@ namespace Pixeval
         public const string AddToWatchLater = "EntryItem.AddToWatchLater";
         public const string Copy = "EntryItem.Copy";
         public const string DownloadTaskCreated = "EntryItem.DownloadTaskCreated";
+        public const string DownloadTaskCreationFailed = "EntryItem.DownloadTaskCreationFailed";
         public const string GenerateLink = "EntryItem.GenerateLink";
         public const string GenerateWebLink = "EntryItem.GenerateWebLink";
         public const string OpenInWebBrowser = "EntryItem.OpenInWebBrowser";
@@ -1472,6 +1473,7 @@ namespace Pixeval
     public static class NovelViewerPageResources
     {
         public const string ApplyingTransformerExtensions = "NovelViewerPage.ApplyingTransformerExtensions";
+        public const string CancelTranslation = "NovelViewerPage.CancelTranslation";
         public const string ShowOriginal = "NovelViewerPage.ShowOriginal";
         public const string ShowTranslation = "NovelViewerPage.ShowTranslation";
         public const string TransformerExtensionFailed = "NovelViewerPage.TransformerExtensionFailed";

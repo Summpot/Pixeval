@@ -6,9 +6,19 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:models="using:AutoSettingsPage.Models"
+    xmlns:toolkit="using:CommunityToolkit.Avalonia.Controls"
     mc:Ignorable="d"
     d:DesignHeight="450"
     d:DesignWidth="800">
+    <ContentPage.Styles>
+        <Style Selector=".compact toolkit|SettingsCard">
+            <Setter Property="Padding" Value="12" />
+        </Style>
+        <Style Selector=".compact toolkit|SettingsCard /template/ Grid#PART_RootGrid.wrapped ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Grid.Column" Value="0" />
+            <Setter Property="Grid.ColumnSpan" Value="3" />
+        </Style>
+    </ContentPage.Styles>
     <ScrollViewer>
         <ItemsControl x:Name="ItemsControl" Margin="20">
             <ItemsControl.ItemsPanel>
