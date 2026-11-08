@@ -32,6 +32,14 @@ internal sealed class OfflineSearchFixture : IDisposable
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? BookmarkWorksResponseFactory { get; set; }
     internal Func<Uri, string>? TrendingResponseFactory { get; set; }
     internal Func<Uri, string>? RankingResponseFactory { get; set; }
+    internal Func<HttpRequestMessage, CancellationToken, Task<string>>? ArtworkDetailResponseFactory { get; set; }
+    internal Func<HttpRequestMessage, CancellationToken, Task<string>>? UserResponseFactory { get; set; }
+    internal Func<HttpRequestMessage, CancellationToken, Task<string>>? SeriesResponseFactory { get; set; }
+    internal Func<HttpRequestMessage, CancellationToken, Task<string>>? WorkFeedResponseFactory { get; set; }
+    internal Func<HttpRequestMessage, CancellationToken, Task<string>>? SpotlightResponseFactory { get; set; }
+    internal Func<HttpRequestMessage, CancellationToken, Task<string>>? WorkCardResponseFactory { get; set; }
+    internal Func<HttpRequestMessage, CancellationToken, Task<string>>? RelatedResponseFactory { get; set; }
+    internal Func<HttpRequestMessage, CancellationToken, Task<string>>? SearchResponseFactory { get; set; }
 
     internal OfflineSearchFixture(MakoClient client)
     {
@@ -74,6 +82,38 @@ internal sealed class OfflineSearchFixture : IDisposable
         string json;
         switch (uri.AbsolutePath)
         {
+            case "/v1/search/illust" or "/v1/search/novel" when SearchResponseFactory is { } search:
+                SearchRequests.Enqueue(uri);
+                json = await search(request, token).ConfigureAwait(false);
+                break;
+            case "/v2/illust/related" or "/v1/novel/related" or "/m3e/related-next" when RelatedResponseFactory is { } related:
+                json = await related(request, token).ConfigureAwait(false);
+                break;
+            case "/v2/illust/bookmark/add" or "/v2/novel/bookmark/add" or "/v1/illust/bookmark/delete"
+                or "/v1/novel/bookmark/delete" or "/webview/v2/novel" when WorkCardResponseFactory is { } card:
+                json = await card(request, token).ConfigureAwait(false);
+                break;
+            case "/v1/spotlight/articles" or "/m3e/spotlight-next" when SpotlightResponseFactory is { } spotlight:
+                json = await spotlight(request, token).ConfigureAwait(false);
+                break;
+            case "/v2/illust/follow" or "/v1/novel/follow" or "/v2/illust/mypixiv" or "/v2/novel/mypixiv"
+                or "/v1/illust/recommended" or "/v1/novel/recommended" or "/v1/illust/new" or "/v1/novel/new"
+                or "/v1/user/illusts" or "/v1/user/novels" or "/m3e/feed-next" when WorkFeedResponseFactory is { } feed:
+                json = await feed(request, token).ConfigureAwait(false);
+                break;
+            case "/v1/watchlist/manga" or "/v1/watchlist/novel" or "/m3e/series-next"
+                or "/v1/illust/series" or "/v2/novel/series" or "/v1/illust/detail" or "/v2/novel/detail"
+                or "/v1/user/detail" when SeriesResponseFactory is { } series:
+                json = await series(request, token).ConfigureAwait(false);
+                break;
+            case "/v1/user/recommended" or "/v1/search/user" or "/v1/user/following" or "/v1/user/follower"
+                or "/v1/user/mypixiv" or "/v1/user/related" or "/v1/user/detail" or "/v1/user/follow/add"
+                or "/v1/user/follow/delete" or "/m3e/user-next" when UserResponseFactory is { } users:
+                json = await users(request, token).ConfigureAwait(false);
+                break;
+            case "/v1/illust/detail" or "/v2/novel/detail" when ArtworkDetailResponseFactory is { } detail:
+                json = await detail(request, token).ConfigureAwait(false);
+                break;
             case "/v1/illust/ranking" or "/v1/novel/ranking" when RankingResponseFactory is { } rankings:
                 json = rankings(uri);
                 break;

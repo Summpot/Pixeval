@@ -4,10 +4,11 @@
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 using Mako.Model;
+using Material3Expressive.Components;
 
 namespace Pixeval.Views.Entry;
 
-public partial class SpotlightItem : EntryItem
+public partial class SpotlightItem : Card
 {
     public SpotlightItem() => InitializeComponent();
 

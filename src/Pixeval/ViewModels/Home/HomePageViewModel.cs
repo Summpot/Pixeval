@@ -226,6 +226,10 @@ public partial class HomePageViewModel : ViewModelBase
         if (template.HasParameter(HomeCardParameterKinds.SearchText) && string.IsNullOrWhiteSpace(_sourceSearchTextEditor.Text))
             return false;
 
+        if (template.HasParameter(HomeCardParameterKinds.RankingDate) && _sourceRankingDateEditor.UseSpecifiedDate
+            && _sourceRankingDateEditor.SelectedDate.Date > MakoClient.RankingMaxDateTime.LocalDateTime.Date)
+            return false;
+
         draft.WorkType = _sourceWorkTypeEditor.GetValue<WorkType>();
         draft.SimpleWorkType = _sourceSimpleWorkTypeEditor.GetValue<SimpleWorkType>();
         draft.PrivacyPolicy = _sourcePrivacyPolicyEditor.GetValue<PrivacyPolicy>();

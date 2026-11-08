@@ -84,7 +84,7 @@ internal static class LoginLayoutValidation
                     var accountPopup = input.GetVisualDescendants().OfType<Popup>().Single();
                     Require(accountPopup.Child!.GetVisualDescendants().OfType<ListBoxItem>().Count() == 2,
                         "Both saved account containers are included in the automation audit");
-                    Require(accountPopup.Child.GetVisualDescendants().OfType<ListBoxItem>().Any(item =>
+                    Require(accountPopup.Child!.GetVisualDescendants().OfType<ListBoxItem>().Any(item =>
                         ControlAutomationPeer.CreatePeerForElement(item).GetName() == second.UserId.ToString()),
                         "An unnamed saved account uses its numeric ID as its accessible label");
                     AssertProtectedAutomation();

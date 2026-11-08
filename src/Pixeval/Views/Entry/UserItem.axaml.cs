@@ -3,10 +3,11 @@
 
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Material3Expressive.Components;
 
 namespace Pixeval.Views.Entry;
 
-public partial class UserItem : EntryItem
+public partial class UserItem : Card
 {
     public UserItem() => InitializeComponent();
 

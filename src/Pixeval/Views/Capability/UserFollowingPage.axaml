@@ -8,6 +8,7 @@
     xmlns:enum="using:Mako.Global.Enum"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:pixeval="using:Pixeval"
     xmlns:views="using:Pixeval.Views"
     mc:Ignorable="d"
     d:DesignHeight="450"
@@ -16,6 +17,7 @@
         <entry:UserContainer.CommandBarElements>
             <controls:SymbolComboBox
                 x:Name="PrivacyPolicyComboBox"
+                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+Source+PrivacyPolicyTextBlock.Text}}"
                 ItemsSource="{markup1:EnumResources x:TypeArguments=enum:PrivacyPolicy}"
                 SelectionChanged="WorkTypeComboBox_OnSelectionChanged" />
         </entry:UserContainer.CommandBarElements>

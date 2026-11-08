@@ -1,12 +1,11 @@
-<entry:EntryItem
+<m3:Card
     x:Class="Pixeval.Views.Entry.UserItem"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:animatedImage="using:AnimatedControls.Avalonia"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Views.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:entry="using:Pixeval.Views.Entry"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -14,15 +13,17 @@
     xmlns:utilities="using:Pixeval.Utilities"
     xmlns:viewModels="using:Pixeval.ViewModels"
     x:DataType="{x:Type viewModels:UserItemViewModel}"
-    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+    Padding="0"
+    AutomationProperties.Name="{Binding Username}"
+    Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerLow}}"
     Design.DataContext="{x:Static utilities:DesignHelper.DesignUserViewModel}"
-    Theme="{StaticResource RoundedButtonStyle}"
+    Theme="{StaticResource ContentCardTheme}"
+    ToolTip.Tip="{Binding Username}"
     mc:Ignorable="d"
     d:DesignHeight="160"
     d:DesignWidth="300">
-    <Grid RowDefinitions="5*,3*">
+    <Grid RowDefinitions="*,Auto">
         <Grid ColumnDefinitions="*,*,*">
-            <!--<labs:Shimmer Grid.Column="0" Grid.ColumnSpan="3" />-->
             <Image
                 Grid.Column="0"
                 controls:Source.Cache="{Binding Banner0Url}"
@@ -38,13 +39,14 @@
         </Grid>
         <StackPanel
             Grid.Row="1"
-            Margin="105,0,15,0"
-            Spacing="5">
+            MinHeight="72"
+            Margin="105,4,12,8"
+            Spacing="4">
             <TextBlock
-                Margin="0,5,0,0"
+                MaxLines="2"
                 Text="{Binding Username}"
                 TextTrimming="CharacterEllipsis"
-                TextWrapping="NoWrap"
+                TextWrapping="Wrap"
                 Theme="{StaticResource SubtitleTextBlockStyle}" />
             <StackPanel Orientation="Horizontal" Spacing="5">
                 <ContentControl
@@ -73,17 +75,18 @@
             Padding="1"
             HorizontalAlignment="Left"
             VerticalAlignment="Bottom"
+            AutomationProperties.Name="{I18N {x:Static pixeval:MiscResources.MoreCommands}}"
             Background="Transparent"
             Click="AvatarButton_OnClicked"
             CornerRadius="100"
             Tapped="AvatarButton_OnTapped"
-            Theme="{StaticResource TransparentButtonStyle}">
+            Theme="{StaticResource MaterialTextButtonTheme}">
             <controls:AvatarImage controls:Source.Cache="{Binding AvatarUrl}" />
             <Button.Flyout>
                 <MenuFlyout>
                     <MenuItem
                         Command="{Binding FollowCommand, Mode=OneWay}"
-                        Header="{I18N {x:Static pixeval:UserViewerPageResources.Follow}}"
+                        Header="{Binding FollowLabel}"
                         Icon="{markup1:SymbolIconEx Person,
                                                     IconVariant={Binding IsFollowedDisplay,
                                                                          Converter={x:Static converters:PixevalConverters.StateToIconVariant}}}" />
@@ -113,4 +116,4 @@
             </Button.Flyout>
         </Button>
     </Grid>
-</entry:EntryItem>
+</m3:Card>

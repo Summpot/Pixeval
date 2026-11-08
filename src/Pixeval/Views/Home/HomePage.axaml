@@ -81,6 +81,7 @@
                 DefaultLabelPosition="Right"
                 IsDynamicOverflowEnabled="True">
                 <CommandBarToggleButton
+                    x:Name="HideHomePageCardTitleButton"
                     Icon="{markup:SymbolIcon AppTitle}"
                     IsChecked="{Binding HideHomePageCardTitle, Source={x:Static views:PixevalSettings.Instance}, Mode=TwoWay}"
                     Label="{I18N {x:Static pixeval:HomePageResources+HideCardTitleButton.Label}}" />
@@ -90,6 +91,7 @@
                     IsChecked="{Binding HideHomePageToolbar, Source={x:Static views:PixevalSettings.Instance}, Mode=TwoWay}"
                     Label="{I18N {x:Static pixeval:HomePageResources+HideToolbarButton.Label}}" />
                 <CommandBarToggleButton
+                    x:Name="EditHomeButton"
                     Icon="{markup:SymbolIcon Edit}"
                     IsChecked="{Binding IsEditMode, Mode=TwoWay}"
                     Label="{I18N {x:Static pixeval:HomePageResources+EditButton.Label}}" />
@@ -123,7 +125,11 @@
         <ScrollViewer>
             <StackPanel Margin="16" Spacing="16">
                 <StackPanel Spacing="4">
-                    <TextBlock Text="{I18N {x:Static pixeval:HomePageResources+EditPaneTitleTextBlock.Text}}" Theme="{StaticResource BodyLargeStrongTextBlockStyle}" />
+                    <TextBlock
+                        x:Name="EditPaneTitle"
+                        Text="{I18N {x:Static pixeval:HomePageResources+EditPaneTitleTextBlock.Text}}"
+                        TextWrapping="Wrap"
+                        Theme="{StaticResource BodyLargeStrongTextBlockStyle}" />
                     <TextBlock
                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                         Text="{I18N {x:Static pixeval:HomePageResources+EditPaneDescriptionTextBlock.Text}}"
@@ -133,23 +139,31 @@
                 <Border Classes="editor-section">
                     <StackPanel Spacing="10">
                         <TextBlock FontWeight="SemiBold" Text="{I18N {x:Static pixeval:HomePageResources+GridSizeTitleTextBlock.Text}}" />
-                        <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8">
+                        <Grid
+                            ColumnDefinitions="Auto,*"
+                            ColumnSpacing="8"
+                            RowDefinitions="Auto,Auto"
+                            RowSpacing="8">
                             <TextBlock
                                 Grid.Column="0"
                                 Classes="editor-label"
                                 Text="{I18N {x:Static pixeval:HomePageResources+GridColumnsTextBlock.Text}}" />
                             <NumericUpDown
                                 Grid.Column="1"
+                                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+GridColumnsTextBlock.Text}}"
                                 Classes="integer-editor"
                                 Maximum="{x:Static home:HomePage.MaximumGridSize}"
                                 Minimum="{x:Static home:HomePage.MinimumGridSize}"
                                 Value="{Binding GridColumnsValue, Mode=TwoWay}" />
                             <TextBlock
-                                Grid.Column="2"
+                                Grid.Row="1"
+                                Grid.Column="0"
                                 Classes="editor-label"
                                 Text="{I18N {x:Static pixeval:HomePageResources+GridRowsTextBlock.Text}}" />
                             <NumericUpDown
-                                Grid.Column="3"
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+GridRowsTextBlock.Text}}"
                                 Classes="integer-editor"
                                 Maximum="{x:Static home:HomePage.MaximumGridSize}"
                                 Minimum="{x:Static home:HomePage.MinimumGridSize}"
@@ -165,42 +179,62 @@
                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             Text="{Binding SelectedCardDescription}"
                             TextWrapping="Wrap" />
-                        <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8">
+                        <Grid
+                            ColumnDefinitions="Auto,*"
+                            ColumnSpacing="8"
+                            RowDefinitions="Auto,Auto"
+                            RowSpacing="8">
                             <TextBlock
                                 Grid.Column="0"
                                 Classes="editor-label"
                                 Text="{I18N {x:Static pixeval:HomePageResources+PositionXTextBlock.Text}}" />
                             <NumericUpDown
+                                x:Name="CardColumnEditor"
                                 Grid.Column="1"
+                                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+PositionXTextBlock.Text}}"
                                 Classes="integer-editor card-layout-editor"
                                 Maximum="{Binding ColumnCount}"
                                 Value="{Binding SelectedColumnValue, Mode=TwoWay}" />
                             <TextBlock
-                                Grid.Column="2"
+                                Grid.Row="1"
+                                Grid.Column="0"
                                 Classes="editor-label"
                                 Text="{I18N {x:Static pixeval:HomePageResources+PositionYTextBlock.Text}}" />
                             <NumericUpDown
-                                Grid.Column="3"
+                                x:Name="CardRowEditor"
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+PositionYTextBlock.Text}}"
                                 Classes="integer-editor card-layout-editor"
                                 Maximum="{Binding RowCount}"
                                 Value="{Binding SelectedRowValue, Mode=TwoWay}" />
                         </Grid>
-                        <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8">
+                        <Grid
+                            ColumnDefinitions="Auto,*"
+                            ColumnSpacing="8"
+                            RowDefinitions="Auto,Auto"
+                            RowSpacing="8">
                             <TextBlock
                                 Grid.Column="0"
                                 Classes="editor-label"
                                 Text="{I18N {x:Static pixeval:HomePageResources+WidthTextBlock.Text}}" />
                             <NumericUpDown
+                                x:Name="CardWidthEditor"
                                 Grid.Column="1"
+                                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+WidthTextBlock.Text}}"
                                 Classes="integer-editor card-layout-editor"
                                 Maximum="{Binding ColumnCount}"
                                 Value="{Binding SelectedWidthValue, Mode=TwoWay}" />
                             <TextBlock
-                                Grid.Column="2"
+                                Grid.Row="1"
+                                Grid.Column="0"
                                 Classes="editor-label"
                                 Text="{I18N {x:Static pixeval:HomePageResources+HeightTextBlock.Text}}" />
                             <NumericUpDown
-                                Grid.Column="3"
+                                x:Name="CardHeightEditor"
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+HeightTextBlock.Text}}"
                                 Classes="integer-editor card-layout-editor"
                                 Maximum="{Binding RowCount}"
                                 Value="{Binding SelectedHeightValue, Mode=TwoWay}" />
@@ -244,7 +278,7 @@
                                 TextWrapping="Wrap" />
                         </StackPanel>
 
-                        <ItemsControl ItemsSource="{Binding ActiveParameterEditors}">
+                        <ItemsControl x:Name="SourceParameterEditors" ItemsSource="{Binding ActiveParameterEditors}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel Spacing="10" />
@@ -253,38 +287,50 @@
                             <ItemsControl.DataTemplates>
                                 <DataTemplate x:DataType="{x:Type viewModels:HomeCardChoiceParameterEditorViewModel}">
                                     <StackPanel Spacing="4">
-                                        <TextBlock Text="{Binding Header}" />
+                                        <TextBlock Text="{Binding Header}" TextWrapping="Wrap" />
                                         <controls:SymbolComboBox
+                                            MinWidth="0"
                                             HorizontalAlignment="Stretch"
+                                            AutomationProperties.Name="{Binding Header}"
                                             IconMode="False"
                                             ItemsSource="{Binding Items}"
-                                            SelectedValue="{Binding Value, Mode=TwoWay}" />
+                                            SelectedValue="{Binding Value, Mode=TwoWay}">
+                                            <controls:SymbolComboBox.TextItemTemplate>
+                                                <DataTemplate x:DataType="{x:Type controls:SymbolComboBoxItem}">
+                                                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
+                                                </DataTemplate>
+                                            </controls:SymbolComboBox.TextItemTemplate>
+                                        </controls:SymbolComboBox>
                                     </StackPanel>
                                 </DataTemplate>
 
                                 <DataTemplate x:DataType="{x:Type viewModels:HomeCardTextParameterEditorViewModel}">
                                     <StackPanel Spacing="4">
-                                        <TextBlock Text="{Binding Header}" />
-                                        <TextBox Text="{Binding Text, Mode=TwoWay}" />
+                                        <TextBlock Text="{Binding Header}" TextWrapping="Wrap" />
+                                        <TextBox AutomationProperties.Name="{Binding Header}" Text="{Binding Text, Mode=TwoWay}" />
                                     </StackPanel>
                                 </DataTemplate>
 
                                 <DataTemplate x:DataType="{x:Type viewModels:HomeCardRankingDateParameterEditorViewModel}">
                                     <StackPanel Spacing="4">
-                                        <TextBlock Text="{Binding Header}" />
+                                        <TextBlock Text="{Binding Header}" TextWrapping="Wrap" />
                                         <CheckBox Content="{I18N {x:Static pixeval:HomePageResources+Source+UseSpecifiedRankingDateCheckBox.Content}}" IsChecked="{Binding UseSpecifiedDate, Mode=TwoWay}" />
                                         <CalendarDatePicker
                                             HorizontalAlignment="Stretch"
+                                            AutomationProperties.Name="{Binding Header}"
+                                            DateValidationError="RankingDate_OnDateValidationError"
                                             DisplayDateEnd="{x:Static capability:WorkRankingPage.MaxDate}"
                                             IsEnabled="{Binding UseSpecifiedDate}"
                                             SelectedDate="{Binding SelectedDate, Mode=TwoWay}"
-                                            SelectedDateFormat="Short" />
+                                            SelectedDateFormat="Short"
+                                            TemplateApplied="RankingDate_OnTemplateApplied" />
                                     </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.DataTemplates>
                         </ItemsControl>
 
                         <Button
+                            x:Name="AddConfiguredCardButton"
                             HorizontalAlignment="Stretch"
                             Command="{Binding $parent[home:HomePage].AddConfiguredCardCommand}"
                             IsEnabled="{Binding CanAddConfiguredCard}">
@@ -301,17 +347,19 @@
 
                 <StackPanel Spacing="8">
                     <TextBlock FontWeight="SemiBold" Text="{I18N {x:Static pixeval:HomePageResources+CardLibraryTitleTextBlock.Text}}" />
-                    <ItemsControl ItemsSource="{Binding CardTemplates}">
+                    <ItemsControl x:Name="CardLibrary" ItemsSource="{Binding CardTemplates}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="{x:Type home:HomeCardDefinition}">
                                 <Button
                                     Margin="0,0,0,8"
                                     Padding="0"
                                     HorizontalAlignment="Stretch"
+                                    AutomationProperties.Name="{Binding Title}"
                                     Background="Transparent"
                                     Command="{Binding $parent[home:HomePage].ViewModel.SelectTemplateCommand}"
                                     CommandParameter="{Binding}"
-                                    Theme="{StaticResource TransparentButtonStyle}">
+                                    Theme="{StaticResource TransparentButtonStyle}"
+                                    ToolTip.Tip="{Binding Description}">
                                     <Border
                                         Padding="12"
                                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"

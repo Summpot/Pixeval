@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.VisualTree;
 using Mako.Global.Enum;
 
@@ -46,6 +47,16 @@ public static class BookmarkTagSelectorFlyoutHelper
         }
         var isSubmitting = false;
         tagSelector.TagsSelected += OnTagsSelected;
+        flyout.Opened += (_, _) =>
+        {
+            // The invoking context-menu item has already detached. Give the new
+            // popup its own keyboard route immediately, including while loading.
+            if (tagSelector.FindAncestorOfType<FlyoutPresenter>() is { } presenter)
+            {
+                presenter.Focusable = true;
+                presenter.Focus(NavigationMethod.Tab);
+            }
+        };
         flyout.Closed += (_, _) =>
         {
             tagSelector.TagsSelected -= OnTagsSelected;

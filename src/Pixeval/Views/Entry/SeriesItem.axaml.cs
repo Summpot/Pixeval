@@ -5,6 +5,7 @@ using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Mako.Global.Enum;
+using Material3Expressive.Components;
 using Misaki;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -12,7 +13,7 @@ using Pixeval.Views.Viewers;
 
 namespace Pixeval.Views.Entry;
 
-public partial class SeriesItem : EntryItem
+public partial class SeriesItem : Card
 {
     public SeriesItem() => InitializeComponent();
 
@@ -22,6 +23,7 @@ public partial class SeriesItem : EntryItem
             || TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
             return;
 
+        e.Handled = true;
         if (viewModel.WorkType is SimpleWorkType.Novel)
             viewContainer.CreateNovelPage(viewModel.Entry.LatestContentId);
         else
@@ -37,6 +39,7 @@ public partial class SeriesItem : EntryItem
         if (TopLevel.GetTopLevel(this)?.ViewContainer is not { } viewContainer)
             return;
 
+        e.Handled = true;
         viewContainer.CreateUserPage(viewModel.Entry.User.Id);
     }
 }

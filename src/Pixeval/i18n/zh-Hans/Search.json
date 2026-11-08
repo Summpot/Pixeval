@@ -82,6 +82,10 @@
     "Unpin": "取消固定"
   },
   "SauceNAO": {
+    "Retry": "重试搜索",
+    "RequestFailed": "搜索失败或服务暂时不可用。请稍后重试。",
+    "ImageLoadFailed": "无法读取图片。已保留之前的选择，请选择有效图片后重试。",
+    "ClipboardHasNoImage": "剪贴板中没有图片。",
     "Search": "SauceNAO 搜索",
     "ProvideImage": "点击选择图片",
     "Or": "或",

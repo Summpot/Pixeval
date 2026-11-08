@@ -1,4 +1,4 @@
-<work:WorkItem
+﻿<work:WorkItem
     x:Class="Pixeval.Views.Work.IllustrationItem"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -6,6 +6,7 @@
     xmlns:converters="using:Pixeval.Views.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:fluent="using:FluentIcons.Avalonia"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -14,76 +15,80 @@
     xmlns:viewModels="using:Pixeval.ViewModels"
     xmlns:work="using:Pixeval.Views.Work"
     x:DataType="{x:Type viewModels:IllustrationItemViewModel}"
-    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+    AutomationProperties.Name="{Binding Entry.Title}"
+    Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerLow}}"
     Design.DataContext="{x:Static utilities:DesignHelper.DesignIllustrationViewModel}"
     RenderTransformOrigin="50%,50%"
-    Theme="{StaticResource RoundedButtonStyle}"
+    Theme="{StaticResource WorkCardButtonTheme}"
+    ToolTip.Tip="{Binding Tooltip}"
     mc:Ignorable="d"
     d:DesignHeight="250"
     d:DesignWidth="300">
+    <work:WorkItem.ContextMenu>
+        <ContextMenu>
+            <MenuItem
+                AutomationProperties.Name="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
+                Command="{Binding BookmarkCommand}"
+                CommandParameter="{Binding $self, Mode=OneTime}"
+                ContextRequested="AddToBookmark_OnRightClick"
+                Header="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
+                Icon="{markup1:SymbolIconEx Heart,
+                                            IconVariant={Binding IsBookmarkedDisplay,
+                                                                 Converter={x:Static converters:PixevalConverters.StateToIconVariant}}}"
+                IsVisible="{Binding IsBookmarkSupported}" />
+            <MenuItem
+                Command="{Binding AddToWatchLaterCommand}"
+                CommandParameter="{Binding $self, Mode=OneTime}"
+                Header="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}"
+                Icon="{markup1:SymbolIconEx Clock,
+                                            IconVariant={Binding IsInWatchLater,
+                                                                 Converter={x:Static converters:PixevalConverters.BoolToIconVariant}}}" />
+            <MenuItem
+                Click="OpenUserInfoPage_OnClicked"
+                Header="{I18N {x:Static pixeval:EntryItemResources.OpenUserInfoPage}}"
+                Icon="{markup:SymbolIcon Person}" />
+            <MenuItem
+                Click="BlockAuthor_OnClicked"
+                Header="{I18N {x:Static pixeval:BlockedContentResources.BlockAuthor}}"
+                Icon="{markup:SymbolIcon PersonProhibited}"
+                IsVisible="{Binding CanBlockAuthor}" />
+            <MenuItem
+                Click="OpenSeriesPage_OnClicked"
+                Header="{I18N {x:Static pixeval:EntryItemResources.OpenSeries}}"
+                Icon="{markup:SymbolIcon SquareMultiple}"
+                IsVisible="{Binding HasSeries}" />
+            <Separator />
+            <MenuItem
+                Command="{Binding CopyCommand}"
+                CommandParameter="{Binding #ThumbnailImage, Mode=OneTime}"
+                Header="{I18N {x:Static pixeval:EntryItemResources.Copy}}"
+                Icon="{markup:SymbolIcon Copy}"
+                IsEnabled="{Binding #ThumbnailImage.(controls:Source.Loaded)}" />
+            <MenuItem
+                Command="{Binding SaveCommand}"
+                CommandParameter="{Binding $self, Mode=OneTime}"
+                Header="{I18N {x:Static pixeval:EntryItemResources.Save}}"
+                Icon="{markup:SymbolIcon Save}" />
+            <Separator />
+            <MenuItem
+                Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                Header="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
+                Icon="{markup:SymbolIcon GlobeArrowUp}"
+                Tag="{Binding WebsiteUri}" />
+            <MenuItem
+                Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                Header="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
+                Icon="{markup:SymbolIcon LinkMultiple}"
+                Tag="{Binding WebsiteUri}" />
+            <MenuItem
+                Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                Header="{I18N {x:Static pixeval:EntryItemResources.GenerateLink}}"
+                Icon="{markup:SymbolIcon Link}"
+                Tag="{Binding AppUri}" />
+        </ContextMenu>
+    </work:WorkItem.ContextMenu>
     <ContentControl ClipToBounds="True">
-        <ContentControl.ContextMenu>
-            <ContextMenu>
-                <MenuItem
-                    Command="{Binding BookmarkCommand}"
-                    CommandParameter="{Binding $self, Mode=OneTime}"
-                    ContextRequested="AddToBookmark_OnRightClick"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
-                    Icon="{markup1:SymbolIconEx Heart,
-                                                IconVariant={Binding IsBookmarkedDisplay,
-                                                                     Converter={x:Static converters:PixevalConverters.StateToIconVariant}}}"
-                    IsVisible="{Binding IsBookmarkSupported}" />
-                <MenuItem
-                    Command="{Binding AddToWatchLaterCommand}"
-                    CommandParameter="{Binding $self, Mode=OneTime}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}"
-                    Icon="{markup1:SymbolIconEx Clock,
-                                                IconVariant={Binding IsInWatchLater,
-                                                                     Converter={x:Static converters:PixevalConverters.BoolToIconVariant}}}" />
-                <MenuItem
-                    Click="OpenUserInfoPage_OnClicked"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.OpenUserInfoPage}}"
-                    Icon="{markup:SymbolIcon Person}" />
-                <MenuItem
-                    Click="BlockAuthor_OnClicked"
-                    Header="{I18N {x:Static pixeval:BlockedContentResources.BlockAuthor}}"
-                    Icon="{markup:SymbolIcon PersonProhibited}"
-                    IsVisible="{Binding CanBlockAuthor}" />
-                <MenuItem
-                    Click="OpenSeriesPage_OnClicked"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.OpenSeries}}"
-                    Icon="{markup:SymbolIcon SquareMultiple}"
-                    IsVisible="{Binding HasSeries}" />
-                <Separator />
-                <MenuItem
-                    Command="{Binding CopyCommand}"
-                    CommandParameter="{Binding #ThumbnailImage, Mode=OneTime}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.Copy}}"
-                    Icon="{markup:SymbolIcon Copy}"
-                    IsEnabled="{Binding #ThumbnailImage.(controls:Source.Loaded)}" />
-                <MenuItem
-                    Command="{Binding SaveCommand}"
-                    CommandParameter="{Binding $self, Mode=OneTime}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.Save}}"
-                    Icon="{markup:SymbolIcon Save}" />
-                <Separator />
-                <MenuItem
-                    Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
-                    Icon="{markup:SymbolIcon GlobeArrowUp}"
-                    Tag="{Binding WebsiteUri}" />
-                <MenuItem
-                    Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
-                    Icon="{markup:SymbolIcon LinkMultiple}"
-                    Tag="{Binding WebsiteUri}" />
-                <MenuItem
-                    Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                    Header="{I18N {x:Static pixeval:EntryItemResources.GenerateLink}}"
-                    Icon="{markup:SymbolIcon Link}"
-                    Tag="{Binding AppUri}" />
-            </ContextMenu>
-        </ContentControl.ContextMenu>
+
         <Border HorizontalAlignment="Stretch">
             <Panel>
                 <controls:ConstrainedBox
@@ -97,20 +102,35 @@
                         Stretch="UniformToFill" />
                 </controls:ConstrainedBox>
                 <controls:Skeleton IsVisible="{Binding !#ThumbnailImage.(controls:Source.Loaded)}" />
-                <controls:HeartButton
-                    Width="30"
-                    Height="30"
+                <Border
+                    Width="40"
+                    Height="40"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
-                    Command="{Binding BookmarkCommand}"
-                    CommandParameter="{Binding $self, Mode=OneTime}"
+                    Background="Transparent"
+                    DoubleTapped="BookmarkButtonHost_OnTapped"
                     IsVisible="{Binding IsBookmarkSupported}"
-                    State="{Binding IsBookmarkedDisplay}">
-                    
-                    <controls:HeartButton.CacheMode>
-                        <BitmapCache SnapsToDevicePixels="False" RenderAtScale="1"/>
-                    </controls:HeartButton.CacheMode>
-                </controls:HeartButton>
+                    PointerPressed="BookmarkButtonHost_OnPointerPressed"
+                    Tapped="BookmarkButtonHost_OnTapped">
+                    <controls:HeartButton
+                        Width="40"
+                        Height="40"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        AutomationProperties.Name="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
+                        Command="{Binding BookmarkCommand}"
+                        CommandParameter="{Binding $self, Mode=OneTime}"
+                        FocusAdorner="{StaticResource WorkCardFocusAdorner}"
+                        IsVisible="{Binding IsBookmarkSupported}"
+                        State="{Binding IsBookmarkedDisplay}"
+                        Theme="{StaticResource TransparentButtonStyle}"
+                        ToolTip.Tip="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}">
+
+                        <controls:HeartButton.CacheMode>
+                            <BitmapCache RenderAtScale="1" SnapsToDevicePixels="False" />
+                        </controls:HeartButton.CacheMode>
+                    </controls:HeartButton>
+                </Border>
                 <Border
                     Margin="5"
                     Padding="5"

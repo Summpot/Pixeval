@@ -791,3 +791,64 @@ CI：构建固定官方 demo 后把清单中的库传给验证脚本，上传提
 新增 search-page/bookmark-page/ranking-page 已接入现有 Windows/Ubuntu CI 模式列表；本轮只执行本地 Windows。改动 XAML 经 XamlStyler，相关 C# 经 whitespace 格式化；工作流 YAML/PowerShell、JSON、文档链接及 `git diff --check` 通过。`verified-source-hashes.json` 保存 33 个最终代码/宿主/CI 文件，`static-validation-final.json` 记录收尾检查。常规构建服务器可驻留，验证进程正常退出；本轮修改通过本地代码及一次文档提交收尾。
 
 未覆盖：原生 OAuth/WebView、IME、系统焦点/读屏/剪贴板、多屏 DPI、触摸/GPU、Linux/macOS/移动端/Browser、远程 CI；真实服务写入、完整作品分页/账号切换、收藏订阅、系列/特辑及完整搜索结果页。Mako EngineHandle 取消约束枚举和响应归属，不能中断已发出的 HTTP；空页的内部 next_url 行为未据非空固定样本外推。日期测试仅使用当前时区。下一批建议从 P07.03/P09.02 的账号切换、收藏订阅和完整作品分页取消建立固定服务基线，或继续 P09.01 动态页面；沿用后台验证，不自动恢复 computer use。
+
+
+## 2026-11-08 无人值守迁移批次（05:01 启动）
+
+时间：05:01–06:32（Asia/Shanghai），约 91 分钟；基线 `ce21ffae`，分支 `feat/material3expressive-migration`，开始时工作区干净。依 §10.3 自选六个完整功能单元，逐个验证后本地提交，结束集中记账一次。全程使用后台脚本、固定 HTTP、隔离数据目录和 headless 输入/渲染，没有调用或恢复 computer use，没有推送/发布、真实账号写入、系统剪贴板操作或启动桌面/AOT 产物。依赖 gitlink、设置格式、导航键、扩展 ABI 及虚拟化算法保持不变。
+
+| 功能单元 / 步骤 | 本地提交 | 本轮完成范围 |
+| --- | --- | --- |
+| SauceNao，P09.06a | `ff03f566` | Material 选图/粘贴/预览与错误提示；无效替换保留原图，API Key 门控、流/文件所有权、取消与迟到结果隔离；结果页限流/服务错误/无效 JSON 内联重试，响应释放及单项详情取消 |
+| 用户卡片与来源，P08.01a/P09.01a | `03b8444d`，内部 Tab 修复随 `1dd6beba` | Material 卡片、长用户名、具名头像菜单、单次资料导航；关注/取消标签、复制和隔离数据库屏蔽；推荐/搜索/关注/粉丝/好P友/相关用户的参数、刷新、分页及模型寿命 |
+| 系列卡片与来源，P08.01b/P09.02c | `1dd6beba` | 长标题不遮挡作者/最新内容，卡片与子动作分别导航；内部 Tab/Shift+Tab、平台菜单键/右键、复制；漫画/小说来源与分页/切换/关闭；修复最新插画详情遗漏取消令牌 |
+| 关注与好P友作品，P09.01b | `0460cb94` | 类型/隐私字段显示可读文本与用途名称；插画/小说参数、刷新/分页、旧源归属、切类型释放、失败重试及空状态 |
+| 特辑卡片与来源，P08.01c/P09.02d | `e1a420db` | Material 卡片、两行标题、分类对比度/提示和缺图；Tab/Shift+Tab、Enter/Space/指针单次 Click；原文章 URL 绑定、分页去重、替换/关闭后旧源清理 |
+| 推荐/新作/投稿共享类型栏，P09.01c | `0b854286` | 具名可读类型选择；插画/漫画/小说原端点及参数、键盘切换、分页/刷新/空结果与关闭；投稿原订阅入口可见性保持，未执行订阅业务 |
+
+主计划只更新以上局部子项和 P08/P09 阶段说明，父步骤仍未勾选。验收文档增加 F08.4–6、F09.4–7 和 F12 输入/结果契约，宿主文档记录六个新模式、输出与证明边界。新增 SauceNao 字符串使用四语言 JSON 并运行 Language.tt；法语原有缺译仍按产品规则回退，没有宣称完成全部翻译。仅验证宿主为 Avalonia 12 存储假对象启用 `AvaloniaAccessUnstablePrivateApis`，产品项目未新增此配置。
+
+证据根目录：`artifacts/m3e/2026-11-08-batch-0501/`。系统 SDK `11.0.100-rc.3.26522.148`、runtime `10.0.14`，Avalonia `12.1.5`，M3E `859a69e563b2a01fc87a26255ee11c1d89959677`。最终命令 `./scripts/verify-m3e.ps1 -OutputDirectory artifacts/m3e/2026-11-08-batch-0501/windows-final -ExtensionFixture <固定 C++ demo DLL>` 完成桌面 Debug、测试 Release 构建及完整测试 **466/466，零失败、零跳过**；TRX、SDK/依赖/提交记录和原生样本 SHA256 在 `windows-final/`，样本哈希为 `14A85A17F7B0D3002B66EC5DE5D073038237214FDC00D2F278DD4E3523DE85D6`。此前 `windows-complete/`、`windows-closed/` 亦通过，分别对应后续功能加入前的源码；最终结论以 `windows-final/` 为准。
+
+最终 `dotnet publish src/Pixeval.Desktop/Pixeval.Desktop.csproj -c Release -r win-x64 --self-contained true -o artifacts/m3e/2026-11-08-batch-0501/native-aot-final` 成功，日志在 `native-aot-final.log`。`native-aot-header.json` 记录最终路径/SHA256、x64 PE32+、CLR 头 RVA/size 均为零，四个 Search.json 发布副本与源码逐字节一致；没有启动 EXE。既有 IL2026/IL3050/IL3053 等裁剪/AOT 警告保留，不将构建当作原生运行时通过。与上一批最终构建的规范化唯一警告对照为 75→75、无增减，见 `warning-delta.json`。
+
+`zh-Hans/en-US/fr-FR/ru-RU` 各通过：saucenao 10 组、user-pages 29 组、series-page 8 组、work-feeds 24 组、spotlight 4 组、work-sources 36 组，共 **444 组**。24 个最终目录、契约文件、文化/runtime 和 956 张过程截图见 `locale-validation-summary.json`。中文最终路径依次为 `saucenao-closed/`、`user-pages-traversal/`、`series-closed-zh-Hans/`、`feeds-final/`、`spotlight-closed-zh-Hans/`、`sources-final-zh-Hans/`，其他语言的最终映射以该 JSON 为准。后续独立共享类型栏改动未修改前五个单元；新增模式均接入 Windows/Ubuntu 工作流，远程 CI 未运行。
+
+相邻回归为 `regression-work-selection/` 12 组、`regression-viewer-toolbar/` 4 组、`regression-search/` 12 组，均通过。SauceNao 专项测试日志 `saucenao-tests.log` 为 15/15，其中四个新增输入用例已计入完整测试。渲染抽查包括长译文窄窗错误/重试、系列内部按钮、用户长名、特辑分类/缺图、推荐/投稿类型字段；截图只作视觉补充，输入、请求和资源归属由断言验证。
+
+关键失败保留：`input-before.log` 的无效图片替换破坏选择/无法恢复；`users-before.log` 与 `series-before.log` 的卡片键盘入口缺失；`series-before/` 的长标题遮挡最新内容；`series-keyboard.log` 的插画详情未取消；`series-tab.log` 的 ListBox 默认 Once 跳过内部按钮；`feeds-before.log`、`sources-label-before.log` 的类型字段缺少可读用途；`spotlight-before.log` 的文章动作绑定缺失。最终专项均验证修复。`series-actions.log` 最初假设 Shift+F10，核对 Avalonia headless 平台配置后改测默认 Apps 菜单键，未为测试新增产品键盘分支；`sources-before.log` 最初将默认 filter 错写为 for_ios，按实际 ForAndroid 配置纠正后才记录字段基线。旧构建进程导致的过期 XAML 结果已通过重建后验收区分；固定不可用作品/失败 feed 产生的应用错误日志属于预期负例，不当作未预期错误。
+
+改动 XAML 经 XamlStyler，相关 C# 经 whitespace 格式化；工作流 YAML/四段 PowerShell、结构化资源、文档本地链接及 `git diff --check` 通过。`verified-source-hashes.json` 保存 44 个改动源码/宿主/CI 文件；`static-validation.json`、`workflow-powershell-validation.json` 和 `final-state.json` 记录收尾证据。验证进程已退出，常规构建服务器可驻留。功能单元按职责提交，批次文档另做一次收尾提交，不补写文档自身哈希。
+
+证明边界与下一步：headless 的内存剪贴板、存储假对象及 NoopLauncher 不代表系统选图/剪贴板/浏览器、IME、原生焦点/读屏、Shift+F10、触摸、DPI/GPU 或其他平台通过；Linux/macOS/移动端/Browser 和远程 CI 本轮均未运行。Mako EngineHandle 取消限制枚举/后续分页及响应归属，不等于中断在途 HTTP，也不外推非空固定页到空页内部 next_url 的全部行为；SauceNao 增量行为串行化来源，故意忽略取消的旧传输需先完成才能观察新源请求。漫画推荐保留 Mako 当前与插画相同的端点映射，没有验证服务端分类。完整 SauceNao 供应方匹配信息/外链、用户关注失败、系列监视/详情、投稿订阅/账号切换、完整卡片与性能矩阵仍待验收。下一批优先为 `WorkRelatedPage` 和投稿/收藏订阅建立固定服务基线，再补账号切换及失败矩阵；沿用后台验证，不自动恢复 computer use。
+
+
+## 2026-11-08 无人值守迁移批次（06:35 启动）
+
+时间：06:35–08:05（Asia/Shanghai），约 90 分钟；基线 `fc3c80d1`，分支 `feat/material3expressive-migration`，开始时工作区干净。依 §10.3 自选作品卡片、相关作品、历史、首页展示/编辑与来源参数五个功能单元，逐个验证、审查后本地提交，结束统一记账一次。既有主题、输入控件、隔离账号/HTTP 与共享源基线支持本轮局部工作，不将前置阶段或整个 P08/P09/P10 宣称完成。全程使用后台脚本与 headless 输入/渲染，没有调用或恢复 computer use，没有全局输入、系统剪贴板操作、真实账号写入、推送或远程发布；未启动桌面/AOT 产物。
+
+| 功能单元 / 步骤 | 本地提交 | 完成范围 |
+| --- | --- | --- |
+| 插画/小说卡片，P08.01d/P08.03b | `2c9075ad` | Material 表面、具名收藏、可见焦点、小说标题/统计/标签布局；Click 统一指针/键盘，行模式 Enter/Shift 选择；禁用收藏不穿透打开，菜单/标签弹层焦点和模型复用后的迟到收藏隔离 |
+| 相关作品，P09.01d | `02ebcb2b` | 零 ID 使用对应作品类型空源；插画/小说端点与 ID、分页去重、刷新、错误重试/空结果、关闭及共享首页预览所有权 |
+| 历史/稍后观看，P08.05a | `54d194e7` | 具名完整类型栏；真实隔离 SQLite 的排序、键盘切类型、同 ID 不同类型、更新时间、重开/删除、增量滚动与关闭后通知隔离 |
+| 首页卡片/局部编辑，P10.01a/P10.03a/P10.04a | `36ac1e83`、`c5e5b078` | 四类预览、标题/占位对比度、自定义背景、具名打开/删除；编辑/卸载/关闭使旧打开意图失效，单图/小说失败不伪装空成功；真实键盘选择/位置编辑/删除及原 YAML 重读；收尾截图新发现的俄语面板标题裁切追加换行修复 |
+| 首页来源参数，P10.02a | `8777b03a` | 19 类来源字段集合、具名键盘输入、完整枚举文字、默认账号和精确草稿映射；无效 ID/空搜索拒绝，未来排行日期由控件与模型双重校验；不隐式请求或保存 |
+
+主计划更新以上局部子项和阶段说明，父步骤仍未勾选；验收文档增加 F08.7、F09.8、F13.3–4、F25.2，宿主文档记录五个新模式及证明边界。没有改动数据库/布局序列化含义、导航键、扩展 ABI、虚拟化算法或依赖 gitlink。法语缺译仍按产品原有规则回退，未声明翻译全覆盖。
+
+证据根目录：`artifacts/m3e/2026-11-08-batch-0635/`。系统 SDK `11.0.100-rc.3.26522.148`、runtime `10.0.14`，Avalonia `12.1.5`，M3E `859a69e563b2a01fc87a26255ee11c1d89959677`。最终命令 `./scripts/verify-m3e.ps1 -OutputDirectory artifacts/m3e/2026-11-08-batch-0635/windows-final -ExtensionFixture <固定 C++ demo DLL>` 完成桌面 Debug、测试 Release 构建与完整测试 **466/466，零失败、零跳过**。TRX、SDK/依赖、提交/工作区记录在 `windows-final/`；样本 SHA256 为 `14A85A17F7B0D3002B66EC5DE5D073038237214FDC00D2F278DD4E3523DE85D6`。构建规范化唯一警告对照为 **75→75，无增减**，见 `warning-delta.json`；该对照仅比较桌面/测试构建，不包含 AOT 裁剪警告。
+
+标题收尾仅修改 XAML 换行和对应宿主断言，不重复完整行为测试；重新构建受影响宿主、桌面 Debug，并运行四语言首页流程，日志为 `home-heading-build.log`、`desktop-heading-build.log`、`home-heading-*.log`。上述完整测试对应标题换行前的 `8777b03a`，最终源码的新增标题契约由收尾宿主验证。
+
+`dotnet publish src/Pixeval.Desktop/Pixeval.Desktop.csproj -c Release -r win-x64 --self-contained true -o artifacts/m3e/2026-11-08-batch-0635/native-aot-heading` 最终本地构建成功，日志为 `native-aot-heading.log`；标题修复前的 `native-aot-final/` 亦通过，最终产物以 heading 目录为准。`native-aot-header.json` 保存 SHA256、x64 PE32+ 和 CLR 头 RVA/size 均为零的核对结果；没有启动 EXE。既有 IL2026/IL3050/IL3053 等裁剪/AOT 警告保留，构建成功不代表原生运行时通过。
+
+最终离线证据合计 **520 组**：`work-cards` 四语言各 8 组，`history-pages` 各 17 组，`home-cards` 各 23 组，`home-parameters` 各 76 组，`work-related` 中文 24 组。语言为 `zh-Hans/en-US/fr-FR/ru-RU`；17 个最终目录、契约文件、文化/runtime 与截图计数在 `locale-validation-summary.json`。中文最终目录依次为 `cards-final-zh-Hans/`、`history-isolation/`、`home-heading-zh-Hans/`、`home-parameters-date/`、`related-final-zh-Hans/`；其余语言映射以 JSON 为准。相关作品改动只涉及类型/所有权，无新文案，未重复四语言运行。新增模式已加入 Windows/Ubuntu 工作流，远程 CI 本轮未运行。
+
+相邻回归 `cards-selection/` 12 组、`cards-bookmark-tags/` 10 组和参数改动后的 `home-cards-adjacent/` 23 组通过。专项测试 `cards-tests.log` 26/26、`history-tests.log` 21/21、`home-tests.log` 6/6 通过；这些既有测试已包含在最终完整测试中，不累加为新测试数。历史额外滚动场景用 125 条记录跨越 SQLite 单次 100 条页面；首页编辑使用真实页面与原 YAML，但数据库/YAML 重读不等同完整应用重启。截图抽查涵盖小说长标签/统计、类型字段、首页编辑数值、标题/占位对比度与俄语窄窗参数；截图只补充行为断言。
+
+关键失败证据保留：`cards-before.log` 的 Enter 未打开作品；`home-initial.log` 的单详情失败被当成空成功；`home-editor/` 暴露数值字段被窄列挤掉；`home-parameters-before.log` 的未来日期可以替换有效日期。最终专项覆盖相应修复。相关作品早期夹具错误地假设旧 HTTP 未完成时立即启动新请求，改为按现有串行引擎先完成旧传输，同时保留旧源立即替换与结果隔离断言；历史初始类型改为在页面构造前设置原默认值，数据库隔离断言也考虑作品导航按原规则写入浏览历史。这些夹具调整未改变产品服务语义，早期失败目录不作为最终通过证据。
+
+改动 XAML 已经 XamlStyler，相关 C# 做 whitespace 格式化；工作流 YAML、四段 PowerShell、文档本地链接和 `git diff --check` 通过。`verified-source-hashes.json` 固定 24 个源码/宿主/CI 文件；`static-validation.json`、`workflow-powershell-validation.json` 和 `final-state.json` 记录收尾结果。验证进程正常退出，常规构建服务器可驻留。批次文档另作一次收尾提交，不补写自身哈希。
+
+未覆盖与下一步：原生 IME、系统焦点/读屏/剪贴板/浏览器、Windows Shift+F10、触摸/DPI/GPU、Linux/macOS/移动端/Browser 和远程 CI 仍待验收。Mako 的取消限制枚举、后续分页和响应归属，不中断已发出的 HTTP，串行加载需等待旧传输；不外推固定非空页至空页内部 next_url 的所有行为。历史清空确认弹窗、批量收藏/保存/浏览器业务、完整卡片性能仍待验收；来源参数的有效结果只验证草稿，全部 19 类有效添加后的请求、完整账号切换、原生拖动/缩放/碰撞和应用重启仍待验收。下一批优先延伸 P10.02/P10.04 的有效添加与来源生命周期，再补账号切换；沿用后台验证，不自动恢复 computer use。

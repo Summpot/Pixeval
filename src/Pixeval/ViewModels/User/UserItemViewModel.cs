@@ -5,6 +5,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Mako.Model;
 using Pixeval.Controls;
+using Pixeval.I18N;
 using Pixeval.Models.Blocking;
 using Pixeval.Utilities;
 
@@ -35,7 +36,10 @@ public partial class UserItemViewModel : EntryViewModel<User>, IFactory<User, Us
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsFollowed))]
+    [NotifyPropertyChangedFor(nameof(FollowLabel))]
     public partial HeartButtonState IsFollowedDisplay { get; set; }
+
+    public string FollowLabel => I18NManager.GetResource(IsFollowed ? UserViewerPageResources.Unfollow : UserViewerPageResources.Follow);
 
     public string Username => Entry.UserInfo.Name;
 

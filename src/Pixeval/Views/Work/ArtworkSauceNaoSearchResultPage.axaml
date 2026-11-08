@@ -1,7 +1,8 @@
-<ContentPage
+﻿<ContentPage
     x:Class="Pixeval.Views.Work.ArtworkSauceNaoSearchResultPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
@@ -16,5 +17,20 @@
             Height="16"
             Source="avares://Pixeval/Assets/Platforms/saucenao.png" />
     </ContentPage.Icon>
-    <work:WorkContainer x:Name="WorkContainer" IsRefreshEnabled="False" />
+    <DockPanel VerticalSpacing="12">
+        <StackPanel
+            x:Name="FailurePanel"
+            Margin="12"
+            DockPanel.Dock="Top"
+            IsVisible="False"
+            Spacing="8">
+            <controls:InfoBar x:Name="SearchError" Mode="Error" />
+            <Button
+                x:Name="RetryButton"
+                HorizontalAlignment="Left"
+                Click="RetryButton_OnClick"
+                Content="{I18N {x:Static pixeval:SearchResources+SauceNAO.Retry}}" />
+        </StackPanel>
+        <work:WorkContainer x:Name="WorkContainer" IsRefreshEnabled="False" />
+    </DockPanel>
 </ContentPage>

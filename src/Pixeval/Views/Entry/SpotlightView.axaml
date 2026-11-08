@@ -22,8 +22,8 @@
             x:Name="ListBox"
             controls:IncrementalLoadingBehavior.IsEnabled="True"
             controls:IncrementalLoadingBehavior.Threshold="200"
-            ContainerPrepared="ListBox_OnContainerPrepared"
-            ItemsSource="{Binding View}">
+            ItemsSource="{Binding View}"
+            KeyboardNavigation.TabNavigation="Continue">
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
                     <controls:AdaptiveGrid

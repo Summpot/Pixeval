@@ -1,4 +1,4 @@
-<UserControl
+﻿<UserControl
     x:Class="Pixeval.Views.Home.HomePageCardControl"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -8,7 +8,6 @@
     xmlns:homeViewModels="using:Pixeval.ViewModels.Home"
     xmlns:local="using:Pixeval.Views.Home"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
-    xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
     xmlns:viewModels="using:Pixeval.ViewModels"
@@ -18,10 +17,13 @@
     Padding="0"
     HorizontalAlignment="Stretch"
     VerticalAlignment="Stretch"
+    AutomationProperties.Name="{Binding $self.CardTitle}"
     Background="Transparent"
     BorderThickness="0"
     Classes.editing="{Binding $self.IsEditing}"
     Classes.selected="{Binding $self.IsSelected}"
+    FocusAdorner="{StaticResource WorkCardFocusAdorner}"
+    Focusable="{Binding $self.IsEditing}"
     mc:Ignorable="d"
     d:DesignHeight="240"
     d:DesignWidth="320">
@@ -30,6 +32,7 @@
             <Setter Property="Padding" Value="0" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Theme" Value="{StaticResource TransparentButtonStyle}" />
+            <Setter Property="FocusAdorner" Value="{StaticResource WorkCardFocusAdorner}" />
         </Style>
 
         <Style Selector="Panel#ResizeHandlesLayer &gt; Border">
@@ -114,41 +117,49 @@
         <Border
             x:Name="CardBorder"
             Padding="16"
-            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+            BorderBrush="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OutlineVariant}}"
             BorderThickness="2"
             ClipToBounds="True"
             CornerRadius="16">
             <DockPanel VerticalSpacing="16">
-                <Border DockPanel.Dock="Bottom" IsVisible="{Binding !HideHomePageCardTitle, Source={x:Static views:PixevalSettings.Instance}}">
+                <Border
+                    x:Name="TitleBar"
+                    Padding="8,0,0,0"
+                    Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerLow}}"
+                    CornerRadius="8"
+                    DockPanel.Dock="Bottom"
+                    IsVisible="{Binding !HideHomePageCardTitle, Source={x:Static views:PixevalSettings.Instance}}">
                     <DockPanel>
-                        <Button
-                            Width="28"
-                            Height="28"
+                        <m3:IconButton
+                            x:Name="OpenCardButton"
                             Padding="0"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
+                            AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+OpenCardPageButton.ToolTip}}"
                             Command="{Binding $parent[local:HomePageCardControl].OpenCardPageCommand}"
-                            Content="{markup:SymbolIcon Open}"
                             DockPanel.Dock="Right"
-                            Theme="{StaticResource TransparentButtonStyle}"
+                            Symbol="OpenInNew"
                             ToolTip.Tip="{I18N {x:Static pixeval:HomePageResources+OpenCardPageButton.ToolTip}}" />
                         <TextBlock
                             VerticalAlignment="Center"
                             FontSize="16"
                             FontWeight="SemiBold"
-                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                            Foreground="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OnSurface}}"
                             MaxLines="1"
                             Text="{Binding #Root.CardTitle}"
-                            TextTrimming="CharacterEllipsis" />
+                            TextTrimming="CharacterEllipsis"
+                            ToolTip.Tip="{Binding #Root.CardTitle}" />
                     </DockPanel>
                 </Border>
 
                 <Panel>
                     <ItemsControl
                         x:DataType="{x:Type homeViewModels:HomeCardPreviewViewModel}"
+                        x:Name="PreviewItems"
                         controls:IncrementalLoadingBehavior.IsEnabled="True"
                         ClipToBounds="True"
                         DataContext="{Binding #Root.PreviewViewModel}"
+                        IsEnabled="{Binding !#Root.IsEditing}"
                         IsHitTestVisible="{Binding !#Root.IsEditing}"
                         ItemsSource="{Binding Items}">
                         <ItemsControl.ItemsPanel>
@@ -168,9 +179,11 @@
                         <ItemsControl.DataTemplates>
                             <DataTemplate x:DataType="{x:Type viewModels:IllustrationItemViewModel}">
                                 <Button
+                                    AutomationProperties.Name="{Binding Entry.Title}"
                                     Classes="preview-item"
                                     Command="{Binding $parent[local:HomePageCardControl].OpenPreviewItemCommand}"
-                                    CommandParameter="{Binding $self}">
+                                    CommandParameter="{Binding $self}"
+                                    ToolTip.Tip="{Binding Entry.Title}">
                                     <Border ClipToBounds="True" CornerRadius="{StaticResource ControlCornerRadius}">
                                         <Image controls:Source.Cache="{Binding ThumbnailUrl}" Stretch="UniformToFill" />
                                     </Border>
@@ -179,9 +192,11 @@
 
                             <DataTemplate x:DataType="{x:Type viewModels:NovelItemViewModel}">
                                 <Button
+                                    AutomationProperties.Name="{Binding Entry.Title}"
                                     Classes="preview-item"
                                     Command="{Binding $parent[local:HomePageCardControl].OpenPreviewItemCommand}"
-                                    CommandParameter="{Binding $self}">
+                                    CommandParameter="{Binding $self}"
+                                    ToolTip.Tip="{Binding Entry.Title}">
                                     <DockPanel VerticalSpacing="6">
                                         <TextBlock
                                             DockPanel.Dock="Bottom"
@@ -199,18 +214,22 @@
 
                             <DataTemplate x:DataType="{x:Type viewModels:UserItemViewModel}">
                                 <Button
+                                    AutomationProperties.Name="{Binding Username}"
                                     Classes="preview-item"
                                     Command="{Binding $parent[local:HomePageCardControl].OpenPreviewItemCommand}"
-                                    CommandParameter="{Binding $self}">
+                                    CommandParameter="{Binding $self}"
+                                    ToolTip.Tip="{Binding Username}">
                                     <controls:AvatarImage controls:Source.Cache="{Binding AvatarUrl}" />
                                 </Button>
                             </DataTemplate>
 
                             <DataTemplate x:DataType="{x:Type viewModels:SpotlightItemViewModel}">
                                 <Button
+                                    AutomationProperties.Name="{Binding Entry.PureTitle}"
                                     Classes="preview-item"
                                     Command="{Binding $parent[local:HomePageCardControl].OpenPreviewItemCommand}"
-                                    CommandParameter="{Binding $self}">
+                                    CommandParameter="{Binding $self}"
+                                    ToolTip.Tip="{Binding Entry.PureTitle}">
                                     <DockPanel VerticalSpacing="6">
                                         <TextBlock
                                             DockPanel.Dock="Bottom"
@@ -228,26 +247,32 @@
                         </ItemsControl.DataTemplates>
                     </ItemsControl>
 
-                    <StackPanel
+                    <Border
                         x:DataType="{x:Type homeViewModels:HomeCardPreviewViewModel}"
+                        x:Name="PlaceholderSurface"
+                        Padding="12"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
+                        Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerLow}}"
+                        CornerRadius="8"
                         DataContext="{Binding #Root.PreviewViewModel}"
                         IsHitTestVisible="{Binding !#Root.IsEditing}"
-                        IsVisible="{Binding !Items.Count}"
-                        Spacing="8">
-                        <fluent:SymbolIcon
-                            HorizontalAlignment="Center"
-                            FontSize="32"
-                            IconVariant="Color"
-                            Opacity="0.92"
-                            Symbol="{Binding #Root.CardSymbol}" />
-                        <TextBlock
-                            Opacity="0.84"
-                            Text="{Binding PlaceholderText}"
-                            TextAlignment="Center"
-                            TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
+                        IsVisible="{Binding !Items.Count}">
+                        <StackPanel Spacing="8">
+                            <fluent:SymbolIcon
+                                HorizontalAlignment="Center"
+                                FontSize="32"
+                                IconVariant="Color"
+                                Opacity="0.92"
+                                Symbol="{Binding #Root.CardSymbol}" />
+                            <TextBlock
+                                x:Name="PlaceholderTextBlock"
+                                Foreground="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OnSurface}}"
+                                Text="{Binding PlaceholderText}"
+                                TextAlignment="Center"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
                 </Panel>
             </DockPanel>
         </Border>
@@ -270,6 +295,7 @@
             x:Name="QuickDeleteButton"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
+            AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+DeleteSelectedCardButton.Content}}"
             Background="{DynamicResource ControlOnImageFillColorDefault}"
             Click="QuickDeleteButton_OnClick"
             IsVisible="{Binding #Root.IsEditing}"

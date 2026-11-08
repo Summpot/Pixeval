@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using FluentIcons.Common;
@@ -19,7 +20,7 @@ namespace Pixeval.Views.Home;
 public sealed class HomeCardDefinition(
     HomePageCardSourceKind sourceKind,
     HomeCardParameterKinds parameters,
-    Func<HomePageCardLayout, Task<HomeCardPreviewSource>> previewSourceFactory,
+    Func<HomePageCardLayout, CancellationToken, Task<HomeCardPreviewSource>> previewSourceFactory,
     Action<HomePageCardLayout, HomeCardPreviewSource, TopLevel> pageOpener,
     Func<HomePageCardLayout, IReadOnlyList<string>>? titleParameterFactory = null,
     int defaultColumnSpan = 2,
@@ -54,8 +55,8 @@ public sealed class HomeCardDefinition(
     public bool HasParameter(HomeCardParameterKinds parameter) =>
         (Parameters & parameter) is not HomeCardParameterKinds.None;
 
-    public Task<HomeCardPreviewSource> CreatePreviewSourceAsync(HomePageCardLayout card) =>
-        previewSourceFactory(card);
+    public Task<HomeCardPreviewSource> CreatePreviewSourceAsync(HomePageCardLayout card, CancellationToken token) =>
+        previewSourceFactory(card, token);
 
     public void OpenCardPage(HomePageCardLayout card, HomeCardPreviewSource source, TopLevel topLevel)
     {

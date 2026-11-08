@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Mako.Global.Enum;
 using Mako.Model;
@@ -135,14 +136,18 @@ public static class ViewerHelper
 
     extension(IIdentityInfo info)
     {
-        public async Task<IArtworkInfo?> TryGetArtworkInfoAsync()
+        public async Task<IArtworkInfo?> TryGetArtworkInfoAsync(CancellationToken token = default)
         {
             var getArtworkService = App.AppViewModel.GetPlatformService<IGetArtworkService>(info.Platform);
             if (getArtworkService is null)
                 return null;
             try
             {
-                return await getArtworkService.GetArtworkAsync(info.Id);
+                return await getArtworkService.GetArtworkAsync(info.Id, token);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception e)
             {

@@ -48,9 +48,11 @@ public partial class WorkRelatedPage : IconContentPage
 
     private void ChangeSource()
     {
-        var engine = _id is 0
-            ? App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<IWorkEntry>())
-            : App.AppViewModel.MakoClient.WorkRelated(_id, _simpleWorkType);
-        WorkContainer.ResetEngine(engine);
+        if (_id is not 0)
+            WorkContainer.ResetEngine(App.AppViewModel.MakoClient.WorkRelated(_id, _simpleWorkType));
+        else if (_simpleWorkType is SimpleWorkType.Novel)
+            WorkContainer.ResetEngine(App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<Novel>()));
+        else
+            WorkContainer.ResetEngine(App.AppViewModel.MakoClient.Computed(AsyncEnumerable.Empty<Illustration>()));
     }
 }

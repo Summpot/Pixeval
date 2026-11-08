@@ -18,9 +18,20 @@
         <work:WorkContainer.CommandBarElements>
             <controls:SymbolComboBox
                 x:Name="WorkTypeComboBox"
+                Width="180"
+                MinWidth="0"
+                MaxWidth="{Binding $parent[WrapPanel].Bounds.Width}"
+                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+Source+WorkTypeTextBlock.Text}}"
+                IconMode="False"
                 ItemsSource="{markup1:EnumResources x:TypeArguments=enum:WorkType}"
                 SelectedValue="{x:Static views:PixevalSettings.WorkType}"
-                SelectionChanged="WorkTypeComboBox_OnSelectionChanged" />
+                SelectionChanged="WorkTypeComboBox_OnSelectionChanged">
+                <controls:SymbolComboBox.TextItemTemplate>
+                    <DataTemplate x:DataType="{x:Type controls:SymbolComboBoxItem}">
+                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
+                    </DataTemplate>
+                </controls:SymbolComboBox.TextItemTemplate>
+            </controls:SymbolComboBox>
         </work:WorkContainer.CommandBarElements>
         <work:WorkContainer.CommandBarSubElements>
             <CommandBarButton

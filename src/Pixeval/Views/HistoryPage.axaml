@@ -7,6 +7,7 @@
     xmlns:enum="using:Mako.Global.Enum"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:pixeval="using:Pixeval"
     xmlns:views="using:Pixeval.Views"
     xmlns:work="using:Pixeval.Views.Work"
     mc:Ignorable="d"
@@ -16,9 +17,20 @@
         <work:WorkContainer.CommandBarElements>
             <controls:SymbolComboBox
                 x:Name="SimpleWorkTypeComboBox"
+                Width="180"
+                MinWidth="0"
+                MaxWidth="{Binding $parent[WrapPanel].Bounds.Width}"
+                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+Source+WorkTypeTextBlock.Text}}"
+                IconMode="False"
                 ItemsSource="{markup1:EnumResources x:TypeArguments=enum:SimpleWorkType}"
                 SelectedValue="{x:Static views:PixevalSettings.SimpleWorkType}"
-                SelectionChanged="SimpleWorkTypeComboBox_OnSelectionChanged" />
+                SelectionChanged="SimpleWorkTypeComboBox_OnSelectionChanged">
+                <controls:SymbolComboBox.TextItemTemplate>
+                    <DataTemplate x:DataType="{x:Type controls:SymbolComboBoxItem}">
+                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
+                    </DataTemplate>
+                </controls:SymbolComboBox.TextItemTemplate>
+            </controls:SymbolComboBox>
         </work:WorkContainer.CommandBarElements>
     </work:WorkContainer>
 </views:IconContentPage>

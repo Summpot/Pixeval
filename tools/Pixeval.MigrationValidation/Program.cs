@@ -19,11 +19,11 @@ internal static class Program
     public static int Main(string[] args)
     {
         if (args.Length is < 2 or > 3
-            || args[0] is not ("inventory" or "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "search-page" or "login" or "work-selection" or "extension-management" or "bookmark-tags" or "bookmark-page" or "ranking-page" or "viewer-toolbar" or "documentation" or "dialogs" or "ui")
+            || args[0] is not ("inventory" or "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "search-page" or "saucenao" or "user-pages" or "series-page" or "work-feeds" or "work-sources" or "work-related" or "history-pages" or "home-cards" or "home-parameters" or "home-sources" or "spotlight" or "login" or "work-cards" or "work-selection" or "extension-management" or "bookmark-tags" or "bookmark-page" or "ranking-page" or "viewer-toolbar" or "documentation" or "dialogs" or "ui")
             || args[0] is "extensions" && args.Length is not 3
             || args.Length is 3 && args[0] is not ("extensions" or "ui"))
         {
-            Console.Error.WriteLine("Usage: Pixeval.MigrationValidation <inventory|capture|benchmark|navigation|extensions|search|search-options|search-page|login|work-selection|extension-management|bookmark-tags|bookmark-page|ranking-page|viewer-toolbar|documentation|dialogs|ui> <new evidence directory> [native fixture library: required for extensions, optional for ui]");
+            Console.Error.WriteLine("Usage: Pixeval.MigrationValidation <inventory|capture|benchmark|navigation|extensions|search|search-options|search-page|saucenao|user-pages|series-page|work-feeds|work-sources|work-related|history-pages|home-cards|home-parameters|home-sources|spotlight|login|work-cards|work-selection|extension-management|bookmark-tags|bookmark-page|ranking-page|viewer-toolbar|documentation|dialogs|ui> <new evidence directory> [native fixture library: required for extensions, optional for ui]");
             return 1;
         }
 
@@ -63,7 +63,7 @@ internal static class Program
                 .StartWithClassicDesktopLifetime([]);
         }
 
-        if (args[0] is "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "search-page" or "login" or "work-selection" or "extension-management" or "bookmark-tags" or "bookmark-page" or "ranking-page" or "viewer-toolbar" or "documentation" or "dialogs")
+        if (args[0] is "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "search-page" or "saucenao" or "user-pages" or "series-page" or "work-feeds" or "work-sources" or "work-related" or "history-pages" or "home-cards" or "home-parameters" or "home-sources" or "spotlight" or "login" or "work-cards" or "work-selection" or "extension-management" or "bookmark-tags" or "bookmark-page" or "ranking-page" or "viewer-toolbar" or "documentation" or "dialogs")
         {
             RunHeadlessAsync(args[0], outputDirectory).GetAwaiter().GetResult();
             return 0;
@@ -120,8 +120,44 @@ internal static class Program
                     case "search-page":
                         await SearchPageValidation.RunAsync(directory);
                         break;
+                    case "saucenao":
+                        await SauceNaoValidation.RunAsync(directory);
+                        break;
+                    case "user-pages":
+                        await UserPagesValidation.RunAsync(directory);
+                        break;
+                    case "series-page":
+                        await SeriesPageValidation.RunAsync(directory);
+                        break;
+                    case "work-feeds":
+                        await WorkFeedsValidation.RunAsync(directory);
+                        break;
+                    case "work-sources":
+                        await WorkSourcesValidation.RunAsync(directory);
+                        break;
+                    case "work-related":
+                        await WorkRelatedValidation.RunAsync(directory);
+                        break;
+                    case "history-pages":
+                        await HistoryPagesValidation.RunAsync(directory);
+                        break;
+                    case "home-cards":
+                        await HomeCardsValidation.RunAsync(directory);
+                        break;
+                    case "home-parameters":
+                        await HomeParametersValidation.RunAsync(directory);
+                        break;
+                    case "home-sources":
+                        await HomeSourcesValidation.RunAsync(directory);
+                        break;
+                    case "spotlight":
+                        await SpotlightValidation.RunAsync(directory);
+                        break;
                     case "login":
                         await LoginLifetimeValidation.RunAsync(directory);
+                        break;
+                    case "work-cards":
+                        await WorkCardsValidation.RunAsync(directory);
                         break;
                     case "work-selection":
                         await WorkSelectionValidation.RunAsync(directory);

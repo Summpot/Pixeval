@@ -1,17 +1,35 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using CommunityToolkit.Mvvm.Input;
 using Pixeval.AppManagement;
 using Pixeval.I18N;
 using Pixeval.Models.Home;
 using Pixeval.Utilities;
+using Pixeval.Views.Capability;
 
 namespace Pixeval.Views.Home;
 
 public sealed partial class HomePage
 {
+    private void RankingDate_OnTemplateApplied(object? sender, TemplateAppliedEventArgs e)
+    {
+        // DisplayDateEnd alone does not reject dates entered through the text box.
+        if (sender is CalendarDatePicker { BlackoutDates: { } dates })
+        {
+            dates.Clear();
+            dates.Add(new(WorkRankingPage.MaxDate.Date.AddDays(1), DateTime.MaxValue.Date));
+        }
+    }
+
+    private void RankingDate_OnDateValidationError(object? sender, CalendarDatePickerDateValidationErrorEventArgs e) =>
+        TopLevel.GetTopLevel(this)?.ViewContainer?.ShowWarning(
+            I18NManager.GetResource(WorkRankingPageResources.InvalidDate.Title),
+            I18NManager.GetResource(WorkRankingPageResources.InvalidDate.Content, WorkRankingPage.MaxDate.ToString("d")));
+
     [RelayCommand]
     private void AddConfiguredCard()
     {

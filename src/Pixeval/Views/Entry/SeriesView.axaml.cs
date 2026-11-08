@@ -3,7 +3,6 @@
 
 using System;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Interactivity;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -25,24 +24,13 @@ public partial class SeriesView : UserControl
             RegisterViewModelDisposal(viewModel);
     }
 
-    private void SeriesItem_OnTapped(object? sender, TappedEventArgs e)
+    private void SeriesItem_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Control { DataContext: SeriesItemViewModel viewModel })
+        if (sender is not SeriesItem { DataContext: SeriesItemViewModel viewModel } || !ReferenceEquals(e.Source, sender))
             return;
 
+        e.Handled = true;
         TopLevel.GetTopLevel(this)?.ViewContainer?.CreateSeriesPage(viewModel.WorkType, viewModel.Entry.Id);
-    }
-
-    private void SeriesListBox_OnContainerPrepared(object? sender, ContainerPreparedEventArgs e)
-    {
-        if (e.Container is ListBoxItem item)
-            item.Tapped += SeriesItem_OnTapped;
-    }
-
-    private void SeriesListBox_OnContainerClearing(object? sender, ContainerClearingEventArgs e)
-    {
-        if (e.Container is ListBoxItem item)
-            item.Tapped -= SeriesItem_OnTapped;
     }
 
     /// <inheritdoc />

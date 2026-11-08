@@ -291,7 +291,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         LoadErrorMessage = null;
         try
         {
-            var entry = await info.TryGetArtworkInfoAsync();
+            var entry = await info.TryGetArtworkInfoAsync(token);
             token.ThrowIfCancellationRequested();
             if (entry is null)
             {

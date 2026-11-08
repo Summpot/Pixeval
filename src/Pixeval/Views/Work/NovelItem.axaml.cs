@@ -51,6 +51,22 @@ public partial class NovelItem : WorkItem
 
     private void InputElement_OnPointerExited(object? sender, PointerEventArgs e)
     {
+        if (DescriptionBlock.IsKeyboardFocusWithin)
+            return;
+        DescriptionBlock.Opacity = 0;
+        CoverImage.Opacity = 1;
+    }
+
+    private void DescriptionBlock_OnGotFocus(object? sender, RoutedEventArgs e)
+    {
+        CoverImage.Opacity = 0;
+        DescriptionBlock.Opacity = 1;
+    }
+
+    private void DescriptionBlock_OnLostFocus(object? sender, RoutedEventArgs e)
+    {
+        if (CoverBounds.IsPointerOver || DescriptionBlock.IsKeyboardFocusWithin)
+            return;
         DescriptionBlock.Opacity = 0;
         CoverImage.Opacity = 1;
     }

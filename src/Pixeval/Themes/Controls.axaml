@@ -288,6 +288,23 @@
         </Setter>
     </ControlTheme>
 
+    <Template x:Key="WorkCardFocusAdorner">
+        <Border
+            Name="WorkCardFocusBorder"
+            Margin="3"
+            BorderBrush="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.Primary}}"
+            BorderThickness="2"
+            CornerRadius="{StaticResource ControlCornerRadius}"
+            IsHitTestVisible="False" />
+    </Template>
+
+    <ControlTheme
+        x:Key="WorkCardButtonTheme"
+        BasedOn="{StaticResource RoundedButtonStyle}"
+        TargetType="{x:Type Button}">
+        <Setter Property="FocusAdorner" Value="{StaticResource WorkCardFocusAdorner}" />
+    </ControlTheme>
+
     <ControlTheme
         x:Key="ContentCardTheme"
         BasedOn="{StaticResource MaterialCardTheme}"

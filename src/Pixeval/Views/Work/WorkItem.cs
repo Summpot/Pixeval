@@ -10,6 +10,7 @@ using Avalonia.LogicalTree;
 using Avalonia.Rendering.Composition;
 using Mako.Global.Enum;
 using Mako.Model;
+using Pixeval.Controls;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Entry;
@@ -19,8 +20,48 @@ namespace Pixeval.Views.Work;
 
 public class WorkItem : EntryItem, IWorkAnimatable
 {
+    // Button.Click covers pointer, Enter and Space. Preserve Shift selection when
+    // the list handles that activation, without interpreting child-button clicks.
+    internal KeyModifiers ActivationModifiers { get; private set; }
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        ActivationModifiers = e.KeyModifiers;
+        base.OnPointerPressed(e);
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        ActivationModifiers = e.KeyModifiers;
+        base.OnKeyDown(e);
+    }
+
+    protected override void OnClick()
+    {
+        try
+        {
+            base.OnClick();
+        }
+        finally
+        {
+            ActivationModifiers = KeyModifiers.None;
+        }
+    }
+
+    protected void BookmarkButtonHost_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        // A command disables its button while awaiting the service. Its surrounding
+        // hit target must not turn that second click into a click on the artwork.
+        if (sender is Border { Child: HeartButton { IsEffectivelyEnabled: false } })
+            e.Handled = true;
+    }
+
+    protected void BookmarkButtonHost_OnTapped(object? sender, RoutedEventArgs e) => e.Handled = true;
+
     internal virtual void Recycle()
     {
+        ActivationModifiers = KeyModifiers.None;
+        ContextMenu?.Close();
         foreach (var descendant in this.GetLogicalDescendants())
             if (descendant is Control { ContextMenu: { } menu })
                 menu.Close();
@@ -42,6 +83,8 @@ public class WorkItem : EntryItem, IWorkAnimatable
 
     protected void AddToBookmark_OnRightClick(object sender, ContextRequestedEventArgs e)
     {
+        e.Handled = true;
+        ContextMenu?.Close();
         RequestAddToBookmark?.Invoke(this, (IWorkViewModel) DataContext!);
     }
 

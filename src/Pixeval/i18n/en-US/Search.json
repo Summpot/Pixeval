@@ -74,6 +74,10 @@
     "Delete": "Delete"
   },
   "SauceNAO": {
+    "Retry": "Retry search",
+    "RequestFailed": "The search failed or the service is temporarily unavailable. Please try again later.",
+    "ImageLoadFailed": "The image could not be read. Your previous selection is kept. Choose a valid image and try again.",
+    "ClipboardHasNoImage": "There is no image on the clipboard.",
     "Search": "SauceNAO Search",
     "ProvideImage": "Click to select an image",
     "Or": "or",

@@ -15,15 +15,21 @@
     d:DesignHeight="450"
     d:DesignWidth="800">
     <DockPanel>
-        <DockPanel DockPanel.Dock="Top">
+        <Grid
+            Margin="12,8"
+            ColumnDefinitions="*,Auto"
+            ColumnSpacing="8"
+            DockPanel.Dock="Top">
             <CommandBar
+                Grid.Column="1"
                 DefaultLabelPosition="Collapsed"
-                DockPanel.Dock="Right"
                 IsDynamicOverflowEnabled="True">
                 <CommandBarButton
+                    x:Name="RefreshButton"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:WorkContainerResources+RefreshButton.Label}}"
                     Click="RefreshButton_OnClick"
                     Icon="{markup:SymbolIcon ArrowClockwise}"
-                    ToolTip.Tip="{I18N {x:Static pixeval:WorkContainerResources+RefreshButton.Label}}" />
+                    Label="{I18N {x:Static pixeval:WorkContainerResources+RefreshButton.Label}}" />
             </CommandBar>
             <StackPanel
                 VerticalAlignment="Center"
@@ -31,11 +37,12 @@
                 Spacing="5">
                 <controls:SymbolComboBox
                     x:Name="SimpleWorkTypeComboBox"
+                    AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+Source+SimpleWorkTypeTextBlock.Text}}"
                     ItemsSource="{markup1:EnumResources x:TypeArguments=enum:SimpleWorkType}"
                     SelectedValue="{x:Static views:PixevalSettings.SimpleWorkType}"
                     SelectionChanged="SimpleWorkTypeComboBox_OnSelectionChanged" />
             </StackPanel>
-        </DockPanel>
+        </Grid>
         <entry:SeriesView x:Name="SeriesView" />
     </DockPanel>
 </views:IconContentPage>

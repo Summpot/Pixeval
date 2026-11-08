@@ -4,11 +4,13 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Selection;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using Mako.Global.Enum;
 using Mako.Model;
 using Misaki;
@@ -54,26 +56,29 @@ public sealed partial class WorkView : UserControl, IDisposable
         PseudoClasses.Set(":masonry", !isNovel && LayoutType is ThumbnailLayoutType.Masonry);
     }
 
-    private async void WorkItem_OnTapped(object? sender, TappedEventArgs tappedEventArgs)
+    private async void WorkItem_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not ListBoxItem { DataContext: IWorkViewModel vm } lbi)
+        if (sender is not WorkItem { DataContext: IWorkViewModel vm } card
+            || !ReferenceEquals(e.Source, card)
+            || card.FindAncestorOfType<ListBoxItem>() is not { } lbi)
             return;
 
+        e.Handled = true;
         if (WorkListBox.SelectionMode.HasFlag(SelectionMode.Multiple))
         {
-            UpdateSelection(lbi, tappedEventArgs);
+            UpdateSelection(lbi, card.ActivationModifiers);
             return;
         }
 
         await CreateWorkViewerPage(vm);
     }
 
-    private void UpdateSelection(ListBoxItem item, TappedEventArgs e)
+    private void UpdateSelection(ListBoxItem item, KeyModifiers modifiers)
     {
         var index = WorkListBox.IndexFromContainer(item);
         var anchorIndex = WorkListBox.Selection.AnchorIndex;
 
-        if (!e.KeyModifiers.HasFlag(KeyModifiers.Shift) || index < 0 || anchorIndex < 0)
+        if (!modifiers.HasFlag(KeyModifiers.Shift) || index < 0 || anchorIndex < 0)
         {
             item.IsSelected = !item.IsSelected;
             return;
@@ -89,10 +94,30 @@ public sealed partial class WorkView : UserControl, IDisposable
         if (sender is not ListBoxItem { DataContext: IWorkViewModel vm })
             return;
 
-        if (WorkListBox.SelectionMode.HasFlag(SelectionMode.Single))
+        var button = e.Source as Button ?? (e.Source as Visual)?.FindAncestorOfType<Button>();
+        if (button is not WorkItem)
+            return;
+
+        if (!WorkListBox.SelectionMode.HasFlag(SelectionMode.Multiple))
             return;
 
         await CreateWorkViewerPage(vm);
+    }
+
+    private async void WorkItem_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        // Arrow navigation focuses the ListBoxItem itself, rather than its card.
+        // Child buttons keep their own keyboard handling and must not navigate twice.
+        if (sender is not ListBoxItem { DataContext: IWorkViewModel vm } item
+            || !ReferenceEquals(e.Source, item) || e.Key is not Key.Enter
+            || e.KeyModifiers is not (KeyModifiers.None or KeyModifiers.Shift))
+            return;
+
+        e.Handled = true;
+        if (WorkListBox.SelectionMode.HasFlag(SelectionMode.Multiple))
+            UpdateSelection(item, e.KeyModifiers);
+        else
+            await CreateWorkViewerPage(vm);
     }
 
     private async Task CreateWorkViewerPage(IWorkViewModel vm)
@@ -197,7 +222,7 @@ public sealed partial class WorkView : UserControl, IDisposable
     {
         if (e.Container is not ListBoxItem lbi)
             return;
-        lbi.Tapped += WorkItem_OnTapped;
+        lbi.AddHandler(KeyDownEvent, WorkItem_OnKeyDown, RoutingStrategies.Tunnel);
         lbi.DoubleTapped += WorkItem_OnDoubleTapped;
     }
 
@@ -206,7 +231,7 @@ public sealed partial class WorkView : UserControl, IDisposable
         if (e.Container is not ListBoxItem lbi)
             return;
 
-        lbi.Tapped -= WorkItem_OnTapped;
+        lbi.RemoveHandler(KeyDownEvent, WorkItem_OnKeyDown);
         lbi.DoubleTapped -= WorkItem_OnDoubleTapped;
     }
 

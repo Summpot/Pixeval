@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Input;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.Input;
 using FluentIcons.Common;
@@ -26,6 +27,7 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
     private readonly bool _loadPreview;
     private PointerEditState? _pointerEditState;
     private bool _isDisposed;
+    private int _openRequestVersion;
 
     public HomePageCardControl(
         HomePageCardLayout card,
@@ -108,30 +110,61 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
             await PreviewViewModel.LoadAsync();
     }
 
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        _openRequestVersion++;
+        base.OnUnloaded(e);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property != IsEditingProperty)
+            return;
+        _openRequestVersion++;
+        OpenPreviewItemCommand.NotifyCanExecuteChanged();
+        OpenCardPageCommand.NotifyCanExecuteChanged();
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (_isDisposed || !IsEditing || !ReferenceEquals(e.Source, this)
+            || e.Key is not (Key.Enter or Key.Space) || e.KeyModifiers != KeyModifiers.None)
+            return;
+        CardSelected?.Invoke(this, new(Card));
+        e.Handled = true;
+    }
+
     private void QuickDeleteButton_OnClick(object? sender, RoutedEventArgs e)
     {
         DeleteRequested?.Invoke(this, new(Card));
         e.Handled = true;
     }
 
-    [RelayCommand]
+    private bool CanOpenCard() => !_isDisposed && !IsEditing;
+
+    [RelayCommand(CanExecute = nameof(CanOpenCard))]
     private void OpenPreviewItem(object? parameter)
     {
-        if (parameter is not Control control
+        if (!CanOpenCard() || parameter is not Control control
             || TopLevel.GetTopLevel(control) is not { } topLevel)
             return;
 
         HomeCardDefinitions.OpenPreviewItem(topLevel, control.DataContext, PreviewViewModel.ViewModel);
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanOpenCard))]
     private async Task OpenCardPageAsync()
     {
-        if (TopLevel.GetTopLevel(this) is not { } topLevel
+        if (!CanOpenCard() || TopLevel.GetTopLevel(this) is not { } topLevel
             || topLevel.ViewContainer is null)
             return;
 
+        var version = _openRequestVersion;
         await PreviewViewModel.EnsureLoadedAsync();
+        if (!CanOpenCard() || version != _openRequestVersion || !ReferenceEquals(TopLevel.GetTopLevel(this), topLevel))
+            return;
         var source = PreviewViewModel.CloneSource();
         if (source is null)
             return;
@@ -145,6 +178,9 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
             return;
 
         _isDisposed = true;
+        _openRequestVersion++;
+        OpenPreviewItemCommand.NotifyCanExecuteChanged();
+        OpenCardPageCommand.NotifyCanExecuteChanged();
         CompleteEdit(false);
         CardSelected = null;
         EditPreview = null;

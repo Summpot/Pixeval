@@ -3,7 +3,6 @@
 
 using System;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Interactivity;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -25,18 +24,15 @@ public partial class UserView : UserControl
             RegisterViewModelDisposal(viewModel);
     }
 
-    private void UserItem_OnTapped(object? sender, TappedEventArgs tappedEventArgs)
+    private void UserItem_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Control { DataContext: UserItemViewModel vm })
+        if (sender is not UserItem { DataContext: UserItemViewModel vm } || !ReferenceEquals(e.Source, sender))
             return;
         if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
+        {
+            e.Handled = true;
             viewContainer.CreateUserPage(vm.UserId);
-    }
-
-    private void ListBox_OnContainerPrepared(object? sender, ContainerPreparedEventArgs e)
-    {
-        if (e.Container is ListBoxItem lbi)
-            lbi.Tapped += UserItem_OnTapped;
+        }
     }
 
     #region Disposal

@@ -6,6 +6,7 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Mako.Engine;
@@ -210,23 +211,29 @@ public static class HomeCardDefinitions
         }
     }
 
-    private static Func<HomePageCardLayout, Task<HomeCardPreviewSource>> CreateWorkPreviewSourceFactory(
+    private static Func<HomePageCardLayout, CancellationToken, Task<HomeCardPreviewSource>> CreateWorkPreviewSourceFactory(
         Func<HomePageCardLayout, IFetchEngine<IArtworkInfo>> engineFactory) =>
-        card => Task.FromResult(CreateWorkPreviewSource(engineFactory(card)));
+        (card, _) => Task.FromResult(CreateWorkPreviewSource(engineFactory(card)));
 
-    private static Func<HomePageCardLayout, Task<HomeCardPreviewSource>> CreateUserPreviewSourceFactory(
+    private static Func<HomePageCardLayout, CancellationToken, Task<HomeCardPreviewSource>> CreateUserPreviewSourceFactory(
         Func<HomePageCardLayout, IFetchEngine<User>> engineFactory) =>
-        card => Task.FromResult(CreateUserPreviewSource(engineFactory(card)));
+        (card, _) => Task.FromResult(CreateUserPreviewSource(engineFactory(card)));
 
-    private static Task<HomeCardPreviewSource> CreateSpotlightViewModelAsync(HomePageCardLayout card)
+    private static Task<HomeCardPreviewSource> CreateSpotlightViewModelAsync(HomePageCardLayout card, CancellationToken token)
     {
         var engine = App.AppViewModel.MakoClient.Spotlight();
         return Task.FromResult(new HomeCardPreviewSource(CreateSpotlightViewModel(engine)));
     }
 
-    private static async Task<HomeCardPreviewSource> CreateSingleSeriesPreviewSourceAsync(HomePageCardLayout card)
+    private static async Task<HomeCardPreviewSource> CreateSingleSeriesPreviewSourceAsync(HomePageCardLayout card, CancellationToken token)
     {
-        var (detail, firstWork, engine) = await App.AppViewModel.MakoClient.GetWorkSeriesAsync(card.SimpleWorkType, card.SeriesId);
+        var (detail, firstWork, engine) = await App.AppViewModel.MakoClient.GetWorkSeriesAsync(card.SimpleWorkType, card.SeriesId, token);
+        if (token.IsCancellationRequested || detail.Id != card.SeriesId)
+        {
+            engine.EngineHandle.Cancel();
+            token.ThrowIfCancellationRequested();
+            throw new InvalidOperationException("The series detail source returned no matching series.");
+        }
         IWorkViewViewModel viewModel = card.SimpleWorkType is SimpleWorkType.Novel
             ? new NovelViewViewModel()
             : new IllustrationViewViewModel();
@@ -234,21 +241,30 @@ public static class HomeCardDefinitions
         return new(viewModel, new SingleSeriesOpeningContext(detail, firstWork));
     }
 
-    private static async Task<HomeCardPreviewSource> CreateSingleImageViewModelAsync(HomePageCardLayout card)
+    private static async Task<HomeCardPreviewSource> CreateSingleImageViewModelAsync(HomePageCardLayout card, CancellationToken token)
     {
-        var engine = App.AppViewModel.MakoClient.Computed(Single(await App.AppViewModel.MakoClient.GetIllustrationFromIdAsync(card.EntryId)));
+        var illustration = await App.AppViewModel.MakoClient.GetIllustrationFromIdAsync(card.EntryId, token)
+            ?? throw new InvalidOperationException("The illustration detail source returned no work.");
+        token.ThrowIfCancellationRequested();
+        var engine = App.AppViewModel.MakoClient.Computed(Single(illustration));
         return new(CreateIllustrationViewModel(engine));
     }
 
-    private static async Task<HomeCardPreviewSource> CreateSingleNovelViewModelAsync(HomePageCardLayout card)
+    private static async Task<HomeCardPreviewSource> CreateSingleNovelViewModelAsync(HomePageCardLayout card, CancellationToken token)
     {
-        var engine = App.AppViewModel.MakoClient.Computed(Single(await App.AppViewModel.MakoClient.GetNovelFromIdAsync(card.EntryId)));
+        var novel = await App.AppViewModel.MakoClient.GetNovelFromIdAsync(card.EntryId, token)
+            ?? throw new InvalidOperationException("The novel detail source returned no work.");
+        token.ThrowIfCancellationRequested();
+        var engine = App.AppViewModel.MakoClient.Computed(Single(novel));
         return new(CreateNovelViewModel(engine));
     }
 
-    private static async Task<HomeCardPreviewSource> CreateSingleUserViewModelAsync(HomePageCardLayout card)
+    private static async Task<HomeCardPreviewSource> CreateSingleUserViewModelAsync(HomePageCardLayout card, CancellationToken token)
     {
-        var userDetail = await App.AppViewModel.MakoClient.GetUserFromIdAsync(card.UserId);
+        var userDetail = await App.AppViewModel.MakoClient.GetUserFromIdAsync(card.UserId, token);
+        token.ThrowIfCancellationRequested();
+        if (userDetail.UserEntity.Id != card.UserId)
+            throw new InvalidOperationException("The user detail source returned no matching user.");
         var engine = App.AppViewModel.MakoClient.Computed(Single(CreateUser(userDetail.UserEntity)));
         return new(CreateUserViewModel(engine), new SingleUserOpeningContext(userDetail));
     }

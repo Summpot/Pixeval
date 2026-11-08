@@ -13,7 +13,18 @@ dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationVa
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll search artifacts/m3e/my-run/search
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll search-options artifacts/m3e/my-run/search-options
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll search-page artifacts/m3e/my-run/search-page
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll saucenao artifacts/m3e/my-run/saucenao
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll user-pages artifacts/m3e/my-run/user-pages
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll series-page artifacts/m3e/my-run/series-page
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-feeds artifacts/m3e/my-run/work-feeds
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-sources artifacts/m3e/my-run/work-sources
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-related artifacts/m3e/my-run/work-related
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll history-pages artifacts/m3e/my-run/history-pages
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll home-cards artifacts/m3e/my-run/home-cards
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll home-parameters artifacts/m3e/my-run/home-parameters
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll spotlight artifacts/m3e/my-run/spotlight
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll login artifacts/m3e/my-run/login
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-cards artifacts/m3e/my-run/work-cards
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-selection artifacts/m3e/my-run/work-selection
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll extension-management artifacts/m3e/my-run/extension-management
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll bookmark-tags artifacts/m3e/my-run/bookmark-tags
@@ -107,6 +118,66 @@ dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationVa
 
 从真实日期编辑器键入本地化日期、以 Ctrl+Down 打开日历并通过 headless 指针点选日期；未来/无效文本必须显示本地化警告、保留先前日期且不发送无效请求，清空仍回退最新榜单日期。输出 `ranking-page-contracts.txt`、`offline-requests.txt`、日期状态与日历/警告截图。使用当前进程时区，不能代表原生弹层、其他时区、完整分页或服务端结果已验收。
 
+## user-pages
+
+通过真实用户推荐、用户搜索、自身/他人关注、粉丝、好P友和相关用户页面验证浅深主题及 360/1000 DIP 窗宽。固定 HTTP 捕获路径、用户/关键词/隐私参数；驱动具名刷新、分页、快速切隐私、空查询、注入模型及替换/关闭，断言顺序、去重、旧源清理和迟到结果不继续 next_url。
+
+卡片通过 Enter/Space/指针单次打开原用户 ID；实际 Tab/Shift+Tab 进入/离开头像菜单。菜单执行公开关注/取消并核对请求次数/载荷与标签，复制使用内存剪贴板，屏蔽写入隔离数据库后清理固定记录。资料目标只观察类型/ID 并立即释放，验证其待完成请求取消。输出 `user-page-contracts.txt`、`user-page-requests.txt` 和 PNG。未验证系统浏览器/剪贴板、原生读屏、关注失败及完整账号切换。
+
+## series-page
+
+从真实 SeriesPage 打开漫画和小说监视列表，验证默认类型、键盘切类型、刷新、next_url/顺序/去重、空结果和旧源响应归属。卡片、作者、最新内容分别通过键盘/指针进入原详情页面，检查目标类型、ID、工作类型和详情请求取消；不把目标挂载为在线页面。
+
+实际 Tab/Shift+Tab 遍历内部按钮，使用 headless 平台配置的菜单键（Apps）和右键打开上下文菜单，验证复制、作者/最新内容及 Escape。完整标题通过名称/提示保留，窄窗动作不得被裁掉。输出 `series-contracts.txt`、`series-requests.txt` 和 PNG。平台默认键不代表 Windows Shift+F10 已通过；实际外链、完整详情、系列监视管理与订阅另行验收。
+
+## work-feeds
+
+验证真实 WorkFollowingPage 和 WorkMyPixivPage 的插画/小说、公开/私密初始参数，浅深主题和宽窄布局。选择器用途名称和完整文本必须可读；键盘切换、溢出刷新、分页去重、快速切隐私、切类型释放旧模型、固定失败后刷新重试/空结果和关闭后的迟到结果均有断言。输出 `work-feed-contracts.txt`、`work-feed-requests.txt` 和 PNG。固定失败会进入既有应用日志，不能把它与未预期错误混淆。
+
+上述用户/系列/作品源及下方特辑的 HTTP 故意允许迟到完成，用于检验源所有权。现有 Mako EngineHandle 取消枚举和后续分页，不能据此宣称中断已发出的 HTTP；非空旧页不外推为空页内部 next_url 的所有行为。真实服务权限、账号切换和完整网络失败矩阵仍需补齐。
+
+## work-sources
+
+验证推荐、新作、指定作者投稿三类真实页面的插画/漫画/小说、宽窄窗口与浅深主题。具名类型字段显示完整文本；键盘切换、恢复旧类型时的迟到结果、next_url/顺序/去重、刷新/空结果及关闭后归属都有断言。核对原端点、默认 filter、推荐标志、新作子类型和投稿作者 ID，跨小说边界检查旧模型释放；投稿仅检查空隔离数据库下的原订阅按钮可见性，不执行订阅业务。
+
+输出 `work-source-contracts.txt`、`work-source-requests.txt` 和 PNG。Mako 当前漫画推荐与插画推荐使用相同端点，本模式保留这一既有映射，不能证明服务端漫画过滤。相关作品见 `work-related`；完整失败/权限、订阅同步与账号切换另行验收。
+
+## work-cards
+
+在真实作品列表中验证插画/小说卡片的浅深主题和宽窄布局，包含长标题、统计、标签、缺图、收藏与焦点。脚本驱动指针、Enter/Space、行模式 Enter、Shift 范围选择和平台 Apps 菜单键；实际收藏请求核对 ID/隐私/标签，禁用收藏命中不得打开作品，复用后迟到结果不得回写新模型。上下文菜单的标签编辑/Escape、稍后看、屏蔽、复制使用隔离服务与数据库。保存只验证原命令绑定，未执行下载。
+
+输出 `work-card-contracts.txt`、请求记录与 PNG；内存剪贴板和 headless 菜单不能证明系统剪贴板、Windows Shift+F10、原生读屏或完整列表性能。相邻选择工具栏及完整标签弹层继续由 `work-selection`、`bookmark-tags` 验证。
+
+## work-related
+
+验证真实相关作品页的插画/小说端点、ID、分页顺序/去重、刷新时迟到结果、失败重试/空状态、关闭与折叠后的归属。零 ID 必须得到对应作品类型的空源；注入首页共享预览时检查引用与释放，关闭详情页不得破坏其他所有者。
+
+输出 `work-related-contracts.txt`、`work-related-requests.txt` 和 PNG。现有引擎串行加载，旧在途 HTTP 完成后才观察新源请求；断言证明旧结果不发布、不继续分页，不能证明传输中断。完整账号切换和真实服务权限另行验收。
+
+## history-pages
+
+使用真实隔离 SQLite 和历史/稍后观看页面，覆盖初始两类作品、键盘切换、排序、同 ID 不同类型、重复访问更新时间、数据库重开、作品导航和删除。另有超过单次数据库页大小的固定记录，真实滚动到末尾验证增量分页与虚拟化可达性。检查数据源清空不影响另一数据库，页面关闭后的排队及后续 Changed 通知不再触发加载。
+
+输出 `history-page-contracts.txt`、请求记录与 PNG。稍后看通过真实菜单删除，浏览记录通过原 API 删除，清空通过数据源执行；清空确认弹窗、完整应用重启和原生输入仍待验收，不将数据库重开等同应用重启。
+
+## home-cards
+
+验证首页插画/小说/用户/特辑四类预览、标题与占位文字、自定义背景、加载/失败、具名打开/删除及编辑态键盘选择。待完成的打开动作在进入/退出编辑、卸载重挂或关闭后不得迟到导航；单图/单小说详情失败必须显示失败。真实首页工具栏进入编辑、键盘选择卡片、修改数值位置、快速删除并重读原 YAML，核对位置/参数/颜色与删除持久化。
+
+输出 `home-card-contracts.txt`、请求记录与 PNG。标题/占位前景与实际表面具有对比度断言，真实编辑面板的长译文标题检查完整换行；不据此宣称所有图片内容或系统高对比模式通过。四类预览并不覆盖全部来源引擎，原生拖动/缩放、完整网格碰撞、账号切换和应用重启另行验收。
+
+## home-parameters
+
+在真实首页卡片库中用键盘逐项选择全部来源，独立核对参数字段集合、默认当前账号、类型/隐私/ID/搜索/标签/日期的精确草稿映射。具名字段与长译文须在宽窄窗口可读；无效 ID/空搜索通过真实添加按钮拒绝且不发请求、不保存。排行榜未来日期输入保留上一有效值并显示原本地化警告，草稿模型也必须拒绝；自动日期保留但不应用禁用的手工日期。离开编辑不隐式添加。
+
+输出 `home-parameter-contracts.txt`、`home-parameter-requests.txt` 和 PNG。有效参数只验证草稿，未点击全部有效来源的添加按钮；因此实际添加后的来源 HTTP、完整账号切换、跨时区、原生日历/IME 仍待验收。日期边界沿用产品的当前排行榜可用日期，不改变序列化格式。
+
+## spotlight
+
+真实特辑列表加载三种分类、长标题/分类和缺图样本，验证原请求、next_url/顺序/去重、模型替换及关闭后旧源隔离。实际 Tab/Shift+Tab 跨卡片，Enter/Space/指针各产生一次 Click；完整文章 URL 的语言路径与查询参数保留在共享外链动作绑定中。
+
+宿主显式确认使用 `NoopLauncher`，不打开系统浏览器。因此输出的 `spotlight-contracts.txt`、`spotlight-requests.txt` 和 PNG 只证明布局、绑定、输入事件和来源契约，不能证明 OS 外链启动成功。分类原有颜色保留，深色主题使用可读的分类前景；完整标题/分类可通过提示取得。
+
 ## extensions
 
 使用官方 Pixeval.Extensions C++ demo，固定在 Common 5.0.0 包元数据的源码提交 `20c900a76cb427ad1dac38ed3f64463be2fd496b`。不修改 SDK 或应用依赖；不是 Rust 迁移。需要 Git、CMake 3.24+、C++20 编译器和项目指定 .NET SDK。Windows 本机 VS 2026 示例：
@@ -141,6 +212,14 @@ Linux 可省略 Generator/Architecture，由 CMake 选择本机工具链。脚�
 通过真实 SearchPage、固定热门标签/图片和隔离 SQLite/设置文件验证浅深主题及 360/1000 DIP 窗宽。长固定/历史标签与翻译必须完整显示；键盘上下文菜单执行复制、固定/取消固定与删除，并核对数据库和设置文件往返。复制仅使用 headless 内存剪贴板。
 
 固定、历史和热门动作分别只路由一次，保留完整关键词及热门作品类型；高级选项折叠后普通搜索仍使用当前结果类型，窗口调整保留同一输入框。输出 `search-page-contracts.txt`、请求日志和页面截图。只记录真实结果页的导航目标并释放其列表，不装载在线结果；完整直接 ID/用户搜索及原生输入仍待验收。
+
+## saucenao
+
+使用真实 SauceNaoSearchPage、结果页及嵌入它的 SearchPage。固定存储提供器和 headless 内存剪贴板验证选图/取消/重复打开、打开失败、无效图片替换、旧读取迟到、预览、资源所有权、API Key 门控、短窗滚动及粘贴快捷键；只使用内置图像和 `fixture-*` Key。存储假对象需要实现 Avalonia 12 平台接口，因此只有验证可执行项目启用 `AvaloniaAccessUnstablePrivateApis`，产品项目没有新增该配置；升级 Avalonia 时需要重新核验接口。
+
+结果页通过受控 HttpClient 运行原请求/解析逻辑，Mako 作品详情仍由共用离线拦截器提供。验证 HTTP 限流、服务错误、无效 JSON、内联重试、不与空成功提示并存、结果顺序、跳过不可用单项、响应释放、替换源和卸载/重挂载的迟到响应，以及首个增量回调尚未运行时离开的取消。传输异常不展示含 Key 的请求 URL。
+
+输出 `saucenao-*.txt`、请求证据及页面 PNG。已有增量行为串行化源加载，固定旧传输若故意忽略取消，需先完成它再观察新请求；不将响应归属验证说成并行抢占 HTTP。系统选图/剪贴板、原生快捷键、真实服务/供应方匹配信息及完整结果外链仍另行验收。
 
 ## search-options
 
