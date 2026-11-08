@@ -32,14 +32,12 @@ public partial class SearchPage : IconContentPage
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
-        UpdateSearchCompletions(SearchAutoCompleteBox.Text);
+        (DataContext as SearchPageViewModel)?.UpdateSearchCompletions(SearchAutoCompleteBox.Text);
     }
 
     protected override void OnUnloaded(RoutedEventArgs e)
     {
-        ++_searchCompletionUpdateVersion;
-        _searchCompletionSource = null;
-        ClearSearchCompletionItems();
+        (DataContext as SearchPageViewModel)?.SuspendCompletions();
         base.OnUnloaded(e);
     }
 

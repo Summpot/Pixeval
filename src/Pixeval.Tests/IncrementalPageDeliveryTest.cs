@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Collections;
+using Pixeval.Common.Collections;
 
 namespace Pixeval.Tests;
 

@@ -26,6 +26,4 @@ public partial record struct Series
     [JsonIgnore]
     public string Caption => MaskText ?? "";
 
-    [JsonIgnore]
-    public bool WatchlistAdded { get; init; }
 }

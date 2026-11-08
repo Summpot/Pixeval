@@ -5,3 +5,7 @@ CommentIsTooShortOrTooLongToastTitle = Длина комментария не с
 ReplyContentRichEditBox-PlaceholderText = Введите комментарий...
 
 SendButton-ToolTip = Отправить
+
+SendFailed = Не удалось отправить комментарий. Повторите попытку.
+
+OpenEmoji = Эмодзи и стикеры

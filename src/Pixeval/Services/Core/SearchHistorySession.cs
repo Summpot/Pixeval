@@ -23,7 +23,11 @@ public sealed class SearchHistorySession(StorageEngine storage, ObservableCollec
         Entries.Insert(0, entry);
     }
 
-    public bool Remove(SearchHistoryRecord entry) => Entries.Remove(entry);
+    public bool Remove(SearchHistoryRecord entry)
+    {
+        var removed = storage.HistoryRepository.TryDeleteSearchHistoryByValue(entry.Value);
+        return Entries.Remove(entry) || removed;
+    }
 
     public void Clear()
     {

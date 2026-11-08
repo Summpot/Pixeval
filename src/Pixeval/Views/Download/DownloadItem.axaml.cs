@@ -34,6 +34,7 @@ public partial class DownloadItem : UserControl
 
     private async Task ActionButton_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
+        ItemCommands.IsOpen = false;
         if (Item is not { } item || Page is not { } page)
             return;
 
@@ -45,12 +46,14 @@ public partial class DownloadItem : UserControl
 
     private void ResetItem_OnClicked(object? sender, RoutedEventArgs e)
     {
+        ItemCommands.IsOpen = false;
         if (Item is { } item && Page is { } page)
             page.Reset(item.Key);
     }
 
     private void CancelDownloadItem_OnClicked(object? sender, RoutedEventArgs e)
     {
+        ItemCommands.IsOpen = false;
         if (Item is { } item && Page is { } page)
             page.Cancel(item.Key);
     }
@@ -60,6 +63,7 @@ public partial class DownloadItem : UserControl
 
     private async Task OpenDownloadLocationItem_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
+        ItemCommands.IsOpen = false;
         if (Item is not { } item)
             return;
 
@@ -70,6 +74,7 @@ public partial class DownloadItem : UserControl
 
     private void GoToPageItem_OnClicked(object? sender, RoutedEventArgs e)
     {
+        ItemCommands.IsOpen = false;
         if (Item is { } item)
             OpenIllustrationRequested?.Invoke(this, item);
     }
@@ -79,6 +84,7 @@ public partial class DownloadItem : UserControl
 
     private async Task CheckErrorMessageInDetail_OnClickedAsync(object? sender, RoutedEventArgs e)
     {
+        ItemCommands.IsOpen = false;
         if (Item is not { } item)
             return;
 

@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Pixeval.Pixiv;
+using Avalonia.Controls.Primitives;
+using Avalonia.Input;
+using Avalonia.VisualTree;
 
 namespace Pixeval.Views.Works;
 
@@ -19,6 +22,13 @@ public static class BookmarkTagSelectorFlyoutHelper
         Func<(bool IsPrivate, IReadOnlyList<string>? Tags), Task> onTagsSelected,
         PlacementMode placement = PlacementMode.Bottom)
     {
+        var provider = UiServices.GetProvider(placementTarget);
+        if (placementTarget.FindAncestorOfType<ContextMenu>() is { } menu)
+        {
+            placementTarget = menu.PlacementTarget ?? menu.Parent as Control ?? placementTarget;
+            menu.Close();
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { }, Avalonia.Threading.DispatcherPriority.Background);
+        }
         var flyout = new Flyout
         {
             Placement = placement
@@ -28,6 +38,7 @@ public static class BookmarkTagSelectorFlyoutHelper
             WorkKind = workType,
             WorkId = workId
         };
+        UiServices.SetProvider(tagSelector, provider);
         var content = new Border
         {
             Width = 340,
@@ -64,11 +75,34 @@ public static class BookmarkTagSelectorFlyoutHelper
         await tagSelector.ResetSourceAsync();
         return;
 
-        void OnTagsSelected(TagSelector sender, (bool IsPrivate, IReadOnlyList<string>? Tags) e) =>
-            placementTarget.RunInteraction(async () =>
+        void OnSizeChanged(object? sender, SizeChangedEventArgs e) => content.MaxWidth = Math.Max(0, e.NewSize.Width - 48);
+
+        async void OnTagsSelected(TagSelector sender, (bool IsPrivate, IReadOnlyList<string>? Tags) e)
+        {
+            if (isSubmitting)
+                return;
+            isSubmitting = true;
+            var submittedFrom = TopLevel.GetTopLevel(tagSelector)?.FocusManager?.GetFocusedElement() as Control;
+            // Disabling the focused confirm button otherwise drops the popup's
+            // keyboard route, including Escape while the request is pending.
+            if (tagSelector.FindAncestorOfType<FlyoutPresenter>() is { } presenter)
+            {
+                presenter.Focusable = true;
+                presenter.Focus();
+            }
+            tagSelector.IsEnabled = false;
+            try
             {
                 await onTagsSelected(e);
                 flyout.Hide();
-            });
+            }
+            finally
+            {
+                isSubmitting = false;
+                tagSelector.IsEnabled = true;
+                if (flyout.IsOpen && submittedFrom is { IsEffectivelyEnabled: true, IsEffectivelyVisible: true })
+                    submittedFrom.Focus();
+            }
+        }
     }
 }

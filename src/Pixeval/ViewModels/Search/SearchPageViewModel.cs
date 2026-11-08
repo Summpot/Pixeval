@@ -127,7 +127,8 @@ public partial class SearchPageViewModel : ViewModelBase
         foreach (var tag in PinnedTags)
             SearchTags.Add(tag);
         foreach (var history in SearchHistories)
-            SearchTags.Add(history);
+            if (!PinnedTags.Contains(history.Value))
+                SearchTags.Add(history);
     }
 
     private async Task RefreshSearchOptionsAsync()
@@ -232,8 +233,14 @@ public partial class SearchPageViewModel : ViewModelBase
         catch (OperationCanceledException)
         {
         }
-        catch
+        catch (Exception error)
         {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (!token.IsCancellationRequested && version == _searchCompletionUpdateVersion
+                    && string.Equals(source, SearchText ?? "", StringComparison.Ordinal))
+                    _notificationService.ShowError(Strings.SearchValidationSearchFailedTitle(), error.Message);
+            });
         }
     }
 
@@ -252,9 +259,17 @@ public partial class SearchPageViewModel : ViewModelBase
         }
     }
 
+    public void SuspendCompletions()
+    {
+        ++_searchCompletionUpdateVersion;
+        _searchCompletionSource = null;
+        ClearSearchCompletionItems();
+    }
+
     public void ClearSearchCompletionItems()
     {
         _searchCompletionCancellationTokenSource?.Cancel();
+        _searchCompletionCancellationTokenSource?.Dispose();
         _searchCompletionCancellationTokenSource = null;
         SearchCompletionItems = [];
         SelectedSearchCompletion = null;
@@ -401,7 +416,7 @@ public partial class SearchPageViewModel : ViewModelBase
         var pinnedTags = _appSettings.BrowsingExperienceSettings.PinnedTags;
         if (!pinnedTags.Contains(record.Value))
             pinnedTags.Add(record.Value);
-        _ = _searchHistory.Entries.Remove(record);
+        _ = _searchHistory.Remove(record);
     }
 
     [RelayCommand]
@@ -420,7 +435,7 @@ public partial class SearchPageViewModel : ViewModelBase
         if (entry is not { } record)
             return;
 
-        _ = _searchHistory.Entries.Remove(record);
+        _ = _searchHistory.Remove(record);
     }
 
     [RelayCommand]

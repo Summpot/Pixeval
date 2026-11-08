@@ -14,9 +14,6 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using ColorDocument.Avalonia;
 using ColorTextBlock.Avalonia;
-using CommunityToolkit.Mvvm.Input;
-using FluentIcons.Avalonia;
-using FluentIcons.Common;
 using Markdown.Avalonia;
 using Pixeval.Services.Core;
 using Markdown.Avalonia.Parsers;
@@ -209,20 +206,7 @@ internal sealed class PixevalCodeBlockElement : DocumentElement
             toolbar.Children.Add(langLabel);
         }
 
-        var copyButton = new Button
-        {
-            Content = new SymbolIcon
-            {
-                Symbol = Symbol.Clipboard,
-                FontSize = 14
-            },
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        copyButton.Classes.Add("CopyButton");
-        ToolTip.SetTip(copyButton, "复制代码");
-        copyButton.Command = new AsyncRelayCommand(() =>
-            copyButton.ClipboardService.SetTextAsync(_code));
-        toolbar.Children.Add(copyButton);
+        toolbar.Children.Add(MarkdownCodeCopyButton.Create(() => _code));
 
         return toolbar;
     }

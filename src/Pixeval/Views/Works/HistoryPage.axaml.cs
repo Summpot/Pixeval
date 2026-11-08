@@ -28,11 +28,12 @@ public abstract partial class HistoryPage : IconContentPage, IDisposable
 
     private void WorkContainer_OnRefreshRequested(object? sender, RoutedEventArgs e) => ResetSource();
 
-    protected void InitializeSource()
+    protected void InitializeSource(AppSettings settings)
     {
         if (_isSourceInitialized)
             return;
 
+        SimpleWorkTypeComboBox.SelectedValue = settings.SearchSettings.DefaultSimpleWorkType;
         _isSourceInitialized = true;
         Source.Changed += Source_OnChanged;
         SimpleWorkTypeComboBox_OnSelectionChanged(SimpleWorkTypeComboBox, EventArgs.Empty);
@@ -78,10 +79,10 @@ public class BrowsingHistoryPage : HistoryPage
 {
     private readonly IArtworkHistorySource _source;
 
-    public BrowsingHistoryPage(StorageEngine storage)
+    public BrowsingHistoryPage(StorageEngine storage, AppSettings settings)
     {
         _source = storage.HistoryRepository;
-        InitializeSource();
+        InitializeSource(settings);
     }
 
     /// <inheritdoc />
@@ -92,10 +93,10 @@ public class WatchLaterPage : HistoryPage
 {
     private readonly IArtworkHistorySource _source;
 
-    public WatchLaterPage(StorageEngine storage)
+    public WatchLaterPage(StorageEngine storage, AppSettings settings)
     {
         _source = storage.WatchLaterRepository;
-        InitializeSource();
+        InitializeSource(settings);
     }
 
     /// <inheritdoc />

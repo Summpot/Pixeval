@@ -17,11 +17,10 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Model;
-using Pixeval.Collections;
+using Pixeval.Mako;
+using Pixeval.Common.Collections;
 using Pixeval.ViewModels;
-using Pixeval.Views.Capability;
-using Pixeval.Views.Entry;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests.Ui;
 
@@ -50,15 +49,15 @@ internal static class SpotlightValidation
             await asset.CopyToAsync(buffer);
             fixture.ImageResponses[imageUri] = buffer.ToArray();
         }
-        await client.SetTokenAsync("fixture-spotlight");
-        await client.ValidateTokenAsync();
+        client.SetRefreshToken("fixture-spotlight");
+        await FixtureAuthentication.IdentifyAsync(client);
         List<string> report = [];
         try
         {
             foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                 foreach (var width in new[] { 360, 1000 })
                 {
-                    var page = new SpotlightPage();
+                    var page = UiTestSession.Create<SpotlightPage>();
                     var view = page.FindControl<SpotlightView>("SpotlightView")!;
                     var model = (SpotlightViewViewModel) view.DataContext!;
                     var container = new PageTestHost { Content = page };
@@ -67,6 +66,7 @@ internal static class SpotlightValidation
                     var key = $"{theme.Key}-{width}";
                     try
                     {
+                        Pixeval.Common.MaterialAnimation.Initialize(window);
                         window.Show();
                         Require(window.Launcher.GetType().Name == "NoopLauncher", "The isolated host must never open the system browser");
                         var initial = await NextAsync();
@@ -74,10 +74,10 @@ internal static class SpotlightValidation
                         var samples = new[] { Sample(960001, SpotlightCategory.Spotlight), Sample(960002, SpotlightCategory.Tutorial), Sample(960003, SpotlightCategory.Inspiration) with { Thumbnail = "" } };
                         initial.Complete(samples[..2], "https://app-api.pixiv.net/m3e/spotlight-next?offset=2");
                         var next = await NextAsync();
-                        Require(next.Uri.PathAndQuery == "/m3e/spotlight-next?offset=2", "Spotlight pagination follows the exact service URL");
+                        Require(next.Uri.PathAndQuery == "/m3e/spotlight-next?offset=2", "SpotlightArticle pagination follows the exact service URL");
                         next.Complete([samples[1], samples[2]]);
                         await UntilAsync(() => model.Source.Count == 3 && !Source(model).IsLoading);
-                        Require(model.Source.Select(item => item.Entry.Id).SequenceEqual(new long[] { 960001, 960002, 960003 }), "Spotlight order and de-duplication preserve article identity");
+                        Require(model.Source.Select(item => item.Id).SequenceEqual(new long[] { 960001, 960002, 960003 }), "SpotlightArticle order and de-duplication preserve article identity");
                         await RenderAsync(window);
                         Save(window, directory, "spotlight-before-" + key);
                         var cards = view.GetVisualDescendants().OfType<SpotlightItem>().ToArray();
@@ -96,7 +96,7 @@ internal static class SpotlightValidation
                         Require(cards[0].IsFocused, "Shift+Tab returns to the previous spotlight card");
                         foreach (var sample in samples)
                         {
-                            var card = view.GetVisualDescendants().OfType<SpotlightItem>().Single(item => item.DataContext is SpotlightItemViewModel row && row.Entry.Id == sample.Id);
+                            var card = view.GetVisualDescendants().OfType<SpotlightItem>().Single(item => item.DataContext is SpotlightArticle row && row.Id == sample.Id);
                             Require(Equals(card.Tag, sample.ArticleUrl), "The shared external-link action receives the complete service article URL, including its locale/query");
                             Require(AutomationProperties.GetName(card) == LongTitle && Equals(ToolTip.GetTip(card), LongTitle), "Truncated spotlight titles retain the full accessible name and tooltip");
                             var clicks = 0;
@@ -125,7 +125,7 @@ internal static class SpotlightValidation
 
                         var oldSource = model.Source;
                         replacement = new SpotlightViewViewModel();
-                        replacement.ResetEngine(client.Computed(new[] { Sample(960004, SpotlightCategory.Spotlight) }.ToAsyncEnumerable()), static (entry, _) => new(entry));
+                        replacement.ResetSource(new[] { Sample(960004, SpotlightCategory.Spotlight) }.ToAsyncEnumerable());
                         view.SetViewModel(replacement);
                         await UntilAsync(() => replacement.Source.Count == 1 && !Source(replacement).IsLoading);
                         await RenderAsync(window);
@@ -138,7 +138,7 @@ internal static class SpotlightValidation
                         window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, null);
                         window.KeyRelease(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, null);
                         Require(rebuiltClicks == 1, "Rebuilding the list retains one keyboard Click per article action");
-                        replacement.ResetEngine(client.Spotlight(), static (entry, _) => new(entry));
+                        replacement.ResetSource(client.Spotlight(SpotlightCategory.All));
                         var late = await NextAsync();
                         var closedSource = replacement.Source;
                         container.Shell.CloseAllPages();
@@ -154,7 +154,7 @@ internal static class SpotlightValidation
                         window.Close();
                     }
                 }
-            Require(fixture.UnexpectedRequests.IsEmpty, "Spotlight requests stayed inside the offline endpoint matrix");
+            Require(fixture.UnexpectedRequests.IsEmpty, "SpotlightArticle requests stayed inside the offline endpoint matrix");
             File.WriteAllLines(Path.Combine(directory, "spotlight-contracts.txt"), report);
             File.WriteAllLines(Path.Combine(directory, "spotlight-requests.txt"), fixture.RequestLog);
             Console.WriteLine($"Validated {report.Count} spotlight groups; external launch remains a native check.");
@@ -165,22 +165,22 @@ internal static class SpotlightValidation
                 _ = request.Response.TrySetResult("{\"spotlight_articles\":[],\"next_url\":null}");
         }
         Task<PendingArticles> NextAsync() => requests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
-        Spotlight Sample(long id, SpotlightCategory category) => new()
+        SpotlightArticle Sample(long id, SpotlightCategory category) => new()
         {
             Id = id, Title = LongTitle, PureTitle = LongTitle, Thumbnail = imageUri,
             ArticleUrl = $"https://www.pixivision.net/zh/a/{id}?from=fixture&label=%E4%B8%AD%E6%96%87",
-            Category = category, SubcategoryLabel = LongCategory, PublishDate = new DateTimeOffset(2026, 11, 7, 0, 0, 0, TimeSpan.Zero)
+            Category = category, SubcategoryLabel = LongCategory, PublishDate = new DateTimeOffset(2026, 11, 7, 0, 0, 0, TimeSpan.Zero).ToString("O")
         };
     }
 
-    private static IncrementalLoadingCollection<SpotlightItemViewModel> Source(SpotlightViewViewModel model) => (IncrementalLoadingCollection<SpotlightItemViewModel>) model.Source;
+    private static IncrementalLoadingCollection<SpotlightArticle> Source(SpotlightViewViewModel model) => (IncrementalLoadingCollection<SpotlightArticle>) model.Source;
 
     private static void Bounds(Control control, Control card)
     {
         var origin = control.TranslatePoint(default, card)!.Value;
         Require(control.Bounds.Width > 0 && control.Bounds.Height > 0 && origin.X >= -1 && origin.Y >= -1
             && origin.X + control.Bounds.Width <= card.Bounds.Width + 1 && origin.Y + control.Bounds.Height <= card.Bounds.Height + 1,
-            "Spotlight metadata remains inside its card");
+            "SpotlightArticle metadata remains inside its card");
     }
 
     private static async Task RenderAsync(Window window)
@@ -220,7 +220,7 @@ internal static class SpotlightValidation
     {
         internal Uri Uri { get; } = uri;
         internal TaskCompletionSource<string> Response { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        internal void Complete(IReadOnlyList<Spotlight> articles, string? next = null) =>
-            Response.SetResult(JsonSerializer.Serialize(new { spotlight_articles = articles, next_url = next }));
+        internal void Complete(IReadOnlyList<SpotlightArticle> articles, string? next = null) =>
+            Response.SetResult(NativeFixtureData.Serialize(new { spotlight_articles = articles, next_url = next }));
     }
 }

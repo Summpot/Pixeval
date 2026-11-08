@@ -39,7 +39,7 @@ public static class DesignHelper
         new ImageUrls(AppInfo.ImageNotAvailablePath, AppInfo.ImageNotAvailablePath, AppInfo.ImageNotAvailablePath, AppInfo.ImageNotAvailablePath),
         DateTimeOffset.UtcNow.ToString("o"),
         [new Tag("Tag A", null), new Tag("Tag B", null)],
-        3, 50, DesignUser, new Series(123, "SeriesTitle", null, null, null, null, null, null), false, 123, 456, 3, false, 0);
+        3, 50, DesignUser, new Series(123, "SeriesTitle", null, null, null, null, null, null, false), false, 123, 456, 3, false, 0);
 
     private static Illustration? s_designIllustration;
     public static Illustration DesignIllustration => s_designIllustration ??= new(
@@ -48,7 +48,7 @@ public static class DesignHelper
         "Caption", 0, DesignUser,
         [new Tag("Tag A", null), new Tag("Tag B", null)],
         [], DateTimeOffset.UtcNow.ToString("o"), 3, 800, 600, 0, Mako.XRestrict.Ordinary,
-        new Series(123, "SeriesTitle", null, null, null, null, null, null),
+        new Series(123, "SeriesTitle", null, null, null, null, null, null, false),
         new MetaSinglePage(AppInfo.ImageNotAvailablePath),
         [], 456, 123, true, true, false, 3, 0, 0, null);
 
@@ -61,7 +61,7 @@ public static class DesignHelper
         AppInfo.ImageNotAvailablePath,
         233,
         0,
-        DateTimeOffset.UtcNow.ToString("o"));
+        DateTimeOffset.UtcNow.ToString("o"), false);
 
 
     public static Illustration DownloadParserSampleSingleIllustration => DesignIllustration with { PageCount = 1 };

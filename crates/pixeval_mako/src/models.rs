@@ -50,16 +50,18 @@ pub struct Series {
     pub title: String,
     #[serde(default)]
     pub user: Option<User>,
-    #[serde(default)]
+    #[serde(default, alias = "caption")]
     pub mask_text: Option<String>,
     #[serde(default, rename = "url")]
     pub cover_url: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "content_count", alias = "series_work_count")]
     pub published_content_count: Option<i32>,
     #[serde(default)]
     pub latest_content_id: Option<i64>,
     #[serde(default)]
     pub last_published_content_datetime: Option<String>,
+    #[serde(default)]
+    pub watchlist_added: bool,
 }
 
 #[boltffi::data]

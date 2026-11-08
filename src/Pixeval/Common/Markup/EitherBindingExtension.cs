@@ -19,12 +19,12 @@ public class EitherBindingExtension<T>(BindingBase binding, T x, T y) : MarkupEx
             Bindings =
             {
                 Binding,
-                new CompiledBinding
+                x as BindingBase ?? new CompiledBinding
                 {
                     Source = x,
                     Mode = BindingMode.OneTime
                 },
-                new CompiledBinding
+                y as BindingBase ?? new CompiledBinding
                 {
                     Source = y,
                     Mode = BindingMode.OneTime

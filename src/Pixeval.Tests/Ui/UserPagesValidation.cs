@@ -20,18 +20,16 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
+using Pixeval.Mako;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Collections;
+using Pixeval.Common.Collections;
 using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Models.Database.Managers;
+using Pixeval.Localization;
+using Pixeval.Storage;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
-using Pixeval.Views.Capability;
-using Pixeval.Views.Entry;
+using Pixeval.Views.Works;
 using Pixeval.Views.Viewers;
 
 namespace Pixeval.Tests.Ui;
@@ -51,7 +49,7 @@ internal static class UserPagesValidation
         fixture.UserResponseFactory = async (request, token) =>
         {
             var uri = request.RequestUri!;
-            if (uri.AbsolutePath == "/v1/user/detail")
+            if (uri.AbsolutePath == "/v2/user/detail")
             {
                 detailTokens.Enqueue(token);
                 await Task.Delay(Timeout.Infinite, token); // The observed destination is immediately disposed by the fixture container.
@@ -74,8 +72,8 @@ internal static class UserPagesValidation
             await asset.CopyToAsync(buffer);
             fixture.ImageResponses[imageUri] = buffer.ToArray();
         }
-        await client.SetTokenAsync("fixture-user-pages");
-        await client.ValidateTokenAsync();
+        client.SetRefreshToken("fixture-user-pages");
+        await FixtureAuthentication.IdentifyAsync(client);
         List<string> report = [];
         try
         {
@@ -105,6 +103,7 @@ internal static class UserPagesValidation
                         var key = $"{scenario.Name}-{theme.Key}-{width}";
                         try
                         {
+                            Pixeval.Common.MaterialAnimation.Initialize(window);
                             window.Show();
                             var initial = await NextAsync();
                             ValidateRequest(initial.Uri, scenario);
@@ -137,7 +136,7 @@ internal static class UserPagesValidation
                             Bounds(window, card);
 
                             var refresh = users.FindControl<CommandBarButton>("RefreshButton")!;
-                            Require(refresh.Label == I18NManager.GetResource(WorkContainerResources.RefreshButton.Label),
+                            Require(refresh.Label == Strings.WorkContainerRefreshButtonLabel(),
                                 "The user-list refresh action has its localized command label");
                             await ActivateAsync(window, refresh, Key.Space, PhysicalKey.Space);
                             var refreshed = await NextAsync();
@@ -177,33 +176,33 @@ internal static class UserPagesValidation
                                 var item = Card(920003);
                                 var avatar = item.FindControl<Button>("AvatarButton")!;
                                 var entries = ((MenuFlyout) avatar.Flyout!).Items.OfType<MenuItem>().ToArray();
-                                var row = (UserItemViewModel) item.DataContext!;
+                                var row = (User) item.DataContext!;
                                 var routeCount = routes.Count;
                                 await OpenMenuAsync();
                                 Require(routes.Count == routeCount, "Opening avatar actions does not also navigate to the profile");
-                                var web = entries.Single(menu => Equals(menu.Header, I18NManager.GetResource(EntryItemResources.OpenInWebBrowser)));
+                                var web = entries.Single(menu => Equals(menu.Header, Strings.EntryItemOpenInWebBrowser()));
                                 Require(Equals(web.Tag, row.WebsiteUri), "The original external user URL is preserved");
-                                var copy = entries.Single(menu => Equals(menu.Header, I18NManager.GetResource(EntryItemResources.GenerateWebLink)));
+                                var copy = entries.Single(menu => Equals(menu.Header, Strings.EntryItemGenerateWebLink()));
                                 await ActivateAsync(window, copy, Key.Enter, PhysicalKey.Enter);
                                 Require(await window.Clipboard!.TryGetTextAsync() == row.WebsiteUri.ToString(), "Copy user link keeps the complete URL in the isolated clipboard");
                                 await OpenMenuAsync();
-                                var appLink = entries.Single(menu => Equals(menu.Header, I18NManager.GetResource(EntryItemResources.GenerateLink)));
+                                var appLink = entries.Single(menu => Equals(menu.Header, Strings.EntryItemGenerateLink()));
                                 await ActivateAsync(window, appLink, Key.Enter, PhysicalKey.Enter);
                                 Require(await window.Clipboard!.TryGetTextAsync() == row.AppUri.ToString(), "Copy app link preserves its scheme and user ID");
                                 await OpenMenuAsync();
-                                var follow = entries.Single(menu => ReferenceEquals(menu.Command, row.FollowCommand));
-                                Require(Equals(follow.Header, I18NManager.GetResource(UserViewerPageResources.Follow)), "An unfollowed user's action is labeled Follow");
+                                var follow = entries.Single(menu => ReferenceEquals(menu.Command, App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().FollowUserCommand));
+                                Require(Equals(follow.Header, Strings.UserViewerPageFollow()), "An unfollowed user's action is labeled Follow");
                                 var before = followRequests.Count;
                                 await ActivateAsync(window, follow, Key.Enter, PhysicalKey.Enter);
-                                await UntilAsync(() => row.IsFollowed && !row.FollowCommand.IsRunning);
+                                await UntilAsync(() => (UserUiStateStore.GetOrCreate(row).FollowState == HeartButtonState.Checked) && !App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().FollowUserCommand.IsRunning);
                                 Require(followRequests.Count == before + 1 && followRequests.Last().Path == "/v1/user/follow/add"
                                     && HttpUtility.ParseQueryString(followRequests.Last().Body)["user_id"] == "920003"
                                     && HttpUtility.ParseQueryString(followRequests.Last().Body)["restrict"] == "public",
                                     "Follow invokes one existing public-follow command with the exact user ID");
                                 await OpenMenuAsync();
-                                Require(Equals(follow.Header, I18NManager.GetResource(UserViewerPageResources.Unfollow)), "The same menu exposes Unfollow after following succeeds");
+                                Require(Equals(follow.Header, Strings.UserViewerPageUnfollow()), "The same menu exposes Unfollow after following succeeds");
                                 await ActivateAsync(window, follow, Key.Enter, PhysicalKey.Enter);
-                                await UntilAsync(() => !row.IsFollowed && !row.FollowCommand.IsRunning);
+                                await UntilAsync(() => !(UserUiStateStore.GetOrCreate(row).FollowState == HeartButtonState.Checked) && !App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().FollowUserCommand.IsRunning);
                                 Require(followRequests.Count == before + 2 && followRequests.Last().Path == "/v1/user/follow/delete",
                                     "Unfollow uses the existing remove endpoint exactly once");
                                 await OpenMenuAsync();
@@ -211,18 +210,18 @@ internal static class UserPagesValidation
                                 window.KeyRelease(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
                                 await RenderAsync(window);
                                 Require(!avatar.Flyout.IsOpen && routes.Count == routeCount, "Escape closes avatar actions without navigating");
-                                var blockedUsers = App.AppViewModel.AppServiceProvider.GetRequiredService<BlockedUserPersistentManager>();
+                                var blockedUsers = App.AppViewModel.StorageEngine;
                                 try
                                 {
                                     await OpenMenuAsync();
-                                    var block = entries.Single(menu => ReferenceEquals(menu.Command, row.BlockUserCommand));
+                                    var block = entries.Single(menu => ReferenceEquals(menu.Command, App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().BlockUserCommand));
                                     await ActivateAsync(window, block, Key.Enter, PhysicalKey.Enter);
-                                    Require(blockedUsers.GetByUserId(row.UserId)?.Name == LongName && !row.BlockUserCommand.CanExecute(null),
+                                    Require(blockedUsers.GetAllBlockedUsers().Single(record => record.Id == row.UserId).UserName == LongName && !App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().BlockUserCommand.CanExecute(null),
                                         "Block user persists the original ID/name in the isolated database and disables duplicate blocking");
                                 }
                                 finally
                                 {
-                                    _ = blockedUsers.TryDeleteByUserId(row.UserId);
+                                    _ = blockedUsers.TryDeleteBlockedUser(row.UserId);
                                 }
 
                                 async Task OpenMenuAsync()
@@ -233,8 +232,8 @@ internal static class UserPagesValidation
                                 }
                             }
 
-                            UserItem Card(long id) => view.GetVisualDescendants().OfType<UserItem>().Single(control => control.DataContext is UserItemViewModel row && row.UserId == id);
-                            IncrementalLoadingCollection<UserItemViewModel> Source() => (IncrementalLoadingCollection<UserItemViewModel>) model.Source;
+                            UserItem Card(long id) => view.GetVisualDescendants().OfType<UserItem>().Single(control => control.DataContext is User row && row.UserId == id);
+                            IncrementalLoadingCollection<User> Source() => (IncrementalLoadingCollection<User>) model.Source;
                         }
                         finally
                         {
@@ -259,13 +258,13 @@ internal static class UserPagesValidation
         Task<PendingUsers> NextAsync() => requests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
         User Sample(long id) => User.CreateDefault() with
         {
-            UserInfo = UserInfo.CreateDefault() with { Id = id, Name = LongName, ProfileImageUrls = new() { Medium = imageUri } },
-            Illustrations = [Illustration.CreateDefault() with { Id = id + 1000, ThumbnailUrls = new() { Medium = imageUri, SquareMedium = imageUri, Large = imageUri } }]
+            Id = id, Name = LongName, ProfileImageUrls = new() { Medium = imageUri },
+            SampleWorkThumbnails = [imageUri]
         };
 
         async Task SourceContractsAsync()
         {
-            var empty = new UserSearchResultPage(null);
+            var empty = UiTestSession.Create<UserSearchResultPage>();
             var container = new PageTestHost { Content = empty };
             var window = new Window { Width = 360, Height = 720, Content = container.Shell };
             var emptyModel = (UserViewViewModel) empty.FindControl<UserContainer>("UserContainer")!.FindControl<UserView>("UserView")!.DataContext!;
@@ -274,11 +273,12 @@ internal static class UserPagesValidation
             UserViewViewModel? replacement = null;
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 await RenderAsync(window);
                 Require(emptyModel.Source.Count == 0 && !requests.Reader.TryPeek(out _), "A user search without a keyword keeps its empty computed source and sends no HTTP request");
                 Save(window, directory, "users-empty-search");
-                var page = new UserRecommendedPage();
+                var page = UiTestSession.Create<UserRecommendedPage>();
                 var users = page.FindControl<UserContainer>("UserContainer")!;
                 var view = users.FindControl<UserView>("UserView")!;
                 pagedModel = (UserViewViewModel) view.DataContext!;
@@ -289,7 +289,7 @@ internal static class UserPagesValidation
                 Require(second.Uri.AbsolutePath == "/m3e/user-next" && HttpUtility.ParseQueryString(second.Uri.Query)["offset"] == "1",
                     "User pagination follows the exact service next_url");
                 second.Complete([Sample(920011), Sample(920012)]);
-                await UntilAsync(() => pagedModel.Source.Count == 2 && !((IncrementalLoadingCollection<UserItemViewModel>) pagedModel.Source).IsLoading);
+                await UntilAsync(() => pagedModel.Source.Count == 2 && !((IncrementalLoadingCollection<User>) pagedModel.Source).IsLoading);
                 Require(pagedModel.Source.Select(row => row.UserId).SequenceEqual(new long[] { 920011, 920012 }), "Pagination retains order and de-duplicates repeated user identities");
                 await ActivateAsync(window, users.FindControl<CommandBarButton>("RefreshButton")!, Key.Space, PhysicalKey.Space);
                 var late = await NextAsync();
@@ -300,15 +300,15 @@ internal static class UserPagesValidation
                 Require(canceledSource.Count == 0 && !requests.Reader.TryPeek(out _), "Disposing a loading user source rejects the late user and does not fetch its next page");
 
                 injected = new UserViewViewModel();
-                injected.ResetEngine(client.Computed(new[] { Sample(920013) }.ToAsyncEnumerable()), static (user, _) => new(user));
-                var injectedPage = new UserRecommendedPage(injected);
+                injected.ResetSource(new[] { Sample(920013) }.ToAsyncEnumerable());
+                var injectedPage = UiTestSession.Create<UserRecommendedPage>(injected);
                 var injectedView = injectedPage.FindControl<UserContainer>("UserContainer")!.FindControl<UserView>("UserView")!;
                 container.Content = injectedPage;
                 await UntilAsync(() => injected.Source.Count == 1);
                 await RenderAsync(window);
                 Require(ReferenceEquals(injectedView.DataContext, injected) && !requests.Reader.TryPeek(out _), "A supplied user view model is reused without an unsolicited replacement request");
                 replacement = new UserViewViewModel();
-                replacement.ResetEngine(client.Computed(new[] { Sample(920014) }.ToAsyncEnumerable()), static (user, _) => new(user));
+                replacement.ResetSource(new[] { Sample(920014) }.ToAsyncEnumerable());
                 var previousSource = injected.Source;
                 injectedView.SetViewModel(replacement);
                 await UntilAsync(() => replacement.Source.Count == 1);
@@ -317,7 +317,7 @@ internal static class UserPagesValidation
                 var count = container.Navigations;
                 var item = injectedView.GetVisualDescendants().OfType<UserItem>().Single();
                 await ActivateAsync(window, item, Key.Enter, PhysicalKey.Enter);
-                Require(container.Navigations == count + 1 && ((UserItemViewModel) item.DataContext!).UserId == 920014,
+                Require(container.Navigations == count + 1 && ((User) item.DataContext!).UserId == 920014,
                     "A rebuilt card keeps one navigation handler bound to the replacement model");
                 container.CloseDestinationAndReturn();
                 report.Add("PASS source lifetime: empty query, next_url/order/de-duplication, late closed source, supplied model and replacement ownership");
@@ -335,13 +335,13 @@ internal static class UserPagesValidation
 
     private static IEnumerable<Scenario> Scenarios()
     {
-        yield return new("recommended", () => new UserRecommendedPage(), "/v1/user/recommended");
-        yield return new("search", () => new UserSearchResultPage("画师 fixture"), "/v1/search/user", "word", "画师 fixture");
-        yield return new("following-self", () => new UserFollowingPage(900001), "/v1/user/following", "user_id", "900001");
-        yield return new("following-other", () => new UserFollowingPage(900007), "/v1/user/following", "user_id", "900007");
-        yield return new("follower", () => new UserFollowerPage(), "/v1/user/follower");
-        yield return new("mypixiv", () => new UserMyPixivPage(900008), "/v1/user/mypixiv", "user_id", "900008");
-        yield return new("related", () => new RelatedUsersPage(900009), "/v1/user/related", "seed_user_id", "900009");
+        yield return new("recommended", () => UiTestSession.Create<UserRecommendedPage>(), "/v1/user/recommended");
+        yield return new("search", () => UiTestSession.Create<UserSearchResultPage>("画师 fixture"), "/v1/search/user", "word", "画师 fixture");
+        yield return new("following-self", () => UiTestSession.Create<UserFollowingPage>(900001L), "/v1/user/following", "user_id", "900001");
+        yield return new("following-other", () => UiTestSession.Create<UserFollowingPage>(900007L), "/v1/user/following", "user_id", "900007");
+        yield return new("follower", () => UiTestSession.Create<UserFollowerPage>(), "/v1/user/follower");
+        yield return new("mypixiv", () => UiTestSession.Create<UserMyPixivPage>(900008L), "/v1/user/mypixiv", "user_id", "900008");
+        yield return new("related", () => UiTestSession.Create<RelatedUsersPage>(900009L), "/v1/user/related", "seed_user_id", "900009");
     }
 
     private static void ValidateRequest(Uri uri, Scenario scenario)
@@ -407,6 +407,6 @@ internal static class UserPagesValidation
         internal Uri Uri { get; } = uri;
         internal TaskCompletionSource<string> Response { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal void Complete(IReadOnlyList<User> users, string? next = null) =>
-            Response.SetResult(JsonSerializer.Serialize(new { user_previews = users, next_url = next }));
+            Response.SetResult(NativeFixtureData.Serialize(new { user_previews = users.Select(user => new { user, illusts = new[] { Illustration.CreateDefault() with { ImageUrls = new() { Medium = user.SampleWorkThumbnails.FirstOrDefault(), SquareMedium = user.SampleWorkThumbnails.FirstOrDefault() } } } }), next_url = next }));
     }
 }

@@ -71,3 +71,7 @@ SaveImage = 保存图片
 ViewOriginal = 查看原图
 
 OtherImageTransformerExtensions = 其他图片转换扩展
+
+PageSelector = 图像页码
+
+PageSelectorHelp = 左右方向键切换图片页；Home 和 End 跳至首末页。

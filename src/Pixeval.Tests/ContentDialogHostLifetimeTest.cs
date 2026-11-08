@@ -101,6 +101,7 @@ public sealed class ContentDialogHostLifetimeTest
             var replacement = new Window { Width = 640, Height = 480, Content = new Border() };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(replacement);
                 replacement.Show();
                 replacement.UpdateLayout();
                 var nextHost = new ContentDialogHost(replacement);
@@ -129,6 +130,7 @@ public sealed class ContentDialogHostLifetimeTest
             var window = new Window { Width = 640, Height = 480, Content = new Border() };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 window.UpdateLayout();
                 Dispatcher.UIThread.RunJobs();

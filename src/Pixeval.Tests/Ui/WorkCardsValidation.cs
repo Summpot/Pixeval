@@ -18,19 +18,17 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
+using Pixeval.Mako;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
 using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Models.Options;
-using Pixeval.Models.Database.Managers;
+using Pixeval.Localization;
+using Pixeval.Config;
+using Pixeval.Storage;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Search;
 using Pixeval.Views.Viewers;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests.Ui;
 
@@ -43,8 +41,8 @@ internal static class WorkCardsValidation
     internal static async Task RunAsync(string directory)
     {
         using var fixture = new OfflineSearchFixture(App.AppViewModel.MakoClient);
-        await App.AppViewModel.MakoClient.SetTokenAsync("fixture-work-cards");
-        await App.AppViewModel.MakoClient.ValidateTokenAsync();
+        App.AppViewModel.MakoClient.SetRefreshToken("fixture-work-cards");
+        await FixtureAuthentication.IdentifyAsync(App.AppViewModel.MakoClient);
         fixture.BookmarkResponseFactory = (request, _) => Task.FromResult(request.RequestUri!.AbsolutePath.EndsWith("/bookmark/detail", StringComparison.Ordinal)
             ? "{\"bookmark_detail\":{\"is_bookmarked\":false,\"restrict\":\"public\",\"tags\":[]}}"
             : "{\"bookmark_tags\":[],\"next_url\":null}");
@@ -52,11 +50,13 @@ internal static class WorkCardsValidation
         fixture.WorkCardResponseFactory = async (request, _) =>
         {
             if (request.RequestUri!.AbsolutePath == "/webview/v2/novel")
-                throw new HttpRequestException("Fixed unavailable novel content; the destination is inspected and closed without mounting its viewer.");
+                throw new HttpRequestException("Fixed unavailable novel content in the real destination viewer.");
             var response = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
             await bookmarks.Writer.WriteAsync((request.RequestUri, await request.Content!.ReadAsStringAsync(), response));
             return await response.Task;
         };
+        fixture.NovelTextResponseFactory = (_, _) => Task.FromException<string>(
+            new HttpRequestException("Fixed unavailable fallback content in the real destination viewer."));
         fixture.SeriesResponseFactory = async (_, token) =>
         {
             await Task.Delay(-1, token);
@@ -70,41 +70,43 @@ internal static class WorkCardsValidation
             fixture.ImageResponses[imageUri] = buffer.ToArray();
         }
         List<string> report = [];
-        foreach (var type in new[] { SimpleWorkType.Illustration, SimpleWorkType.Novel })
+        foreach (var type in new[] { SimpleWorkKind.Illustration, SimpleWorkKind.Novel })
             foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                 foreach (var width in new[] { 360, 1000 })
                 {
                     var scenario = $"{type}-{theme.Key}-{width}";
-                    IArtworkInfo entry = type == SimpleWorkType.Novel
-                        ? Novel.CreateDefault() with
+                    IWorkEntry entry = type == SimpleWorkKind.Novel
+                        ? Mako.Novel.CreateDefault() with
                         {
                             Id = 950001,
                             Title = Title,
-                            CreateDate = new DateTimeOffset(2026, 11, 7, 0, 0, 0, TimeSpan.Zero),
-                            User = UserInfo.CreateDefault() with { Id = 900007, Name = Author },
-                            Description = "Description / 小说简介",
+                            CreateDate = new DateTimeOffset(2026, 11, 7, 0, 0, 0, TimeSpan.Zero).ToString("O"),
+                            User = User.CreateDefault() with { Id = 900007, Name = Author },
+                            Caption = "Description / 小说简介",
                             TextLength = 12345,
-                            TotalFavorite = 1200,
+                            TotalBookmarks = 1200,
                             TotalView = 98765,
-                            ThumbnailUrls = new() { Medium = imageUri, SquareMedium = imageUri, Large = imageUri },
-                            Tags = Enumerable.Range(0, 8).Select(index => new Tag { Name = TagName + index, TranslatedName = "长标签翻译 / A long translated tag ABCDEFGHIJKLMNOPQRSTUVWXYZ " + index }).ToArray()
+                            ImageUrls = new() { Medium = imageUri, SquareMedium = imageUri, Large = imageUri },
+                            Tags = Enumerable.Range(0, 8).Select(index => new Tag { Name = TagName + index, TranslatedName = "长标签翻译 / A long translated tag ABCDEFGHIJKLMNOPQRSTUVWXYZ " + index }).ToList()
                         }
                         : Illustration.CreateDefault() with
                         {
                             Id = 950001,
                             Title = Title,
-                            CreateDate = new DateTimeOffset(2026, 11, 7, 0, 0, 0, TimeSpan.Zero),
-                            Type = IllustrationType.Illustration,
+                            CreateDate = new DateTimeOffset(2026, 11, 7, 0, 0, 0, TimeSpan.Zero).ToString("O"),
+                            IllustType = IllustContentType.Illustration,
                             Width = 600,
                             Height = 400,
                             PageCount = 1,
                             Visible = true,
                             SanityLevel = 2,
                             Series = null,
-                            User = UserInfo.CreateDefault() with { Id = 900007, Name = Author },
-                            ThumbnailUrls = new() { Medium = imageUri, SquareMedium = imageUri, Large = imageUri },
+                            User = User.CreateDefault() with { Id = 900007, Name = Author },
+                            ImageUrls = new() { Medium = imageUri, SquareMedium = imageUri, Large = imageUri },
                             MetaSinglePage = new() { OriginalImageUrl = imageUri }
                         };
+                    // Each layout variation starts with the same server bookmark state.
+                    ArtworkUiStateStore.SetBookmarkState(entry, false);
                     var work = new WorkContainer();
                     var view = work.FindControl<WorkView>("WorkView")!;
                     view.LayoutType = ThumbnailLayoutType.Grid;
@@ -116,7 +118,7 @@ internal static class WorkCardsValidation
                         Content = work,
                         NavigationObserver = page => routes.Add((page.GetType(), page.DataContext switch
                         {
-                            IllustrationViewerPageViewModel vm => vm.CurrentIllustration?.Entry.Id,
+                            IllustrationViewerPageViewModel vm => (vm.CurrentIllustration as IWorkEntry)?.Id.ToString(),
                             NovelViewerPageViewModel vm => vm.NovelId.ToString(),
                             UserViewerPageViewModel vm => vm.Id.ToString(),
                             _ => null
@@ -125,14 +127,15 @@ internal static class WorkCardsValidation
                     var window = new Window { Width = width, Height = 720, Content = container.Shell, RequestedThemeVariant = theme };
                     try
                     {
+                        Pixeval.Common.MaterialAnimation.Initialize(window);
                         window.Show();
                         await RenderAsync(window);
                         var card = view.GetVisualDescendants().OfType<WorkItem>().Single();
-                        var row = (IWorkViewModel) card.DataContext!;
+                        var row = (IWorkEntry) card.DataContext!;
                         var list = view.FindControl<WorkListBox>("WorkListBox")!;
                         Save(window, directory, "card-before-" + scenario);
                         await ActivateAsync(window, card, Key.Enter, PhysicalKey.Enter);
-                        Require(routes.Count == 1 && routes[0] == (type == SimpleWorkType.Novel ? typeof(NovelViewerPage) : typeof(IllustrationViewerPage), "950001"),
+                        Require(routes.Count == 1 && routes[0] == (type == SimpleWorkKind.Novel ? typeof(NovelViewerPage) : typeof(IllustrationViewerPage), "950001"),
                             "Enter on a work card opens exactly its work viewer");
                         container.CloseDestinationAndReturn();
                         await ActivateAsync(window, card, Key.Space, PhysicalKey.Space);
@@ -146,8 +149,8 @@ internal static class WorkCardsValidation
                         Require(window.GetVisualDescendants().OfType<Border>().Any(border => border.Name == "WorkCardFocusBorder" && border.IsEffectivelyVisible),
                             "Keyboard card activation displays a focus ring above its opaque thumbnail");
                         var heart = card.GetVisualDescendants().OfType<HeartButton>().Single();
-                        Require(AutomationProperties.GetName(heart) == Text(EntryItemResources.AddToBookmark), "The bookmark icon has its localized action name");
-                        Require(heart.Command == row.BookmarkCommand && ReferenceEquals(heart.CommandParameter, heart), "The bookmark command and its owning control remain unchanged");
+                        Require(AutomationProperties.GetName(heart) == Text("EntryItem-AddToBookmark"), "The bookmark icon has its localized action name");
+                        Require(heart.Command == App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().BookmarkCommand && Equals(heart.CommandParameter, entry), "The bookmark command and its owning control remain unchanged");
                         card.Focus(NavigationMethod.Tab);
                         Press(window, Key.Tab, PhysicalKey.Tab);
                         if (card is NovelItem)
@@ -162,37 +165,37 @@ internal static class WorkCardsValidation
                         var routeCountBeforeBookmark = routes.Count;
                         await ActivateAsync(window, heart, Key.Space, PhysicalKey.Space);
                         var bookmark = await bookmarks.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
-                        Require(bookmark.Uri.AbsolutePath == (type == SimpleWorkType.Novel ? "/v2/novel/bookmark/add" : "/v2/illust/bookmark/add")
-                            && System.Web.HttpUtility.ParseQueryString(bookmark.Body)[type == SimpleWorkType.Novel ? "novel_id" : "illust_id"] == "950001",
+                        Require(bookmark.Uri.AbsolutePath == (type == SimpleWorkKind.Novel ? "/v2/novel/bookmark/add" : "/v2/illust/bookmark/add")
+                            && System.Web.HttpUtility.ParseQueryString(bookmark.Body)[type == SimpleWorkKind.Novel ? "novel_id" : "illust_id"] == "950001",
                             "The bookmark button keeps the type-specific POST and work ID");
                         Require((heart.State & HeartButtonState.Pending) != 0, "Pending bookmarks retain their progress state");
                         await ClickAsync(window, heart);
                         Require(!bookmarks.Reader.TryPeek(out _) && routes.Count == routeCountBeforeBookmark, "Repeated pending bookmark input neither duplicates the request nor opens the work; routes=" + routes.Count + "; before=" + routeCountBeforeBookmark);
                         bookmark.Response.SetResult("{}");
-                        await UntilAsync(() => !row.BookmarkCommand.IsRunning);
-                        Require(heart.State == HeartButtonState.Checked && entry.IsFavorite, "Successful bookmark completion updates both model and heart");
+                        await UntilAsync(() => !App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().BookmarkCommand.IsRunning);
+                        Require(heart.State == HeartButtonState.Checked && (ArtworkUiStateStore.GetOrCreate(entry).BookmarkState == HeartButtonState.Checked), "Successful bookmark completion updates both model and heart");
                         await ClickAsync(window, heart);
                         var removal = await bookmarks.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
                         Require(removal.Uri.AbsolutePath.EndsWith("/bookmark/delete", StringComparison.Ordinal), "Pointer activation removes an existing bookmark");
                         removal.Response.SetResult("{}");
-                        await UntilAsync(() => !row.BookmarkCommand.IsRunning);
-                        Require(heart.State == HeartButtonState.Unchecked && !entry.IsFavorite, "Bookmark removal restores the unchecked state");
+                        await UntilAsync(() => !App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().BookmarkCommand.IsRunning);
+                        Require(heart.State == HeartButtonState.Unchecked && !(ArtworkUiStateStore.GetOrCreate(entry).BookmarkState == HeartButtonState.Checked), "Bookmark removal restores the unchecked state");
                         var menu = card.ContextMenu ?? card.GetLogicalDescendants().OfType<Control>().Select(control => control.ContextMenu).First(value => value is not null)!;
                         card.Focus(NavigationMethod.Tab);
                         Press(window, Key.Apps, PhysicalKey.ContextMenu);
                         await RenderAsync(window);
                         Require(menu.IsOpen, "The platform context-menu key reaches the focused work card actions");
                         var items = menu.Items.OfType<MenuItem>().ToArray();
-                        Require(items.Single(item => Equals(item.Header, Text(EntryItemResources.Save))).Command == row.SaveCommand,
+                        Require(items.Single(item => Equals(item.Header, Text("EntryItem-Save"))).Command == App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().SaveCommand,
                             "The save action retains its original command without starting a download");
                         if (card is IllustrationItem)
                         {
                             var thumbnail = card.FindControl<Image>("ThumbnailImage")!;
-                            var copy = items.Single(item => Equals(item.Header, Text(EntryItemResources.Copy)));
+                            var copy = items.Single(item => Equals(item.Header, Text("EntryItem-Copy")));
                             Require(copy.IsEnabled && ReferenceEquals(copy.CommandParameter, thumbnail), "Image copy still targets the loaded cached thumbnail");
                         }
                         menu.Close();
-                        foreach (var resource in new[] { EntryItemResources.GenerateWebLink, EntryItemResources.GenerateLink })
+                        foreach (var resource in new[] { "EntryItem-GenerateWebLink", "EntryItem-GenerateLink" })
                         {
                             await OpenMenuAsync();
                             var action = items.Single(item => Equals(item.Header, Text(resource)));
@@ -200,12 +203,13 @@ internal static class WorkCardsValidation
                             Require(await window.Clipboard!.TryGetTextAsync() == action.Tag!.ToString(), "Copying a work link preserves its full target in the headless clipboard");
                         }
                         await OpenMenuAsync();
-                        var bookmarkOptions = items.Single(item => Equals(item.Header, Text(EntryItemResources.AddToBookmark)));
+                        var bookmarkOptions = items.Single(item => Equals(item.Header, Text("EntryItem-AddToBookmark")));
                         bookmarkOptions.Focus(NavigationMethod.Tab);
                         Press(window, Key.Apps, PhysicalKey.ContextMenu);
                         await RenderAsync(window);
+                        Require(window.GetVisualDescendants().OfType<TagSelector>().Any(), "Bookmark popup opens after the context action");
                         var tagSelector = window.GetVisualDescendants().OfType<TagSelector>().Single();
-                        Require(tagSelector.WorkId == 950001 && tagSelector.WorkType == type,
+                        Require(tagSelector.WorkId == 950001 && tagSelector.WorkKind == type,
                             "The bookmark context action preserves its work ID/type and reaches the existing tag/privacy editor");
                         Require(!menu.IsOpen, "Bookmark options replace the source menu instead of leaving two competing popup layers");
                         Press(window, Key.Escape, PhysicalKey.Escape);
@@ -213,15 +217,15 @@ internal static class WorkCardsValidation
                         Require(!window.GetVisualDescendants().OfType<TagSelector>().Any(), "Escape dismisses bookmark options without submitting a write");
                         menu.Close();
                         await OpenMenuAsync();
-                        var watch = items.Single(item => Equals(item.Header, Text(EntryItemResources.AddToWatchLater)));
+                        var watch = items.Single(item => Equals(item.Header, Text("EntryItem-AddToWatchLater")));
                         await ActivateAsync(window, watch, Key.Enter, PhysicalKey.Enter);
-                        Require(App.AppViewModel.HistoryPersistHelper.ContainsWatchLater(entry), "The menu persists watch-later in the isolated database");
+                        Require(App.AppViewModel.StorageEngine.WatchLaterRepository.ContainsWatchLater(entry), "The menu persists watch-later in the isolated database");
                         await OpenMenuAsync();
                         await ActivateAsync(window, watch, Key.Enter, PhysicalKey.Enter);
-                        Require(!App.AppViewModel.HistoryPersistHelper.ContainsWatchLater(entry), "The same menu action removes watch-later without changing work identity");
+                        Require(!App.AppViewModel.StorageEngine.WatchLaterRepository.ContainsWatchLater(entry), "The same menu action removes watch-later without changing work identity");
                         var routeCount = routes.Count;
                         await OpenMenuAsync();
-                        await ActivateAsync(window, items.Single(item => Equals(item.Header, Text(EntryItemResources.OpenUserInfoPage))), Key.Enter, PhysicalKey.Enter);
+                        await ActivateAsync(window, items.Single(item => Equals(item.Header, Text("EntryItem-OpenUserInfoPage"))), Key.Enter, PhysicalKey.Enter);
                         Require(routes.Count == routeCount + 1 && routes[^1] == (typeof(UserViewerPage), "900007"), "The menu author action opens only the author; before=" + routeCount + "; routes=" + string.Join(", ", routes));
                         container.CloseDestinationAndReturn();
                         if (card is NovelItem novel)
@@ -232,7 +236,7 @@ internal static class WorkCardsValidation
                             Bounds(tag, card);
                             foreach (var text in novel.FindControl<Panel>("StatisticsPanel")!.GetVisualDescendants().OfType<TextBlock>())
                                 Require(text.TextLayout.TextLines.All(line => !line.HasCollapsed) && text.TextLayout.Width <= text.Bounds.Width + 1,
-                                    "Novel statistics fit their available width without losing their formatted values");
+                                    "Mako.Novel statistics fit their available width without losing their formatted values");
                             routeCount = routes.Count;
                             await ClickAsync(window, author);
                             Require(routes.Count == routeCount + 1 && routes[^1] == (typeof(UserViewerPage), "900007"), "Clicking the novel author does not also open its work viewer");
@@ -268,9 +272,9 @@ internal static class WorkCardsValidation
                         await ActivateAsync(window, heart, Key.Enter, PhysicalKey.Enter);
                         var obsoleteBookmark = await bookmarks.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
                         await OpenMenuAsync();
-                        IArtworkInfo replacement = entry switch
+                        IWorkEntry replacement = entry switch
                         {
-                            Novel replacementNovel => replacementNovel with { Id = 950099, Title = "Replacement novel" },
+                            Mako.Novel replacementNovel => replacementNovel with { Id = 950099, Title = "Replacement novel" },
                             Illustration illustration => illustration with { Id = 950099, Title = "Replacement illustration" },
                             _ => throw new InvalidOperationException("Unexpected card type")
                         };
@@ -278,30 +282,30 @@ internal static class WorkCardsValidation
                         await RenderAsync(window);
                         Require(!menu.IsOpen, "Replacing a source closes the old card's root context menu");
                         obsoleteBookmark.Response.SetResult("{}");
-                        await UntilAsync(() => !row.BookmarkCommand.IsRunning);
+                        await UntilAsync(() => !App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().BookmarkCommand.IsRunning);
                         var newCard = view.GetVisualDescendants().OfType<WorkItem>().Single();
                         Require(AutomationProperties.GetName(newCard) == replacement.Title
                             && newCard.GetVisualDescendants().OfType<HeartButton>().Single().State == HeartButtonState.Unchecked,
                             "Recycled cards bind the replacement title and ignore the previous model's late bookmark completion");
                         if (newCard is NovelItem)
                             Require(newCard.GetVisualDescendants().OfType<TextBlock>().Any(text => text.Text == replacement.Title), "A recycled novel's one-time title binding follows the new entry");
-                        var blockedUsers = App.AppViewModel.AppServiceProvider.GetRequiredService<BlockedUserPersistentManager>();
+                        var blockedUsers = App.AppViewModel.StorageEngine;
                         try
                         {
                             newCard.Focus(NavigationMethod.Tab);
                             Press(window, Key.Apps, PhysicalKey.ContextMenu);
                             await RenderAsync(window);
-                            var block = newCard.ContextMenu!.Items.OfType<MenuItem>().Single(item => Equals(item.Header, Text(BlockedContentResources.BlockAuthor)));
+                            var block = newCard.ContextMenu!.Items.OfType<MenuItem>().Single(item => Equals(item.Header, Text("BlockedContent-BlockAuthor")));
                             await ActivateAsync(window, block, Key.Enter, PhysicalKey.Enter);
-                            var blocked = (IWorkViewModel) view.GetVisualDescendants().OfType<WorkItem>().Single().DataContext!;
-                            Require(blockedUsers.GetByUserId(900007)?.Name == Author && !blocked.IsBookmarkSupported,
+                            var blocked = (IWorkEntry) view.GetVisualDescendants().OfType<WorkItem>().Single().DataContext!;
+                            Require(blockedUsers.GetAllBlockedUsers().Single(record => record.Id == 900007).UserName == Author && App.AppViewModel.StorageEngine.IsUserBlocked(blocked.User.Id),
                                 "Blocking the author retains the original identity and replaces the visible work with its blocked placeholder");
                             Require(!view.GetVisualDescendants().OfType<HeartButton>().Single().IsEffectivelyVisible,
                                 "Blocked illustrations and novels do not expose an unusable bookmark icon");
                         }
                         finally
                         {
-                            _ = blockedUsers.TryDeleteByUserId(900007);
+                            _ = blockedUsers.TryDeleteBlockedUser(900007);
                         }
                         await ValidateRangeAndDoubleClickAsync(window, view, container, entry, type);
                         view.Dispose();
@@ -333,15 +337,15 @@ internal static class WorkCardsValidation
         Console.WriteLine($"Validated {report.Count} work-card groups.");
     }
 
-    private static string Text(string key) => I18NManager.GetResource(key);
+    private static string Text(string key) => FixtureLocalization.GetResource(key);
 
     private static async Task ValidateRangeAndDoubleClickAsync(Window window, WorkView view,
-        PageTestHost container, IArtworkInfo template, SimpleWorkType type)
+        PageTestHost container, IWorkEntry template, SimpleWorkKind type)
     {
         var entries = Enumerable.Range(0, 3).Select(index => template switch
         {
-            Novel novel => (IArtworkInfo) (novel with { Id = 950100 + index, Title = "Range novel " + index, IsFavorite = false }),
-            Illustration illustration => illustration with { Id = 950100 + index, Title = "Range illustration " + index, IsFavorite = false },
+            Mako.Novel novel => (IWorkEntry) (novel with { Id = 950100 + index, Title = "Range novel " + index, IsBookmarked = false }),
+            Illustration illustration => illustration with { Id = 950100 + index, Title = "Range illustration " + index, IsBookmarked = false },
             _ => throw new InvalidOperationException("Unexpected selection sample")
         }).ToArray();
         await DismissNotificationsAsync(window);
@@ -359,7 +363,7 @@ internal static class WorkCardsValidation
         window.MouseDown(point, MouseButton.Left, RawInputModifiers.Shift);
         window.MouseUp(point, MouseButton.Left, RawInputModifiers.Shift);
         await RenderAsync(window);
-        Require(model.SelectedEntries.Select(item => item.Entry.Id).Order().SequenceEqual(new[] { "950100", "950101", "950102" })
+        Require(model.SelectedEntries.Select(item => ((IWorkEntry)item).Id.ToString()).Order().SequenceEqual(new[] { "950100", "950101", "950102" })
             && container.Navigations == before, "Shift-click preserves inclusive range selection across real card containers");
         point = card.TranslatePoint(new Point(card.Bounds.Width - 60, 12), window)!.Value;
         window.MouseDown(point, MouseButton.Left);
@@ -415,7 +419,7 @@ internal static class WorkCardsValidation
         var point = control.TranslatePoint(default, card)!.Value;
         Require(control.Bounds.Width > 0 && control.Bounds.Height > 0 && point.X >= -1 && point.Y >= -1
             && point.X + control.Bounds.Width <= card.Bounds.Width + 1 && point.Y + control.Bounds.Height <= card.Bounds.Height + 1,
-            "Novel actions fit inside their card: " + control + " " + point + " " + control.Bounds + "; card=" + card.Bounds);
+            "Mako.Novel actions fit inside their card: " + control + " " + point + " " + control.Bounds + "; card=" + card.Bounds);
     }
 
     private static async Task RenderAsync(Window window)

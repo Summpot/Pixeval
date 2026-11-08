@@ -18,8 +18,8 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.I18N;
-using Pixeval.Models.Database.Managers;
+using Pixeval.Localization;
+using Pixeval.Storage;
 using Pixeval.ViewModels;
 using Pixeval.Views.Home;
 using Pixeval.Views.Login;
@@ -34,7 +34,7 @@ internal static class LoginLifetimeValidation
         var client = App.AppViewModel.MakoClient;
         // Authentication owns navigation; home source loading is covered separately.
         App.AppViewModel.HomePageCards.Clear();
-        var accounts = App.AppViewModel.AppServiceProvider.GetRequiredService<LoginUserPersistentManager>();
+        var accounts = App.AppViewModel.StorageEngine;
         var requests = Channel.CreateUnbounded<PendingLogin>();
         ConcurrentBag<PendingLogin> pending = [];
         using var fixture = new OfflineSearchFixture(client);
@@ -51,10 +51,10 @@ internal static class LoginLifetimeValidation
         var sequence = 0;
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
-            await client.ClearTokenAsync();
+            client.ClearToken();
             var oldId = 900100 + ++sequence * 10;
             var currentId = oldId + 1;
-            var page = new LoginPage();
+            var page = UiTestSession.Create<LoginPage>();
             var model = (LoginPageViewModel) page.DataContext!;
             var navigation = new NavigationPage();
             await navigation.PushAsync(page);
@@ -62,11 +62,12 @@ internal static class LoginLifetimeValidation
             var window = new Window { Width = 1000, Height = 720, RequestedThemeVariant = theme, Content = container.Shell };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render();
                 await model.LoadUsersAsync();
                 var button = page.GetVisualDescendants().OfType<Button>().Single(control =>
-                    Equals(control.Content, I18NManager.GetResource(LoginPageResources.RefreshTokenButton.Content)));
+                    Equals(control.Content, Strings.LoginPageRefreshTokenButtonContent()));
                 var input = page.GetVisualDescendants().OfType<AutoCompleteBox>().Single();
                 model.RefreshToken = " ";
                 button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -92,17 +93,17 @@ internal static class LoginLifetimeValidation
                 var current = await NextAsync();
                 Require(current.RefreshToken is "fixture-current" && model.IsLoginInProgress,
                     "Old completion cannot end the replacement's busy state");
-                Require(client.Me is null && accounts.GetByUserId(oldId) is null, "Late canceled credentials do not become the current or saved account");
+                Require(client.GetUser() is null && !accounts.GetAllLoginUsers().Any(user => user.UserId == oldId), "Late canceled credentials do not become the current or saved account");
                 Require(container.Navigations is 0, "Canceled login does not navigate");
                 Require(pending.Count == (sequence - 1) * 3 + 2, "A queued duplicate submission does not start another authentication");
                 completed.Add($"{theme.Key}: busy input/command state, unload cancellation, late response rejection and isolated persistence");
 
                 current.Complete(currentId);
                 await UntilAsync(() => !model.IsLoginInProgress);
-                Require(client.Me?.Id == currentId && App.AppViewModel.GetCurrentLoginUser()?.UserId == currentId,
+                Require(client.GetUser()?.Id == currentId.ToString() && App.AppViewModel.GetCurrentLoginUser()?.UserId == currentId,
                     "Successful login persists and selects only the intended account");
                 Require(container.Navigations is 1 && container.LastPageType == typeof(HomePage), "Successful login navigates home exactly once");
-                var reopened = new LoginPageViewModel();
+                var reopened = UiTestSession.Create<LoginPageViewModel>();
                 await reopened.LoadUsersAsync();
                 Require(reopened.SelectedUser?.UserId == currentId && reopened.RefreshToken == $"fixture-refreshed-{currentId}",
                     "Reopening account selection restores the refreshed token for the persisted current account");
@@ -110,13 +111,13 @@ internal static class LoginLifetimeValidation
 
                 // Success replaced and disposed the old login tab. Retry from a newly
                 // opened account page, as a user switching accounts would do.
-                page = new LoginPage();
+                page = UiTestSession.Create<LoginPage>();
                 model = (LoginPageViewModel) page.DataContext!;
                 container.Content = page;
                 Render();
                 await model.LoadUsersAsync();
                 button = page.GetVisualDescendants().OfType<Button>().Single(control =>
-                    Equals(control.Content, I18NManager.GetResource(LoginPageResources.RefreshTokenButton.Content)));
+                    Equals(control.Content, Strings.LoginPageRefreshTokenButtonContent()));
                 input = page.GetVisualDescendants().OfType<AutoCompleteBox>().Single();
                 model.RefreshToken = "fixture-failure";
                 button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -126,7 +127,7 @@ internal static class LoginLifetimeValidation
                 Render();
                 Require(button.IsEffectivelyEnabled && input.IsEffectivelyEnabled && model.RefreshToken is "fixture-failure",
                     $"Authentication failure restores controls and keeps editable input: button={button.IsEffectivelyEnabled}, input={input.IsEffectivelyEnabled}, token={model.RefreshToken}");
-                Require(accounts.GetByUserId(currentId) is not null, "Authentication failure preserves saved accounts");
+                Require(accounts.GetAllLoginUsers().Any(user => user.UserId == currentId), "Authentication failure preserves saved accounts");
                 Require(container.Notifications.Any(notification => notification.Type is NotificationType.Error), "Authentication error remains visible");
                 using var frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException("No login error frame.");
                 frame.Save(Path.Combine(directory, $"login-error-{theme.Key}.png"), new PngBitmapEncoderOptions());
@@ -157,15 +158,22 @@ internal static class LoginLifetimeValidation
         Console.WriteLine($"Validated {completed.Count} login groups with isolated accounts and controlled HTTP responses.");
         return;
 
-        Task<PendingLogin> NextAsync() => requests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+        async Task<PendingLogin> NextAsync()
+        {
+            while (true)
+            {
+                var request = await requests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+                if (!request.Token.IsCancellationRequested && !request.Response.Task.IsCompleted) return request;
+            }
+        }
 
         async Task VerifyOverlappingPagesAsync(bool oldFails)
         {
-            await client.ClearTokenAsync();
+            client.ClearToken();
             var oldId = oldFails ? 900211 : 900201;
             var currentId = oldId + 1;
-            var firstPage = new LoginPage();
-            var secondPage = new LoginPage();
+            var firstPage = UiTestSession.Create<LoginPage>();
+            var secondPage = UiTestSession.Create<LoginPage>();
             var firstModel = (LoginPageViewModel) firstPage.DataContext!;
             var secondModel = (LoginPageViewModel) secondPage.DataContext!;
             var firstContainer = new PageTestHost { Content = firstPage };
@@ -174,7 +182,9 @@ internal static class LoginLifetimeValidation
             var secondWindow = new Window { Width = 1000, Height = 720, Content = secondContainer.Shell };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(firstWindow);
                 firstWindow.Show();
+                Pixeval.Common.MaterialAnimation.Initialize(secondWindow);
                 secondWindow.Show();
                 firstWindow.UpdateLayout();
                 secondWindow.UpdateLayout();
@@ -189,9 +199,12 @@ internal static class LoginLifetimeValidation
                 secondModel.RefreshToken = " ";
                 secondButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Require(!first.Token.IsCancellationRequested && firstModel.IsLoginInProgress,
-                    "Blank input in another window must not cancel the active login");
+                    $"Blank input in another window must not cancel the active login (request={first.RefreshToken}, cancelled={first.Token.IsCancellationRequested}, busy={firstModel.IsLoginInProgress})");
                 secondModel.RefreshToken = "fixture-second-window";
                 secondButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Require(secondModel.IsLoginInProgress && !firstModel.IsLoginInProgress,
+                    $"Superseding login releases the old page immediately (first={firstModel.IsLoginInProgress}, second={secondModel.IsLoginInProgress}, loaded={secondPage.IsLoaded}, token={secondModel.RefreshToken})");
+                await UntilAsync(() => first.Token.IsCancellationRequested && !firstModel.IsLoginInProgress);
                 Require(first.Token.IsCancellationRequested && !firstModel.IsLoginInProgress && secondModel.IsLoginInProgress,
                     "A newer login on another page cancels the old request and releases only its page busy state");
                 if (oldFails)
@@ -199,7 +212,7 @@ internal static class LoginLifetimeValidation
                 else
                     first.Complete(oldId);
                 var second = await NextAsync();
-                Require(second.RefreshToken is "fixture-second-window" && accounts.GetByUserId(oldId) is null,
+                Require(second.RefreshToken is "fixture-second-window" && !accounts.GetAllLoginUsers().Any(user => user.UserId == oldId),
                     "Late cross-window credentials cannot be persisted over the newer attempt");
                 Require(firstContainer.Navigations is 0 && secondModel.IsLoginInProgress,
                     "The old page cannot navigate or clear the new page's busy state");
@@ -210,7 +223,7 @@ internal static class LoginLifetimeValidation
                     "Closing the superseded page must not cancel the current page's authentication");
                 second.Complete(currentId);
                 await UntilAsync(() => !secondModel.IsLoginInProgress);
-                Require(client.Me?.Id == currentId && accounts.GetByUserId(currentId) is not null,
+                Require(client.GetUser()?.Id == currentId.ToString() && accounts.GetAllLoginUsers().Any(user => user.UserId == currentId),
                     "Only the second window's credentials become the current saved account");
                 Require(firstContainer.Navigations is 0 && secondContainer.Navigations is 1,
                     "Only the page owning the current attempt navigates home");
@@ -229,7 +242,7 @@ internal static class LoginLifetimeValidation
         }
 
         static Button LoginButton(LoginPage page) => page.GetVisualDescendants().OfType<Button>().Single(control =>
-            Equals(control.Content, I18NManager.GetResource(LoginPageResources.RefreshTokenButton.Content)));
+            Equals(control.Content, Strings.LoginPageRefreshTokenButtonContent()));
     }
 
     private static async Task UntilAsync(Func<bool> condition)
@@ -245,7 +258,7 @@ internal static class LoginLifetimeValidation
           "access_token":"fixture-access", "refresh_token":"fixture-refreshed-{{id}}",
           "expires_in":3600, "token_type":"bearer", "scope":"",
           "user": {
-            "id":{{id}}, "name":"M3E Fixture", "account":"fixture", "mail_address":"",
+            "id":"{{id}}", "name":"M3E Fixture", "account":"fixture", "mail_address":"",
             "is_premium":false, "x_restrict":0, "is_mail_authorized":true,
             "require_policy_agreement":false,
             "profile_image_urls":{"px_16x16":"", "px_50x50":"", "px_170x170":""}

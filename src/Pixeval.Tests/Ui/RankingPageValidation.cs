@@ -19,10 +19,9 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
+using Pixeval.Mako;
 using Pixeval.Controls;
-using Pixeval.Views.Capability;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests.Ui;
 
@@ -39,14 +38,14 @@ internal static class RankingPageValidation
             return uri.AbsolutePath.Contains("novel", StringComparison.Ordinal)
                 ? "{\"novels\":[],\"next_url\":null}" : "{\"illusts\":[],\"next_url\":null}";
         };
-        await client.SetTokenAsync("fixture-ranking-page");
-        await client.ValidateTokenAsync();
+        client.SetRefreshToken("fixture-ranking-page");
+        await FixtureAuthentication.IdentifyAsync(client);
         var settings = App.AppViewModel.AppSettings.SearchSettings;
-        settings.RankOptions.IllustrationRankOption = RankOption.DayManga;
-        settings.RankOptions.NovelRankOption = RankOption.WeekAi;
-        settings.DefaultSimpleWorkType = SimpleWorkType.Novel;
-        var defaultPage = new WorkRankingPage();
-        Require(defaultPage.FindControl<SymbolComboBox>("RankOptionComboBox")!.GetSelectedValue<RankOption>() == RankOption.WeekAi,
+        settings.RankOptions.IllustrationRankOption = RankMode.DayManga;
+        settings.RankOptions.NovelRankOption = RankMode.WeekAi;
+        settings.DefaultSimpleWorkType = SimpleWorkKind.Novel;
+        var defaultPage = UiTestSession.Create<WorkRankingPage>();
+        Require(defaultPage.FindControl<SymbolComboBox>("RankOptionComboBox")!.GetSelectedValue<RankMode>() == RankMode.WeekAi,
             "The default novel page uses the configured novel ranking, even when the illustration default is unsupported");
         defaultPage.FindControl<WorkContainer>("WorkContainer")!.FindControl<WorkView>("WorkView")!.Dispose();
         var originalDate = new DateTime(2021, 4, 5);
@@ -55,7 +54,7 @@ internal static class RankingPageValidation
             foreach (var width in new[] { 360, 1000 })
             {
                 requests.Clear();
-                var page = new WorkRankingPage(SimpleWorkType.Illustration, RankOption.Day, originalDate);
+                var page = UiTestSession.Create<WorkRankingPage>(SimpleWorkKind.Illustration, RankMode.Day, originalDate);
                 var navigation = new NavigationPage();
                 await navigation.PushAsync(page);
                 var container = new PageTestHost { Content = navigation };
@@ -67,6 +66,7 @@ internal static class RankingPageValidation
                 var type = page.FindControl<SymbolComboBox>("SimpleWorkTypeComboBox")!;
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     await UntilAsync(() => !requests.IsEmpty);
                     await RenderAsync(window);
@@ -80,16 +80,16 @@ internal static class RankingPageValidation
                         && AutomationProperties.GetName(Inner(ranking)) is { Length: > 0 }
                         && AutomationProperties.GetName(Inner(type)) is { Length: > 0 }, "Ranking selectors expose their localized purposes");
                     Require(requests.Count == 1, "Opening the ranking page issues exactly one initial request");
-                    CheckRequest(SimpleWorkType.Illustration, RankOption.Day, originalDate);
-                    await CheckOptionsAsync(SimpleWorkType.Illustration);
+                    CheckRequest(SimpleWorkKind.Illustration, RankMode.Day, originalDate);
+                    await CheckOptionsAsync(SimpleWorkKind.Illustration);
                     var before = requests.Count;
                     Require(Inner(type).Focus(NavigationMethod.Tab), "Ranking work type is keyboard reachable");
                     Press(window, Key.Down, PhysicalKey.ArrowDown);
                     await UntilAsync(() => requests.Count > before);
                     await RenderAsync(window);
                     Require(requests.Count == before + 1, "Switching work type issues one request without a transient unsupported ranking");
-                    CheckRequest(SimpleWorkType.Novel, RankOption.WeekAi, originalDate);
-                    await CheckOptionsAsync(SimpleWorkType.Novel);
+                    CheckRequest(SimpleWorkKind.Novel, RankMode.WeekAi, originalDate);
+                    await CheckOptionsAsync(SimpleWorkKind.Novel);
 
                     var editor = date.GetVisualDescendants().OfType<TextBox>().Single();
                     var editedDate = new DateTime(2022, 6, 7);
@@ -97,7 +97,7 @@ internal static class RankingPageValidation
                     await EditDateAsync(editedDate.ToString("d", CultureInfo.CurrentCulture));
                     await UntilAsync(() => requests.Count > before);
                     Require(date.SelectedDate == editedDate && requests.Count == before + 1, "Localized date editing commits exactly once");
-                    CheckRequest(SimpleWorkType.Novel, ranking.GetSelectedValue<RankOption>(), editedDate);
+                    CheckRequest(SimpleWorkKind.Novel, ranking.GetSelectedValue<RankMode>(), editedDate);
                     window.KeyPress(Key.Down, RawInputModifiers.Control, PhysicalKey.ArrowDown, "");
                     window.KeyRelease(Key.Down, RawInputModifiers.Control, PhysicalKey.ArrowDown, "");
                     await Task.Delay(300);
@@ -119,7 +119,7 @@ internal static class RankingPageValidation
                     await UntilAsync(() => requests.Count > before);
                     Require(date.SelectedDate == editedDate && !date.IsDropDownOpen && requests.Count == before + 1,
                         "Picking a calendar day closes the popup and updates the source exactly once");
-                    CheckRequest(SimpleWorkType.Novel, ranking.GetSelectedValue<RankOption>(), editedDate);
+                    CheckRequest(SimpleWorkKind.Novel, ranking.GetSelectedValue<RankMode>(), editedDate);
                     before = requests.Count;
                     await EditDateAsync(WorkRankingPage.MaxDate.AddDays(10).ToString("d", CultureInfo.CurrentCulture));
                     File.WriteAllText(Path.Combine(directory, "future-date-" + scenario + ".txt"), $"Selected: {date.SelectedDate:O}; editor: {editor.Text}; requests: {before}->{requests.Count}; latest: {requests.Last()}");
@@ -135,7 +135,7 @@ internal static class RankingPageValidation
                     Press(window, Key.Back, PhysicalKey.Backspace);
                     Press(window, Key.Enter, PhysicalKey.Enter);
                     await UntilAsync(() => requests.Count > before);
-                    CheckRequest(SimpleWorkType.Novel, ranking.GetSelectedValue<RankOption>(), WorkRankingPage.MaxDate.Date);
+                    CheckRequest(SimpleWorkKind.Novel, ranking.GetSelectedValue<RankMode>(), WorkRankingPage.MaxDate.Date);
                     Require(date.SelectedDate is null && requests.Count == before + 1, "An empty date keeps the existing latest-ranking fallback");
 
                     var bar = works.FindControl<CommandBar>("RightToolBar")!;
@@ -146,11 +146,12 @@ internal static class RankingPageValidation
                     Press(window, Key.Enter, PhysicalKey.Enter);
                     await UntilAsync(() => requests.Count > before);
                     Require(requests.Count == before + 1, "One refresh issues one request with the active source");
-                    CheckRequest(SimpleWorkType.Novel, ranking.GetSelectedValue<RankOption>(), WorkRankingPage.MaxDate.Date);
-                    settings.RankOptions.IllustrationRankOption = settings.RankOptions.NovelRankOption = RankOption.Day;
+                    CheckRequest(SimpleWorkKind.Novel, ranking.GetSelectedValue<RankMode>(), WorkRankingPage.MaxDate.Date);
+                    settings.RankOptions.IllustrationRankOption = settings.RankOptions.NovelRankOption = RankMode.Day;
                     Require(Inner(ranking).Focus(NavigationMethod.Tab), "Ranking mode remains keyboard reachable after refresh");
                     for (var index = ranking.SelectedIndex; index > 0; index--)
                         Press(window, Key.Up, PhysicalKey.ArrowUp);
+                    await UntilAsync(() => requests.LastOrDefault()?.AbsolutePath == "/v1/novel/ranking" && HttpUtility.ParseQueryString(requests.Last().Query)["mode"] == "day");
                     await RenderAsync(window);
                     before = requests.Count;
                     Require(Inner(type).Focus(NavigationMethod.Tab), "Work type remains reachable with an unchanged ranking mode");
@@ -158,9 +159,9 @@ internal static class RankingPageValidation
                     await UntilAsync(() => requests.Count > before);
                     await RenderAsync(window);
                     Require(requests.Count == before + 1, "Switching type with the same mode still dispatches exactly one request");
-                    CheckRequest(SimpleWorkType.Illustration, RankOption.Day, WorkRankingPage.MaxDate.Date);
-                    settings.RankOptions.IllustrationRankOption = RankOption.DayManga;
-                    settings.RankOptions.NovelRankOption = RankOption.WeekAi;
+                    CheckRequest(SimpleWorkKind.Illustration, RankMode.Day, WorkRankingPage.MaxDate.Date);
+                    settings.RankOptions.IllustrationRankOption = RankMode.DayManga;
+                    settings.RankOptions.NovelRankOption = RankMode.WeekAi;
                     window.Width = width == 360 ? 1000 : 360;
                     await RenderAsync(window);
                     Require(ReferenceEquals(date, page.FindControl<CalendarDatePicker>("RankDateTimeCalendarDatePicker"))
@@ -170,14 +171,14 @@ internal static class RankingPageValidation
                     Save(window, directory, "ranking-final-" + scenario);
                     report.Add($"PASS {scenario}: all ranking modes and exact date/type requests, localized editing, future-date rejection, latest-date fallback, single refresh and resize");
 
-                    async Task CheckOptionsAsync(SimpleWorkType workType)
+                    async Task CheckOptionsAsync(SimpleWorkKind workType)
                     {
-                        var expected = Enum.GetValues<RankOption>().Where(option => workType == SimpleWorkType.Illustration
-                            ? RankOption.IsIllustrationSupport(option) : RankOption.IsNovelSupport(option)).ToArray();
-                        Require(ranking.ItemsSource!.Select(item => (RankOption) item.Value).SequenceEqual(expected), "Ranking choices match the engine's work-type support matrix");
+                        var expected = PixevalMakoMethods.SupportedRankModes(workType).ToArray();
+                        Require(ranking.ItemsSource!.Select(item => (RankMode) item.Value).SequenceEqual(expected), "Ranking choices match the engine's work-type support matrix");
                         Require(Inner(ranking).Focus(NavigationMethod.Tab), "Ranking option is keyboard reachable");
                         for (var index = ranking.SelectedIndex; index > 0; index--)
                             Press(window, Key.Up, PhysicalKey.ArrowUp);
+                        await UntilAsync(() => requests.LastOrDefault()?.Query.Contains("mode=day&", StringComparison.Ordinal) == true);
                         await RenderAsync(window);
                         CheckRequest(workType, expected[0], originalDate);
                         for (var index = 1; index < expected.Length; index++)
@@ -220,12 +221,12 @@ internal static class RankingPageValidation
         Console.WriteLine($"Validated {report.Count} ranking page groups and the default novel route.");
         return;
 
-        void CheckRequest(SimpleWorkType type, RankOption option, DateTime date)
+        void CheckRequest(SimpleWorkKind type, RankMode option, DateTime date)
         {
             var uri = requests.Last();
             var query = HttpUtility.ParseQueryString(uri.Query);
-            Require(uri.AbsolutePath == (type == SimpleWorkType.Novel ? "/v1/novel/ranking" : "/v1/illust/ranking")
-                && query["mode"] == typeof(RankOption).GetField(option.ToString())!.GetCustomAttribute<JsonStringEnumMemberNameAttribute>()!.Name
+            Require(uri.AbsolutePath == (type == SimpleWorkKind.Novel ? "/v1/novel/ranking" : "/v1/illust/ranking")
+                && query["mode"] == (option == RankMode.WeekR18G ? "week_r18g" : System.Text.Json.JsonNamingPolicy.SnakeCaseLower.ConvertName(option.ToString()))
                 && query["date"] == date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 $"Ranking request preserves {type}/{option}/{date:yyyy-MM-dd}: {uri.PathAndQuery}");
         }

@@ -13,23 +13,19 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
+using Pixeval.Mako;
 using Microsoft.Extensions.DependencyInjection;
-using Misaki;
-using Pixeval.AppManagement;
+using Pixeval.Services.Core;
 using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Models.Database;
-using Pixeval.Models.Database.Managers;
-using Pixeval.Models.Options;
+using Pixeval.Localization;
+using Pixeval.Storage;
+using Pixeval.Config;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views;
 using Pixeval.Views.Viewers;
-using Pixeval.Views.Work;
-using SQLite;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests.Ui;
 
@@ -39,35 +35,35 @@ internal static class HistoryPagesValidation
     {
         var app = App.AppViewModel;
         using var fixture = new OfflineSearchFixture(app.MakoClient);
-        await app.MakoClient.SetTokenAsync("fixture-history-pages");
-        await app.MakoClient.ValidateTokenAsync();
+        app.MakoClient.SetRefreshToken("fixture-history-pages");
+        await FixtureAuthentication.IdentifyAsync(app.MakoClient);
         fixture.WorkCardResponseFactory = (_, _) => throw new HttpRequestException("Fixed unavailable novel body; only the destination identity is inspected.");
         fixture.SeriesResponseFactory = async (_, token) =>
         {
             await Task.Delay(-1, token);
             return "{}";
         };
-        var helper = app.HistoryPersistHelper;
-        var browse = app.AppServiceProvider.GetRequiredService<BrowseHistoryPersistentManager>();
-        var watch = app.AppServiceProvider.GetRequiredService<WatchLaterPersistentManager>();
+        var helper = app.StorageEngine;
+        var browse = app.StorageEngine.HistoryRepository;
+        var watch = app.StorageEngine.WatchLaterRepository;
         List<string> report = [];
         foreach (var isWatchLater in new[] { false, true })
-            foreach (var initialType in new[] { SimpleWorkType.Illustration, SimpleWorkType.Novel })
+            foreach (var initialType in new[] { SimpleWorkKind.Illustration, SimpleWorkKind.Novel })
                 foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                     foreach (var width in new[] { 360, 1000 })
                     {
                         browse.Clear();
                         watch.Clear();
-                        foreach (var type in new[] { SimpleWorkType.Illustration, SimpleWorkType.Novel })
+                        foreach (var type in new[] { SimpleWorkKind.Illustration, SimpleWorkKind.Novel })
                             for (var index = 1; index <= 3; index++)
                                 Add(Create(type, index));
                         if (isWatchLater)
-                            helper.AddBrowseHistory(Create(SimpleWorkType.Illustration, 99));
+                            browse.AddBrowseHistory(Create(SimpleWorkKind.Illustration, 99));
                         else
-                            helper.AddWatchLater(Create(SimpleWorkType.Illustration, 99));
+                            watch.AddWatchLater(Create(SimpleWorkKind.Illustration, 99));
                         var key = $"{(isWatchLater ? "watch-later" : "browse")}-{initialType}-{theme.Key}-{width}";
                         app.AppSettings.SearchSettings.DefaultSimpleWorkType = initialType;
-                        HistoryPage page = isWatchLater ? new WatchLaterPage() : new BrowsingHistoryPage();
+                        HistoryPage page = isWatchLater ? UiTestSession.Create<WatchLaterPage>() : UiTestSession.Create<BrowsingHistoryPage>();
                         var works = page.FindControl<WorkContainer>("WorkContainer")!;
                         var view = works.FindControl<WorkView>("WorkView")!;
                         var list = view.FindControl<WorkListBox>("WorkListBox")!;
@@ -78,7 +74,7 @@ internal static class HistoryPagesValidation
                             Content = page,
                             NavigationObserver = destination => routes.Add((destination.GetType(), destination.DataContext switch
                             {
-                                IllustrationViewerPageViewModel illustration => illustration.CurrentIllustration?.Entry.Id,
+                                IllustrationViewerPageViewModel illustration => (illustration.CurrentIllustration as IWorkEntry)?.Id.ToString(),
                                 NovelViewerPageViewModel novel => novel.NovelId.ToString(),
                                 _ => null
                             }))
@@ -86,14 +82,15 @@ internal static class HistoryPagesValidation
                         var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = host.Shell };
                         try
                         {
+                            Pixeval.Common.MaterialAnimation.Initialize(window);
                             window.Show();
                             await UntilAsync(() => Model().Source.Count == 3 && !Loading());
                             await RenderAsync(window);
-                            Require(Model().Source.Select(item => item.Entry.Id).SequenceEqual(new[] { "990003", "990002", "990001" }),
+                            Require(Model().Source.Select(item => ((IWorkEntry)item).Id.ToString()).SequenceEqual(new[] { "990003", "990002", "990001" }),
                                 "History retains newest-record-first order without mixing identical IDs from different work types");
-                            Require(Model().RequireAdaptiveGrid == (initialType == SimpleWorkType.Novel), "History retains its typed work layout");
+                            Require(Model().RequireAdaptiveGrid == (initialType == SimpleWorkKind.Novel), "History retains its typed work layout");
                             var combo = field.GetVisualDescendants().OfType<ComboBox>().Single();
-                            Require(!field.IconMode && AutomationProperties.GetName(combo) == I18NManager.GetResource(HomePageResources.Source.WorkTypeTextBlock.Text),
+                            Require(!field.IconMode && AutomationProperties.GetName(combo) == Strings.HomePageSourceWorkTypeTextBlockText(),
                                 "The history type field has a readable selected value and localized purpose name");
                             var origin = field.TranslatePoint(default, window)!.Value;
                             Require(origin.X >= -1 && origin.X + field.Bounds.Width <= window.ClientSize.Width + 1, "The history type fits within the narrow toolbar");
@@ -103,40 +100,40 @@ internal static class HistoryPagesValidation
                             Save(window, directory, "history-ready-" + key);
                             works.FindControl<SymbolComboBox>("SortOptionComboBox")!.SelectedValue = LocalSortOption.PublishDateAscending;
                             await RenderAsync(window);
-                            Require(Model().View.Select(item => item.Entry.Id).SequenceEqual(new[] { "990001", "990002", "990003" }),
+                            Require(Model().View.Select(item => ((IWorkEntry)item).Id.ToString()).SequenceEqual(new[] { "990001", "990002", "990003" }),
                                 "History uses the existing local date sort without rewriting record order");
                             works.FindControl<SymbolComboBox>("SortOptionComboBox")!.SelectedValue = LocalSortOption.DoNotSort;
                             var oldSource = Model().Source;
                             Require(combo.Focus(NavigationMethod.Tab), "The history type selector receives keyboard focus");
-                            Press(window, initialType == SimpleWorkType.Illustration ? Key.Down : Key.Up,
-                                initialType == SimpleWorkType.Illustration ? PhysicalKey.ArrowDown : PhysicalKey.ArrowUp);
-                            var currentType = initialType == SimpleWorkType.Illustration ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
+                            Press(window, initialType == SimpleWorkKind.Illustration ? Key.Down : Key.Up,
+                                initialType == SimpleWorkKind.Illustration ? PhysicalKey.ArrowDown : PhysicalKey.ArrowUp);
+                            var currentType = initialType == SimpleWorkKind.Illustration ? SimpleWorkKind.Novel : SimpleWorkKind.Illustration;
                             await UntilAsync(() => Model().Source.Count == 3 && !Loading());
-                            Require(oldSource.Count == 0 && Model().RequireAdaptiveGrid == (currentType == SimpleWorkType.Novel),
+                            Require(oldSource.Count == 0 && Model().RequireAdaptiveGrid == (currentType == SimpleWorkKind.Novel),
                                 "Keyboard type switching releases the previous model and retains the new type's own history");
                             await Task.Run(() => Add(Create(currentType, 1, "Updated oldest record")));
-                            await UntilAsync(() => Model().Source.FirstOrDefault()?.Entry.Title == "Updated oldest record" && !Loading());
-                            Require(Model().Source.Count == 3 && Model().Source.First().Entry.Id == "990001", "Revisiting an existing work updates its payload and recency without duplicating it");
+                            await UntilAsync(() => (Model().Source.FirstOrDefault() as IWorkEntry)?.Title == "Updated oldest record" && !Loading());
+                            Require(Model().Source.Count == 3 && ((IWorkEntry)Model().Source.First()).Id.ToString() == "990001", "Revisiting an existing work updates its payload and recency without duplicating it");
 
-                            using (var reopenedDb = new SQLiteConnection(AppInfo.DatabaseFilePath, SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.FullMutex))
+                            using (var reopenedDb = new Pixeval.Storage.StorageEngine(AppInfo.DatabaseFilePath))
                             {
                                 var logger = app.AppServiceProvider.GetRequiredService<FileLogger>();
                                 IArtworkHistorySource reopened = isWatchLater
-                                    ? new WatchLaterPersistentManager(reopenedDb, logger)
-                                    : new BrowseHistoryPersistentManager(reopenedDb, logger);
+                                    ? reopenedDb.WatchLaterRepository
+                                    : reopenedDb.HistoryRepository;
                                 var restored = await reopened.StreamAsync(currentType).ToArrayAsync();
-                                Require(restored.Select(entry => entry.Id).SequenceEqual(new[] { "990001", "990003", "990002" })
-                                    && restored[0].Title == "Updated oldest record", "Reopening the existing SQLite file retains work identity, type, recency and payload");
+                                Require(restored.Cast<IWorkEntry>().Select(entry => entry.Id.ToString()).SequenceEqual(new[] { "990001", "990003", "990002" })
+                                    && ((IWorkEntry)restored[0]).Title == "Updated oldest record", "Reopening the existing SQLite file retains work identity, type, recency and payload");
                             }
 
                             await RefreshAsync(window, works);
                             await UntilAsync(() => Model().Source.Count == 3 && !Loading());
                             await RenderAsync(window);
-                            var card = view.GetVisualDescendants().OfType<WorkItem>().First(control => ((IWorkViewModel) control.DataContext!).Entry.Id == "990001");
+                            var card = view.GetVisualDescendants().OfType<WorkItem>().First(control => ((IWorkEntry) control.DataContext!).Id == 990001);
                             Require(card.Focus(NavigationMethod.Tab), "The history card is keyboard reachable");
                             Press(window, Key.Enter, PhysicalKey.Enter);
                             await RenderAsync(window);
-                            Require(routes.Count == 1 && routes[0] == (currentType == SimpleWorkType.Novel ? typeof(NovelViewerPage) : typeof(IllustrationViewerPage), "990001"),
+                            Require(routes.Count == 1 && routes[0] == (currentType == SimpleWorkKind.Novel ? typeof(NovelViewerPage) : typeof(IllustrationViewerPage), "990001"),
                                 "Opening a history record preserves its original work viewer and ID exactly once");
                             host.CloseDestinationAndReturn();
                             if (isWatchLater)
@@ -144,29 +141,29 @@ internal static class HistoryPagesValidation
                                 card.Focus(NavigationMethod.Tab);
                                 Press(window, Key.Apps, PhysicalKey.ContextMenu);
                                 await RenderAsync(window);
-                                var action = card.ContextMenu!.Items.OfType<MenuItem>().Single(item => Equals(item.Header, I18NManager.GetResource(EntryItemResources.AddToWatchLater)));
+                                var action = card.ContextMenu!.Items.OfType<MenuItem>().Single(item => Equals(item.Header, Strings.EntryItemAddToWatchLater()));
                                 Require(action.Focus(NavigationMethod.Tab), "Watch-later removal is reachable in the existing card menu");
                                 Press(window, Key.Enter, PhysicalKey.Enter);
                                 await UntilAsync(() => Model().Source.Count == 2 && !Loading());
-                                Require(!helper.ContainsWatchLater(Create(currentType, 1)) && Model().Source.All(item => item.Entry.Id != "990001") && routes.Count == 1,
+                                Require(!watch.ContainsWatchLater(Create(currentType, 1)) && Model().Source.All(item => ((IWorkEntry)item).Id.ToString() != "990001") && routes.Count == 1,
                                     "The card's watch-later toggle removes the database record and refreshes its page without navigation");
                             }
                             else
                             {
-                                _ = BrowseHistoryEntry.TryCreateWorkKey(Create(currentType, 1), out var workKey);
-                                Require(browse.TryDeleteByWorkKey(workKey), "The original history deletion API finds the same work identity");
+                                _ = Pixeval.Storage.WatchLaterRecord.TryCreateWorkKey(Create(currentType, 1), out var workKey);
+                                Require(browse.TryDeleteBrowseHistoryByWorkKey(workKey), "The original history deletion API finds the same work identity");
                                 await UntilAsync(() => Model().Source.Count == 2 && !Loading());
                             }
-                            var otherHistoryCount = isWatchLater ? browse.Count : watch.Count;
-                            _ = BrowseHistoryEntry.TryCreateWorkKey(Create(SimpleWorkType.Illustration, 99), out var sentinelKey);
+                            var otherHistoryCount = isWatchLater ? browse.CountBrowseHistory() : watch.CountWatchLater();
+                            _ = Pixeval.Storage.WatchLaterRecord.TryCreateWorkKey(Create(SimpleWorkKind.Illustration, 99), out var sentinelKey);
                             if (isWatchLater)
                                 watch.Clear();
                             else
-                                helper.ClearBrowseHistory();
+                                browse.Clear();
                             await UntilAsync(() => Model().Source.Count == 0 && !Loading());
                             await RenderAsync(window);
-                            Require((isWatchLater ? browse.Count : watch.Count) == otherHistoryCount
-                                && (isWatchLater ? browse.GetByWorkKey(sentinelKey) : watch.GetByWorkKey(sentinelKey)) is not null,
+                            Require((isWatchLater ? browse.CountBrowseHistory() : watch.CountWatchLater()) == otherHistoryCount
+                                && (isWatchLater ? (object?)browse.GetBrowseHistoryByWorkKey(sentinelKey) : watch.GetWatchLaterByWorkKey(sentinelKey)) is not null,
                                 "Clearing one history kind leaves the other kind and its sentinel record intact");
                             Save(window, directory, "history-empty-" + key);
                             await RefreshAsync(window, works);
@@ -196,12 +193,12 @@ internal static class HistoryPagesValidation
 
                         IWorkViewViewModel Model() => (IWorkViewViewModel) view.DataContext!;
                         bool Loading() => list.GetValue(IncrementalLoadingBehavior.IsLoadingMoreProperty);
-                        void Add(IArtworkInfo entry)
+                        void Add(IWorkEntry entry)
                         {
                             if (isWatchLater)
-                                helper.AddWatchLater(entry);
+                                watch.AddWatchLater(entry);
                             else
-                                helper.AddBrowseHistory(entry);
+                                browse.AddBrowseHistory(entry);
                         }
                     }
         await ValidatePagingAsync(directory, report);
@@ -214,16 +211,18 @@ internal static class HistoryPagesValidation
     private static async Task ValidatePagingAsync(string directory, List<string> report)
     {
         var app = App.AppViewModel;
-        app.HistoryPersistHelper.ClearBrowseHistory();
-        app.AppSettings.SearchSettings.DefaultSimpleWorkType = SimpleWorkType.Illustration;
+        app.StorageEngine.HistoryRepository.ClearBrowseHistory();
+        app.AppSettings.SearchSettings.DefaultSimpleWorkType = SimpleWorkKind.Illustration;
         for (var index = 1; index <= 125; index++)
-            app.HistoryPersistHelper.AddBrowseHistory(Create(SimpleWorkType.Illustration, index));
-        var page = new BrowsingHistoryPage();
+            app.StorageEngine.HistoryRepository.AddBrowseHistory(Create(SimpleWorkKind.Illustration, index));
+        var page = UiTestSession.Create<BrowsingHistoryPage>();
         var view = page.FindControl<WorkContainer>("WorkContainer")!.FindControl<WorkView>("WorkView")!;
         var list = view.FindControl<WorkListBox>("WorkListBox")!;
-        var window = new Window { Width = 1000, Height = 720, Content = page };
+        var host = new PageTestHost { Content = page };
+        var window = new Window { Width = 1000, Height = 720, Content = host.Shell };
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             var model = (IWorkViewViewModel) view.DataContext!;
             await UntilAsync(() => model.Source.Count >= 20 && !list.GetValue(IncrementalLoadingBehavior.IsLoadingMoreProperty));
@@ -234,11 +233,11 @@ internal static class HistoryPagesValidation
                 await RenderAsync(window);
                 await UntilAsync(() => model.Source.Count > previousCount && !list.GetValue(IncrementalLoadingBehavior.IsLoadingMoreProperty));
             }
-            Require(model.Source.Select(item => item.Entry.Id).SequenceEqual(Enumerable.Range(1, 125).Reverse().Select(index => (990000 + index).ToString())),
+            Require(model.Source.Select(item => ((IWorkEntry)item).Id.ToString()).SequenceEqual(Enumerable.Range(1, 125).Reverse().Select(index => (990000 + index).ToString())),
                 "Scrolling crosses the SQLite 100-record page boundary without lost, duplicated or reordered records");
             list.ScrollIntoView(124);
             await RenderAsync(window);
-            Require(list.ContainerFromIndex(124) is ListBoxItem { DataContext: IWorkViewModel { Entry.Id: "990001" } }
+            Require(list.ContainerFromIndex(124) is ListBoxItem { DataContext: IWorkEntry { Id: 990001 } }
                 && view.GetVisualDescendants().OfType<WorkItem>().Count() < 125,
                 "The oldest record remains reachable while history retains virtualized containers");
             Save(window, directory, "history-paging-oldest");
@@ -252,9 +251,9 @@ internal static class HistoryPagesValidation
         }
     }
 
-    private static IArtworkInfo Create(SimpleWorkType type, int index, string? title = null) => type == SimpleWorkType.Novel
-        ? Novel.CreateDefault() with { Id = 990000 + index, Title = title ?? "历史小说 / History novel " + index, User = UserInfo.CreateDefault() with { Id = 900007, Name = "Fixture author" }, CreateDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero).AddDays(index) }
-        : Illustration.CreateDefault() with { Id = 990000 + index, Title = title ?? "历史作品 / History artwork " + index, User = UserInfo.CreateDefault() with { Id = 900007, Name = "Fixture author" }, CreateDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero).AddDays(index), Width = 640, Height = 480, PageCount = 1 };
+    private static IWorkEntry Create(SimpleWorkKind type, int index, string? title = null) => type == SimpleWorkKind.Novel
+        ? Mako.Novel.CreateDefault() with { Id = 990000 + index, Title = title ?? "历史小说 / History novel " + index, User = User.CreateDefault() with { Id = 900007, Name = "Fixture author" }, CreateDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero).AddDays(index).ToString("O") }
+        : Illustration.CreateDefault() with { Id = 990000 + index, Title = title ?? "历史作品 / History artwork " + index, User = User.CreateDefault() with { Id = 900007, Name = "Fixture author" }, CreateDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero).AddDays(index).ToString("O"), Width = 640, Height = 480, PageCount = 1 };
 
     private static async Task RefreshAsync(Window window, WorkContainer works)
     {

@@ -137,3 +137,5 @@ ReleaseNoteDialog-TitleFormatted = { "更新日志 " }{ $version }
 ReleaseNoteDialog-Empty = 暂无更新日志
 
 SettingsSaved = 设置已保存
+
+InvalidDateTimeOffset = 请输入包含时间和时区的日期，例如 2026-11-07T13:24:35.1234567+05:30

@@ -5,3 +5,7 @@ CommentIsTooShortOrTooLongToastTitle = Comment format is illegal
 ReplyContentRichEditBox-PlaceholderText = Type your comment...
 
 SendButton-ToolTip = Submit
+
+SendFailed = Could not send the comment. Try again.
+
+OpenEmoji = Emoji and stickers

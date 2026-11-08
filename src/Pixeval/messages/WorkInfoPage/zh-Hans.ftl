@@ -1,3 +1,5 @@
 CopyOriginalTagMenuItem-Text = 复制原文
 
 CopyTranslatedTagMenuItem-Text = 复制译文
+
+CopyId = 复制 ID

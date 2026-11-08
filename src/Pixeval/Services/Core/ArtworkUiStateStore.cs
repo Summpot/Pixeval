@@ -36,8 +36,21 @@ public static class ArtworkUiStateStore
 
     public static void Initialize(StorageEngine storageEngine)
     {
+        if (s_storageEngine is { } previous)
+            previous.WatchLaterChanged -= OnWatchLaterChanged;
+        s_observerHooked = false;
+        s_states.Clear();
         s_storageEngine = storageEngine;
         EnsureStorageObserver();
+    }
+
+    public static void Shutdown(StorageEngine storageEngine)
+    {
+        if (!ReferenceEquals(s_storageEngine, storageEngine)) return;
+        storageEngine.WatchLaterChanged -= OnWatchLaterChanged;
+        s_storageEngine = null;
+        s_observerHooked = false;
+        s_states.Clear();
     }
 
     private static object UnwrapEntry(object entry) => ArtworkPayloads.Unwrap(entry);
@@ -133,23 +146,16 @@ public static class ArtworkUiStateStore
             if (s_observerHooked)
                 return;
 
-            storageEngine.WatchLaterChanged += (_, _) =>
-            {
-                Dispatcher.UIThread.Post(() =>
-                {
-                    var currentEngine = s_storageEngine;
-                    if (currentEngine?.WatchLaterRepository is not { } repo)
-                        return;
-
-                    foreach (var (key, state) in s_states)
-                    {
-                        var inWatchLater = repo.ContainsWatchLater(key);
-                        if (state.IsInWatchLater != inWatchLater)
-                            state.IsInWatchLater = inWatchLater;
-                    }
-                });
-            };
+            storageEngine.WatchLaterChanged += OnWatchLaterChanged;
             s_observerHooked = true;
         }
     }
+
+    private static void OnWatchLaterChanged(object? sender, EventArgs args) => Dispatcher.UIThread.Post(() =>
+    {
+        if (sender is not StorageEngine current || !ReferenceEquals(current, s_storageEngine)) return;
+        var repo = current.WatchLaterRepository;
+        foreach (var (key, state) in s_states)
+            state.IsInWatchLater = repo.ContainsWatchLater(key);
+    });
 }

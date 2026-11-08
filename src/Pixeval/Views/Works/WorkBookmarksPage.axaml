@@ -1,11 +1,7 @@
 <views:IconContentPage
     x:Class="Pixeval.Views.Works.WorkBookmarksPage"
     xmlns="https://github.com/avaloniaui"
-    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:loc="using:Pixeval.Localization"
-    xmlns:di="using:Pixeval.Common.Markup"
-    xmlns:settings="using:Pixeval.Config"
     xmlns:capability="using:Pixeval.Views.Works"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -13,13 +9,16 @@
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Common.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:model="using:Mako.Model"
+    xmlns:model="using:Pixeval.Mako"
     xmlns:pixeval="using:Pixeval"
     xmlns:views="using:Pixeval.Views.Shell"
     xmlns:work="using:Pixeval.Views.Works"
     mc:Ignorable="d"
     d:DesignHeight="450"
-    d:DesignWidth="800">
+    d:DesignWidth="800"
+    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
+    xmlns:loc="using:Pixeval.Localization"
+    xmlns:settings="using:Pixeval.Config">
     <work:WorkContainer x:Name="WorkContainer" RefreshRequested="WorkContainer_OnRefreshRequested">
         <work:WorkContainer.CommandBarElements>
             <ComboBox
@@ -28,7 +27,7 @@
                 MinWidth="0"
                 MaxWidth="{Binding $parent[WrapPanel].Bounds.Width}"
                 VerticalAlignment="Stretch"
-                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+Source+TagTextBlock.Text}}"
+                AutomationProperties.Name="{CompiledBinding [HomePage-Source-TagTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                 ItemsSource="{x:Static capability:WorkBookmarksPage.DefaultTags}"
                 SelectedIndex="0"
                 SelectionChanged="TagComboBox_OnSelectionChanged">
@@ -40,12 +39,14 @@
             </ComboBox>
             <controls:SymbolComboBox
                 x:Name="PrivacyPolicyComboBox"
+                AutomationProperties.Name="{CompiledBinding [HomePage-Source-PrivacyPolicyTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                 ItemsSource="{markup1:EnumResources x:TypeArguments=nativeMako:PrivacyRestrict}"
                 SelectionChanged="WorkTypeComboBox_OnSelectionChanged" />
             <controls:SymbolComboBox
                 x:Name="SimpleWorkTypeComboBox"
+                AutomationProperties.Name="{CompiledBinding [HomePage-Source-SimpleWorkTypeTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                 ItemsSource="{markup1:EnumResources x:TypeArguments=nativeMako:SimpleWorkKind}"
-                SelectedValue="{Binding SearchSettings.DefaultSimpleWorkType, Source={di:Service Type={x:Type settings:AppSettings}}, DataType={x:Type settings:AppSettings}, Mode=OneTime}"
+
                 SelectionChanged="WorkTypeComboBox_OnSelectionChanged" />
         </work:WorkContainer.CommandBarElements>
         <work:WorkContainer.CommandBarSubElements>

@@ -18,18 +18,16 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
+using Pixeval.Mako;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement;
-using Pixeval.I18N;
-using Pixeval.Models.Home;
-using Pixeval.Models.Options;
+using Pixeval.Services.Core;
+using Pixeval.Localization;
+using Pixeval.Config;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views;
-using Pixeval.Views.Capability;
+using Pixeval.Views.Works;
 using Pixeval.Views.Home;
 using Pixeval.Views.Viewers;
 
@@ -44,21 +42,21 @@ internal static class HomeCardsValidation
     {
         var client = App.AppViewModel.MakoClient;
         using var fixture = new OfflineSearchFixture(client);
-        await client.SetTokenAsync("fixture-home-cards");
-        await client.ValidateTokenAsync();
+        client.SetRefreshToken("fixture-home-cards");
+        await FixtureAuthentication.IdentifyAsync(client);
         fixture.RelatedResponseFactory = (request, _) => Task.FromResult(request.RequestUri!.AbsolutePath.Contains("/novel/", StringComparison.Ordinal)
-            ? JsonSerializer.Serialize(new { novels = new[] { NovelSample(991001), NovelSample(991002) }, next_url = (string?) null })
-            : JsonSerializer.Serialize(new { illusts = new[] { IllustrationSample(991001), IllustrationSample(991002) }, next_url = (string?) null }));
+            ? NativeFixtureData.Serialize(new { novels = new[] { NovelSample(991001), NovelSample(991002) }, next_url = (string?) null })
+            : NativeFixtureData.Serialize(new { illusts = new[] { IllustrationSample(991001), IllustrationSample(991002) }, next_url = (string?) null }));
         fixture.UserResponseFactory = async (request, token) =>
         {
-            if (request.RequestUri!.AbsolutePath == "/v1/user/detail")
+            if (request.RequestUri!.AbsolutePath == "/v2/user/detail")
             {
                 await Task.Delay(-1, token);
                 return "{}";
             }
-            return JsonSerializer.Serialize(new { user_previews = new[] { UserSample(991001), UserSample(991002) }, next_url = (string?) null });
+            return NativeFixtureData.Serialize(new { user_previews = new[] { new { user = UserSample(991001) }, new { user = UserSample(991002) } }, next_url = (string?) null });
         };
-        fixture.SpotlightResponseFactory = (_, _) => Task.FromResult(JsonSerializer.Serialize(new
+        fixture.SpotlightResponseFactory = (_, _) => Task.FromResult(NativeFixtureData.Serialize(new
         {
             spotlight_articles = new[] { SpotlightSample(991001), SpotlightSample(991002) },
             next_url = (string?) null
@@ -93,9 +91,9 @@ internal static class HomeCardsValidation
                             "spotlight" => HomePageCardSourceKind.Spotlight,
                             _ => HomePageCardSourceKind.WorkRelated
                         }, 0, 0)
-                        { EntryId = 991007, SimpleWorkType = kind == "novel" ? SimpleWorkType.Novel : SimpleWorkType.Illustration };
-                        var savedLayout = JsonSerializer.Serialize(layout);
-                        var card = new HomePageCardControl(layout, 1, 1);
+                        { EntryId = 991007, RawSimpleWorkType = StoredEnum.ToIndex(kind == "novel" ? SimpleWorkKind.Novel : SimpleWorkKind.Illustration) };
+                        var savedLayout = NativeFixtureData.Serialize(layout);
+                        var card = UiTestSession.Create<HomePageCardControl>(layout, 1, 1);
                         List<(Type Page, string? Id)> routes = [];
                         var host = new PageTestHost
                         {
@@ -104,7 +102,7 @@ internal static class HomeCardsValidation
                             {
                                 routes.Add((page.GetType(), page.DataContext switch
                                 {
-                                    IllustrationViewerPageViewModel illustration => illustration.CurrentIllustration?.Entry.Id,
+                                    IllustrationViewerPageViewModel illustration => (illustration.CurrentIllustration as IWorkEntry)?.Id.ToString(),
                                     NovelViewerPageViewModel novel => novel.NovelId.ToString(),
                                     UserViewerPageViewModel user => user.Id.ToString(),
                                     _ => null
@@ -114,6 +112,7 @@ internal static class HomeCardsValidation
                         var window = new Window { Width = width, Height = 480, RequestedThemeVariant = theme, Content = host.Shell };
                         try
                         {
+                            Pixeval.Common.MaterialAnimation.Initialize(window);
                             window.Show();
                             await card.PreviewViewModel.LoadAsync();
                             await UntilAsync(() => card.PreviewViewModel.Items.Count == 2);
@@ -122,7 +121,7 @@ internal static class HomeCardsValidation
                             Require(buttons.Length == 2 && buttons.All(button => AutomationProperties.GetName(button) == LongTitle),
                                 $"All four home preview templates expose their full work/user/article names: {key}; rendered={buttons.Length}; {string.Join(" | ", buttons.Select(AutomationProperties.GetName))}");
                             var open = card.FindControl<Button>("OpenCardButton")!;
-                            Require(AutomationProperties.GetName(open) == Text(HomePageResources.OpenCardPageButton.ToolTip)
+                            Require(AutomationProperties.GetName(open) == Text("HomePage-OpenCardPageButton-ToolTip")
                                 && open.Bounds.Width >= 40 && open.Bounds.Height >= 40, "The Material open action has a localized name and usable target size");
                             var source = card.PreviewViewModel.ViewModel!.Source;
                             Require(buttons[0].Focus(NavigationMethod.Tab), "The first preview receives keyboard focus");
@@ -151,8 +150,8 @@ internal static class HomeCardsValidation
                             Require(clicks == 2, "Each preview keyboard activation raises one Click");
                             if (kind == "spotlight")
                                 Require(routes.Count == 0 && window.Launcher.GetType().Name == "NoopLauncher"
-                                    && ((SpotlightItemViewModel) buttons[0].DataContext!).Entry.ArticleUrl == SpotlightSample(991001).ArticleUrl,
-                                    "Spotlight previews retain their full article target and isolated launcher");
+                                    && ((SpotlightArticle) buttons[0].DataContext!).ArticleUrl == SpotlightSample(991001).ArticleUrl,
+                                    "SpotlightArticle previews retain their full article target and isolated launcher");
                             else
                                 Require(routes.Count == 2 && routes.All(route => route == (kind switch
                                 {
@@ -172,15 +171,15 @@ internal static class HomeCardsValidation
                                 _ => typeof(WorkRelatedPage)
                             }) && source.Count == 2, "Opening and disposing the full source preserves the preview's shared owner");
                             Save(window, directory, "home-ready-" + key);
-                            PixevalSettings.Instance.HideHomePageCardTitle = true;
+                            App.AppViewModel.AppServiceProvider.GetRequiredService<PixevalSettings>().HideHomePageCardTitle = true;
                             await RenderAsync(window);
                             Require(!card.FindControl<Border>("TitleBar")!.IsEffectivelyVisible && buttons[0].IsEffectivelyVisible,
                                 "The existing title preference hides title/open together while retaining preview actions");
-                            PixevalSettings.Instance.HideHomePageCardTitle = false;
+                            App.AppViewModel.AppServiceProvider.GetRequiredService<PixevalSettings>().HideHomePageCardTitle = false;
                             var selections = 0;
                             var deletes = 0;
-                            card.CardSelected += (_, e) => { Require(ReferenceEquals(e.Card, layout), "Keyboard selection retains the layout identity"); selections++; };
-                            card.DeleteRequested += (_, e) => { Require(ReferenceEquals(e.Card, layout), "Quick delete retains the layout identity"); deletes++; };
+                            card.CardSelected += (_, e) => { Require(Equals(e.Card, layout), "Keyboard selection retains the layout identity"); selections++; };
+                            card.DeleteRequested += (_, e) => { Require(Equals(e.Card, layout), "Quick delete retains the layout identity"); deletes++; };
                             before = routes.Count;
                             card.IsEditing = true;
                             await RenderAsync(window);
@@ -193,7 +192,7 @@ internal static class HomeCardsValidation
                             Require(selections == 2 && routes.Count == before && AutomationProperties.GetName(card) == card.CardTitle,
                                 "Enter/Space select the editable card exactly once without opening its data");
                             var delete = card.FindControl<Button>("QuickDeleteButton")!;
-                            Require(AutomationProperties.GetName(delete) == Text(HomePageResources.DeleteSelectedCardButton.Content) && delete.Focus(NavigationMethod.Tab),
+                            Require(AutomationProperties.GetName(delete) == Text("HomePage-DeleteSelectedCardButton-Content") && delete.Focus(NavigationMethod.Tab),
                                 "The visible quick-delete action is named and keyboard reachable");
                             Press(window, Key.Enter, PhysicalKey.Enter);
                             Require(deletes == 1 && selections == 2 && routes.Count == before, "Quick delete raises only its existing owner event");
@@ -202,8 +201,9 @@ internal static class HomeCardsValidation
                             await RenderAsync(window);
                             Require(card.OpenCardPageCommand.CanExecute(null) && buttons[0].IsEffectivelyEnabled && !card.Focusable,
                                 "Leaving edit mode restores preview actions and removes the editing-only Tab stop");
-                            Require(JsonSerializer.Serialize(layout) == savedLayout, "Display, selection and title preferences never rewrite layout or source parameters");
+                            Require(NativeFixtureData.Serialize(layout) == savedLayout, "Display, selection and title preferences never rewrite layout or source parameters");
                             layout.BackgroundColor = 0xFF19324B;
+                            card.UpdateCard(layout);
                             card.UpdateBackground();
                             window.RequestedThemeVariant = theme == ThemeVariant.Light ? ThemeVariant.Dark : ThemeVariant.Light;
                             await RenderAsync(window);
@@ -225,7 +225,7 @@ internal static class HomeCardsValidation
                         }
                         finally
                         {
-                            PixevalSettings.Instance.HideHomePageCardTitle = false;
+                            App.AppViewModel.AppServiceProvider.GetRequiredService<PixevalSettings>().HideHomePageCardTitle = false;
                             card.Dispose();
                             host.Content = null;
                             window.Close();
@@ -234,15 +234,16 @@ internal static class HomeCardsValidation
 
             foreach (var mode in new[] { "edit", "detach", "close", "failure", "novel-failure" })
             {
-                var card = new HomePageCardControl(new(mode == "novel-failure" ? HomePageCardSourceKind.SingleNovel : HomePageCardSourceKind.SingleImage, 0, 0) { EntryId = 991050, BackgroundColor = 0xFF19324B }, 1, 1);
+                var card = UiTestSession.Create<HomePageCardControl>(new HomePageCardLayout(mode == "novel-failure" ? HomePageCardSourceKind.SingleNovel : HomePageCardSourceKind.SingleImage, 0, 0) { EntryId = 991050, BackgroundColor = 0xFF19324B }, 1, 1);
                 var host = new PageTestHost { Content = card };
                 var window = new Window { Width = 360, Height = 320, Content = host.Shell };
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     var response = await details.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
                     await RenderAsync(window);
-                    Require(card.PreviewViewModel.PlaceholderText == Text(HomePageResources.CardPreview.LoadingTextBlock.Text), "Pending details show the existing localized loading state");
+                    Require(card.PreviewViewModel.PlaceholderText == Text("HomePage-CardPreview-LoadingTextBlock-Text"), "Pending details show the existing localized loading state");
                     var open = card.FindControl<Button>("OpenCardButton")!;
                     open.Focus(NavigationMethod.Tab);
                     Press(window, Key.Enter, PhysicalKey.Enter);
@@ -263,13 +264,13 @@ internal static class HomeCardsValidation
                     if (mode is "failure" or "novel-failure")
                         response.SetException(new HttpRequestException("Fixed single-image detail failure"));
                     else
-                        response.SetResult(JsonSerializer.Serialize(new { illust = IllustrationSample(991050) }));
+                        response.SetResult(NativeFixtureData.Serialize(new { illust = IllustrationSample(991050) }));
                     await UntilAsync(() => !card.OpenCardPageCommand.IsRunning);
                     await RenderAsync(window);
                     Require(host.Navigations == 0, "Editing, detach/reattach, closing and failure never complete a stale open intent");
                     if (mode is "failure" or "novel-failure")
                     {
-                        Require(card.PreviewViewModel.PlaceholderText == Text(HomePageResources.CardPreview.FailedTextBlock.Text), "Failed details retain the existing localized error placeholder");
+                        Require(card.PreviewViewModel.PlaceholderText == Text("HomePage-CardPreview-FailedTextBlock-Text"), "Failed details retain the existing localized error placeholder");
                         var text = card.FindControl<TextBlock>("PlaceholderTextBlock")!;
                         Require(Contrast(text.Foreground, card.FindControl<Border>("PlaceholderSurface")!.Background) >= 4.5
                             && text.TextLayout.TextLines.All(line => !line.HasCollapsed),
@@ -304,14 +305,14 @@ internal static class HomeCardsValidation
         finally
         {
             foreach (var response in pending)
-                response.TrySetResult(JsonSerializer.Serialize(new { illust = IllustrationSample(991050) }));
+                response.TrySetResult(NativeFixtureData.Serialize(new { illust = IllustrationSample(991050) }));
         }
     }
 
-    private static Illustration IllustrationSample(long id) => Illustration.CreateDefault() with { Id = id, Title = LongTitle, User = UserInfo.CreateDefault() with { Id = 900007, Name = "Fixture author" }, Width = 640, Height = 480, PageCount = 1, ThumbnailUrls = new() { Medium = ImageUri, SquareMedium = ImageUri, Large = ImageUri }, MetaSinglePage = new() { OriginalImageUrl = ImageUri } };
-    private static Novel NovelSample(long id) => Novel.CreateDefault() with { Id = id, Title = LongTitle, User = UserInfo.CreateDefault() with { Id = 900007, Name = "Fixture author" }, ThumbnailUrls = new() { Medium = ImageUri, SquareMedium = ImageUri, Large = ImageUri } };
-    private static User UserSample(long id) => User.CreateDefault() with { UserInfo = UserInfo.CreateDefault() with { Id = id, Name = LongTitle, ProfileImageUrls = new() { Medium = ImageUri } }, Illustrations = [] };
-    private static Spotlight SpotlightSample(long id) => new() { Id = id, Title = LongTitle, PureTitle = LongTitle, Thumbnail = ImageUri, ArticleUrl = $"https://www.pixivision.net/zh/a/{id}?from=fixture", Category = SpotlightCategory.Spotlight, SubcategoryLabel = "Fixture spotlight", PublishDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero) };
+    private static Illustration IllustrationSample(long id) => Illustration.CreateDefault() with { Id = id, Title = LongTitle, User = User.CreateDefault() with { Id = 900007, Name = "Fixture author" }, Width = 640, Height = 480, PageCount = 1, ImageUrls = new() { Medium = ImageUri, SquareMedium = ImageUri, Large = ImageUri }, MetaSinglePage = new() { OriginalImageUrl = ImageUri } };
+    private static Mako.Novel NovelSample(long id) => Mako.Novel.CreateDefault() with { Id = id, Title = LongTitle, User = User.CreateDefault() with { Id = 900007, Name = "Fixture author" }, ImageUrls = new() { Medium = ImageUri, SquareMedium = ImageUri, Large = ImageUri } };
+    private static User UserSample(long id) => User.CreateDefault() with { Id = id, Name = LongTitle, ProfileImageUrls = new() { Medium = ImageUri } };
+    private static SpotlightArticle SpotlightSample(long id) => new() { Id = id, Title = LongTitle, PureTitle = LongTitle, Thumbnail = ImageUri, ArticleUrl = $"https://www.pixivision.net/zh/a/{id}?from=fixture", Category = SpotlightCategory.Spotlight, SubcategoryLabel = "Fixture spotlight", PublishDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero).ToString("O") };
     private static async Task ValidateHomeEditorAsync(string directory, List<string> report)
     {
         var app = App.AppViewModel;
@@ -323,11 +324,12 @@ internal static class HomeCardsValidation
             app.HomePageCards.Add(layout);
             app.AppSettings.ApplicationSettings.HomePage.HomePageRows = 2;
             app.AppSettings.ApplicationSettings.HomePage.HomePageColumns = 2;
-            var page = new HomePage();
+            var page = UiTestSession.Create<HomePage>();
             var host = new PageTestHost { Content = page };
             var window = new Window { Width = 1000, Height = 800, RequestedThemeVariant = theme, Content = host.Shell };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 var card = page.FindControl<Grid>("HomeGrid")!.Children.OfType<HomePageCardControl>().Single();
                 await card.PreviewViewModel.LoadAsync();
@@ -345,7 +347,7 @@ internal static class HomeCardsValidation
                 Require(page.ViewModel.HasSelectedCard && card.IsSelected && page.ViewModel.SelectedCardDescription == card.CardTitle,
                     "Keyboard card selection populates the existing home editor with the same layout");
                 var columns = page.FindControl<NumericUpDown>("CardColumnEditor")!;
-                Require(AutomationProperties.GetName(columns) == Text(HomePageResources.PositionXTextBlock.Text), "The position editor exposes its localized purpose");
+                Require(AutomationProperties.GetName(columns) == Text("HomePage-PositionXTextBlock-Text"), "The position editor exposes its localized purpose");
                 columns.BringIntoView();
                 await RenderAsync(window);
                 var input = columns.GetVisualDescendants().OfType<TextBox>().Single();
@@ -356,7 +358,7 @@ internal static class HomeCardsValidation
                 window.KeyTextInput("2");
                 Press(window, Key.Enter, PhysicalKey.Enter);
                 await RenderAsync(window);
-                Require(layout.Column == 1 && Grid.GetColumn(card) == 1 && source.Count == 2 && host.Navigations == 0,
+                Require(card.Card.Column == 1 && Grid.GetColumn(card) == 1 && source.Count == 2 && host.Navigations == 0,
                     "Editing the selected column moves the same card without reloading or navigating its preview");
                 Require(input.Text == "2" && input.Bounds.Width >= 40, "The edited position remains visibly readable");
                 var restored = AppInfo.LoadHomePageCards(logger)!.Single();
@@ -402,7 +404,7 @@ internal static class HomeCardsValidation
         static double Linear(byte value) => value / 255d <= 0.04045 ? value / 255d / 12.92 : Math.Pow((value / 255d + 0.055) / 1.055, 2.4);
     }
 
-    private static string Text(string key) => I18NManager.GetResource(key);
+    private static string Text(string key) => FixtureLocalization.GetResource(key);
 
     private static void Press(Window window, Key key, PhysicalKey physical, RawInputModifiers modifiers = RawInputModifiers.None)
     {

@@ -14,9 +14,9 @@ using FluentIcons.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.Commands.Transformers;
-using Pixeval.I18N;
-using Pixeval.Models.Extensions;
-using Pixeval.Models.Options;
+using Pixeval.Localization;
+using Pixeval.Services.Background;
+using Pixeval.Config;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
@@ -35,13 +35,14 @@ internal static class IllustrationTransformValidation
         extensions.HostModels.Add(extensionHost);
         var continuous = System.Globalization.CultureInfo.CurrentUICulture.Name is "en-US" or "ru-RU";
         App.AppViewModel.AppSettings.BrowsingExperienceSettings.BrowseMode = continuous ? BrowseMode.Continuous : BrowseMode.Swipe;
-        var model = new IllustrationViewerPageViewModel(new IllustrationItemViewModel(IllustrationReaderFixture.Sample(996401, 1)), false);
+        var model = UiTestSession.Create<IllustrationViewerPageViewModel>((IllustrationReaderFixture.Sample(996401, 1)), false);
         var page = new IllustrationViewerPage(model);
         var host = new PageTestHost { Content = page };
         var window = new Window { Width = 700, Height = 760, Content = host.Shell };
         List<string> report = [];
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             await UntilAsync(() => model.CurrentImage?.CurrentPage?.LoadSuccessfully == true);
             await RenderAsync(window);
@@ -173,7 +174,7 @@ internal static class IllustrationTransformValidation
                 else
                 {
                     var submenu = viewer.ContextMenu!.Items.OfType<MenuItem>().Single(item =>
-                        item.Header?.ToString() == I18NManager.GetResource(EntryViewerPageResources.OtherImageTransformerExtensions));
+                        item.Header?.ToString() == Strings.EntryViewerPageOtherImageTransformerExtensions());
                     Require(submenu.Focus(NavigationMethod.Tab), "Other image transformers remain keyboard reachable");
                     Press(window, Key.Right, PhysicalKey.ArrowRight);
                     await RenderAsync(window);

@@ -14,10 +14,10 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Views.Search;
-using Pixeval.Views.ViewContainers;
-using Pixeval.Views.Work;
+using Pixeval.Views.Shell;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests.Ui;
 
@@ -27,19 +27,20 @@ internal static class SearchCompletionValidation
     {
         var client = App.AppViewModel.MakoClient;
         using var fixture = new OfflineSearchFixture(client);
-        await client.SetTokenAsync("fixture-refresh");
-        await client.ValidateTokenAsync();
-        Require(client.Me?.Id is 900001, "Only the isolated fixture account is active");
+        client.SetRefreshToken("fixture-refresh");
+        await FixtureAuthentication.IdentifyAsync(client);
+        Require(client.GetUser()?.Id is "900001", "Only the isolated fixture account is active");
         List<string> completed = [];
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
-            var page = new SearchPage();
+            var page = UiTestSession.Create<SearchPage>();
             var navigation = new NavigationPage();
             await navigation.PushAsync(page);
             var container = new PageTestHost { Content = navigation };
             var window = new Window { Width = 1000, Height = 720, RequestedThemeVariant = theme, Content = container.Shell };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 var box = page.FindControl<AutoCompleteBox>("SearchAutoCompleteBox")
@@ -146,7 +147,7 @@ internal static class SearchCompletionValidation
                     {
                         Render(window);
                         if (container.Notifications.Any(notification => notification.Type is NotificationType.Error
-                            && notification.Title == I18NManager.GetResource(SearchResources.Validation.SearchFailed.Title)
+                            && notification.Title == Strings.SearchValidationSearchFailedTitle()
                             && !string.IsNullOrWhiteSpace(notification.Message)))
                             return;
                         await Task.Delay(10);

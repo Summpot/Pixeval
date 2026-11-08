@@ -13,8 +13,8 @@ using Avalonia.Styling;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Models.Options;
+using Pixeval.Localization;
+using Pixeval.Config;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
@@ -31,24 +31,25 @@ internal static class IllustrationInfoValidation
         var logger = App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>();
         ConcurrentQueue<string> layoutErrors = [];
         logger.Logging += ObserveErrors;
-        await App.AppViewModel.MakoClient.SetTokenAsync("fixture-image-info");
-        await App.AppViewModel.MakoClient.ValidateTokenAsync();
+        App.AppViewModel.MakoClient.SetRefreshToken("fixture-image-info");
+        await FixtureAuthentication.IdentifyAsync(App.AppViewModel.MakoClient);
         App.AppViewModel.AppSettings.BrowsingExperienceSettings.BrowseMode = BrowseMode.Swipe;
-        var model = new IllustrationViewerPageViewModel(new IllustrationItemViewModel(IllustrationReaderFixture.Sample(996430, 1)), false);
+        var model = UiTestSession.Create<IllustrationViewerPageViewModel>((IllustrationReaderFixture.Sample(996430, 1)), false);
         var page = new IllustrationViewerPage(model);
         var host = new PageTestHost { Content = page };
         var window = new Window { Width = 1000, Height = 800, RequestedThemeVariant = ThemeVariant.Dark, Content = host.Shell };
         List<string> report = [];
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             await UntilAsync(() => model.CurrentImage?.CurrentPage?.LoadSuccessfully == true);
             await RenderAsync(window);
             var info = page.GetVisualDescendants().OfType<IllustrationViewerInfoPane>().Single();
             var expand = info.GetVisualDescendants().OfType<Button>().Single(button =>
-                Equals(ToolTip.GetTip(button), I18NManager.GetResource(EntryViewerPageResources.InfoAndComments)));
+                Equals(ToolTip.GetTip(button), Strings.EntryViewerPageInfoAndComments()));
             Require(expand.Bounds.Width >= 48 && expand.Bounds.Height >= 48
-                && Avalonia.Automation.AutomationProperties.GetName(expand) == I18NManager.GetResource(EntryViewerPageResources.InfoAndComments),
+                && Avalonia.Automation.AutomationProperties.GetName(expand) == Strings.EntryViewerPageInfoAndComments(),
                 "The information toggle has a localized accessible name and a 48 DIP target");
             if (!info.IsDocked)
                 await ActivateAsync(window, expand);

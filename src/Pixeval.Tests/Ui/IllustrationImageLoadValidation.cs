@@ -9,9 +9,8 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
-using Mako.Model;
-using Pixeval.Models.Options;
-using Pixeval.Utilities.IO.Caching;
+using Pixeval.Mako;
+using Pixeval.Config;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
@@ -24,7 +23,7 @@ internal static class IllustrationImageLoadValidation
     internal static async Task RunAsync(string directory)
     {
         using var fixture = new IllustrationReaderFixture();
-        App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache = true;
+
         List<string> report = [];
         foreach (var mode in new[] { BrowseMode.Swipe, BrowseMode.Continuous })
         {
@@ -43,10 +42,10 @@ internal static class IllustrationImageLoadValidation
             };
             Illustration Sample() => IllustrationReaderFixture.Sample(996440, 1) with
             {
-                ThumbnailUrls = new() { Medium = uri, Large = uri, SquareMedium = uri },
+                ImageUrls = new() { Medium = uri, Large = uri, SquareMedium = uri },
                 MetaSinglePage = new() { OriginalImageUrl = uri }
             };
-            var model = new IllustrationViewerPageViewModel(new IllustrationItemViewModel(Sample()), false);
+            var model = UiTestSession.Create<IllustrationViewerPageViewModel>((Sample()), false);
             var page = new IllustrationViewerPage(model);
             var host = new PageTestHost { Content = page };
             var window = new Window
@@ -58,6 +57,7 @@ internal static class IllustrationImageLoadValidation
             };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 await UntilAsync(() => requests == 1);
                 var image = model.CurrentImage!.CurrentPage!;
@@ -78,8 +78,8 @@ internal static class IllustrationImageLoadValidation
                 pending!.SetResult(new(HttpStatusCode.OK) { Content = new ByteArrayContent([1, 2, 3, 4]) });
                 await image.RetryImageCommand.ExecutionTask!;
                 Require(image.LoadErrorMessage is not null && !image.LoadSuccessfully, "Decode failure remains recoverable");
-                using (var corrupt = CacheHelper.TryGetStream(uri))
-                    Require(corrupt is not null, "The decode fixture exercises an actual cached corrupt response");
+                var corrupt = App.AppViewModel.AppServiceProvider.GetRequiredService<Pixeval.Services.Media.IImageProviderService>().ImageCache.Get(uri);
+                Require(corrupt is not null, "The decode fixture exercises an actual cached corrupt response");
                 await RenderAsync(window);
                 await ActivateAsync(window, retry);
                 await UntilAsync(() => requests == 3);
@@ -93,13 +93,14 @@ internal static class IllustrationImageLoadValidation
 
                 host.Shell.ClosePage(page);
                 uri = $"https://i.pximg.net/m3e/close-image-{mode}.png";
-                model = new IllustrationViewerPageViewModel(new IllustrationItemViewModel(Sample()), false);
+                model = UiTestSession.Create<IllustrationViewerPageViewModel>((Sample()), false);
                 page = new IllustrationViewerPage(model);
                 host.Shell.NavigateTo(page);
                 await UntilAsync(() => requests == 4);
                 image = model.CurrentImage!.CurrentPage!;
                 var closing = image.LoadOriginalImageAsync();
                 host.Shell.ClosePage(page);
+                await UntilAsync(() => token.IsCancellationRequested);
                 Require(token.IsCancellationRequested, "Production close cancels the pending image request");
                 var changed = 0;
                 image.PropertyChanged += (_, _) => changed++;

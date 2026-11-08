@@ -14,11 +14,14 @@ namespace Pixeval.Views.Works;
 
 public partial class WorkRankingPage : IconContentPage
 {
+    private (SimpleWorkKind Type, RankMode Rank, DateTime Date)? _currentQuery;
     private readonly AppSettings _settings;
     private readonly MakoClient _client;
+    private bool _changingOptions;
 
     public WorkRankingPage(AppSettings settings, MakoClient client)
-        : this(settings.SearchSettings.DefaultSimpleWorkType, settings.SearchSettings.RankOptions.IllustrationRankOption, MaxDate, settings, client)
+        : this(settings.SearchSettings.DefaultSimpleWorkType, settings.SearchSettings.DefaultSimpleWorkType == SimpleWorkKind.Novel
+            ? settings.SearchSettings.RankOptions.NovelRankOption : settings.SearchSettings.RankOptions.IllustrationRankOption, MaxDate, settings, client)
     {
     }
 
@@ -61,15 +64,15 @@ public partial class WorkRankingPage : IconContentPage
 
     private void RankDateTimeCalendarDatePicker_OnDateValidationError(object? sender, CalendarDatePickerDateValidationErrorEventArgs e) =>
         TopLevel.GetTopLevel(this)?.ViewContainer?.ShowWarning(
-            I18NManager.GetResource(WorkRankingPageResources.InvalidDate.Title),
-            I18NManager.GetResource(WorkRankingPageResources.InvalidDate.Content, MaxDate.ToString("d")));
+            Strings.WorkRankingPageInvalidDateTitle(),
+            Strings.WorkRankingPageInvalidDateContent(MaxDate.ToString("d")));
 
     private void SimpleWorkTypeComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
     {
-        var oldRankOption = RankOptionComboBox.SelectedValue;
-        ChangeEnumSource();
-        if (Equals(oldRankOption, RankOptionComboBox.SelectedValue))
-            ChangeSource();
+        _changingOptions = true;
+        try { ChangeEnumSource(); }
+        finally { _changingOptions = false; }
+        ChangeSource();
     }
 
     private void ChangeEnumSource()
@@ -83,7 +86,7 @@ public partial class WorkRankingPage : IconContentPage
 
     private void RankOptionComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
     {
-        if (RankOptionComboBox.SelectedValue is not null)
+        if (!_changingOptions && RankOptionComboBox.SelectedValue is not null)
             ChangeSource();
     }
 
@@ -104,6 +107,10 @@ public partial class WorkRankingPage : IconContentPage
         var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>();
         var rankOption = RankOptionComboBox.GetSelectedValue<RankMode>();
         var date = RankDateTimeCalendarDatePicker.SelectedDate ?? MaxDate;
+        var query = (workType, rankOption, date.Date);
+        if (!force && _currentQuery == query)
+            return;
+        _currentQuery = query;
         WorkContainer.ResetSource(_client.WorkRankingUnified(workType, rankOption, date.ToQueryDate()).AsObjects(), workType);
 
     }

@@ -230,6 +230,7 @@ public sealed class MaterialDialogTest
             var window = new Window { Width = width, Height = 640, RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light, Content = origin };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 await SettleAsync(window);
                 Assert.IsTrue(origin.Focus());

@@ -4,10 +4,10 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement;
-using Pixeval.AppManagement.Settings;
-using Pixeval.Models.Extensions;
-using SharpYaml;
+using Pixeval.Services.Core;
+using Pixeval.Config;
+using Pixeval.Services.Background;
+using System.Text.Json;
 
 namespace Pixeval.Tests;
 
@@ -15,21 +15,21 @@ namespace Pixeval.Tests;
 public sealed class ExtensionSettingsPersistenceTest
 {
     [TestMethod]
-    public void IntegerAndEnumValuesSurviveUntypedYaml()
+    public void IntegerAndEnumValuesSurviveNativeYaml()
     {
         var values = RoundTrip(7);
         Assert.AreEqual(7, values.TryGetTargetOrAddDefault("value", 3));
     }
 
     [TestMethod]
-    public void ColorRetainsAllBitsAcrossUntypedYaml()
+    public void ColorRetainsAllBitsAcrossNativeYaml()
     {
         var values = RoundTrip(0x80224466u);
         Assert.AreEqual(0x80224466u, values.TryGetTargetOrAddDefault("value", 0u));
     }
 
     [TestMethod]
-    public void DateRetainsTimeAndOffsetAcrossUntypedYaml()
+    public void DateRetainsTimeAndOffsetAcrossNativeYaml()
     {
         var date = new DateTimeOffset(2026, 11, 7, 13, 24, 35, TimeSpan.FromMinutes(330)).AddTicks(1234);
         var values = RoundTrip(date);
@@ -37,7 +37,7 @@ public sealed class ExtensionSettingsPersistenceTest
     }
 
     [TestMethod]
-    public void StringCollectionRetainsOrderAndUnicodeAcrossUntypedYaml()
+    public void StringCollectionRetainsOrderAndUnicodeAcrossNativeYaml()
     {
         var values = RoundTrip(new ObservableCollection<string> { "fixture 中文", "", "second" });
         CollectionAssert.AreEqual(new[] { "fixture 中文", "", "second" },
@@ -72,8 +72,9 @@ public sealed class ExtensionSettingsPersistenceTest
     private static Dictionary<string, object?> RoundTrip(object value)
     {
         var settings = new AppSettings { ExtensionSettings = new() { ["fixture"] = new() { ["value"] = value } } };
-        var yaml = YamlSerializer.Serialize(settings, SettingsSerializerContext.Default.AppSettings);
-        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(yaml));
-        return LegacyAppSettingsMigration.Deserialize(stream)!.ExtensionSettings["fixture"];
+        var json = JsonSerializer.Serialize(settings, SettingsSerializerContext.Default.AppSettings);
+        var yaml = PixevalConfigMethods.JsonToYaml(json);
+        var restored = PixevalConfigMethods.YamlToJson(yaml);
+        return JsonSerializer.Deserialize(restored, SettingsSerializerContext.Default.AppSettings)!.ExtensionSettings["fixture"];
     }
 }

@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+using Pixeval.Views.Viewers;
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
@@ -8,12 +10,18 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text;
+using AutoSettingsPage;
+using AutoSettingsPage.Avalonia;
+using AutoSettingsPage.Models;
+using Avalonia.Controls;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Pixeval.Config;
 using Pixeval.Localization;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
+using CommunityToolkit.Mvvm.Input;
 using Pixeval.Utilities;
 
 namespace Pixeval.ViewModels.Viewers;
@@ -30,6 +38,49 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
     private readonly bool _needRefresh;
 
     private readonly IReadOnlyList<Mako.Novel>? _novels;
+    private readonly long _initialNovelId;
+    private readonly ObservableCollection<Page> _panePages = [];
+    private Mako.Novel? _paneNovel;
+
+    public IReadOnlyList<Page> PanePages
+    {
+        get
+        {
+            var current = CurrentNovel;
+            if (_disposed || Equals(current, _paneNovel))
+                return _panePages;
+            _paneNovel = current;
+            if (current is not { } novel)
+            {
+                _panePages.Clear();
+                return _panePages;
+            }
+            if (_panePages.Count == 0)
+                _panePages.Add(new WorkInfoPage(novel));
+            else if (_panePages[0] is WorkInfoPage info)
+                info.Work = novel;
+            if (BlockedContentHelper.IsBlockedPlaceholder(novel))
+            {
+                while (_panePages.Count > 1)
+                    _panePages.RemoveAt(_panePages.Count - 1);
+                return _panePages;
+            }
+            var comments = new CommentsPage { ParentType = SimpleWorkKind.Novel, ParentId = novel.Id };
+            var related = new WorkRelatedPage(novel.Id, SimpleWorkKind.Novel, _makoClient) { IsCommandBarCollapsed = true };
+            if (_panePages.Count == 1)
+            {
+                _panePages.Add(comments);
+                _panePages.Add(related);
+                _panePages.Add(SettingsPage);
+            }
+            else
+            {
+                _panePages[1] = comments;
+                _panePages[2] = related;
+            }
+            return _panePages;
+        }
+    }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ToggleTranslationCommand))]
@@ -72,6 +123,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         _appSettings = appSettings;
         _storageEngine = storageEngine;
         _blockedContent = blockedContent;
+        _initialNovelId = id;
         _ = LoadSingleNovelAsync(id, _loadingCts.Token);
     }
 
@@ -213,6 +265,68 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
     internal AppSettings AppSettings => _appSettings;
 
     private AppSettings Settings => _appSettings;
+    private ObservableCollection<string>? _subscribedNovelFontFamily;
+    private SettingsSubView? _settingsPage;
+    private readonly List<INotifyPropertyChanged> _readingSettingsEntries = [];
+
+    private SettingsSubView SettingsPage
+    {
+        get
+        {
+            if (_settingsPage is not null)
+                return _settingsPage;
+
+            LocalSettingsEntryHelper.Initialize();
+            var group = SettingsBuilder.CreateGroupList(_appSettings)
+                .NewGroup(t => t.NovelSettings, entries => entries
+                    .Color(t => t.NovelBackground)
+                    .Color(t => t.NovelFontColor)
+                    .Font(t => t.NovelFontFamily)
+                    .Enum(t => t.NovelFontWeight)
+                    .Int(t => t.NovelFontSize, 5, 100, 1)
+                    .Int(t => t.NovelLineHeight, 0, 150, 1)
+                    .Int(t => t.NovelMaxWidth, 50, 10000, 50))
+                .Build()[0];
+            if (!_disposed)
+            {
+                foreach (var entry in group)
+                    if (entry is INotifyPropertyChanged observable)
+                    {
+                        observable.PropertyChanged += OnReadingSettingChanged;
+                        _readingSettingsEntries.Add(observable);
+                    }
+                ObserveNovelFonts();
+            }
+            return _settingsPage = new SettingsSubView(group) { Classes = { "compact" } };
+        }
+    }
+
+    private void OnReadingSettingChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_disposed || e.PropertyName is not (null or "Value") || sender is not ISettingsEntry entry)
+            return;
+
+        if (entry.Token == nameof(NovelSettingsGroup.NovelFontFamily))
+        {
+            ObserveNovelFonts();
+            OnPropertyChanged(nameof(NovelFontFamilyObject));
+        }
+        else
+            OnPropertyChanged(entry.Token);
+    }
+
+    private void ObserveNovelFonts()
+    {
+        var fonts = Settings.NovelSettings.NovelFontFamily;
+        if (ReferenceEquals(fonts, _subscribedNovelFontFamily))
+            return;
+        if (_subscribedNovelFontFamily is { } previous)
+            previous.CollectionChanged -= OnNovelFontFamilyChanged;
+        _subscribedNovelFontFamily = fonts;
+        fonts.CollectionChanged += OnNovelFontFamilyChanged;
+    }
+
+    private void OnNovelFontFamilyChanged(object? sender, NotifyCollectionChangedEventArgs e) => OnPropertyChanged(nameof(NovelFontFamilyObject));
 
     public uint NovelBackground => Settings.NovelSettings.NovelBackground;
 
@@ -302,7 +416,7 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             else
             {
                 SeriesInfo = WorkSeriesInfoViewModel.Create(novel, SimpleWorkKind.Novel);
-                var content = await _makoClient.GetNovelContentStructuredAsync(novel.Id);
+                var content = await _makoClient.GetNovelContentCachedAsync(novel.Id, token);
                 token.ThrowIfCancellationRequested();
                 if (index != CurrentWorkIndex || _disposed)
                     return;
@@ -422,6 +536,8 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
             var loaded = await _makoClient.GetNovelAsync(id, token);
             var novel = _blockedContent?.Replace(loaded) ?? loaded;
             token.ThrowIfCancellationRequested();
+            if (novel.Id != id)
+                throw new InvalidOperationException(Strings.EntryViewerPageLoadFailed());
             onLoaded(novel);
             return novel;
         }
@@ -454,6 +570,17 @@ public sealed partial class NovelViewerPageViewModel : PagedViewerViewModel, IDi
         _syncMarkerCts?.Dispose();
         _loadingCts.Cancel();
         _loadingCts.Dispose();
+        RetryCommand.NotifyCanExecuteChanged();
+        foreach (var entry in _readingSettingsEntries)
+            entry.PropertyChanged -= OnReadingSettingChanged;
+        _readingSettingsEntries.Clear();
+        if (_subscribedNovelFontFamily is { } novelFontFamily)
+        {
+            novelFontFamily.CollectionChanged -= OnNovelFontFamilyChanged;
+            _subscribedNovelFontFamily = null;
+        }
+
+
     }
 
     #endregion

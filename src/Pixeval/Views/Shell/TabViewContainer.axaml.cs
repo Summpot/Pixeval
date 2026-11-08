@@ -21,7 +21,7 @@ using TabView.Avalonia;
 
 namespace Pixeval.Views.Shell;
 
-public partial class TabViewContainer : ViewContainerBase
+public sealed partial class TabViewContainer : ViewContainerBase
 {
     private static IUiHost? Host;
     private static INavigationService? Navigation;
@@ -88,6 +88,11 @@ public partial class TabViewContainer : ViewContainerBase
         if (TopLevel.GetTopLevel(this) is not { } topLevel)
             return;
 
+        if (topLevel is Window window)
+        {
+            window.Closed -= OnWindowClosed;
+            window.Closed += OnWindowClosed;
+        }
         var imageProvider = _services.GetService<IImageProviderService>();
         Source.SetImageProvider(topLevel, imageProvider);
         Source.SetImageProvider(this, imageProvider);
@@ -109,6 +114,8 @@ public partial class TabViewContainer : ViewContainerBase
         base.OnDetachedFromVisualTree(e);
     }
 
+    public event EventHandler<Page>? PageOpened;
+
     public override void NavigateTo(Page page, bool removeCurrentPage = false)
     {
         if (TabsControl.Pages is not IList<Page> pages)
@@ -121,10 +128,51 @@ public partial class TabViewContainer : ViewContainerBase
 
         if (removeCurrentPage && selected is not null)
         {
-            ViewModelDisposal.Dispose(selected);
-            selected.DataContext = null;
-            _ = pages.Remove(selected);
+            ClosePage(selected);
         }
+        PageOpened?.Invoke(this, page);
+    }
+
+    private void OnWindowClosed(object? sender, EventArgs args)
+    {
+        if (sender is Window window)
+            window.Closed -= OnWindowClosed;
+        CloseAllPages();
+        if (DataContext is IDisposable disposable)
+            disposable.Dispose();
+        DataContext = null;
+    }
+
+    public IReadOnlyList<Page> Pages => TabsControl.Pages?.ToArray() ?? [];
+
+    public Page? SelectedPage => TabsControl.SelectedPage;
+
+    public void SelectPage(Page page)
+    {
+        if (TabsControl.Pages is IList<Page> pages && pages.Contains(page))
+            TabsControl.SelectedIndex = pages.IndexOf(page);
+    }
+
+    public void ClosePage(Page page)
+    {
+        if (TabsControl.Pages is not IList<Page> pages || !pages.Contains(page))
+            return;
+        RequestClose(page);
+        _ = pages.Remove(page);
+    }
+
+    private static void RequestClose(Control page)
+    {
+        var args = new RoutedEventArgs(ViewModelDisposal.RequestDisposeEvent, page);
+        page.RaiseEvent(args);
+        if (!args.Handled)
+            ViewModelDisposal.Dispose(page);
+    }
+
+    public void CloseAllPages()
+    {
+        foreach (var page in Pages)
+            ClosePage(page);
     }
 
     public void ReloadNavigation() => (DataContext as TabViewContainerViewModel)?.RebuildNavigation();

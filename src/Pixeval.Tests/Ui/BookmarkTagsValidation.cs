@@ -13,10 +13,9 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
+using Pixeval.Mako;
 using Pixeval.Utilities;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests.Ui;
 
@@ -26,9 +25,9 @@ internal static class BookmarkTagsValidation
     {
         var client = App.AppViewModel.MakoClient;
         using var fixture = new OfflineSearchFixture(client);
-        await client.SetTokenAsync("fixture-bookmark-tags");
-        await client.ValidateTokenAsync();
-        var response = JsonSerializer.Serialize(new
+        client.SetRefreshToken("fixture-bookmark-tags");
+        await FixtureAuthentication.IdentifyAsync(client);
+        var response = NativeFixtureData.Serialize(new
         {
             bookmark_detail = new
             {
@@ -41,13 +40,15 @@ internal static class BookmarkTagsValidation
         List<string> report = [];
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
             foreach (var width in new[] { 360, 700 })
-                foreach (var type in new[] { SimpleWorkType.Illustration, SimpleWorkType.Novel })
+                foreach (var type in new[] { SimpleWorkKind.Illustration, SimpleWorkKind.Novel })
                 {
                     var scenario = $"{theme.Key}-{width}-{type}";
-                    var selector = new TagSelector { WorkType = type, WorkId = 901001 };
-                    var window = new Window { Width = width, Height = 700, RequestedThemeVariant = theme, Content = new Border { Padding = new Thickness(16), Child = selector } };
+                    var selector = new TagSelector { WorkKind = type, WorkId = 901001 };
+                    var host = new PageTestHost { Content = new Border { Padding = new Thickness(16), Child = selector } };
+                    var window = new Window { Width = width, Height = 700, RequestedThemeVariant = theme, Content = host.Shell };
                     try
                     {
+                        Pixeval.Common.MaterialAnimation.Initialize(window);
                         window.Show();
                         var pending = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
                         fixture.BookmarkResponseFactory = (_, _) => pending.Task;
@@ -113,15 +114,17 @@ internal static class BookmarkTagsValidation
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
             var anchor = new Button { Content = "Bookmark tags", HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top };
-            var window = new Window { Width = 360, Height = 720, RequestedThemeVariant = theme, Content = anchor };
+            var host = new PageTestHost { Content = anchor };
+            var window = new Window { Width = 360, Height = 720, RequestedThemeVariant = theme, Content = host.Shell };
             var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             TaskCompletionSource? late = null;
             var submissions = 0;
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 await RenderAsync(window);
-                await BookmarkTagSelectorFlyoutHelper.ShowAsync(anchor, SimpleWorkType.Illustration, 901001, async _ => { submissions++; await release.Task; });
+                await BookmarkTagSelectorFlyoutHelper.ShowAsync(anchor, SimpleWorkKind.Illustration, 901001, async _ => { submissions++; await release.Task; });
                 await RenderAsync(window);
                 var selector = window.GetVisualDescendants().OfType<TagSelector>().Single();
                 InWindow(window, selector);
@@ -139,7 +142,7 @@ internal static class BookmarkTagsValidation
                 await RenderAsync(window);
                 Require(TopLevel.GetTopLevel(selector) is null, "Successful async confirmation detaches the real flyout content");
                 late = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                await BookmarkTagSelectorFlyoutHelper.ShowAsync(anchor, SimpleWorkType.Novel, 901001, async _ => { submissions++; await late.Task; });
+                await BookmarkTagSelectorFlyoutHelper.ShowAsync(anchor, SimpleWorkKind.Novel, 901001, async _ => { submissions++; await late.Task; });
                 await RenderAsync(window);
                 var closing = window.GetVisualDescendants().OfType<TagSelector>().Single();
                 await ActivateAsync(window, closing.FindControl<Button>("ConfirmButton")!);
@@ -167,7 +170,7 @@ internal static class BookmarkTagsValidation
                 Dispatcher.UIThread.UnhandledException += ObserveFailure;
                 try
                 {
-                    await BookmarkTagSelectorFlyoutHelper.ShowAsync(anchor, SimpleWorkType.Illustration, 901001,
+                    await BookmarkTagSelectorFlyoutHelper.ShowAsync(anchor, SimpleWorkKind.Illustration, 901001,
                         _ => ++attempts == 1 ? Task.FromException(expectedFailure) : Task.CompletedTask);
                     await RenderAsync(window);
                     var retry = window.GetVisualDescendants().OfType<TagSelector>().Single();

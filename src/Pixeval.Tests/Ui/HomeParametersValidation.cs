@@ -13,14 +13,13 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Pixeval.AppManagement;
+using Pixeval.Mako;
+using Pixeval.Services.Core;
 using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Models.Home;
-using Pixeval.Models.Options;
+using Pixeval.Localization;
+using Pixeval.Config;
 using Pixeval.ViewModels.Home;
-using Pixeval.Views.Capability;
+using Pixeval.Views.Works;
 using Pixeval.Views.Home;
 
 namespace Pixeval.Tests.Ui;
@@ -31,8 +30,8 @@ internal static class HomeParametersValidation
     {
         var app = App.AppViewModel;
         using var fixture = new OfflineSearchFixture(app.MakoClient);
-        await app.MakoClient.SetTokenAsync("fixture-home-parameters");
-        await app.MakoClient.ValidateTokenAsync();
+        app.MakoClient.SetRefreshToken("fixture-home-parameters");
+        await FixtureAuthentication.IdentifyAsync(app.MakoClient);
         app.HomePageCards.Clear();
         AppInfo.SaveHomePageCards(app.HomePageCards);
         var cardsPath = Path.Combine(AppInfo.SettingsFolder, "home_page_cards.yaml");
@@ -41,12 +40,13 @@ internal static class HomeParametersValidation
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
             foreach (var width in new[] { 360, 1000 })
             {
-                var page = new HomePage();
+                var page = UiTestSession.Create<HomePage>();
                 var host = new PageTestHost { Content = page };
                 var window = new Window { Width = width, Height = 800, RequestedThemeVariant = theme, Content = host.Shell };
                 var key = $"{theme.Key}-{width}";
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     page.ViewModel.IsEditMode = true;
                     await RenderAsync(window);
@@ -55,7 +55,7 @@ internal static class HomeParametersValidation
                     var library = page.FindControl<ItemsControl>("CardLibrary")!;
                     var buttons = library.GetVisualDescendants().OfType<Button>().Where(button => button.DataContext is HomeCardDefinition).ToArray();
                     Require(buttons.Length == 19, "Every existing home source remains in the actual card library");
-                    foreach (var definition in HomeCardDefinitions.All)
+                    foreach (var definition in App.AppViewModel.AppServiceProvider.GetRequiredService<HomeCardDefinitions>().All)
                     {
                         key = $"{definition.SourceKind}-{theme.Key}-{width}";
                         var button = buttons.Single(button => ReferenceEquals(button.DataContext, definition));
@@ -101,7 +101,7 @@ internal static class HomeParametersValidation
                                         await ActivateAsync(window, page.FindControl<Button>("AddConfiguredCardButton")!);
                                         Require(app.HomePageCards.Count == 0 && fixture.RequestLog.Count == initialRequests,
                                             "The real Add action refuses invalid parameters without saving or starting a source");
-                                        Require(host.Notifications.Any(notification => notification.Title == I18NManager.GetResource(HomePageResources.InvalidSourceParameterWarning.Title)),
+                                        Require(host.Notifications.Any(notification => notification.Title == Strings.HomePageInvalidSourceParameterWarningTitle()),
                                             "Rejected parameters retain the existing localized warning");
                                     }
                                     var input = id ? " 991007 " : textEditor.Kind == HomeCardParameterKinds.Tag ? "  标签 / fixture tag  " : "  alpha beta 中文  ";
@@ -124,29 +124,29 @@ internal static class HomeParametersValidation
                                     await EditTextAsync(window, dateInput, WorkRankingPage.MaxDate.AddDays(10).ToString("d", CultureInfo.CurrentCulture));
                                     Require(picker.SelectedDate?.Date == valid && date.SelectedDate.Date == valid,
                                         "A future home ranking date cannot replace the last valid selection");
-                                    Require(host.Notifications.Any(notification => notification.Title == I18NManager.GetResource(WorkRankingPageResources.InvalidDate.Title)),
+                                    Require(host.Notifications.Any(notification => notification.Title == Strings.WorkRankingPageInvalidDateTitle()),
                                         "Invalid ranking input uses the existing localized date warning");
                                     values[date.Kind] = valid;
                                     Fits(picker, window);
                                     break;
                             }
                         }
-                        Require(page.ViewModel.TryCreateCardFromSourceParameters(out var draft) && draft is not null && draft.SourceKind == definition.SourceKind,
+                        Require(page.ViewModel.TryCreateCardFromSourceParameters(out var draft) && draft is not null && draft.Value.SourceKind == definition.SourceKind,
                             "Valid parameter input produces the same source kind");
                         foreach (var (kind, expected) in values)
                         {
                             object? actualValue = kind switch
                             {
-                                HomeCardParameterKinds.WorkType => draft!.WorkType,
-                                HomeCardParameterKinds.SimpleWorkType => draft!.SimpleWorkType,
-                                HomeCardParameterKinds.PrivacyPolicy => draft!.PrivacyPolicy,
-                                HomeCardParameterKinds.RankOption => draft!.RankOption,
-                                HomeCardParameterKinds.UserId => draft!.UserId,
-                                HomeCardParameterKinds.EntryId => draft!.EntryId,
-                                HomeCardParameterKinds.SeriesId => draft!.SeriesId,
-                                HomeCardParameterKinds.SearchText => draft!.SearchText,
-                                HomeCardParameterKinds.Tag => draft!.Tag,
-                                HomeCardParameterKinds.RankingDate => draft!.GetRankingDate().LocalDateTime.Date,
+                                HomeCardParameterKinds.WorkKind => draft!.Value.WorkKind,
+                                HomeCardParameterKinds.SimpleWorkKind => draft!.Value.SimpleWorkKind,
+                                HomeCardParameterKinds.PrivacyRestrict => draft!.Value.PrivacyRestrict,
+                                HomeCardParameterKinds.RankMode => draft!.Value.RankMode,
+                                HomeCardParameterKinds.UserId => draft!.Value.UserId,
+                                HomeCardParameterKinds.EntryId => draft!.Value.EntryId,
+                                HomeCardParameterKinds.SeriesId => draft!.Value.SeriesId,
+                                HomeCardParameterKinds.SearchText => draft!.Value.SearchText,
+                                HomeCardParameterKinds.Tag => draft!.Value.Tag,
+                                HomeCardParameterKinds.RankingDate => draft!.Value.GetRankingDate().LocalDateTime.Date,
                                 _ => throw new InvalidOperationException("Unexpected parameter kind")
                             };
                             Require(Equals(expected, actualValue), "The configured draft preserves the exact typed parameter: " + kind);
@@ -174,8 +174,8 @@ internal static class HomeParametersValidation
                 }
             }
         Require(fixture.UnexpectedRequests.IsEmpty, "Parameter editing stays inside the offline account fixture");
-        var guarded = new HomePageViewModel();
-        guarded.SelectTemplate(HomeCardDefinitions.Get(HomePageCardSourceKind.WorkRanking));
+        var guarded = UiTestSession.Create<HomePageViewModel>();
+        guarded.SelectTemplate(App.AppViewModel.AppServiceProvider.GetRequiredService<HomeCardDefinitions>().Get(HomePageCardSourceKind.WorkRanking));
         var guardedDate = guarded.ActiveParameterEditors.OfType<HomeCardRankingDateParameterEditorViewModel>().Single();
         guardedDate.UseSpecifiedDate = true;
         guardedDate.SelectedDate = WorkRankingPage.MaxDate.AddDays(10);
@@ -190,19 +190,19 @@ internal static class HomeParametersValidation
 
     private static HomeCardParameterKinds Parameters(HomePageCardSourceKind kind) => kind switch
     {
-        HomePageCardSourceKind.WorkRecommended or HomePageCardSourceKind.WorkNew => HomeCardParameterKinds.WorkType,
-        HomePageCardSourceKind.WorkBookmarks => HomeCardParameterKinds.UserId | HomeCardParameterKinds.SimpleWorkType | HomeCardParameterKinds.PrivacyPolicy | HomeCardParameterKinds.Tag,
-        HomePageCardSourceKind.WorkRanking => HomeCardParameterKinds.SimpleWorkType | HomeCardParameterKinds.RankOption | HomeCardParameterKinds.RankingDate,
-        HomePageCardSourceKind.WorkFollowing => HomeCardParameterKinds.SimpleWorkType | HomeCardParameterKinds.PrivacyPolicy,
-        HomePageCardSourceKind.WorkMyPixiv => HomeCardParameterKinds.SimpleWorkType,
-        HomePageCardSourceKind.WorkRelated => HomeCardParameterKinds.EntryId | HomeCardParameterKinds.SimpleWorkType,
-        HomePageCardSourceKind.WorkPosts => HomeCardParameterKinds.UserId | HomeCardParameterKinds.WorkType,
-        HomePageCardSourceKind.WorkSearch => HomeCardParameterKinds.SimpleWorkType | HomeCardParameterKinds.SearchText,
+        HomePageCardSourceKind.WorkRecommended or HomePageCardSourceKind.WorkNew => HomeCardParameterKinds.WorkKind,
+        HomePageCardSourceKind.WorkBookmarks => HomeCardParameterKinds.UserId | HomeCardParameterKinds.SimpleWorkKind | HomeCardParameterKinds.PrivacyRestrict | HomeCardParameterKinds.Tag,
+        HomePageCardSourceKind.WorkRanking => HomeCardParameterKinds.SimpleWorkKind | HomeCardParameterKinds.RankMode | HomeCardParameterKinds.RankingDate,
+        HomePageCardSourceKind.WorkFollowing => HomeCardParameterKinds.SimpleWorkKind | HomeCardParameterKinds.PrivacyRestrict,
+        HomePageCardSourceKind.WorkMyPixiv => HomeCardParameterKinds.SimpleWorkKind,
+        HomePageCardSourceKind.WorkRelated => HomeCardParameterKinds.EntryId | HomeCardParameterKinds.SimpleWorkKind,
+        HomePageCardSourceKind.WorkPosts => HomeCardParameterKinds.UserId | HomeCardParameterKinds.WorkKind,
+        HomePageCardSourceKind.WorkSearch => HomeCardParameterKinds.SimpleWorkKind | HomeCardParameterKinds.SearchText,
         HomePageCardSourceKind.UserSearch => HomeCardParameterKinds.SearchText,
-        HomePageCardSourceKind.UserFollowing => HomeCardParameterKinds.UserId | HomeCardParameterKinds.PrivacyPolicy,
+        HomePageCardSourceKind.UserFollowing => HomeCardParameterKinds.UserId | HomeCardParameterKinds.PrivacyRestrict,
         HomePageCardSourceKind.UserMyPixiv or HomePageCardSourceKind.SingleUser => HomeCardParameterKinds.UserId,
         HomePageCardSourceKind.SingleImage or HomePageCardSourceKind.SingleNovel => HomeCardParameterKinds.EntryId,
-        HomePageCardSourceKind.SingleSeries => HomeCardParameterKinds.SeriesId | HomeCardParameterKinds.SimpleWorkType,
+        HomePageCardSourceKind.SingleSeries => HomeCardParameterKinds.SeriesId | HomeCardParameterKinds.SimpleWorkKind,
         HomePageCardSourceKind.UserRecommended or HomePageCardSourceKind.UserFollower or HomePageCardSourceKind.Spotlight => HomeCardParameterKinds.None,
         _ => throw new InvalidOperationException("Unlisted home source")
     };

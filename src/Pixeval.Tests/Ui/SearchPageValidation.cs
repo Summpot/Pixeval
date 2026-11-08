@@ -16,15 +16,13 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
+using Pixeval.Mako;
 using Material3Expressive.Components;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement;
+using Pixeval.Services.Core;
 using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Models.Database;
-using Pixeval.Models.Database.Managers;
+using Pixeval.Localization;
+using Pixeval.Storage;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Search;
@@ -47,7 +45,7 @@ internal static class SearchPageValidation
             source.CopyTo(bytes);
             fixture.ImageResponses[imageUri] = bytes.ToArray();
         }
-        fixture.TrendingResponseFactory = uri => JsonSerializer.Serialize(new
+        fixture.TrendingResponseFactory = uri => NativeFixtureData.Serialize(new
         {
             trend_tags = new[]
             {
@@ -55,19 +53,19 @@ internal static class SearchPageValidation
                 {
                     Tag = uri.AbsolutePath.EndsWith("novel", StringComparison.Ordinal) ? "小说 热门 tag" : "插画 热门 tag",
                     TranslatedName = "Trending translation",
-                    Illustration = Illustration.CreateDefault() with
+                    Illust = Illustration.CreateDefault() with
                     {
                         Id = 909001, Title = "Trending fixture", Width = 128, Height = 128,
-                        ThumbnailUrls = new() { Medium = imageUri, Large = imageUri, SquareMedium = imageUri }
+                        ImageUrls = new() { Medium = imageUri, Large = imageUri, SquareMedium = imageUri }
                     }
                 }
             }
         });
-        await client.SetTokenAsync("fixture-search-page");
-        await client.ValidateTokenAsync();
-        var persistence = App.AppViewModel.HistoryPersistHelper;
+        client.SetRefreshToken("fixture-search-page");
+        await FixtureAuthentication.IdentifyAsync(client);
+        var persistence = App.AppViewModel;
         await persistence.RestoreTask;
-        var historyManager = App.AppViewModel.AppServiceProvider.GetRequiredService<SearchHistoryPersistentManager>();
+        var historyManager = App.AppViewModel.StorageEngine.HistoryRepository;
         var pinned = App.AppViewModel.AppSettings.BrowsingExperienceSettings.PinnedTags;
         List<string> report = [];
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
@@ -76,15 +74,15 @@ internal static class SearchPageValidation
                 pinned.Clear();
                 persistence.SearchHistoryEntries.Clear();
                 pinned.Add(Pinned);
-                persistence.AddSearchHistory(History, "翻译与原文 separate display text");
-                var model = SearchPageViewModel.Instance;
+                persistence.SearchHistory.Add(History, "翻译与原文 separate display text");
+                var model = App.AppViewModel.AppServiceProvider.GetRequiredService<SearchPageViewModel>();
                 model.SearchText = "";
-                model.SelectedTrendingTagsType = SimpleWorkType.Illustration;
-                model.SelectedAdvancedOptionsType = SimpleWorkType.Illustration;
-                var page = new SearchPage();
+                model.SelectedTrendingTagsType = SimpleWorkKind.Illustration;
+                model.SelectedAdvancedOptionsType = SimpleWorkKind.Illustration;
+                var page = UiTestSession.Create<SearchPage>();
                 var navigation = new NavigationPage();
                 await navigation.PushAsync(page);
-                List<(Type Type, object? Header, object? WorkType)> routes = [];
+                List<(Type Type, object? Header, object? WorkKind)> routes = [];
                 var container = new PageTestHost
                 {
                     Content = navigation,
@@ -94,14 +92,15 @@ internal static class SearchPageValidation
                 var scenario = $"{theme.Key}-{width}";
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     await UntilAsync(() => model.IllustrationTrendingTags.Count == 1 && model.NovelTrendingTags.Count == 1);
                     await RenderAsync(window);
                     var input = page.FindControl<AutoCompleteBox>("SearchAutoCompleteBox")!;
                     HorizontalBounds(window, input);
                     HorizontalBounds(window, (Control) input.InnerRightContent!);
-                    Require(AutomationProperties.GetName(input) == I18NManager.GetResource(SearchResources.SearchBox.PlaceholderText)
-                        && AutomationProperties.GetName((Control) input.InnerRightContent!) == I18NManager.GetResource(MainPageResources.Tab.Search),
+                    Require(AutomationProperties.GetName(input) == Strings.SearchSearchBoxPlaceholderText()
+                        && AutomationProperties.GetName((Control) input.InnerRightContent!) == Strings.MainPageTabSearch(),
                         "Search input and action expose localized names for their actual purpose");
                     Save(window, directory, "search-page-before-" + scenario);
                     var pinnedChip = Chip(Pinned);
@@ -117,24 +116,24 @@ internal static class SearchPageValidation
                         }
                     }
 
-                    await InvokeContextAsync(pinnedChip, SearchResources.SearchHistory.Copy);
+                    await InvokeContextAsync(pinnedChip, "Search-SearchHistory-Copy");
                     Require(await window.Clipboard!.TryGetTextAsync() == Pinned, "Pinned copy keeps the full original text in the headless clipboard");
-                    await InvokeContextAsync(historyChip, SearchResources.SearchHistory.AddPinnedTag);
-                    Require(pinned.Contains(History) && historyManager.GetByValue(History) is null, "Pinning moves exactly that search history entry into pinned settings");
-                    await InvokeContextAsync(Chip(History), SearchResources.SearchHistory.Unpin);
-                    Require(!pinned.Contains(History) && historyManager.GetByValue(History) is not null, "Unpinning restores the tag to persisted history");
+                    await InvokeContextAsync(historyChip, "Search-SearchHistory-AddPinnedTag");
+                    Require(pinned.Contains(History) && historyManager.GetSearchHistoryByValue(History) is null, "Pinning moves exactly that search history entry into pinned settings");
+                    await InvokeContextAsync(Chip(History), "Search-SearchHistory-Unpin");
+                    Require(!pinned.Contains(History) && historyManager.GetSearchHistoryByValue(History) is not null, "Unpinning restores the tag to persisted history");
                     AppInfo.SaveAppSettings(App.AppViewModel.AppSettings);
                     Require(AppInfo.LoadAppSettings(App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>())!.BrowsingExperienceSettings.PinnedTags.SequenceEqual(pinned), "Pinned values round-trip through the unchanged settings format");
 
                     await ActivateAsync(Chip(Pinned));
                     Require(routes.Count == 1 && model.SearchText == Pinned && routes[^1].Type == typeof(WorkSearchResultPage)
-                        && Equals(routes[^1].WorkType, SimpleWorkType.Illustration), "A pinned tag starts exactly one illustration search with its complete keyword");
+                        && Equals(routes[^1].WorkKind, SimpleWorkKind.Illustration), "A pinned tag starts exactly one illustration search with its complete keyword");
                     container.CloseDestinationAndReturn();
                     await ActivateAsync(Chip(History));
                     Require(routes.Count == 2 && model.SearchText == History, "History search submits exactly once and preserves the complete keyword");
                     container.CloseDestinationAndReturn();
-                    await InvokeContextAsync(Chip(History), SearchResources.SearchHistory.Delete);
-                    Require(historyManager.GetByValue(History) is null && !persistence.SearchHistoryEntries.Any(entry => entry.Value == History),
+                    await InvokeContextAsync(Chip(History), "Search-SearchHistory-Delete");
+                    Require(historyManager.GetSearchHistoryByValue(History) is null && !persistence.SearchHistoryEntries.Any(entry => entry.Value == History),
                         "Deleting history removes only the selected persisted item");
 
                     var trendingType = page.GetVisualDescendants().OfType<TabStrip>().Single();
@@ -146,24 +145,24 @@ internal static class SearchPageValidation
                     Require(novelTab.Focus(NavigationMethod.Tab), "Trending type is keyboard reachable");
                     Press(window, Key.Space, PhysicalKey.Space);
                     await RenderAsync(window);
-                    Require(model.SelectedTrendingTagsType == SimpleWorkType.Novel, "Trending type keyboard selection changes the real data source");
+                    Require(model.SelectedTrendingTagsType == SimpleWorkKind.Novel, "Trending type keyboard selection changes the real data source");
                     var card = page.GetVisualDescendants().OfType<Card>().Single(control => control.DataContext is TrendingTag);
                     await ActivateAsync(card);
-                    Require(routes.Count == 3 && Equals(routes[^1].WorkType, SimpleWorkType.Novel)
-                        && Equals(routes[^1].Header, I18NManager.GetResource(MainPageResources.SearchResultFormatted, "小说 热门 tag")),
+                    Require(routes.Count == 3 && Equals(routes[^1].WorkKind, SimpleWorkKind.Novel)
+                        && Equals(routes[^1].Header, Strings.MainPageSearchResultFormatted("小说 热门 tag")),
                         "Trending action uses its own work type and tag exactly once");
                     container.CloseDestinationAndReturn();
                     var expander = page.FindControl<Expander>("AdvancedExpander")!;
                     expander.IsExpanded = true;
                     await RenderAsync(window);
                     var tabs = page.FindControl<TabbedPage>("AdvancedOptionsTabControl")!;
-                    model.SelectedAdvancedOptionsType = SimpleWorkType.Novel;
+                    model.SelectedAdvancedOptionsType = SimpleWorkKind.Novel;
                     await RenderAsync(window);
                     Require(tabs.CurrentPage is NovelSearchOptionsPage, "Advanced result type retains its original page and model binding");
                     expander.IsExpanded = false;
                     await RenderAsync(window);
                     await ActivateAsync(Chip(Pinned));
-                    Require(routes.Count == 4 && Equals(routes[^1].WorkType, SimpleWorkType.Novel), "Collapsed ordinary search retains the selected result type");
+                    Require(routes.Count == 4 && Equals(routes[^1].WorkKind, SimpleWorkKind.Novel), "Collapsed ordinary search retains the selected result type");
                     container.CloseDestinationAndReturn();
                     window.Width = width == 360 ? 1000 : 360;
                     await RenderAsync(window);
@@ -174,7 +173,7 @@ internal static class SearchPageValidation
                     report.Add($"PASS {scenario}: complete tags/translation, clipboard, pin/unpin/delete persistence, single search actions, trending/result type and resize");
 
                     SuggestionChip Chip(string value) => page.GetVisualDescendants().OfType<SuggestionChip>().Single(control =>
-                        control.DataContext is string tag && tag == value || control.DataContext is SearchHistoryEntry entry && entry.Value == value);
+                        control.DataContext is string tag && tag == value || control.DataContext is Pixeval.Storage.SearchHistoryRecord entry && entry.Value == value);
 
                     async Task InvokeContextAsync(Control control, string resource)
                     {
@@ -182,7 +181,7 @@ internal static class SearchPageValidation
                         var menu = control.ContextMenu!;
                         menu.Open(control);
                         await RenderAsync(window);
-                        var item = menu.Items.OfType<MenuItem>().Single(item => Equals(item.Header, I18NManager.GetResource(resource)));
+                        var item = menu.Items.OfType<MenuItem>().Single(item => Equals(item.Header, FixtureLocalization.GetResource(resource)));
                         Require(item.Focus(NavigationMethod.Tab), "Tag context action is keyboard reachable");
                         Press(window, Key.Enter, PhysicalKey.Enter);
                         await RenderAsync(window);

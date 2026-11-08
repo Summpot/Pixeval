@@ -11,7 +11,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 using SmoothScroll.Avalonia.Controls;
 
@@ -24,8 +24,8 @@ public sealed class MarkdownScrollChainingTest
     [ClassInitialize]
     public static void Initialize(TestContext _)
     {
-        I18NManager.CandidatePaths.Add(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval")));
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+
+        AppLocalization.Instance.SetLanguage("zh-Hans");
     }
 
     [TestMethod]
@@ -41,6 +41,7 @@ public sealed class MarkdownScrollChainingTest
             var window = new Window { Width = 500, Height = 400, Content = markdown };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 window.UpdateLayout();
                 Dispatcher.UIThread.RunJobs();

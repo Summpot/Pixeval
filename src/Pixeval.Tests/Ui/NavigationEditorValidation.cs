@@ -19,9 +19,9 @@ using AvaloniaEdit;
 using CommunityToolkit.Avalonia.Controls;
 using FluentIcons.Common;
 using Material3Expressive.Components;
-using Pixeval.AppManagement;
-using Pixeval.I18N;
-using Pixeval.Models.Navigation;
+using Pixeval.Services.Core;
+using Pixeval.Localization;
+using Pixeval.Config;
 using Pixeval.Utilities;
 using Pixeval.Views.Settings;
 
@@ -51,13 +51,14 @@ internal static class NavigationEditorValidation
                 var scenario = $"{theme.Key}-{width}";
                 App.AppViewModel.NavigationMenuYamlText = NavigationMenuYaml.DefaultYaml;
                 AppInfo.SaveNavigationMenuYaml(NavigationMenuYaml.DefaultYaml);
-                var page = new NavigationSettingsPage();
+                var page = UiTestSession.Create<NavigationSettingsPage>();
                 var navigation = new NavigationPage();
                 await navigation.PushAsync(page);
                 var container = new PageTestHost { Content = navigation };
                 var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = container.Shell };
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     Render(window);
                     var editor = page.FindControl<TextEditor>("YamlEditor")
@@ -74,14 +75,14 @@ internal static class NavigationEditorValidation
                     {
                         var position = primary.TranslatePoint(default, window)!.Value;
                         Require(position.X >= 0 && position.X + primary.Bounds.Width <= window.ClientSize.Width + 1,
-                            $"Visible command fits the window: {primary.Label} at {position}, {primary.Bounds.Size}");
+                            $"Visible command fits the window: {primary.Label} at {position}, {primary.Bounds.Size}; window={window.ClientSize}, bar={bar.Bounds}, max={bar.MaxWidth}, label={bar.DefaultLabelPosition}");
                     }
 
                     editor.Text = ValidYaml;
                     var parsed = NavigationYamlParser.Parse(ValidYaml);
                     Require(parsed.Configuration is not null && parsed.IsValid, "Fixed valid YAML parses");
                     var expectedFormat = NavigationYamlFormatter.Format(parsed.Configuration!);
-                    Click(NavigationSettingsPageResources.FormatButton.Content);
+                    Click("NavigationSettingsPage-FormatButton-Content");
                     Require(editor.Text == expectedFormat, "Format uses the production formatter");
                     Require(App.AppViewModel.NavigationMenuYamlText == NavigationMenuYaml.DefaultYaml, "Format does not apply changes");
                     completed.Add($"{scenario}: format preserves navigation semantics without applying");
@@ -121,16 +122,16 @@ internal static class NavigationEditorValidation
                     }
                     completed.Add($"{scenario}: invalid YAML and save shortcut preserve the last valid file");
 
-                    Click(NavigationSettingsPageResources.ResetButton.Content);
+                    Click("NavigationSettingsPage-ResetButton-Content");
                     Require(editor.Text == NavigationMenuYaml.DefaultYaml && apply.IsEffectivelyEnabled, "Reset changes the editor to defaults");
                     Require(File.ReadAllBytes(savedPath).SequenceEqual(saved), "Reset waits for explicit apply");
                     completed.Add($"{scenario}: reset edits defaults without overwriting saved navigation");
 
                     editor.TextArea.Caret.Offset = editor.Text.Length;
                     var length = editor.Text.Length;
-                    Click(NavigationSettingsPageResources.InsertFolderButton.Content);
+                    Click("NavigationSettingsPage-InsertFolderButton-Content");
                     Require(editor.Text.Length > length && editor.TextArea.Caret.Offset == editor.Text.Length, "Insert folder keeps the caret after the inserted text");
-                    Require(editor.Text.Contains("$" + NavigationSettingsPageResources.DefaultFolderTitle, StringComparison.Ordinal), "Inserted folder retains its i18n resource reference");
+                    Require(editor.Text.Contains("$NavigationSettingsPage.DefaultFolderTitle", StringComparison.Ordinal), "Inserted folder retains its i18n resource reference");
                     Require(File.ReadAllBytes(savedPath).SequenceEqual(saved), "Insert folder waits for explicit apply");
                     completed.Add($"{scenario}: folder insertion preserves its resource key and pending edit state");
 
@@ -166,7 +167,7 @@ internal static class NavigationEditorValidation
 
                     void Click(string resource)
                     {
-                        var label = I18NManager.GetResource(resource);
+                        var label = FixtureLocalization.GetResource(resource);
                         var button = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => button.Label == label);
                         bar.IsOpen = button.IsInOverflow;
                         Render(window);

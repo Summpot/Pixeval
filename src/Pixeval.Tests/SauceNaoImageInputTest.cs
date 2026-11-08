@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Headless;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Search;
 
@@ -17,8 +17,8 @@ public sealed class SauceNaoImageInputTest
     [ClassInitialize]
     public static void Initialize(TestContext _)
     {
-        I18NManager.CandidatePaths.Add(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval")));
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+
+        AppLocalization.Instance.SetLanguage("zh-Hans");
     }
 
     [TestMethod]
@@ -27,7 +27,7 @@ public sealed class SauceNaoImageInputTest
         await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerRenderingTest.ViewerTestApplication));
         _ = await session.Dispatch<bool>(async () =>
         {
-            using var model = new SauceNaoSearchPageViewModel();
+            using var model = new SauceNaoSearchPageViewModel(new Pixeval.Config.AppSettings(), NullClipboardService.Instance);
             var bytes = Sample();
             await model.LoadAsync(new MemoryStream(bytes));
             var preview = model.Image;
@@ -52,7 +52,7 @@ public sealed class SauceNaoImageInputTest
         await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerRenderingTest.ViewerTestApplication));
         _ = await session.Dispatch<bool>(async () =>
         {
-            using var model = new SauceNaoSearchPageViewModel();
+            using var model = new SauceNaoSearchPageViewModel(new Pixeval.Config.AppSettings(), NullClipboardService.Instance);
             using var delayed = new DelayedStream(Sample());
             var loading = model.LoadAsync(delayed);
             await delayed.Started.Task;
@@ -80,7 +80,7 @@ public sealed class SauceNaoImageInputTest
         await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerRenderingTest.ViewerTestApplication));
         _ = await session.Dispatch<bool>(async () =>
         {
-            using var model = new SauceNaoSearchPageViewModel();
+            using var model = new SauceNaoSearchPageViewModel(new Pixeval.Config.AppSettings(), NullClipboardService.Instance);
             using var valid = new MemoryStream(Sample());
             await model.LoadAsync(valid);
             var image = model.Image;

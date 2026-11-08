@@ -1,6 +1,7 @@
 <UserControl
     x:Class="Pixeval.Views.Works.UserContainer"
     xmlns="https://github.com/avaloniaui"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -25,10 +26,10 @@
                 IsDynamicOverflowEnabled="True">
                 <CommandBarButton
                     x:Name="RefreshButton"
-                    AutomationProperties.Name="{I18N {x:Static pixeval:WorkContainerResources+RefreshButton.Label}}"
+                    AutomationProperties.Name="{CompiledBinding [WorkContainer-RefreshButton-Label], Source={x:Static loc:LocalizationManager.Instance}}"
                     Click="RefreshButton_OnClick"
                     Icon="{markup:SymbolIcon ArrowClockwise}"
-                    Label="{I18N {x:Static pixeval:WorkContainerResources+RefreshButton.Label}}" />
+                    Label="{CompiledBinding [WorkContainer-RefreshButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
             </CommandBar>
 
             <WrapPanel

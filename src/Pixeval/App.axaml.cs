@@ -30,8 +30,12 @@ using Pixeval.Views.Shell;
 
 namespace Pixeval;
 
-public class App : Application, IAsyncDisposable
+public sealed class App : Application, IAsyncDisposable
 {
+    internal Action<IServiceCollection>? ConfigureServices { get; init; }
+    internal bool EnableDeveloperTools { get; init; } = true;
+    internal Action<MakoClient, Pixeval.Maho.MahoClient, IImageProviderService, Pixeval.Download.DownloadManager>? ConfigureTransport { get; init; }
+
     /// <summary>
     /// 确保随时能记录日志
     /// </summary>
@@ -45,6 +49,7 @@ public class App : Application, IAsyncDisposable
 
     public override void Initialize()
     {
+        Services = null;
         RegisterUnhandledExceptionHandler();
         AppViewModel = new AppViewModel(this, Logger);
         AppLocalization.Instance.SetLanguage(AppViewModel.AppSettings.ApplicationSettings.CultureName);
@@ -61,7 +66,7 @@ public class App : Application, IAsyncDisposable
         };
 
 #if DEBUG
-        this.AttachDeveloperTools();
+        if (EnableDeveloperTools) this.AttachDeveloperTools();
 #endif
     }
 
@@ -132,7 +137,12 @@ public class App : Application, IAsyncDisposable
 
     public override void OnFrameworkInitializationCompleted()
     {
-        var viewContainer = ActivatorUtilities.CreateInstance<TabViewContainer>(AppViewModel.AppServiceProvider);
+        if (ApplicationLifetime is not (IClassicDesktopStyleApplicationLifetime or ISingleViewApplicationLifetime))
+        {
+            base.OnFrameworkInitializationCompleted();
+            return;
+        }
+        var viewContainer = CreateViewContainer(ApplicationLifetime is IClassicDesktopStyleApplicationLifetime);
 
         switch (ApplicationLifetime)
         {
@@ -214,7 +224,7 @@ public class App : Application, IAsyncDisposable
         catch (Exception e)
         {
             AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
-                .LogError(nameof(LoginAsync), e);
+                .LogError(nameof(OpenInitialPageAsync), e);
             AppViewModel.OnTokenRefreshed(null);
             viewContainer.ShowError(Strings.MainPageLoggingInFailed(), LoginErrorHelper.GetMessage(e));
         }
@@ -226,6 +236,31 @@ public class App : Application, IAsyncDisposable
     private bool IsLastVisibleWindow(Window window) =>
         ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
         && desktop.Windows.Where(static candidate => candidate.IsVisible).All(candidate => ReferenceEquals(candidate, window));
+
+    public static TabViewContainer CreateViewContainer(bool enableTabTearOff = false)
+    {
+        var container = ActivatorUtilities.CreateInstance<TabViewContainer>(AppViewModel.AppServiceProvider);
+        container.SetInterTabController(enableTabTearOff);
+        return container;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+        try
+        {
+            await AppViewModel.DisposeAsync();
+        }
+        finally
+        {
+            foreach (var unregister in _unregisterExceptionHandlers)
+                unregister();
+            _unregisterExceptionHandlers.Clear();
+            GC.SuppressFinalize(this);
+        }
+    }
 
     private void RegisterUnhandledExceptionHandler()
     {

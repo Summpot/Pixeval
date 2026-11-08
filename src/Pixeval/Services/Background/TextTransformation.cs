@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Pixeval.Extensions.Common.Commands.Transformers;
 
-namespace Pixeval.Models.Extensions;
+namespace Pixeval.Services.Background;
 
 internal static class TextTransformation
 {

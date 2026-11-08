@@ -33,7 +33,16 @@ public class IncrementalLoadingCollection<IType> : ObservableRangeCollection<ITy
 
     public bool IsInterrupted => !IsLoading && Source.IsInterrupted;
 
-    public Exception? LoadError { get; private set; }
+    public Exception? LoadError
+    {
+        get;
+        private set
+        {
+            if (ReferenceEquals(field, value)) return;
+            field = value;
+            OnPropertyChanged(new PropertyChangedEventArgs(nameof(LoadError)));
+        }
+    }
 
     /// <summary>
     /// Gets a value indicating how many items that must be retrieved for each incremental call.
@@ -169,7 +178,10 @@ public class IncrementalLoadingCollection<IType> : ObservableRangeCollection<ITy
                 return 0;
             }
 
-            AddRange(data as IReadOnlyList<IType> ?? [.. data]);
+            // Transfer the whole page before notifying observers. A close during the
+            // notification releases the published page through Dispose.
+            AddRange(data as IReadOnlyList<IType> ?? data.ToArray());
+            ThrowIfPageCanceled(token, data, data.Count);
 
             HasMoreItems = Source.HasMoreItems;
             return data.Count;
@@ -177,6 +189,25 @@ public class IncrementalLoadingCollection<IType> : ObservableRangeCollection<ITy
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private static void ThrowIfPageCanceled(CancellationToken token, IReadOnlyCollection<IType> data, int publishedCount)
+    {
+        if (!token.IsCancellationRequested)
+            return;
+
+        var cancellation = new OperationCanceledException(token);
+        // Published entries belong to the provider. Only release entries it never received.
+        IncrementalPageLifetime.DisposeItems(data.Skip(publishedCount), cancellation);
+        throw cancellation;
+    }
+
+    private Task<int>? GetRunningLoadingTask()
+    {
+        lock (_loadingTaskGate)
+        {
+            return _loadingTask is { IsCompleted: false } loadingTask ? loadingTask : null;
         }
     }
 
@@ -220,6 +251,9 @@ public class IncrementalLoadingCollection<IType> : ObservableRangeCollection<ITy
         }
 
         _lifetimeCts.Cancel();
+        var entries = this.ToArray();
+        Clear();
+        IncrementalPageLifetime.DisposeItems(entries, new ObjectDisposedException(GetType().Name));
         if (Source is IDisposable disposable)
             disposable.Dispose();
         if (loadingTask is { IsCompleted: false })

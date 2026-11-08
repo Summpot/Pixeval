@@ -67,3 +67,7 @@ SaveAs = Save Displayed Image
 ViewOriginal = View Original
 
 OtherImageTransformerExtensions = Other Image Transformer Extensions
+
+PageSelector = Image page
+
+PageSelectorHelp = Use Left and Right to change image pages, or Home and End for the first and last page.

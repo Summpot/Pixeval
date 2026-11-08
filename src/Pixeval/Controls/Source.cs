@@ -46,6 +46,30 @@ public static class Source
             typeof(Source),
             defaultValue: false);
 
+    public static readonly AttachedProperty<Control?> DecodeTargetProperty =
+        AvaloniaProperty.RegisterAttached<Image, Control?>("DecodeTarget", typeof(Source));
+    private static readonly AttachedProperty<SizedImageLoader?> SizedImageLoaderProperty =
+        AvaloniaProperty.RegisterAttached<Image, SizedImageLoader?>("SizedImageLoader", typeof(Source));
+    public static Control? GetDecodeTarget(Image image) => image.GetValue(DecodeTargetProperty);
+    public static void SetDecodeTarget(Image image, Control? value) => image.SetValue(DecodeTargetProperty, value);
+
+    private static void OnDecodeTargetChanged(Image image, AvaloniaPropertyChangedEventArgs e)
+    {
+        image.Source = null;
+        AbandonLoad(image, CacheLoadLifetimeProperty);
+        image.GetValue(SizedImageLoaderProperty)?.Dispose();
+        image.ClearValue(SizedImageLoaderProperty);
+        SetLoaded(image, false);
+        if (GetDecodeTarget(image) is { } target)
+        {
+            var loader = new SizedImageLoader(image, target);
+            image.SetValue(SizedImageLoaderProperty, loader);
+            loader.UpdateRequest();
+        }
+        else
+            TryStartLoads(image);
+    }
+
     private static readonly AttachedProperty<SourceLoadLifetime?> CacheLoadLifetimeProperty =
         AvaloniaProperty.RegisterAttached<Control, SourceLoadLifetime?>(
             "CacheLoadLifetime",
@@ -73,6 +97,8 @@ public static class Source
 
     static Source()
     {
+        DecodeTargetProperty.Changed.AddClassHandler<Image>(OnDecodeTargetChanged);
+        PlatformProperty.Changed.AddClassHandler<Image>((image, _) => image.GetValue(SizedImageLoaderProperty)?.UpdateRequest());
         CacheProperty.Changed.AddClassHandler<Control>(OnCacheChanged);
         BackgroundCacheProperty.Changed.AddClassHandler<Control>(OnBackgroundCacheChanged);
     }
@@ -113,6 +139,11 @@ public static class Source
     private static void OnCacheChanged(Control element, AvaloniaPropertyChangedEventArgs e)
     {
         EnsureLifetime(element);
+        if (element is Image image && image.GetValue(SizedImageLoaderProperty) is { } loader)
+        {
+            loader.UpdateRequest();
+            return;
+        }
 
         if (e.GetNewValue<string>() is not { } value)
         {
@@ -151,7 +182,7 @@ public static class Source
                 return;
             if (GetCache(element) != value)
             {
-                bitmap.Dispose();
+                lifetime.Dispose();
                 return;
             }
 
@@ -198,7 +229,7 @@ public static class Source
                 return;
             if (GetBackgroundCache(element) != value)
             {
-                bitmap.Dispose();
+                lifetime.Dispose();
                 return;
             }
 
@@ -313,6 +344,11 @@ public static class Source
 
     private static void TryLoadCache(Control element, string value)
     {
+        if (element is Image image && image.GetValue(SizedImageLoaderProperty) is { } loader)
+        {
+            loader.UpdateRequest();
+            return;
+        }
         if (GetLoaded(element) || !element.IsAttachedToVisualTree())
             return;
         if (ResolveImageProvider(element) is not { } images)
@@ -363,6 +399,8 @@ public static class Source
         if (sender is not Control element)
             return;
 
+        ClearImageSource(element);
+        SetLoaded(element, false);
         DisposeLifetime(element, CacheLoadLifetimeProperty);
         DisposeLifetime(element, BackgroundCacheLoadLifetimeProperty);
     }
@@ -385,9 +423,13 @@ internal sealed class SourceLoadLifetime : IDisposable
     private readonly HashSet<SourceLoadOperation> _operations = [];
     private SourceLoadOperation? _current;
 
+    public bool IsRegistered { get; private set; }
+
     public bool IsDisposed { get; private set; }
 
-    public SourceLoadOperation BeginLoad()
+    public void MarkRegistered() => IsRegistered = true;
+
+    public SourceLoadOperation BeginLoad(bool preserveCurrentSource = false)
     {
         var operation = new SourceLoadOperation(OnOperationDisposed);
         SourceLoadOperation? previous = null;
@@ -412,7 +454,8 @@ internal sealed class SourceLoadLifetime : IDisposable
 
         // Recycling a container only makes its old result obsolete. Let the cache fill finish so
         // virtualized scrolling doesn't turn every binding change into a canceled HTTP request.
-        previous?.Abandon();
+        if (!preserveCurrentSource)
+            previous?.Abandon();
         return operation;
     }
 
@@ -462,6 +505,8 @@ internal sealed class SourceLoadOperation : IDisposable
     private readonly Action<SourceLoadOperation> _onDisposed;
     private readonly Lock _gate = new();
     private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private readonly CancellationTokenSource _decodeCancellationTokenSource = new();
+    private IDisposable? _source;
     private bool _isAbandoned;
     private bool _isDisposed;
 
@@ -469,9 +514,12 @@ internal sealed class SourceLoadOperation : IDisposable
     {
         _onDisposed = onDisposed;
         Token = _cancellationTokenSource.Token;
+        DecodeToken = _decodeCancellationTokenSource.Token;
     }
 
     public CancellationToken Token { get; }
+
+    public CancellationToken DecodeToken { get; }
 
     public bool TrySetSource(IDisposable source)
     {
@@ -480,6 +528,7 @@ internal sealed class SourceLoadOperation : IDisposable
         {
             if (!_isDisposed && !_isAbandoned)
             {
+                _source = source;
                 return true;
             }
 
@@ -498,30 +547,48 @@ internal sealed class SourceLoadOperation : IDisposable
 
     public void Abandon()
     {
+        IDisposable? source;
         lock (_gate)
         {
             if (_isDisposed || _isAbandoned)
                 return;
 
             _isAbandoned = true;
+            _decodeCancellationTokenSource.Cancel();
+            source = _source;
+            _source = null;
+            if (source is null)
+                return;
+
+            _isDisposed = true;
         }
+
+        source.Dispose();
+        Complete(cancel: false);
     }
 
     public void Dispose()
     {
+        IDisposable? source;
         lock (_gate)
         {
             if (_isDisposed)
                 return;
 
             _isDisposed = true;
+            source = _source;
+            _source = null;
         }
 
+        source?.Dispose();
         Complete(cancel: true);
     }
 
     private void Complete(bool cancel)
     {
+        _decodeCancellationTokenSource.Cancel();
+        _decodeCancellationTokenSource.Dispose();
+
         if (cancel)
             _cancellationTokenSource.Cancel();
         _cancellationTokenSource.Dispose();

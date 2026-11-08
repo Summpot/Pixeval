@@ -33,8 +33,15 @@ pub struct SauceNaoSearchResult {
 #[derive(Deserialize, Debug)]
 pub(crate) struct RawSauceNaoResponse {
     pub header: RawSauceNaoResponseHeader,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_results")]
     pub results: Vec<RawSauceNaoResult>,
+}
+
+
+// A malformed match must not discard otherwise valid results in the response.
+fn deserialize_results<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Vec<RawSauceNaoResult>, D::Error> {
+    let values = Vec::<serde_json::Value>::deserialize(deserializer)?;
+    Ok(values.into_iter().filter_map(|value| serde_json::from_value(value).ok()).collect())
 }
 
 #[derive(Deserialize, Debug)]

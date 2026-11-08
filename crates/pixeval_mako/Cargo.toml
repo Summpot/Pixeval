@@ -22,4 +22,5 @@ hex.workspace = true
 md-5.workspace = true
 
 [dev-dependencies]
+async-trait = "0.1"
 tokio = { workspace = true, features = ["full"] }

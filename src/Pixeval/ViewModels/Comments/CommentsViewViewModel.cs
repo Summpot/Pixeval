@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Pixeval.Pixiv;
 using Pixeval.Mako;
@@ -11,6 +12,7 @@ namespace Pixeval.ViewModels.Comments;
 public class CommentsViewViewModel : EntryViewViewModel<CommentRecord, CommentRecord>
 {
     private readonly Dictionary<long, string> _drafts = [];
+    private readonly HashSet<long> _deleting = [];
 
     public long ParentId { get; }
 
@@ -63,14 +65,14 @@ public class CommentsViewViewModel : EntryViewViewModel<CommentRecord, CommentRe
     public CommentsViewViewModel OpenReplies(long commentId) =>
         new(ParentType, ParentId, _makoClient, _userSessionService, _blockedContent, commentId);
 
-    public async Task<CommentRecord> AddCommentAsync(string content)
+    public async Task<CommentRecord> AddCommentAsync(string content, CancellationToken token = default)
     {
-        return await _makoClient.AddWorkCommentUnifiedAsync(ParentType, ParentId, content, ReplyToCommentId, null);
+        return await _makoClient.AddWorkCommentUnifiedAsync(ParentType, ParentId, content, ReplyToCommentId, null, token);
     }
 
-    public async Task<CommentRecord> AddStickerAsync(int stampId)
+    public async Task<CommentRecord> AddStickerAsync(int stampId, CancellationToken token = default)
     {
-        return await _makoClient.AddWorkCommentUnifiedAsync(ParentType, ParentId, "", ReplyToCommentId, stampId);
+        return await _makoClient.AddWorkCommentUnifiedAsync(ParentType, ParentId, "", ReplyToCommentId, stampId, token);
     }
 
     public void AddComment(CommentRecord comment)
@@ -81,12 +83,15 @@ public class CommentsViewViewModel : EntryViewViewModel<CommentRecord, CommentRe
         Source.Insert(0, _blockedContent is { } blocked ? blocked.Replace(comment) : comment);
     }
 
-    public async Task<bool> DeleteCommentAsync(CommentRecord comment)
+    public async Task<bool> DeleteCommentAsync(CommentRecord comment, CancellationToken token = default)
     {
-        if (!IsOwnComment(comment))
+        if (!IsOwnComment(comment) || !_deleting.Add(comment.Id))
             return false;
-
-        return (await _makoClient.DeleteWorkCommentUnifiedAsync(ParentType, comment.Id)).Success;
+        try
+        {
+            return (await _makoClient.DeleteWorkCommentUnifiedAsync(ParentType, comment.Id, token)).Success;
+        }
+        finally { _deleting.Remove(comment.Id); }
     }
 
     public void RemoveComment(long commentId)

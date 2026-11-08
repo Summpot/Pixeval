@@ -10,6 +10,8 @@ namespace Pixeval.Download;
 
 public partial record struct DownloadFolderSnapshot
 {
+    public string GroupProgressMessage => Strings.DownloadItemGroupProgressFormatted((int)ActiveCount, (int)CompletedCount, (int)ErrorCount);
+
     public string Title =>
         $"{DisplayName} · {SymbolComboBoxItem.GetResource((WorkSubscriptionType)SubscriptionType)} · {SymbolComboBoxItem.GetResource((WorkSubscriptionWorkKind)WorkKind)}";
 

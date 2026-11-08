@@ -49,6 +49,7 @@ public static class IllustrationAutoPlayBehavior
         {
             control.DataContextChanged += OnDataContextChanged;
             control.Unloaded += OnUnloaded;
+            control.Loaded += OnLoaded;
             Attach(control);
         }
         else
@@ -67,6 +68,11 @@ public static class IllustrationAutoPlayBehavior
     {
         if (sender is Control control)
             Stop(control);
+    }
+
+    private static void OnLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control control) UpdateTimer(control);
     }
 
     private static void Attach(Control control)
@@ -131,6 +137,7 @@ public static class IllustrationAutoPlayBehavior
     {
         control.DataContextChanged -= OnDataContextChanged;
         control.Unloaded -= OnUnloaded;
+        control.Loaded -= OnLoaded;
         Unsubscribe(control);
         Stop(control);
         control.SetValue(TargetProperty, null);

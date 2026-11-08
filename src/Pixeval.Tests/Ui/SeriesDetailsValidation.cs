@@ -18,12 +18,10 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
-using Mako.Net.Responses;
+using Pixeval.Mako;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.Models.Options;
-using Pixeval.Models.Subscriptions;
+using Pixeval.Config;
+using Pixeval.Services.Background;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
@@ -42,8 +40,8 @@ internal static class SeriesDetailsValidation
     {
         var client = App.AppViewModel.MakoClient;
         using var fixture = new OfflineSearchFixture(client);
-        await client.SetTokenAsync("fixture-series-details");
-        await client.ValidateTokenAsync();
+        client.SetRefreshToken("fixture-series-details");
+        await FixtureAuthentication.IdentifyAsync(client);
         using (var asset = AssetLoader.Open(new Uri("avares://Pixeval/Assets/Platforms/pixiv.png")))
         using (var buffer = new MemoryStream())
         {
@@ -64,22 +62,23 @@ internal static class SeriesDetailsValidation
         List<string> report = [];
         try
         {
-            foreach (var type in new[] { SimpleWorkType.Illustration, SimpleWorkType.Novel })
+            foreach (var type in new[] { SimpleWorkKind.Illustration, SimpleWorkKind.Novel })
                 foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                     foreach (var width in new[] { 360, 1000 })
                     {
-                        using var model = new SeriesViewerPageViewModel(type, SeriesId);
-                        var page = new SeriesViewerPage(model);
+                        using var model = UiTestSession.Create<SeriesViewerPageViewModel>(type, SeriesId);
+                        var page = UiTestSession.Create<SeriesViewerPage>(model);
                         var host = new PageTestHost { Content = page };
                         var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = host.Shell };
                         var key = $"{type}-{theme.Key}-{width}";
                         try
                         {
+                            Pixeval.Common.MaterialAnimation.Initialize(window);
                             window.Show();
                             var initial = await NextAsync(details);
                             Require(model.IsLoading && !model.AddToWatchlistCommand.CanExecute(null), "Watchlist remains disabled until the series exists");
-                            Require(initial.Uri.AbsolutePath == (type == SimpleWorkType.Novel ? "/v2/novel/series" : "/v1/illust/series")
-                                && HttpUtility.ParseQueryString(initial.Uri.Query)[type == SimpleWorkType.Novel ? "series_id" : "illust_series_id"] == SeriesId.ToString(),
+                            Require(initial.Uri.AbsolutePath == (type == SimpleWorkKind.Novel ? "/v2/novel/series" : "/v1/illust/series")
+                                && HttpUtility.ParseQueryString(initial.Uri.Query)[type == SimpleWorkKind.Novel ? "series_id" : "illust_series_id"] == SeriesId.ToString(),
                                 "Series loading keeps the original type-specific endpoint and ID");
                             initial.Response.SetResult(Response(type));
                             await UntilAsync(() => !model.IsLoading);
@@ -110,13 +109,13 @@ internal static class SeriesDetailsValidation
                             Require(!model.RemoveFromWatchlistCommand.CanExecute(null), "Add and remove share one pending state");
                             await model.RemoveFromWatchlistCommand.ExecuteAsync(null);
                             Require(!actions.Reader.TryPeek(out _), "A direct competing command cannot start another watchlist request");
-                            Require(operation.Uri.AbsolutePath == $"/v1/watchlist/{(type == SimpleWorkType.Novel ? "novel" : "manga")}/add"
+                            Require(operation.Uri.AbsolutePath == $"/v1/watchlist/{(type == SimpleWorkKind.Novel ? "novel" : "manga")}/add"
                                 && HttpUtility.ParseQueryString(operation.Body)["series_id"] == SeriesId.ToString(), "Watchlist preserves its own endpoint and series ID");
                             operation.Response.SetResult("{}");
                             await UntilAsync(() => model.IsWatchlistAdded);
                             await RenderAsync(window);
                             Require(!add.IsVisible && subscriptions.TryGetSubscription(SeriesId, WorkSubscriptionType.Series,
-                                    type == SimpleWorkType.Novel ? WorkSubscriptionWorkKind.Novel : WorkSubscriptionWorkKind.Manga) is null,
+                                    type == SimpleWorkKind.Novel ? WorkSubscriptionWorkKind.Novel : WorkSubscriptionWorkKind.Manga) is null,
                                 "Server watchlist success never creates a local download subscription");
                             var remove = bar.PrimaryCommands.Concat(bar.SecondaryCommands).OfType<CommandBarButton>()
                                 .SingleOrDefault(button => ReferenceEquals(button.Command, model.RemoveFromWatchlistCommand));
@@ -154,16 +153,17 @@ internal static class SeriesDetailsValidation
                             window.Close();
                         }
                     }
-            foreach (var type in new[] { SimpleWorkType.Illustration, SimpleWorkType.Novel })
+            foreach (var type in new[] { SimpleWorkKind.Illustration, SimpleWorkKind.Novel })
             {
-                using var failed = new SeriesViewerPageViewModel(type, SeriesId);
+                using var failed = UiTestSession.Create<SeriesViewerPageViewModel>(type, SeriesId);
                 (await NextAsync(details)).Response.SetException(new HttpRequestException("Fixed series detail failure"));
                 await UntilAsync(() => !failed.IsLoading);
                 Require(failed.SeriesDetail is null && failed.WorksEngine is null && !string.IsNullOrWhiteSpace(failed.LoadErrorMessage),
                     "Failed series details cannot publish an ID-zero record or engine");
-                using var closed = new SeriesViewerPageViewModel(type, SeriesId);
+                using var closed = UiTestSession.Create<SeriesViewerPageViewModel>(type, SeriesId);
                 var initial = await NextAsync(details);
                 closed.Dispose();
+                await UntilAsync(() => initial.Token.IsCancellationRequested);
                 Require(initial.Token.IsCancellationRequested, "Closing cancels pending series details");
                 initial.Response.SetResult(Response(type));
                 await Task.Delay(100);
@@ -171,25 +171,25 @@ internal static class SeriesDetailsValidation
                 Require(closed.SeriesDetail is null && closed.WorksEngine is null, "Late series details never publish after close");
                 report.Add($"PASS {type}-detail-lifetime: failed/default response and close cancellation");
             }
-            using (var switched = new SeriesViewerPageViewModel(SimpleWorkType.Novel, SeriesId))
+            using (var switched = UiTestSession.Create<SeriesViewerPageViewModel>(SimpleWorkKind.Novel, SeriesId))
             {
-                (await NextAsync(details)).Response.SetResult(Response(SimpleWorkType.Novel));
+                (await NextAsync(details)).Response.SetResult(Response(SimpleWorkKind.Novel));
                 await UntilAsync(() => !switched.IsLoading);
                 var action = switched.AddToWatchlistCommand.ExecuteAsync(null);
                 var operation = await NextAsync(actions);
-                fixture.AuthResponseFactory = (_, _) => Task.FromResult(JsonSerializer.Serialize(TokenResponse.CreateDefault() with
+                fixture.AuthResponseFactory = (_, _) => Task.FromResult(NativeFixtureData.Serialize(new TokenResponse { AccessToken = "fixture", RefreshToken = "fixture", TokenType = "Bearer", ExpiresIn = 3600 } with
                 {
                     AccessToken = "fixture-second-access",
                     RefreshToken = "fixture-second-refresh",
                     ExpiresIn = 3600,
-                    User = TokenUser.CreateDefault() with { Id = 900002, Name = "Fixture second account", Account = "fixture-second" }
+                    User = new TokenUser { Id = "", Name = "", Account = "" } with { Id = "900002", Name = "Fixture second account", Account = "fixture-second" }
                 }));
-                await client.SetTokenAsync("fixture-second-account");
-                await client.ValidateTokenAsync();
-                Require(client.Me?.Id == 900002, "The watchlist sample changes the isolated account");
+                client.SetRefreshToken("fixture-second-account");
+                await FixtureAuthentication.IdentifyAsync(client);
+                Require(client.GetUser()?.Id == "900002", "The watchlist sample changes the isolated account");
                 operation.Response.SetResult("{}");
                 await action;
-                Require(!switched.IsWatchlistAdded && !switched.SeriesDetail!.WatchlistAdded, "The previous account cannot publish a late watchlist result");
+                Require(!switched.IsWatchlistAdded && !switched.SeriesDetail!.Value.WatchlistAdded, "The previous account cannot publish a late watchlist result");
                 report.Add("PASS watchlist-account: late completion cannot change the next account's series state");
             }
             Require(fixture.UnexpectedRequests.IsEmpty, "Series detail requests remain inside the fixed endpoint matrix");
@@ -204,9 +204,9 @@ internal static class SeriesDetailsValidation
         }
     }
 
-    private static string Response(SimpleWorkType type)
+    private static string Response(SimpleWorkKind type)
     {
-        var user = UserInfo.CreateDefault() with { Id = 900007, Name = "长作者 / A long series author", ProfileImageUrls = new() { Medium = ImageUri } };
+        var user = User.CreateDefault() with { Id = 900007, Name = "长作者 / A long series author", ProfileImageUrls = new() { Medium = ImageUri } };
         var image = Illustration.CreateDefault() with
         {
             Id = 994008,
@@ -215,13 +215,13 @@ internal static class SeriesDetailsValidation
             Width = 640,
             Height = 480,
             PageCount = 1,
-            ThumbnailUrls = new() { Medium = ImageUri, SquareMedium = ImageUri, Large = ImageUri },
+            ImageUrls = new() { Medium = ImageUri, SquareMedium = ImageUri, Large = ImageUri },
             MetaSinglePage = new() { OriginalImageUrl = ImageUri }
         };
-        var novel = Novel.CreateDefault() with { Id = 994008, Title = image.Title, User = user, ThumbnailUrls = image.ThumbnailUrls };
-        return type == SimpleWorkType.Novel
-            ? JsonSerializer.Serialize(new { novel_series_detail = NovelSeriesDetail.CreateDefault() with { Id = SeriesId, Title = Title, Caption = Caption, User = user, ContentCount = 12345 }, novel_series_first_novel = novel, novel_series_latest_novel = novel, novels = new[] { novel }, next_url = (string?) null })
-            : JsonSerializer.Serialize(new { illust_series_detail = MangaSeriesDetail.CreateDefault() with { Id = SeriesId, Title = Title, Caption = Caption, User = user, SeriesWorkCount = 12345, CoverImageUrls = new() { Medium = ImageUri } }, illust_series_first_illust = image, illusts = new[] { image }, next_url = (string?) null });
+        var novel = Mako.Novel.CreateDefault() with { Id = 994008, Title = image.Title, User = user, ImageUrls = image.ImageUrls };
+        return type == SimpleWorkKind.Novel
+            ? NativeFixtureData.Serialize(new { novel_series_detail = Series.CreateDefault() with { Id = SeriesId, Title = Title, MaskText = Caption, User = user, PublishedContentCount = 12345 }, novel_series_first_novel = novel, novel_series_latest_novel = novel, novels = new[] { novel }, next_url = (string?) null })
+            : NativeFixtureData.Serialize(new { illust_series_detail = Series.CreateDefault() with { Id = SeriesId, Title = Title, MaskText = Caption, User = user, PublishedContentCount = 12345, CoverUrl = ImageUri }, illust_series_first_illust = image, illusts = new[] { image }, next_url = (string?) null });
     }
     private static Task<Pending> NextAsync(Channel<Pending> channel) => channel.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
     private static async Task ActivateAsync(Window window, CommandBar bar, CommandBarButton button)

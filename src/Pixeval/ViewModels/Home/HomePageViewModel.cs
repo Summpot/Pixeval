@@ -230,7 +230,9 @@ public partial class HomePageViewModel : ViewModelBase
         if (template.HasParameter(HomeCardParameterKinds.SearchText) && string.IsNullOrWhiteSpace(_sourceSearchTextEditor.Text))
             return false;
 
-        var useSpecifiedRankingDate = _sourceRankingDateEditor.UseSpecifiedDate;
+        var useSpecifiedRankingDate = template.HasParameter(HomeCardParameterKinds.RankingDate) && _sourceRankingDateEditor.UseSpecifiedDate;
+        if (useSpecifiedRankingDate && _sourceRankingDateEditor.SelectedDate.Date > MakoClient.RankingMaxDateTime.LocalDateTime.Date)
+            return false;
         var rawRankingDate = useSpecifiedRankingDate
             ? new DateTimeOffset(_sourceRankingDateEditor.SelectedDate).ToString("o")
             : null;

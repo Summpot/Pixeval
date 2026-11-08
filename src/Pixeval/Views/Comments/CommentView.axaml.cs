@@ -6,6 +6,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Pixeval.Mako;
+using Pixeval.Controls;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 
@@ -33,7 +34,7 @@ public partial class CommentView : UserControl
         {
             if (args.Property == IncrementalLoadingBehavior.IsLoadingMoreProperty)
                 IsLoadInterrupted = !ListBox.GetValue(IncrementalLoadingBehavior.IsLoadingMoreProperty)
-                    && _viewModel?.View.IsInterrupted == true;
+                    && _viewModel?.View is IIncrementalLoading { IsInterrupted: true };
         };
     }
 
@@ -44,7 +45,28 @@ public partial class CommentView : UserControl
     private void CommentItem_OnDeleteButtonClick(CommentRecord comment) =>
         (DataContext as CommentsViewViewModel)?.RemoveComment(comment.Id);
 
-    private void CommentView_OnDataContextChanged(object? sender, EventArgs e) => (DataContext as CommentsViewViewModel)?.RefreshSource();
+    private void CommentView_OnDataContextChanged(object? sender, EventArgs e)
+    {
+        var model = DataContext as CommentsViewViewModel;
+        // Navigation temporarily detaches a retained page and clears its inherited
+        // context. Keep that page's source until an actual replacement arrives.
+        if (model is null)
+            return;
+        if (ReferenceEquals(_viewModel, model))
+            return;
+        _viewModel?.Dispose();
+        _viewModel = model;
+        IsLoadInterrupted = false;
+        model.RefreshSource();
+        if (IsLoaded)
+            RaiseEvent(new ViewModelDisposalEventArgs(ViewModelDisposal.ViewModelDisposalEvent, model));
+    }
+
+    private void RefreshButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        IsLoadInterrupted = false;
+        _viewModel?.RefreshSource();
+    }
 
     #region Disposal
 

@@ -19,15 +19,13 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
-using Mako.Net.Responses;
+using Pixeval.Mako;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views;
-using Pixeval.Views.Entry;
+using Pixeval.Views.Works;
 using Pixeval.Views.Viewers;
 using SkiaSharp;
 
@@ -45,8 +43,8 @@ internal static class CommentListValidation
     {
         var client = App.AppViewModel.MakoClient;
         using var fixture = new OfflineSearchFixture(client);
-        await client.SetTokenAsync("fixture-comment-list");
-        await client.ValidateTokenAsync();
+        client.SetRefreshToken("fixture-comment-list");
+        await FixtureAuthentication.IdentifyAsync(client);
         using (var bitmap = new SKBitmap(160, 80))
         using (var canvas = new SKCanvas(bitmap))
         {
@@ -67,20 +65,28 @@ internal static class CommentListValidation
         List<string> report = [];
         try
         {
-            using var original = new CommentItemViewModel(Comment(997001), SimpleWorkType.Illustration, 997000, true);
-            using var replacement = new CommentItemViewModel(Comment(997003), SimpleWorkType.Illustration, 997000, true);
-            var item = new CommentItem { DataContext = original };
-            var window = new Window { Width = 360, Height = 500, Content = item };
-            CommentItemViewModel? deleted = null;
-            item.DeleteButtonClick += model => deleted = model;
+            var original = CommentRecord(997001);
+            var replacement = CommentRecord(997003);
+            using var owner = UiTestSession.Create<CommentsViewViewModel>(SimpleWorkKind.Illustration, WorkId);
+            var identityPage = new CommentsPage(owner);
+            var identityHost = new PageTestHost { Content = identityPage };
+            var window = new Window { Width = 360, Height = 500, Content = identityHost.Shell };
+            CommentRecord? deleted = null;
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 await RenderAsync(window);
+                (await NextAsync()).Response.SetResult(Page([original]));
+                await UntilAsync(() => owner.Source.Count == 1);
+                await RenderAsync(window);
+                var item = identityPage.GetVisualDescendants().OfType<CommentItem>().Single();
+                item.DeleteButtonClick += model => deleted = model;
                 item.FindControl<Button>("DeleteButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 var operation = await requests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
                 Require(operation.Uri.AbsolutePath == "/v1/illust/comment/delete", "The original delete entry sends the expected operation");
                 item.DataContext = replacement;
+                await UntilAsync(() => operation.Token.IsCancellationRequested);
                 Require(operation.Token.IsCancellationRequested, "Rebinding cancels the old delete transport");
                 item.FindControl<Button>("DeleteButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 var replacementOperation = await requests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
@@ -88,20 +94,20 @@ internal static class CommentListValidation
                 operation.Response.SetResult("{}");
                 await Task.Delay(200);
                 Dispatcher.UIThread.RunJobs();
-                Require(deleted is null && replacement.IsDeleting && !item.FindControl<Button>("DeleteButton")!.IsEnabled,
+                Require(deleted is null && !item.FindControl<Button>("DeleteButton")!.IsEnabled,
                     "A rebound comment must not publish a stale deletion or unlock its replacement's pending action");
                 replacementOperation.Response.SetResult("{}");
-                await UntilAsync(() => !replacement.IsDeleting);
-                Require(ReferenceEquals(deleted, replacement), "Only the replacement's own completion can publish its deletion");
+                await UntilAsync(() => item.FindControl<Button>("DeleteButton")!.IsEnabled);
+                Require(deleted == replacement, "Only the replacement's own completion can publish its deletion");
                 report.Add("PASS deletion identity: rebound item rejects the old completion while its replacement completes independently");
             }
             finally { window.Close(); }
 
-            foreach (var type in new[] { SimpleWorkType.Illustration, SimpleWorkType.Novel })
+            foreach (var type in new[] { SimpleWorkKind.Illustration, SimpleWorkKind.Novel })
                 foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                     foreach (var width in new[] { 360, 1000 })
                     {
-                        using var model = new CommentsViewViewModel(type, WorkId);
+                        using var model = UiTestSession.Create<CommentsViewViewModel>(type, WorkId);
                         var page = new CommentsPage(model);
                         var host = new PageTestHost
                         {
@@ -112,13 +118,14 @@ internal static class CommentListValidation
                         var key = $"{type}-{theme.Key}-{width}";
                         try
                         {
+                            Pixeval.Common.MaterialAnimation.Initialize(viewWindow);
                             viewWindow.Show();
                             await RenderAsync(viewWindow);
                             var first = await NextAsync();
-                            var category = type == SimpleWorkType.Illustration ? "illust" : "novel";
+                            var category = type == SimpleWorkKind.Illustration ? "illust" : "novel";
                             Require(first.Uri.AbsolutePath == $"/v3/{category}/comments"
                                 && HttpUtility.ParseQueryString(first.Uri.Query)[category + "_id"] == WorkId.ToString(), "Comments use the original endpoint and work ID");
-                            first.Response.SetResult(Page(Enumerable.Range(1, 20).Select(i => Comment(WorkId + i)), "https://app-api.pixiv.net/m3e/comments-next?offset=20"));
+                            first.Response.SetResult(Page(Enumerable.Range(1, 20).Select(i => CommentRecord(WorkId + i)), "https://app-api.pixiv.net/m3e/comments-next?offset=20"));
                             await UntilAsync(() => model.Source.Count == 20);
                             await RenderAsync(viewWindow);
                             var root = (CommentContainer) page.CurrentPage!;
@@ -131,14 +138,14 @@ internal static class CommentListValidation
                             var author = own.FindControl<Button>("AuthorButton")!;
                             Require(delete.IsVisible && !other.FindControl<Button>("DeleteButton")!.IsVisible && replies.IsVisible,
                                 "Only own comments expose deletion; top comments expose replies");
-                            Require(AutomationProperties.GetName(delete) == I18NManager.GetResource(CommentItemResources.Delete)
-                                && AutomationProperties.GetName(replies) == I18NManager.GetResource(CommentItemResources.Replies)
-                                && AutomationProperties.GetName(author) == LongName, "Comment actions and author have complete readable names");
+                            Require(AutomationProperties.GetName(delete) == Strings.CommentItemDelete()
+                                && AutomationProperties.GetName(replies) == Strings.CommentItemReplies()
+                                && AutomationProperties.GetName(author) == LongName, "CommentRecord actions and author have complete readable names");
                             foreach (var button in new[] { delete, replies, author })
                             {
                                 var origin = button.TranslatePoint(default, viewWindow)!.Value;
                                 Require(button.Bounds.Width >= 30 && button.Bounds.Height >= 30 && origin.X >= 0
-                                    && origin.X + button.Bounds.Width <= width + 1, "Comment actions fit in the actual window");
+                                    && origin.X + button.Bounds.Width <= width + 1, "CommentRecord actions fit in the actual window");
                             }
                             var text = own.FindControl<TextBlock>("CommentText")!;
                             Require(text.Text == Content && text.GetValue(TranslatableTextBlockBehavior.IsEnabledProperty)
@@ -159,12 +166,12 @@ internal static class CommentListValidation
                             await ActivateAsync(delete);
                             var deletion = await NextAsync();
                             CheckDelete(deletion, category, WorkId + 1);
-                            Require(!delete.IsEnabled && ((CommentItemViewModel) own.DataContext!).IsDeleting, "Deletion has a visible busy guard");
+                            Require(!delete.IsEnabled, "Deletion has a visible busy guard");
                             delete.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                            Require(!await ((CommentItemViewModel) own.DataContext!).DeleteAsync() && !requests.Reader.TryPeek(out _), "Repeated UI and model actions cannot duplicate deletion");
+                            Require(!await model.DeleteCommentAsync((CommentRecord)own.DataContext!) && !requests.Reader.TryPeek(out _), "Repeated UI and model actions cannot duplicate deletion");
                             deletion.Response.SetException(new HttpRequestException("Fixed comment deletion failure"));
                             await UntilAsync(() => delete.IsEnabled);
-                            Require(model.Source.Count == 20 && host.Notifications.Any(n => n.Title == I18NManager.GetResource(CommentItemResources.DeleteFailed)), "Failure retains the comment, reports an error and permits retry");
+                            Require(model.Source.Count == 20 && host.Notifications.Any(n => n.Title == Strings.CommentItemDeleteFailed()), "Failure retains the comment, reports an error and permits retry");
                             Save(viewWindow, directory, "delete-failed-" + key);
                             await ActivateAsync(delete);
                             (await NextAsync()).Response.SetResult("{}");
@@ -184,9 +191,9 @@ internal static class CommentListValidation
                             await RenderAsync(viewWindow);
                             var next = await NextAsync();
                             Require(next.Uri.AbsolutePath == "/m3e/comments-next" && HttpUtility.ParseQueryString(next.Uri.Query)["offset"] == "20", "Scrolling to the end follows the original next_url");
-                            next.Response.SetResult(Page(Enumerable.Range(20, 5).Select(i => Comment(WorkId + i) with
+                            next.Response.SetResult(Page(Enumerable.Range(20, 5).Select(i => CommentRecord(WorkId + i) with
                             {
-                                Stamp = i == 24 ? Stamp.CreateDefault() with { StampId = 301, StampUrl = ImageUri } : null
+                                Stamp = i == 24 ? new StampInfo() with { StampId = 301, StampUrl = ImageUri } : null
                             })));
                             await UntilAsync(() => model.Source.Count == 23);
                             Require(model.Source.Select(entry => entry.Id).SequenceEqual(Enumerable.Range(2, 23).Select(i => WorkId + i)), "Pagination preserves order and deduplicates the repeated boundary comment");
@@ -212,13 +219,13 @@ internal static class CommentListValidation
                             var replyRequest = await NextAsync();
                             Require(replyRequest.Uri.AbsolutePath == $"/v2/{category}/comment/replies"
                                 && HttpUtility.ParseQueryString(replyRequest.Uri.Query)["comment_id"] == (WorkId + 3).ToString(), "Reply navigation retains the parent comment ID and type");
-                            replyRequest.Response.SetResult(Page([Comment(WorkId + 101)]));
-                            await UntilAsync(() => page.CurrentPage is CommentContainer { DataContext: CommentItemViewModel parent } && parent.Source.Count == 1);
+                            replyRequest.Response.SetResult(Page([CommentRecord(WorkId + 101)]));
+                            await UntilAsync(() => page.CurrentPage is CommentContainer { DataContext: CommentsViewViewModel parent } && parent.Source.Count == 1);
                             await RenderAsync(viewWindow);
                             var replyPage = (CommentContainer) page.CurrentPage!;
                             var replyItem = replyPage.GetVisualDescendants().OfType<CommentItem>().Single();
-                            var replyModel = (CommentItemViewModel) replyItem.DataContext!;
-                            Require(!replyModel.IsTopComment && replyModel.ParentId == WorkId && replyModel.ParentType == type
+                            var replyModel = (CommentsViewViewModel) replyPage.DataContext!;
+                            Require(!replyModel.AllowsReplies && replyModel.ParentId == WorkId && replyModel.ParentType == type
                                 && !replyItem.FindControl<Button>("RepliesButton")!.IsVisible, "Replies retain work context and cannot create a third comment level");
                             replyItem.FindControl<Button>("RepliesButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                             Require(page.NavigationStack.Count == 2 && !requests.Reader.TryPeek(out _), "A hidden reply action cannot push a third level");
@@ -227,7 +234,7 @@ internal static class CommentListValidation
                             var replyDelete = await NextAsync();
                             CheckDelete(replyDelete, category, WorkId + 101);
                             replyDelete.Response.SetResult("{}");
-                            await UntilAsync(() => ((CommentItemViewModel) replyPage.DataContext!).Source.Count == 0);
+                            await UntilAsync(() => ((CommentsViewViewModel) replyPage.DataContext!).Source.Count == 0);
                             Require(model.Source.Count == 23, "Deleting a reply removes only that reply, not its top-level parent");
                             await UntilAsync(() => !page.IsNavigating);
                             var pop = page.PopAsync();
@@ -247,10 +254,10 @@ internal static class CommentListValidation
                             await ActivateAsync(view.FindControl<Button>("RefreshButton")!);
                             (await NextAsync()).Response.SetResult(Page([]));
                             await UntilAsync(() => !list.GetValue(IncrementalLoadingBehavior.IsLoadingMoreProperty));
-                            Require(!view.IsLoadInterrupted && model.Source.Count == 0 && !model.View.HasMoreItems, "Successful empty retry clears error and completes the source");
+                            Require(!view.IsLoadInterrupted && model.Source.Count == 0 && !((IIncrementalLoading)model.View).HasMoreItems, "Successful empty retry clears error and completes the source");
                             report.Add("PASS " + key + ": load failure, explicit retry and empty state");
 
-                            CommentItem Item(long id) => list.GetVisualDescendants().OfType<CommentItem>().Single(entry => entry.DataContext is CommentItemViewModel vm && vm.Id == id);
+                            CommentItem Item(long id) => list.GetVisualDescendants().OfType<CommentItem>().Single(entry => entry.DataContext is CommentRecord vm && vm.Id == id);
                         }
                         finally
                         {
@@ -260,59 +267,69 @@ internal static class CommentListValidation
                     }
 
             // A pending write belongs to both its original item and its account.
-            using (var own = new CommentItemViewModel(Comment(997501), SimpleWorkType.Novel, WorkId, true))
+            using (var own = UiTestSession.Create<CommentsViewViewModel>(SimpleWorkKind.Novel, WorkId))
             {
-                var entry = new CommentItem { DataContext = own };
-                var host = new PageTestHost { Content = entry };
+                var lifetimePage = new CommentsPage(own);
+                var host = new PageTestHost { Content = lifetimePage };
+                CommentItem entry = null!;
                 var lifetimeWindow = new Window { Width = 360, Height = 500, Content = host.Shell };
                 var events = 0;
-                entry.DeleteButtonClick += _ => events++;
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(lifetimeWindow);
                     lifetimeWindow.Show();
                     await RenderAsync(lifetimeWindow);
+                    (await NextAsync()).Response.SetResult(Page([CommentRecord(997501)]));
+                    await UntilAsync(() => own.Source.Count == 1);
+                    await RenderAsync(lifetimeWindow);
+                    entry = lifetimePage.GetVisualDescendants().OfType<CommentItem>().Single();
+                    entry.DeleteButtonClick += _ => events++;
                     await ActivateAsync(entry.FindControl<Button>("DeleteButton")!);
                     var detached = await NextAsync();
                     host.Content = null;
+                    await UntilAsync(() => detached.Token.IsCancellationRequested);
                     Require(detached.Token.IsCancellationRequested, "Detaching a comment cancels its pending delete");
                     detached.Response.SetResult("{}");
-                    await UntilAsync(() => !own.IsDeleting);
+                    await UntilAsync(() => entry.FindControl<Button>("DeleteButton")!.IsEnabled);
                     Require(events == 0, "A detached item cannot publish a deletion");
-                    host.Content = entry;
+                    host.Content = lifetimePage;
                     await RenderAsync(lifetimeWindow);
+                    entry = lifetimePage.GetVisualDescendants().OfType<CommentItem>().Single();
+                    entry.DeleteButtonClick += _ => events++;
                     await ActivateAsync(entry.FindControl<Button>("DeleteButton")!);
                     var switched = await NextAsync();
-                    fixture.AuthResponseFactory = (_, _) => Task.FromResult(JsonSerializer.Serialize(TokenResponse.CreateDefault() with
+                    fixture.AuthResponseFactory = (_, _) => Task.FromResult(NativeFixtureData.Serialize(new TokenResponse { AccessToken = "fixture", RefreshToken = "fixture", TokenType = "Bearer", ExpiresIn = 3600 } with
                     {
                         AccessToken = "fixture-next-access",
                         RefreshToken = "fixture-next-refresh",
                         ExpiresIn = 3600,
-                        User = TokenUser.CreateDefault() with { Id = 900002, Name = "Next fixture account", Account = "fixture-next" }
+                        User = new TokenUser { Id = "", Name = "", Account = "" } with { Id = "900002", Name = "Next fixture account", Account = "fixture-next" }
                     }));
-                    await client.SetTokenAsync("fixture-next-account");
-                    await client.ValidateTokenAsync();
+                    client.SetRefreshToken("fixture-next-account");
+                    await FixtureAuthentication.IdentifyAsync(client);
                     switched.Response.SetResult("{}");
-                    await UntilAsync(() => !own.IsDeleting);
-                    Require(events == 0 && !own.IsMe, "A previous account's late delete cannot alter the current page");
+                    await UntilAsync(() => entry.FindControl<Button>("DeleteButton")!.IsEnabled);
+                    Require(events == 0 && !own.IsOwnComment((CommentRecord)entry.DataContext!), "A previous account's late delete cannot alter the current page");
                     entry.FindControl<Button>("DeleteButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     Require(!requests.Reader.TryPeek(out _), "The fresh account permission guard rejects an old visible delete action");
                     fixture.AuthResponseFactory = null;
-                    await client.SetTokenAsync("fixture-comment-list");
-                    await client.ValidateTokenAsync();
+                    client.SetRefreshToken("fixture-comment-list");
+                    await FixtureAuthentication.IdentifyAsync(client);
                     await ActivateAsync(entry.FindControl<Button>("DeleteButton")!);
                     var closing = await NextAsync();
                     lifetimeWindow.Close();
+                    await UntilAsync(() => closing.Token.IsCancellationRequested);
                     Require(closing.Token.IsCancellationRequested, "Window.Close cancels a pending comment deletion");
                     closing.Response.SetResult("{}");
-                    await UntilAsync(() => !own.IsDeleting);
+                    await UntilAsync(() => entry.FindControl<Button>("DeleteButton")!.IsEnabled);
                     Require(events == 0, "The closed window rejects the late deletion");
                     report.Add("PASS deletion lifetime: detach/remount, account switch, permission recheck and actual Window.Close");
                 }
                 finally { host.Content = null; lifetimeWindow.Close(); }
             }
 
-            using (var old = new CommentsViewViewModel(SimpleWorkType.Illustration, WorkId))
-            using (var current = new CommentsViewViewModel(SimpleWorkType.Novel, WorkId + 1))
+            using (var old = UiTestSession.Create<CommentsViewViewModel>(SimpleWorkKind.Illustration, WorkId))
+            using (var current = UiTestSession.Create<CommentsViewViewModel>(SimpleWorkKind.Novel, WorkId + 1))
             {
                 var view = new CommentView { DataContext = old };
                 var lifetimeHost = new PageTestHost { Content = view };
@@ -321,15 +338,16 @@ internal static class CommentListValidation
                 view.AddHandler(ViewModelDisposal.ViewModelDisposalEvent, (_, e) => registered.Add(e.Disposable));
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(lifetimeWindow);
                     lifetimeWindow.Show();
                     await RenderAsync(lifetimeWindow);
                     var stale = await NextAsync();
                     var oldSource = old.Source;
                     view.DataContext = current;
-                    stale.Response.SetResult(Page([Comment(997601)], "https://app-api.pixiv.net/m3e/comments-next?stale=true"));
+                    stale.Response.SetResult(Page([CommentRecord(997601)], "https://app-api.pixiv.net/m3e/comments-next?stale=true"));
                     var active = await NextAsync();
                     Require(active.Uri.AbsolutePath == "/v3/novel/comments", "A replacement source owns the next request after the old serial load ends");
-                    active.Response.SetResult(Page([Comment(997603)]));
+                    active.Response.SetResult(Page([CommentRecord(997603)]));
                     await UntilAsync(() => current.Source.Count == 1);
                     Require(oldSource.Count == 0 && old.Source.Count == 0 && current.Source[0].Id == 997603
                         && !requests.Reader.TryPeek(out _), "Replaced lists release old items and reject late results and next_url");
@@ -338,16 +356,16 @@ internal static class CommentListValidation
                     var beforeRefresh = await NextAsync();
                     var refreshingSource = current.Source;
                     await ActivateAsync(view.FindControl<Button>("RefreshButton")!);
-                    beforeRefresh.Response.SetResult(Page([Comment(997607)], "https://app-api.pixiv.net/m3e/comments-next?refresh-stale=true"));
+                    beforeRefresh.Response.SetResult(Page([CommentRecord(997607)], "https://app-api.pixiv.net/m3e/comments-next?refresh-stale=true"));
                     var afterRefresh = await NextAsync();
-                    afterRefresh.Response.SetResult(Page([Comment(997609)]));
+                    afterRefresh.Response.SetResult(Page([CommentRecord(997609)]));
                     await UntilAsync(() => current.Source.Count == 1);
                     Require(refreshingSource.Count == 0 && current.Source[0].Id == 997609 && !requests.Reader.TryPeek(out _),
                         "A second refresh supersedes the first without publishing its late page or following next_url");
                     await ActivateAsync(view.FindControl<Button>("RefreshButton")!);
                     var closed = await NextAsync();
                     lifetimeWindow.Close();
-                    closed.Response.SetResult(Page([Comment(997605)], "https://app-api.pixiv.net/m3e/comments-next?closed=true"));
+                    closed.Response.SetResult(Page([CommentRecord(997605)], "https://app-api.pixiv.net/m3e/comments-next?closed=true"));
                     await RenderAsync(lifetimeWindow);
                     Require(current.Source.Count == 0 && !requests.Reader.TryPeek(out _), "Closing the production window rejects a pending feed result and further pagination");
                     report.Add("PASS feed lifetime: replacement, stale source cleanup/next_url rejection and production window disposal");
@@ -369,15 +387,15 @@ internal static class CommentListValidation
         Task<Pending> NextAsync() => requests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
     }
 
-    private static Comment Comment(long id) => Mako.Model.Comment.CreateDefault() with
+    private static CommentRecord CommentRecord(long id) => new CommentRecord() with
     {
         Id = id,
-        Content = Content,
-        Date = DateTimeOffset.UnixEpoch,
+        Comment = Content,
+        Date = DateTimeOffset.UnixEpoch.ToString("O"),
         HasReplies = true,
-        User = AvatarUser.CreateDefault() with { Id = id % 2 == 1 ? 900001 : 900002, Name = LongName, ProfileImageUrls = new() { Medium = ImageUri } }
+        User = User.CreateDefault() with { Id = id % 2 == 1 ? 900001 : 900002, Name = LongName, ProfileImageUrls = new() { Medium = ImageUri } }
     };
-    private static string Page(IEnumerable<Comment> comments, string? next = null) => JsonSerializer.Serialize(new { comments, next_url = next });
+    private static string Page(IEnumerable<CommentRecord> comments, string? next = null) => NativeFixtureData.Serialize(new { comments, next_url = next });
     private static void CheckDelete(Pending request, string category, long id) => Require(request.Uri.AbsolutePath == $"/v1/{category}/comment/delete"
         && HttpUtility.ParseQueryString(request.Body)["comment_id"] == id.ToString(), "Deletion retains its endpoint and exact comment ID");
     private static void Press(Window window, Key key, PhysicalKey physical, RawInputModifiers modifiers = RawInputModifiers.None)
@@ -397,7 +415,7 @@ internal static class CommentListValidation
         var deadline = DateTime.UtcNow.AddSeconds(10);
         while (!condition())
         {
-            if (DateTime.UtcNow > deadline) throw new TimeoutException("Comment list did not reach its expected state");
+            if (DateTime.UtcNow > deadline) throw new TimeoutException("CommentRecord list did not reach its expected state");
             await Task.Delay(20);
             Dispatcher.UIThread.RunJobs();
             AvaloniaHeadlessPlatform.ForceRenderTimerTick(1);

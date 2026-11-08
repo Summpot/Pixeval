@@ -6,7 +6,7 @@ using FluentIcons.Common;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.Commands.Transformers;
-using Pixeval.Models.Extensions;
+using Pixeval.Services.Background;
 
 namespace Pixeval.Tests;
 

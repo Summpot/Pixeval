@@ -41,6 +41,7 @@ public sealed class WorkListBoxTest
             var window = new Window { Width = 400, Height = 240, Content = list };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 window.UpdateLayout();
                 ScrollTo(80);
@@ -106,6 +107,7 @@ public sealed class WorkListBoxTest
             var window = new Window { Content = container };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 window.UpdateLayout();
                 var text = (TextBlock) card.Content!;

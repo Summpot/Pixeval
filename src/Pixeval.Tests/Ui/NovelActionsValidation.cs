@@ -1,3 +1,4 @@
+using Pixeval.Controls;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,21 +11,19 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
+using Pixeval.Mako;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Download;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.FormatProviders;
-using Pixeval.I18N;
-using Pixeval.Models.Download;
-using Pixeval.Models.Download.Tasks;
-using Pixeval.Models.Extensions;
-using Pixeval.Models.Options;
+using Pixeval.Localization;
+using Pixeval.Services.Background;
+using Pixeval.Config;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 using static Pixeval.Tests.Ui.NovelReaderValidation;
 
 namespace Pixeval.Tests.Ui;
@@ -36,39 +35,43 @@ internal static class NovelActionsValidation
     internal static async Task RunNativeAsync(string directory)
     {
         using var fixture = new NovelReaderFixture();
-        await App.AppViewModel.MakoClient.SetTokenAsync("fixture-native-export");
-        await App.AppViewModel.MakoClient.ValidateTokenAsync();
-        var history = App.AppViewModel.HistoryPersistHelper;
+        App.AppViewModel.MakoClient.SetRefreshToken("fixture-native-export");
+        await FixtureAuthentication.IdentifyAsync(App.AppViewModel.MakoClient);
+        var history = App.AppViewModel;
         await history.RestoreTask;
         var extension = App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>().ActiveNovelFormatProviders.Single();
         var format = NovelDownloadFormatToken.Extension(extension);
         App.AppViewModel.AppSettings.DownloadSettings.DownloadFormats.NovelDownloadFormat = format;
         App.AppViewModel.AppSettings.DownloadSettings.DownloadPathMacro = Path.Combine(directory, "native-export", "@{id}.@{ext}");
-        var item = NovelItemViewModel.CreateInstance(NovelReaderFixture.Sample(993101));
-        var model = new NovelViewerPageViewModel(item, false);
+        history.DownloadManager.SetDownloadPolicy(AppViewModel.CreateDownloadPolicy(App.AppViewModel.AppSettings));
+        var item = NovelReaderFixture.Sample(993101);
+        var model = UiTestSession.Create<NovelViewerPageViewModel>(item, false);
         var page = new NovelViewerPage(model);
         var host = new PageTestHost { Content = page };
         var window = new Window { Width = 1100, Height = 800, Content = host.Shell };
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             (await fixture.NextAsync()).Complete(SourceText, withImages: true);
             await UntilAsync(() => !model.IsLoading);
             await RenderAsync(window);
             var save = page.FindControl<CommandBar>("ReaderCommands")!.PrimaryCommands.OfType<CommandBarButton>()
-                .Single(button => ReferenceEquals(button.Command, item.SaveCommand));
+                .Single(button => ReferenceEquals(button.Command, App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().SaveCommand));
             await ActivateAsync(window, save);
-            await UntilAsync(() => history.DownloadManager.QueuedTasks.Count == 1);
-            var task = (NovelDownloadTaskGroup) history.DownloadManager.QueuedTasks.Single();
-            await UntilAsync(() => task.CurrentState is DownloadState.Completed or DownloadState.Error);
-            var paths = NovelDownloadTaskGroup.GetOutputPaths(task.TokenizedDestination, format);
+            (await fixture.NextAsync()).Complete(SourceText, withImages: true);
+            await UntilAsync(() => history.DownloadManager.OrdinaryItems.Count == 1);
+            var task = (DownloadItemSnapshot) history.DownloadManager.OrdinaryItems.Single();
+            await UntilAsync(() => App.AppViewModel.DownloadManager.OrdinaryItems.Single(row => row.Key == task.Key).State is DownloadState.Completed or DownloadState.Error);
+                task = App.AppViewModel.DownloadManager.OrdinaryItems.Single(row => row.Key == task.Key);
+            var paths = (NovelFile: task.OpenDestination, ImageFolderPath: task.OpenDestination + ".pixevaldownloading");
             // The pinned official C++ demo intentionally completes without writing a file.
             // Exercise its real ABI and require the consumer to reject this incomplete output.
-            Require(task.CurrentState == DownloadState.Error && !File.Exists(paths.NovelFile)
-                && task.ErrorMessage is { } error && error.Contains(nameof(FileNotFoundException)) && error.Contains(Path.GetFileName(paths.NovelFile)),
+            Require(task.State == DownloadState.Error && !File.Exists(paths.NovelFile)
+                && task.ErrorMessage is { } error && error.Contains("did not create output") && error.Contains(Path.GetFileName(paths.NovelFile)),
                 "An installed native provider returning without an output file cannot report a completed export");
             File.WriteAllLines(Path.Combine(directory, "novel-native-export-contracts.txt"),
-                [$"PASS pinned C++ provider: format={format.Value}; state={task.CurrentState}; missing output rejected", task.ErrorMessage!]);
+                [$"PASS pinned C++ provider: format={format.Value}; state={task.State}; missing output rejected", task.ErrorMessage!]);
             Require(fixture.Http.UnexpectedRequests.IsEmpty, "Native export uses only the isolated image/content transport");
             host.Shell.ClosePage(page);
         }
@@ -78,9 +81,9 @@ internal static class NovelActionsValidation
     internal static async Task RunAsync(string directory)
     {
         using var fixture = new NovelReaderFixture();
-        await App.AppViewModel.MakoClient.SetTokenAsync("fixture-novel-actions");
-        await App.AppViewModel.MakoClient.ValidateTokenAsync();
-        var history = App.AppViewModel.HistoryPersistHelper;
+        App.AppViewModel.MakoClient.SetRefreshToken("fixture-novel-actions");
+        await FixtureAuthentication.IdentifyAsync(App.AppViewModel.MakoClient);
+        var history = App.AppViewModel;
         await history.RestoreTask;
         var manager = history.DownloadManager;
         var contentHandler = fixture.Http.WorkCardResponseFactory!;
@@ -92,62 +95,66 @@ internal static class NovelActionsValidation
             return "{}";
         };
         fixture.Http.BookmarkResponseFactory = (_, _) => Task.FromResult("{\"bookmark_detail\":{\"is_bookmarked\":false,\"restrict\":\"public\",\"tags\":[{\"name\":\"固定标签\",\"is_registered\":true}]}}");
-        var item = NovelItemViewModel.CreateInstance(NovelReaderFixture.Sample(993001));
-        var model = new NovelViewerPageViewModel(item, false);
+        var item = NovelReaderFixture.Sample(993001);
+        var model = UiTestSession.Create<NovelViewerPageViewModel>(item, false);
         var page = new NovelViewerPage(model);
         var host = new PageTestHost { Content = page };
         var window = new Window { Width = 1100, Height = 850, Content = host.Shell };
         List<string> report = [];
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             var initial = await fixture.NextAsync();
             await RenderAsync(window);
             var bar = page.FindControl<CommandBar>("ReaderCommands")!;
-            var save = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => ReferenceEquals(button.Command, item.SaveCommand));
-            var failedSave = item.SaveCommand.ExecuteAsync(save);
+            var save = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => ReferenceEquals(button.Command, App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().SaveCommand));
+            var failedSave = App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().SaveCommand.ExecuteAsync(item);
             initial.Fail();
+            (await fixture.NextAsync()).Fail();
             await failedSave;
             await UntilAsync(() => !model.IsLoading);
             await RenderAsync(window);
-            Require(manager.QueuedTasks.Count == 0 && host.Notifications.Any(notification => notification.Type == NotificationType.Error),
-                "A content failure shows a save error without queuing a fake download or escaping the async command");
+            await UntilAsync(() => manager.OrdinaryItems is { Count: 1 } && manager.OrdinaryItems[0].State == DownloadState.Error);
+            Require(manager.OrdinaryItems[0].ErrorMessage is { Length: > 0 }, "Native content failure remains visible on the queued download and can be retried");
+            manager.RemoveWork(manager.OrdinaryItems[0].Key, false);
+            await UntilAsync(() => manager.OrdinaryItems.Count == 0);
             await ActivateAsync(window, page.FindControl<CommandBarButton>("ReloadButton")!);
             (await fixture.NextAsync()).Complete(SourceText, withImages: true);
             await UntilAsync(() => !model.IsLoading);
             Require(model.LoadErrorMessage is null, "The same novel recovers after a failed save/content load");
 
-            var bookmark = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => ReferenceEquals(button.Command, item.BookmarkCommand));
+            var bookmark = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => ReferenceEquals(button.Command, App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().BookmarkCommand));
             await ActivateAsync(window, bookmark);
-            await UntilAsync(() => !item.BookmarkCommand.IsRunning);
+            await UntilAsync(() => !App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().BookmarkCommand.IsRunning);
             Require(bookmarks.Count == 1 && bookmarks[0].Uri.AbsolutePath == "/v2/novel/bookmark/add"
-                && HttpUtility.ParseQueryString(bookmarks[0].Body)["novel_id"] == "993001" && item.IsFavorite,
+                && HttpUtility.ParseQueryString(bookmarks[0].Body)["novel_id"] == "993001" && (ArtworkUiStateStore.GetOrCreate(item).BookmarkState == HeartButtonState.Checked),
                 "The reader bookmark action sends one original novel ID/type request");
             await ActivateAsync(window, bookmark);
-            await UntilAsync(() => !item.BookmarkCommand.IsRunning);
-            Require(bookmarks.Count == 2 && bookmarks[^1].Uri.AbsolutePath == "/v1/novel/bookmark/delete" && !item.IsFavorite,
+            await UntilAsync(() => !App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().BookmarkCommand.IsRunning);
+            Require(bookmarks.Count == 2 && bookmarks[^1].Uri.AbsolutePath == "/v1/novel/bookmark/delete" && !(ArtworkUiStateStore.GetOrCreate(item).BookmarkState == HeartButtonState.Checked),
                 "Bookmark removal preserves the original endpoint and displayed state");
             Require(bookmark.Focus(), "Bookmark options retain a keyboard route");
             Press(window, Key.Apps, PhysicalKey.ContextMenu);
             await UntilAsync(() => window.GetVisualDescendants().OfType<TagSelector>().Any(selector => !selector.IsLoading));
             var tags = window.GetVisualDescendants().OfType<TagSelector>().Single();
-            Require(tags.WorkId == 993001 && tags.WorkType == SimpleWorkType.Novel && tags.SelectedTags.Single().Name == "固定标签", "Reader bookmark options retain type, ID and selected tags");
+            Require(tags.WorkId == 993001 && tags.WorkKind == SimpleWorkKind.Novel && tags.SelectedTags.Single().Name == "固定标签", "Reader bookmark options retain type, ID and selected tags");
             tags.IsPrivate = true;
             await ActivateAsync(window, tags.FindControl<Button>("ConfirmButton")!);
-            await UntilAsync(() => !item.AddToBookmarkCommand.IsRunning);
+            await UntilAsync(() => !App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().AddToBookmarkCommand.IsRunning);
             var payload = HttpUtility.ParseQueryString(bookmarks[^1].Body);
             Require(bookmarks.Count == 3 && payload["restrict"] == "private" && payload["tags[]"] == "固定标签", $"The actual tag editor submits the original private/tag payload once: count={bookmarks.Count}, body={bookmarks[^1].Body}");
 
-            var watch = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => ReferenceEquals(button.Command, item.AddToWatchLaterCommand));
-            var copy = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => button.Label == I18NManager.GetResource(EntryItemResources.GenerateWebLink));
-            var browser = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => button.Label == I18NManager.GetResource(EntryItemResources.OpenInWebBrowser));
+            var watch = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => ReferenceEquals(button.Command, App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().AddToWatchLaterCommand));
+            var copy = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => button.Label == Strings.EntryItemGenerateWebLink());
+            var browser = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => button.Label == Strings.EntryItemOpenInWebBrowser());
             window.Width = 360;
             window.RequestedThemeVariant = ThemeVariant.Dark;
             await RenderAsync(window);
             await ActivateAsync(window, watch);
-            Require(history.ContainsWatchLater(item.Entry) && item.IsInWatchLater, "The narrow overflow action persists watch-later");
+            Require(history.StorageEngine.WatchLaterRepository.ContainsWatchLater(item) && ArtworkUiStateStore.GetOrCreate(item).IsInWatchLater, "The narrow overflow action persists watch-later");
             await ActivateAsync(window, watch);
-            Require(!history.ContainsWatchLater(item.Entry) && !item.IsInWatchLater, "The same overflow action removes watch-later");
+            Require(!history.StorageEngine.WatchLaterRepository.ContainsWatchLater(item) && !ArtworkUiStateStore.GetOrCreate(item).IsInWatchLater, "The same overflow action removes watch-later");
             await OpenOverflowAsync(window, bar);
             Require(Equals(copy.Tag, item.WebsiteUri), "The reader web link binding preserves its original URI");
             await ActivateAsync(window, copy);
@@ -161,8 +168,8 @@ internal static class NovelActionsValidation
             foreach (var format in new[] { NovelDownloadFormat.OriginalTxt, NovelDownloadFormat.Html, NovelDownloadFormat.Md })
             {
                 var task = await SaveAsync(format.ToString(), format.ToString());
-                Require(task.CurrentState == DownloadState.Completed, "Built-in novel export completes: " + task.ErrorMessage);
-                var paths = NovelDownloadTaskGroup.GetOutputPaths(task.TokenizedDestination, new(format.ToString()));
+                Require(task.State == DownloadState.Completed, "Built-in novel export completes: " + task.ErrorMessage);
+                var paths = (NovelFile: task.OpenDestination, ImageFolderPath: Path.GetDirectoryName(task.OpenDestination)!);
                 var text = File.ReadAllText(paths.NovelFile);
                 Require(format == NovelDownloadFormat.OriginalTxt ? text == SourceText : text.Contains("かんじ") && text.Contains("page1") && text.Contains("11.png") && text.Contains("994101-1.png"),
                     "Built-in formats preserve source or parsed Unicode, page anchors and local image paths: " + format);
@@ -178,39 +185,42 @@ internal static class NovelActionsValidation
             try
             {
                 var extension = await SaveAsync("extension-success", "extension:fixture");
-                var file = NovelDownloadTaskGroup.GetOutputPaths(extension.TokenizedDestination, new("extension:fixture")).NovelFile;
-                Require(extension.CurrentState == DownloadState.Completed && File.ReadAllText(file) == "first:" + SourceText && first.Calls == 1 && second.Calls == 0,
+                var file = extension.OpenDestination;
+                Require(extension.State == DownloadState.Completed && File.ReadAllText(file) == "first:" + SourceText && first.Calls == 1 && second.Calls == 0,
                     "The first active format provider receives the source and owns the committed output");
                 firstHost.IsActive = false;
                 extension = await SaveAsync("extension-second", "extension:fixture");
-                file = NovelDownloadTaskGroup.GetOutputPaths(extension.TokenizedDestination, new("extension:fixture")).NovelFile;
-                Require(extension.CurrentState == DownloadState.Completed && File.ReadAllText(file) == "second:" + SourceText && second.Calls == 1, "Disabling the first provider exposes the next active provider");
+                file = extension.OpenDestination;
+                Require(extension.State == DownloadState.Completed && File.ReadAllText(file) == "second:" + SourceText && second.Calls == 1, "Disabling the first provider exposes the next active provider");
                 second.Throw = true;
                 extension = await SaveAsync("extension-failure", "extension:fixture");
-                file = NovelDownloadTaskGroup.GetOutputPaths(extension.TokenizedDestination, new("extension:fixture")).NovelFile;
-                Require(extension.CurrentState == DownloadState.Error && !File.Exists(file)
+                file = extension.OpenDestination;
+                Require(extension.State == DownloadState.Error && !File.Exists(file)
                     && extension.ErrorMessage!.Contains("Fixed export provider failure")
-                    && !Directory.Exists(NovelDownloadTaskGroup.GetOutputPaths(extension.TokenizedDestination, new("extension:fixture")).ImageFolderPath),
+                    && !Directory.Exists(extension.OpenDestination + ".pixevaldownloading"),
                     "A provider failure never commits its partial temporary file and cleans its temporary images");
             }
             finally { service.HostModels.Remove(firstHost); service.HostModels.Remove(secondHost); }
             report.Add("PASS save/export: failed content yields feedback/no task, same-item retry, actual queued Html/Md/OriginalTxt files and images, active format priority and extension partial-file failure");
             File.WriteAllLines(Path.Combine(directory, "novel-actions-contracts.txt"), report);
-            Require(fixture.Http.RequestLog.Count(request => request.Contains("/webview/v2/novel")) == 2, "All successful exports reuse the recovered content without extra network requests");
+            Require(fixture.Http.RequestLog.Count(request => request.Contains("/webview/v2/novel")) == 9, "Reader retries and each native export issue exactly their own content request");
             Require(fixture.Http.UnexpectedRequests.IsEmpty, "Reader actions only reach declared offline boundaries");
             host.Shell.ClosePage(page);
 
-            async Task<NovelDownloadTaskGroup> SaveAsync(string name, string token)
+            async Task<DownloadItemSnapshot> SaveAsync(string name, string token)
             {
                 var settings = App.AppViewModel.AppSettings.DownloadSettings;
                 settings.DownloadFormats.NovelDownloadFormat = token;
                 settings.DownloadPathMacro = Path.Combine(directory, "exports", name, "@{id}.@{ext}");
-                var count = manager.QueuedTasks.Count;
-                var previous = manager.QueuedTasks.ToArray();
+                manager.SetDownloadPolicy(AppViewModel.CreateDownloadPolicy(App.AppViewModel.AppSettings));
+                var count = manager.OrdinaryItems.Count;
+                var previous = manager.OrdinaryItems.Select(row => row.Key).ToArray();
                 await ActivateAsync(window, save);
-                await UntilAsync(() => manager.QueuedTasks.Count == count + 1);
-                var task = (NovelDownloadTaskGroup) manager.QueuedTasks.Except(previous).Single();
-                await UntilAsync(() => task.CurrentState is DownloadState.Completed or DownloadState.Error);
+                (await fixture.NextAsync()).Complete(SourceText, withImages: true);
+                await UntilAsync(() => manager.OrdinaryItems.Count == count + 1);
+                var task = (DownloadItemSnapshot) manager.OrdinaryItems.Single(row => !previous.Contains(row.Key));
+                await UntilAsync(() => App.AppViewModel.DownloadManager.OrdinaryItems.Single(row => row.Key == task.Key).State is DownloadState.Completed or DownloadState.Error);
+                task = App.AppViewModel.DownloadManager.OrdinaryItems.Single(row => row.Key == task.Key);
                 return task;
             }
         }
@@ -238,7 +248,7 @@ internal static class NovelActionsValidation
 
     private sealed class ExportHost(Exporter exporter) : IExtensionsHost
     {
-        public string GetExtensionName() => "Novel exporter fixture";
+        public string GetExtensionName() => "Mako.Novel exporter fixture";
         public string GetAuthorName() => "Pixeval tests";
         public string GetExtensionLink() => "";
         public string GetHelpLink() => "";

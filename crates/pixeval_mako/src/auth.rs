@@ -75,9 +75,12 @@ impl OAuthManager {
 
     pub fn set_refresh_token(&self, refresh_token: String) {
         let mut guard = self.state.write();
-        if let Some(existing) = guard.as_mut() {
-            existing.response.refresh_token = refresh_token;
-        } else {
+        if guard.as_ref().is_some_and(|entry| entry.response.refresh_token == refresh_token) {
+            return;
+        }
+        // Credentials for another account must not reuse a still-valid access
+        // token or user from the previous account.
+        {
             *guard = Some(TokenEntry {
                 response: TokenResponse {
                     access_token: String::new(),
@@ -243,6 +246,22 @@ impl OAuthManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn switching_refresh_credentials_invalidates_the_previous_account() {
+        let oauth = OAuthManager::new();
+        oauth.set_token_response(TokenResponse {
+            access_token: "first-access".into(), refresh_token: "first-refresh".into(),
+            expires_in: 3600, user: Some(crate::models::TokenUser { id: "1".into(), ..Default::default() }),
+            ..Default::default()
+        });
+        oauth.set_refresh_token("first-refresh".into());
+        assert!(oauth.get_valid_access_token().is_some());
+        oauth.set_refresh_token("second-refresh".into());
+        assert!(oauth.get_valid_access_token().is_none());
+        assert!(oauth.get_user().is_none());
+        assert_eq!(oauth.get_refresh_token().as_deref(), Some("second-refresh"));
+    }
 
     #[test]
     fn test_parse_token_response_direct_and_wrapped() {

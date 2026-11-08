@@ -291,7 +291,31 @@ public class TokenizingBox : TemplatedControl
         private set => SetAndRaise(TokenItemsProperty, ref field, value);
     } = [];
 
-    public bool AddToken(object? item) => AddTokenCore(item);
+    public event EventHandler<TokenizingBox, TokenAddingEventArgs>? TokenAdding;
+
+    public event EventHandler<TokenizingBox, TokenEventArgs>? TokenAdded;
+
+    public event EventHandler<TokenizingBox, TokenRemovingEventArgs>? TokenRemoving;
+
+    public event EventHandler<TokenizingBox, TokenEventArgs>? TokenRemoved;
+
+    public event EventHandler<TokenizingBox, TokenEventArgs>? TokenClick;
+
+    public bool AddToken(object? item) => AddTokenCore(item, item as string);
+
+    public bool RemoveToken(object? item)
+    {
+        var snapshot = GetTokenItemsSnapshot();
+        var index = snapshot.FindIndex(token => Equals(token, item));
+        return index >= 0 && RemoveTokenAt(index, snapshot[index]);
+    }
+
+    public void ClearTokens()
+    {
+        var snapshot = GetTokenItemsSnapshot();
+        for (var i = snapshot.Count - 1; i >= 0; --i)
+            RemoveTokenAt(i, snapshot[i]);
+    }
 
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
     {
@@ -304,6 +328,7 @@ public class TokenizingBox : TemplatedControl
         _autoCompleteBox = e.NameScope.Find<AutoCompleteBox>(PartAutoCompleteBox);
 
         _root?.Tapped += RootOnTapped;
+        _itemsHost?.Tapped += ItemsHostOnTapped;
 
         if (_autoCompleteBox is not null)
         {
@@ -326,6 +351,7 @@ public class TokenizingBox : TemplatedControl
     private void DetachTemplateParts()
     {
         _root?.Tapped -= RootOnTapped;
+        _itemsHost?.Tapped -= ItemsHostOnTapped;
 
         if (_autoCompleteBox is not null)
         {
@@ -397,6 +423,12 @@ public class TokenizingBox : TemplatedControl
 
         if (shouldRestoreFocus)
             QueueFocusTextBox();
+    }
+
+    private void ItemsHostOnTapped(object? sender, TappedEventArgs e)
+    {
+        if (!IsRemoveButtonEvent(e) && GetEventToken(e) is { } token)
+            TokenClick?.Invoke(this, new TokenEventArgs(token.Item));
     }
 
     private static bool IsRemoveButtonEvent(RoutedEventArgs e)
@@ -492,7 +524,7 @@ public class TokenizingBox : TemplatedControl
         if (item is null)
             return false;
 
-        if (!AddTokenCore(item))
+        if (!AddTokenCore(item, item as string))
             return false;
 
         if (_autoCompleteBox is not null)
@@ -515,7 +547,7 @@ public class TokenizingBox : TemplatedControl
         if (string.IsNullOrEmpty(text))
             return false;
 
-        if (!AddTokenCore(text))
+        if (!AddTokenCore(text, text))
             return false;
 
         SetCurrentValue(TextProperty, "");
@@ -546,7 +578,7 @@ public class TokenizingBox : TemplatedControl
             if (token.Length == 0)
                 continue;
 
-            if (!AddTokenCore(token))
+            if (!AddTokenCore(token, token))
             {
                 remainder = string.Join(separator, parts, i, parts.Length - i);
                 break;
@@ -562,10 +594,18 @@ public class TokenizingBox : TemplatedControl
             QueueFocusTextBox();
     }
 
-    private bool AddTokenCore(object? item)
+    private bool AddTokenCore(object? item, string? tokenText)
     {
         if (IsMaxCountReached())
             return false;
+
+        var args = new TokenAddingEventArgs(item, tokenText);
+        TokenAdding?.Invoke(this, args);
+
+        if (args.Cancel)
+            return false;
+
+        item = args.Item;
 
         if (item is null)
             return true;
@@ -576,16 +616,29 @@ public class TokenizingBox : TemplatedControl
         if (!AddItemToSource(item))
             return false;
 
+        TokenAdded?.Invoke(this, new TokenEventArgs(item));
+
         if (_notifyCollectionChanged is null)
             RebuildItemsHost();
 
         return true;
     }
 
-    private bool RemoveTokenAt(int index, object? item)
+    private bool RemoveTokenAt(int index, object? item, bool ignoreCancel = false)
     {
+        if (!ignoreCancel)
+        {
+            var args = new TokenRemovingEventArgs(item);
+            TokenRemoving?.Invoke(this, args);
+
+            if (args.Cancel)
+                return false;
+        }
+
         if (!RemoveItemFromSource(index, item))
             return false;
+
+        TokenRemoved?.Invoke(this, new TokenEventArgs(item));
 
         if (_notifyCollectionChanged is null)
             RebuildItemsHost();
@@ -600,7 +653,7 @@ public class TokenizingBox : TemplatedControl
 
         var snapshot = GetTokenItemsSnapshot();
         for (var i = snapshot.Count - 1; i >= MaxCount; --i)
-            RemoveTokenAt(i, snapshot[i]);
+            RemoveTokenAt(i, snapshot[i], true);
     }
 
     private bool AddItemToSource(object? item)

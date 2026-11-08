@@ -22,7 +22,7 @@ public abstract class EntryViewViewModel<T, TViewModel>
 {
     private readonly IBlockedContentService? _blockedContent;
     private bool _isDisposed;
-    private IncrementalLoadingCollection<TViewModel>? _source;
+    private SharedSource? _source;
     private BoxedReadOnlyCollectionAdapter? _boxedView;
     private BoxedReadOnlyCollectionAdapter? _boxedSource;
 
@@ -33,7 +33,36 @@ public abstract class EntryViewViewModel<T, TViewModel>
 
     public virtual ObservableCollection<TViewModel> View => Source;
 
-    public ObservableCollection<TViewModel> Source => _source ??= CreateEmptyCollection();
+    public ObservableCollection<TViewModel> Source => (_source ??= new(CreateEmptyCollection())).Collection;
+
+    // Each page owns its view/filter, while loaded records and the native cursor
+    // stay alive until the last preview or destination releases its lease.
+    public virtual void ShareSourceFrom(EntryViewViewModel<T, TViewModel> owner)
+    {
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
+        ObjectDisposedException.ThrowIf(owner._isDisposed, owner);
+        _ = owner.Source;
+        var shared = owner._source!.Retain();
+        _source?.Dispose();
+        _source = shared;
+        OnPropertyChanged(nameof(Source));
+        OnPropertyChanged(nameof(View));
+    }
+
+    private sealed class SharedSource(IncrementalLoadingCollection<TViewModel> collection) : IDisposable
+    {
+        private int _references = 1;
+        public IncrementalLoadingCollection<TViewModel> Collection { get; } = collection;
+        public SharedSource Retain()
+        {
+            Interlocked.Increment(ref _references);
+            return this;
+        }
+        public void Dispose()
+        {
+            if (Interlocked.Decrement(ref _references) == 0) Collection.Dispose();
+        }
+    }
 
     public virtual void Dispose()
     {
@@ -61,7 +90,7 @@ public abstract class EntryViewViewModel<T, TViewModel>
 
         var feed = source ?? EmptyAsyncEnumerable();
         var incrementalSource = new IncrementalSource<T, TViewModel>(feed, effectiveFactory, itemLimit);
-        _source = new IncrementalLoadingCollection<TViewModel>(incrementalSource, itemsPerPage);
+        _source = new(new IncrementalLoadingCollection<TViewModel>(incrementalSource, itemsPerPage));
 
         OnPropertyChanged(nameof(Source));
         OnPropertyChanged(nameof(View));

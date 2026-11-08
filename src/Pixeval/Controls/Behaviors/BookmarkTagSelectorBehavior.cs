@@ -51,6 +51,7 @@ public static class BookmarkTagSelectorBehavior
             return;
 
         e.Handled = true;
+        var commands = control.GetRequiredUiService<WorkCommands>();
 
         var workType = work is Mako.Novel
             ? SimpleWorkKind.Novel
@@ -61,7 +62,7 @@ public static class BookmarkTagSelectorBehavior
             work.Id,
             async result =>
             {
-                await control.GetRequiredUiService<WorkCommands>().AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(work, result.IsPrivate, result.Tags));
+                await commands.AddToBookmarkCommand.ExecuteAsync(new BookmarkRequest(work, result.IsPrivate, result.Tags));
             },
             PlacementMode.Bottom);
     }

@@ -21,7 +21,7 @@ using CommunityToolkit.Mvvm.Input;
 using Material3Expressive.Components;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 
 namespace Pixeval.Tests;
@@ -34,8 +34,8 @@ public sealed class FloatingCommandBarTest
     public static void Initialize(TestContext _)
     {
         var projectPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval"));
-        I18NManager.CandidatePaths.Add(projectPath);
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+
+        AppLocalization.Instance.SetLanguage("zh-Hans");
     }
 
     [TestMethod]
@@ -66,6 +66,7 @@ public sealed class FloatingCommandBarTest
             var window = CreateWindow(bar, dark);
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 Assert.IsTrue(action.GetVisualDescendants().OfType<MaterialSurface>().Any(), "Floating actions must use the Material interaction surface.");
@@ -124,14 +125,15 @@ public sealed class FloatingCommandBarTest
             var window = CreateWindow(bar, dark);
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 Assert.IsTrue(bar.IsOverflowButtonVisible, "Narrow toolbars must offer the commands that no longer fit.");
                 Assert.IsTrue(action.IsInOverflow);
                 Assert.IsTrue(toggle.IsInOverflow);
                 var more = bar.GetVisualDescendants().OfType<Button>().Single(button => button.Name is "PART_OverflowButton");
-                Assert.AreEqual(I18NManager.GetResource(MiscResources.MoreCommands), ToolTip.GetTip(more));
-                Assert.AreEqual(I18NManager.GetResource(MiscResources.MoreCommands), AutomationProperties.GetName(more));
+                Assert.AreEqual(Strings.MiscMoreCommands(), ToolTip.GetTip(more));
+                Assert.AreEqual(Strings.MiscMoreCommands(), AutomationProperties.GetName(more));
                 Click(window, more);
                 Render(window);
                 Assert.IsTrue(bar.IsOpen);

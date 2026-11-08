@@ -43,6 +43,7 @@ public sealed class VirtualizingQuantizationTest
                 ItemTemplate = new FuncDataTemplate<string>((_, _) => new Border { Width = 100, Height = 100 })
             };
             var window = new Window { Width = 400.25, Height = 300, Content = list };
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             window.UpdateLayout();
 
@@ -96,6 +97,7 @@ public sealed class VirtualizingQuantizationTest
                 ItemTemplate = new FuncDataTemplate<string>((_, _) => new Border { Width = 100, Height = 100 })
             };
             var window = new Window { Width = 400.25, Height = 300, Content = list };
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             window.UpdateLayout();
 

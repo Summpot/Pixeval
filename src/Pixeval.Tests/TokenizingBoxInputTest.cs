@@ -198,6 +198,7 @@ public sealed class TokenizingBoxInputTest
             var window = new Window { Width = 640, Height = 480, RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light, Content = tokens };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 var box = tokens.GetVisualDescendants().OfType<AutoCompleteBox>().Single();

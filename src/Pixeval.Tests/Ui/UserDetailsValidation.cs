@@ -19,16 +19,14 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Model;
-using Mako.Net.Responses;
+using Pixeval.Mako;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.I18N;
-using Pixeval.Models.Blocking;
-using Pixeval.Models.Database.Managers;
+using Pixeval.Localization;
+using Pixeval.Storage;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views;
-using Pixeval.Views.Capability;
+using Pixeval.Views.Works;
 using Pixeval.Views.Viewers;
 
 namespace Pixeval.Tests.Ui;
@@ -44,8 +42,8 @@ internal static class UserDetailsValidation
     {
         var client = App.AppViewModel.MakoClient;
         using var fixture = new OfflineSearchFixture(client);
-        await client.SetTokenAsync("fixture-user-details");
-        await client.ValidateTokenAsync();
+        client.SetRefreshToken("fixture-user-details");
+        await FixtureAuthentication.IdentifyAsync(client);
         using (var asset = AssetLoader.Open(new Uri("avares://Pixeval/Assets/Platforms/pixiv.png")))
         using (var buffer = new MemoryStream())
         {
@@ -58,11 +56,11 @@ internal static class UserDetailsValidation
         fixture.UserResponseFactory = async (request, token) =>
         {
             var uri = request.RequestUri!;
-            if (uri.AbsolutePath is "/v1/user/detail" or "/v1/user/follow/add" or "/v1/user/follow/delete")
+            if (uri.AbsolutePath is "/v2/user/detail" or "/v1/user/follow/add" or "/v1/user/follow/delete")
             {
                 var operation = new Pending(uri, request.Content is null ? "" : await request.Content.ReadAsStringAsync(token), token);
                 pending.Add(operation);
-                await (uri.AbsolutePath == "/v1/user/detail" ? details : follows).Writer.WriteAsync(operation);
+                await (uri.AbsolutePath == "/v2/user/detail" ? details : follows).Writer.WriteAsync(operation);
                 return await operation.Response.Task;
             }
             return "{\"user_previews\":[],\"next_url\":null}";
@@ -76,13 +74,15 @@ internal static class UserDetailsValidation
             foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                 foreach (var width in new[] { 360, 1000 })
                 {
-                    using var model = new UserViewerPageViewModel(Sample());
+                    UserUiStateStore.SetFollowState(Sample().User, false);
+                    using var model = UiTestSession.Create<UserViewerPageViewModel>(Sample());
                     var page = new UserViewerPage(model);
                     var host = new PageTestHost { Content = page };
                     var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = host.Shell };
                     var key = $"{theme.Key}-{width}";
                     try
                     {
+                        Pixeval.Common.MaterialAnimation.Initialize(window);
                         window.Show();
                         var expander = page.FindControl<Expander>("UserInfoExpander")!;
                         expander.IsExpanded = true;
@@ -117,10 +117,10 @@ internal static class UserDetailsValidation
                         expander.IsExpanded = false;
                         await RenderAsync(window);
                         var bar = page.GetVisualDescendants().OfType<CommandBar>().First();
-                        var copyApp = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => button.Label == Text(EntryItemResources.GenerateLink));
+                        var copyApp = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => button.Label == Text("EntryItem-GenerateLink"));
                         await ActivateAsync(window, bar, copyApp);
                         Require(await window.Clipboard!.TryGetTextAsync() == Sample().UserEntity.AppUri.ToString(), "Profile copy preserves the original app URI");
-                        var copyWeb = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => button.Label == Text(EntryItemResources.GenerateWebLink));
+                        var copyWeb = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => button.Label == Text("EntryItem-GenerateWebLink"));
                         await ActivateAsync(window, bar, copyWeb);
                         Require(await window.Clipboard!.TryGetTextAsync() == Sample().UserEntity.WebsiteUri.ToString(), "Profile copy preserves the complete web URI");
                         var follow = bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => ReferenceEquals(button.Command, model.FollowCommand));
@@ -153,9 +153,9 @@ internal static class UserDetailsValidation
                         {
                             var block = bar.SecondaryCommands.OfType<CommandBarButton>().Single(button => ReferenceEquals(button.Command, model.BlockUserCommand));
                             await ActivateAsync(window, bar, block);
-                            Require(BlockedContentHelper.IsBlocked(Sample().UserEntity) && !model.BlockUserCommand.CanExecute(null)
+                            Require(App.AppViewModel.StorageEngine.IsUserBlocked(Sample().UserEntity.Id) && !model.BlockUserCommand.CanExecute(null)
                                 && model.Id == UserId, "The existing overflow block action writes the isolated block list and retains the user identity");
-                            App.AppViewModel.AppServiceProvider.GetRequiredService<BlockedUserPersistentManager>().TryDeleteByUserId(UserId);
+                            App.AppViewModel.StorageEngine.TryDeleteBlockedUser(UserId);
                         }
                         report.Add($"PASS {key}: full profile text/scroll, copy, real follow/pending state and five list destinations");
                     }
@@ -169,7 +169,8 @@ internal static class UserDetailsValidation
                     }
                 }
 
-            using (var model = new UserViewerPageViewModel(Sample()))
+            UserUiStateStore.SetFollowState(Sample().User, false);
+            using (var model = UiTestSession.Create<UserViewerPageViewModel>(Sample()))
             {
                 var action = model.FollowPrivatelyCommand.ExecuteAsync(null);
                 var operation = await NextAsync(follows);
@@ -190,13 +191,14 @@ internal static class UserDetailsValidation
                 action = model.FollowCommand.ExecuteAsync(null);
                 operation = await NextAsync(follows);
                 model.Dispose();
+                await UntilAsync(() => operation.Token.IsCancellationRequested);
                 Require(operation.Token.IsCancellationRequested, "Closing the profile cancels an active follow request");
                 operation.Response.SetResult("{}");
                 await action;
                 Require(!model.IsFollowed && !model.FollowCommand.CanExecute(null), "Late follow cannot update or re-enable a closed profile");
                 report.Add("PASS follow-lifetime: private/failure/retry/unfollow, close cancellation and no late state write");
             }
-            using (var model = new UserViewerPageViewModel(UserId))
+            using (var model = UiTestSession.Create<UserViewerPageViewModel>(UserId))
             {
                 var operation = await NextAsync(details);
                 Require(model.IsLoading && !model.FollowCommand.CanExecute(null), "Follow is unavailable before user details are ready");
@@ -206,40 +208,42 @@ internal static class UserDetailsValidation
                     "A failed profile cannot become a successful empty user with ID zero");
                 report.Add("PASS detail-failure: original identity, error state and command gating");
             }
-            using (var model = new UserViewerPageViewModel(UserId))
+            using (var model = UiTestSession.Create<UserViewerPageViewModel>(UserId))
             {
                 var operation = await NextAsync(details);
                 model.Dispose();
+                await UntilAsync(() => operation.Token.IsCancellationRequested);
                 Require(operation.Token.IsCancellationRequested, "Closing cancels the detail request");
-                operation.Response.SetResult(JsonSerializer.Serialize(Sample()));
+                operation.Response.SetResult(NativeFixtureData.Serialize(Sample()));
                 await Task.Delay(100);
                 Dispatcher.UIThread.RunJobs();
                 Require(model.UserDetail is null && !model.IsLoading, "Late detail never populates a closed profile");
                 report.Add("PASS detail-close: cancellation and late successful response isolation");
             }
-            using (var model = new UserViewerPageViewModel(Sample()))
+            UserUiStateStore.SetFollowState(Sample().User, false);
+            using (var model = UiTestSession.Create<UserViewerPageViewModel>(Sample()))
             {
                 var action = model.FollowCommand.ExecuteAsync(null);
                 var operation = await NextAsync(follows);
-                fixture.AuthResponseFactory = (_, _) => Task.FromResult(JsonSerializer.Serialize(TokenResponse.CreateDefault() with
+                fixture.AuthResponseFactory = (_, _) => Task.FromResult(NativeFixtureData.Serialize(new TokenResponse { AccessToken = "fixture", RefreshToken = "fixture", TokenType = "Bearer", ExpiresIn = 3600 } with
                 {
                     AccessToken = "fixture-second-access",
                     RefreshToken = "fixture-second-refresh",
                     ExpiresIn = 3600,
-                    User = TokenUser.CreateDefault() with { Id = 900002, Name = "Fixture second account", Account = "fixture-second" }
+                    User = new TokenUser { Id = "", Name = "", Account = "" } with { Id = "900002", Name = "Fixture second account", Account = "fixture-second" }
                 }));
-                await client.SetTokenAsync("fixture-second-account");
-                await client.ValidateTokenAsync();
-                Require(client.Me?.Id == 900002, "The account-switch sample actually changes the isolated account");
+                client.SetRefreshToken("fixture-second-account");
+                await FixtureAuthentication.IdentifyAsync(client);
+                Require(client.GetUser()?.Id == "900002", "The account-switch sample actually changes the isolated account");
                 operation.Response.SetResult("{}");
                 await action;
-                Require(!model.IsFollowed && !model.UserDetail!.UserEntity.IsFollowed, "An old account's follow result cannot update the new account's profile state");
+                Require(!model.IsFollowed && !model.UserDetail!.Value.UserEntity.IsFollowed, "An old account's follow result cannot update the new account's profile state");
                 fixture.AuthResponseFactory = null;
-                await client.SetTokenAsync("fixture-user-details");
-                await client.ValidateTokenAsync();
+                client.SetRefreshToken("fixture-user-details");
+                await FixtureAuthentication.IdentifyAsync(client);
                 report.Add("PASS follow-account-change: late previous-account response cannot publish follow state");
             }
-            using (var self = new UserViewerPageViewModel(Sample() with { UserEntity = Sample().UserEntity with { Id = 900001 } }))
+            using (var self = UiTestSession.Create<UserViewerPageViewModel>(Sample() with { User = Sample().UserEntity with { Id = 900001 } }))
                 Require(!self.FollowCommand.CanExecute(null) && !self.FollowPrivatelyCommand.CanExecute(null) && !self.UnfollowCommand.CanExecute(null), "Own-account follow actions stay disabled");
             Require(fixture.UnexpectedRequests.IsEmpty, "User details remain inside the offline endpoint matrix");
             File.WriteAllLines(Path.Combine(directory, "user-detail-contracts.txt"), report);
@@ -248,17 +252,17 @@ internal static class UserDetailsValidation
         finally
         {
             foreach (var operation in pending)
-                operation.Response.TrySetResult(operation.Uri.AbsolutePath == "/v1/user/detail" ? JsonSerializer.Serialize(Sample()) : "{}");
+                operation.Response.TrySetResult(operation.Uri.AbsolutePath == "/v2/user/detail" ? NativeFixtureData.Serialize(Sample()) : "{}");
             File.WriteAllLines(Path.Combine(directory, "user-detail-requests.txt"), fixture.RequestLog);
         }
     }
 
     private static SingleUserResponse Sample() => SingleUserResponse.CreateDefault() with
     {
-        UserEntity = SingleUserInfo.CreateDefault() with { Id = UserId, Name = LongName, Description = Description, ProfileImageUrls = new() { Medium = ImageUri } },
-        UserProfile = Profile.CreateDefault() with { TotalFollowUsers = 1234567, TotalMyPixivUsers = 12345, TotalIllustrations = 123456, TotalManga = 123456, TotalNovels = 123456, TotalNovelSeries = 12345, BackgroundImageUrl = ImageUri, IsPremium = true }
+        User = User.CreateDefault() with { Id = UserId, Name = LongName, Comment = Description, ProfileImageUrls = new() { Medium = ImageUri } },
+        Profile = UserProfile.CreateDefault() with { TotalFollowUsers = 1234567, TotalMypixivUsers = 12345, TotalIllusts = 123456, TotalManga = 123456, TotalNovels = 123456, TotalNovelSeries = 12345, BackgroundImageUrl = ImageUri, IsPremium = true }
     };
-    private static string Text(string key) => I18NManager.GetResource(key);
+    private static string Text(string key) => FixtureLocalization.GetResource(key);
     private static Task<Pending> NextAsync(Channel<Pending> channel) => channel.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
 
     private static async Task ActivateAsync(Window window, CommandBar bar, CommandBarButton button)
@@ -273,7 +277,7 @@ internal static class UserDetailsValidation
         }
         var origin = button.TranslatePoint(default, window)!.Value;
         Require(button.Bounds.Width > 0 && origin.X >= -1 && origin.X + button.Bounds.Width <= window.ClientSize.Width + 1,
-            "Profile commands remain inside the window");
+             $"Profile commands remain inside the window: label={button.Label}, x={origin.X}, width={button.Bounds.Width}, window={window.ClientSize.Width}, overflow={button.IsInOverflow}");
         Require(button.Focus(NavigationMethod.Tab), "Profile actions remain keyboard reachable");
         Press(window, Key.Enter, PhysicalKey.Enter);
         await RenderAsync(window);

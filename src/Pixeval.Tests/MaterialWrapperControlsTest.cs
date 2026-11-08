@@ -62,6 +62,7 @@ public sealed class MaterialWrapperControlsTest
             var window = new Window { Width = 500, Height = 400, Content = new StackPanel { Children = { selector } } };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 var inner = selector.GetVisualDescendants().OfType<ComboBox>().Single();
@@ -130,6 +131,7 @@ public sealed class MaterialWrapperControlsTest
             var window = new Window { Width = 500, Height = 400, Content = new StackPanel { Children = { address, reference } } };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 var input = address.GetVisualDescendants().OfType<TextBox>().Single();
@@ -184,6 +186,7 @@ public sealed class MaterialWrapperControlsTest
             var window = new Window { Width = 500, Height = 400, Content = new StackPanel { Children = { tokens, heart, slider, page } } };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 Assert.IsTrue(tokens.Bounds.Height <= 56, $"Token input grew to {tokens.Bounds.Height}.");
@@ -266,6 +269,7 @@ public sealed class MaterialWrapperControlsTest
             window.Content = new StackPanel { Children = { expander, navigation } };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 var header = expander.GetVisualDescendants().OfType<ToggleButton>().Single(button => button.Name is "ExpanderHeader");
@@ -308,6 +312,7 @@ public sealed class MaterialWrapperControlsTest
             var window = new Window { Width = 500, Height = 320, Content = addresses };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 var remove = addresses.GetVisualDescendants().OfType<Button>().Single(button => button.DataContext is "104.18.42.239");

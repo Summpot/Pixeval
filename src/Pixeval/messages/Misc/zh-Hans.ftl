@@ -37,3 +37,9 @@ Copied = 已复制
 Saved = 已保存
 
 PixevalBadge-Following = 关注中
+
+MoreCommands = 更多命令
+
+CloseNotification = 关闭通知
+
+CopyCode = 复制代码

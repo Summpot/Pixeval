@@ -11,9 +11,9 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
-using Mako.Model;
-using Pixeval.I18N;
-using Pixeval.Models.Options;
+using Pixeval.Mako;
+using Pixeval.Localization;
+using Pixeval.Config;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
@@ -26,8 +26,8 @@ internal static class IllustrationAnimationValidation
     internal static async Task RunAsync(string directory)
     {
         using var fixture = new IllustrationReaderFixture();
-        await App.AppViewModel.MakoClient.SetTokenAsync("fixture-animation");
-        await App.AppViewModel.MakoClient.ValidateTokenAsync();
+        App.AppViewModel.MakoClient.SetRefreshToken("fixture-animation");
+        await FixtureAuthentication.IdentifyAsync(App.AppViewModel.MakoClient);
         const string zipUri = "https://i.pximg.net/m3e/animation-1920x1080.zip";
         var png = fixture.Http.ImageResponses[IllustrationReaderFixture.ImageUri];
         using (var buffer = new MemoryStream())
@@ -51,16 +51,17 @@ internal static class IllustrationAnimationValidation
         App.AppViewModel.AppSettings.BrowsingExperienceSettings.BrowseMode = continuous ? BrowseMode.Continuous : BrowseMode.Swipe;
         var work = IllustrationReaderFixture.Sample(996440, 1) with
         {
-            Type = IllustrationType.Ugoira,
+            IllustType = IllustContentType.Ugoira,
             MetaSinglePage = new() { OriginalImageUrl = "https://i.pximg.net/m3e/animation-ugoira0.png" }
         };
-        var model = new IllustrationViewerPageViewModel(new IllustrationItemViewModel(work), false);
+        var model = UiTestSession.Create<IllustrationViewerPageViewModel>((work), false);
         var page = new IllustrationViewerPage(model);
         var host = new PageTestHost { Content = page };
         var window = new Window { Width = 700, Height = 760, Content = host.Shell };
         List<string> report = [];
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             await UntilAsync(() => model.CurrentImage?.CurrentPage is { LoadSuccessfully: true } or { LoadErrorMessage: not null });
             await RenderAsync(window);
@@ -86,9 +87,9 @@ internal static class IllustrationAnimationValidation
             if (!continuous)
             {
                 var play = page.GetVisualDescendants().OfType<CommandBarToggleButton>().Single(button => ReferenceEquals(button.Command, image.PlayPauseCommand));
-                Require(play.Label == I18NManager.GetResource(MiscResources.Pause), "The playing animation exposes a localized pause action");
+                Require(play.Label == Strings.MiscPause(), "The playing animation exposes a localized pause action");
                 await ActivateAsync(window, play);
-                Require(!image.IsPlaying && play.Label == I18NManager.GetResource(MiscResources.Play), "The actual floating toolbar pauses and updates its action label");
+                Require(!image.IsPlaying && play.Label == Strings.MiscPlay(), "The actual floating toolbar pauses and updates its action label");
                 await ActivateAsync(window, play);
                 Require(image.IsPlaying, "The same floating toolbar resumes animation");
             }
@@ -120,7 +121,7 @@ internal static class IllustrationAnimationValidation
                 await RenderAsync(window);
                 var toggle = viewer.ContextMenu!.Items.OfType<MenuItem>().Single(m => ReferenceEquals(m.Command, image.PlayPauseCommand));
                 Require(toggle.IsEffectivelyVisible && toggle.IsEffectivelyEnabled && toggle.Focus(NavigationMethod.Tab), "Animation menu is keyboard reachable");
-                Require(toggle.Header?.ToString() == I18NManager.GetResource(image.IsPlaying ? MiscResources.Pause : MiscResources.Play),
+                Require(toggle.Header?.ToString() == FixtureLocalization.GetResource(image.IsPlaying ? "Misc-Pause" : "Misc-Play"),
                     "Animation menu text describes the next action");
                 Press(window, Key.Enter, PhysicalKey.Enter);
                 await RenderAsync(window);

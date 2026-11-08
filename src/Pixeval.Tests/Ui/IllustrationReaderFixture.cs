@@ -8,8 +8,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Web;
 using Avalonia.Platform;
-using Mako.Model;
-using Misaki;
+using Pixeval.Mako;
 
 namespace Pixeval.Tests.Ui;
 
@@ -41,27 +40,26 @@ internal sealed class IllustrationReaderFixture : IDisposable
 
     internal Task<Pending> NextDetailAsync() => _details.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
 
-    internal static IIdentityInfo Identity(long id) => new IdentityInfo(id.ToString(), "pixiv");
-    private sealed record IdentityInfo(string Id, string Platform) : IIdentityInfo;
+    internal static string Identity(long id) => id.ToString();
 
     internal static Illustration Sample(long id, int pages = 3) => Illustration.CreateDefault() with
     {
         Id = id,
         Title = Title + " / " + id,
-        Type = pages == 1 ? IllustrationType.Illustration : IllustrationType.Manga,
+        IllustType = pages == 1 ? IllustContentType.Illustration : IllustContentType.Manga,
         Width = 128,
         Height = 128,
         PageCount = pages,
         Visible = true,
         SanityLevel = 2,
         Series = null,
-        User = UserInfo.CreateDefault() with { Id = 900001, Name = "Fixture author", ProfileImageUrls = new() { Medium = ImageUri } },
-        ThumbnailUrls = new() { Medium = ImageUri, Large = ImageUri, SquareMedium = ImageUri },
+        User = User.CreateDefault() with { Id = 900001, Name = "Fixture author", ProfileImageUrls = new() { Medium = ImageUri } },
+        ImageUrls = new() { Medium = ImageUri, Large = ImageUri, SquareMedium = ImageUri },
         MetaSinglePage = new() { OriginalImageUrl = ImageUri },
         MetaPages = Enumerable.Range(0, pages).Select(_ => new MetaPage
         {
             ImageUrls = new() { Original = ImageUri, Medium = ImageUri, Large = ImageUri, SquareMedium = ImageUri }
-        }).ToArray()
+        }).ToList()
     };
 
     public void Dispose()

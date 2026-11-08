@@ -38,6 +38,7 @@ public sealed class FloatingPaneKeyboardTest
             var window = new Window { Width = 900, Height = 640, RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light, Content = view };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 await RenderAsync(window);
                 var pane = view.GetVisualDescendants().OfType<Border>().Single(control => control.Name is "PART_FloatingPaneBorder");

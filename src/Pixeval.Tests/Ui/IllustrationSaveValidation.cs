@@ -11,8 +11,8 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
-using Pixeval.I18N;
-using Pixeval.Models.Options;
+using Pixeval.Localization;
+using Pixeval.Config;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
@@ -29,19 +29,20 @@ internal static class IllustrationSaveValidation
         AvaloniaLocator.CurrentMutable.Bind<IStorageProviderFactory>().ToConstant(provider);
         App.AppViewModel.AppSettings.BrowsingExperienceSettings.BrowseMode = BrowseMode.Swipe;
         List<string> report = [];
-        var model = new IllustrationViewerPageViewModel(new IllustrationItemViewModel(IllustrationReaderFixture.Sample(996301, 1)), false);
+        var model = UiTestSession.Create<IllustrationViewerPageViewModel>((IllustrationReaderFixture.Sample(996301, 1)), false);
         var page = new IllustrationViewerPage(model);
         var host = new PageTestHost { Content = page };
         var window = new Window { Width = 700, Height = 760, Content = host.Shell };
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             await UntilAsync(() => model.CurrentImage?.CurrentPage?.LoadSuccessfully == true);
             await RenderAsync(window);
             var image = model.CurrentImage!.CurrentPage!;
             var viewer = page.GetVisualDescendants().OfType<SingleImageViewer>().Single(control => ReferenceEquals(control.DataContext, image));
-            var save = viewer.ContextMenu!.Items.OfType<MenuItem>().Single(item => item.Header?.ToString() == I18NManager.GetResource(EntryViewerPageResources.SaveAs));
-            Require(save.Header?.ToString() == I18NManager.GetResource(EntryViewerPageResources.SaveAs), "The existing localized save-displayed-image action remains available");
+            var save = viewer.ContextMenu!.Items.OfType<MenuItem>().Single(item => item.Header?.ToString() == Strings.EntryViewerPageSaveAs());
+            Require(save.Header?.ToString() == Strings.EntryViewerPageSaveAs(), "The existing localized save-displayed-image action remains available");
 
             await BeginAsync();
             Require(provider.Options is { DefaultExtension: "png", SuggestedFileName: "996301" }
@@ -108,14 +109,14 @@ internal static class IllustrationSaveValidation
             Require(!image.SaveAsCommand.CanExecute(save), "A disposed image cannot be saved again");
             report.Add("PASS real close while picker is pending and late storage selection isolation");
 
-            var next = new IllustrationViewerPageViewModel(new IllustrationItemViewModel(IllustrationReaderFixture.Sample(996302, 1)), false);
+            var next = UiTestSession.Create<IllustrationViewerPageViewModel>((IllustrationReaderFixture.Sample(996302, 1)), false);
             var nextPage = new IllustrationViewerPage(next);
             host.Shell.NavigateTo(nextPage);
             await UntilAsync(() => next.CurrentImage?.CurrentPage?.LoadSuccessfully == true);
             await RenderAsync(window);
             image = next.CurrentImage!.CurrentPage!;
             viewer = nextPage.GetVisualDescendants().OfType<SingleImageViewer>().Single(control => ReferenceEquals(control.DataContext, image));
-            save = viewer.ContextMenu!.Items.OfType<MenuItem>().Single(item => item.Header?.ToString() == I18NManager.GetResource(EntryViewerPageResources.SaveAs));
+            save = viewer.ContextMenu!.Items.OfType<MenuItem>().Single(item => item.Header?.ToString() == Strings.EntryViewerPageSaveAs());
             await BeginAsync();
             var pendingOpen = new IllustrationSaveFixture.File { PendingOpen = new(TaskCreationOptions.RunContinuationsAsynchronously) };
             provider.Complete(pendingOpen);

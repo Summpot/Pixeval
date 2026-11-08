@@ -11,7 +11,7 @@ use bytes::Bytes;
 use futures_util::Stream;
 use http::header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue, USER_AGENT};
 use http::{Method, Request, StatusCode, Uri};
-use http_body_util::{BodyExt, Full};
+use http_body_util::{BodyExt, Full, combinators::UnsyncBoxBody};
 use hyper::body::Body;
 use hyper_util::client::legacy::Client;
 use hyper_util::rt::TokioExecutor;
@@ -75,11 +75,11 @@ impl From<serde_json::Error> for MahoError {
 }
 
 pub struct MahoByteStream {
-    inner: hyper::body::Incoming,
+    inner: UnsyncBoxBody<Bytes, MahoError>,
 }
 
 impl MahoByteStream {
-    pub fn new(inner: hyper::body::Incoming) -> Self {
+    pub fn new(inner: UnsyncBoxBody<Bytes, MahoError>) -> Self {
         Self { inner }
     }
 }
@@ -115,7 +115,7 @@ impl Stream for MahoByteStream {
 pub struct MahoResponse {
     status: StatusCode,
     headers: HeaderMap,
-    body: hyper::body::Incoming,
+    body: UnsyncBoxBody<Bytes, MahoError>,
 }
 
 impl MahoResponse {
@@ -123,8 +123,20 @@ impl MahoResponse {
         Self {
             status,
             headers,
-            body,
+            body: body.map_err(MahoError::from).boxed_unsync(),
         }
+    }
+
+    pub fn from_data(data: MahoResponseData) -> Result<Self, MahoError> {
+        let status = StatusCode::from_u16(data.status).map_err(|e| MahoError::Network { message: e.to_string() })?;
+        let mut headers = HeaderMap::new();
+        for (key, value) in data.headers {
+            let key = HeaderName::try_from(key).map_err(|e| MahoError::Network { message: e.to_string() })?;
+            let value = HeaderValue::try_from(value).map_err(|e| MahoError::Network { message: e.to_string() })?;
+            headers.insert(key, value);
+        }
+        Ok(Self { status, headers, body: Full::new(Bytes::from(data.body))
+            .map_err(|never| match never {}).boxed_unsync() })
     }
 
     pub fn status(&self) -> StatusCode {
@@ -176,6 +188,7 @@ pub struct MahoHttpClient {
     inner: Client<MahoConnector, Full<Bytes>>,
     config: Arc<MahoConfig>,
     default_user_agent: String,
+    transport: Arc<RwLock<Option<Arc<dyn MahoTransport>>>>,
 }
 
 impl MahoHttpClient {
@@ -189,8 +202,17 @@ impl MahoHttpClient {
         Self {
             inner,
             config,
+            transport: Arc::new(RwLock::new(None)),
             default_user_agent: "PixivAndroidApp/6.199.0 (Android 15.0; Pixel 8)".to_string(),
         }
+    }
+
+    pub fn set_transport(&self, transport: Option<Arc<dyn MahoTransport>>) {
+        *self.transport.write() = transport;
+    }
+
+    pub fn transport(&self) -> Option<Arc<dyn MahoTransport>> {
+        self.transport.read().clone()
     }
 
     pub fn config(&self) -> &Arc<MahoConfig> {
@@ -213,6 +235,18 @@ impl MahoHttpClient {
         &self,
         builder: MahoRequestBuilder,
     ) -> Result<MahoResponse, MahoError> {
+        if let Some(transport) = self.transport() {
+            let headers = builder.headers.iter().filter_map(|(key, value)|
+                value.to_str().ok().map(|value| (key.to_string(), value.to_owned()))).collect();
+            static NEXT_REQUEST: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+            let id = NEXT_REQUEST.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            let mut lifetime = TransportRequest { transport: transport.clone(), id, completed: false };
+            let response = transport.send(id, builder.method.to_string(), builder.url, headers,
+                builder.body.unwrap_or_default().to_vec()).await;
+            lifetime.completed = true;
+            let response = response?;
+            return MahoResponse::from_data(response);
+        }
         let uri: Uri = builder
             .url
             .parse()
@@ -341,6 +375,30 @@ pub struct MahoResponseData {
     pub body: Vec<u8>,
 }
 
+/// Optional per-client transport supplied at the application composition boundary.
+/// Request construction, authentication and response parsing remain in Rust.
+#[uniffi::export(callback_interface)]
+#[async_trait::async_trait]
+pub trait MahoTransport: Send + Sync {
+    async fn send(&self, request_id: u64, method: String, url: String, headers: HashMap<String, String>, body: Vec<u8>)
+        -> Result<MahoResponseData, MahoError>;
+    fn cancel(&self, request_id: u64);
+}
+
+struct TransportRequest {
+    transport: Arc<dyn MahoTransport>,
+    id: u64,
+    completed: bool,
+}
+
+impl Drop for TransportRequest {
+    fn drop(&mut self) {
+        if !self.completed {
+            self.transport.cancel(self.id);
+        }
+    }
+}
+
 #[derive(uniffi::Object)]
 pub struct MahoClient {
     inner: Arc<RwLock<MahoHttpClient>>,
@@ -356,9 +414,15 @@ impl MahoClient {
         })
     }
 
+    pub fn set_transport(&self, transport: Option<Box<dyn MahoTransport>>) {
+        self.inner.read().set_transport(transport.map(Arc::from));
+    }
+
     pub fn update_options(&self, options: MahoClientOptions) {
         let new_client = Self::build_client(Some(&options));
-        *self.inner.write() = new_client;
+        let mut current = self.inner.write();
+        new_client.set_transport(current.transport());
+        *current = new_client;
     }
 
     pub async fn get(
@@ -482,3 +546,69 @@ impl MahoClient {
     }
 }
 
+
+#[cfg(test)]
+mod transport_tests {
+    use super::*;
+    use futures_util::StreamExt;
+    use tokio::sync::mpsc;
+
+    struct Transport {
+        started: mpsc::UnboundedSender<u64>,
+        cancelled: mpsc::UnboundedSender<u64>,
+        pending: bool,
+    }
+
+    #[async_trait::async_trait]
+    impl MahoTransport for Transport {
+        async fn send(&self, id: u64, method: String, url: String,
+            headers: HashMap<String, String>, body: Vec<u8>) -> Result<MahoResponseData, MahoError> {
+            assert_eq!(method, "POST");
+            assert_eq!(url, "https://fixture.invalid/resource");
+            assert_eq!(headers.get("x-fixture").map(String::as_str), Some("value"));
+            assert_eq!(body, b"payload");
+            self.started.send(id).unwrap();
+            if self.pending { std::future::pending::<()>().await; }
+            Ok(MahoResponseData { status: 201, headers: HashMap::from([("x-result".into(), "ok".into())]), body: b"response".to_vec() })
+        }
+        fn cancel(&self, id: u64) { let _ = self.cancelled.send(id); }
+    }
+
+    #[tokio::test]
+    async fn transport_preserves_request_response_stream_and_configuration_updates() {
+        let (started, mut requests) = mpsc::unbounded_channel();
+        let (cancelled, mut cancellations) = mpsc::unbounded_channel();
+        let client = MahoClient::new(None);
+        client.set_transport(Some(Box::new(Transport { started, cancelled, pending: false })));
+        client.update_options(MahoClientOptions::default());
+        let http = client.inner.read().clone();
+        for _ in 0..2 {
+            let response = http.post("https://fixture.invalid/resource")
+                .header("x-fixture", "value").body(Bytes::from_static(b"payload")).send().await.unwrap();
+            assert_eq!(response.status(), StatusCode::CREATED);
+            assert_eq!(response.headers()["x-result"], "ok");
+            let chunks: Vec<_> = response.bytes_stream().collect().await;
+            assert_eq!(chunks.len(), 1);
+            assert_eq!(chunks[0].as_ref().unwrap().as_ref(), b"response");
+        }
+        assert_ne!(requests.recv().await.unwrap(), requests.recv().await.unwrap());
+        assert!(cancellations.try_recv().is_err(), "Completed requests must not be cancelled");
+    }
+
+    #[tokio::test]
+    async fn dropping_an_inflight_request_cancels_only_its_transport_operation() {
+        let (started, mut requests) = mpsc::unbounded_channel();
+        let (cancelled, mut cancellations) = mpsc::unbounded_channel();
+        let http = MahoClient::build_client(None);
+        http.set_transport(Some(Arc::new(Transport { started, cancelled, pending: true })));
+        let request = tokio::spawn(async move {
+            http.post("https://fixture.invalid/resource")
+                .header("x-fixture", "value").body(Bytes::from_static(b"payload")).send().await
+        });
+        let id = requests.recv().await.unwrap();
+        request.abort();
+        assert!(matches!(request.await, Err(error) if error.is_cancelled()));
+        assert_eq!(cancellations.recv().await.unwrap(), id);
+        assert!(cancellations.try_recv().is_err());
+    }
+}

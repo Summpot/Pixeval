@@ -100,7 +100,13 @@ impl DownloadManager {
 
     pub fn update_network_options(&self, network_options: Option<DownloadNetworkOptions>) {
         let new_client = Self::build_client(network_options.as_ref());
-        *self.client.write() = new_client;
+        let mut current = self.client.write();
+        new_client.set_transport(current.transport());
+        *current = new_client;
+    }
+
+    pub fn set_transport(&self, transport: Option<Box<dyn pixeval_maho::MahoTransport>>) {
+        self.client.read().set_transport(transport.map(Arc::from));
     }
 
     pub fn enqueue_task(

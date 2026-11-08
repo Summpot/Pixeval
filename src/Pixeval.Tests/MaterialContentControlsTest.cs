@@ -79,6 +79,7 @@ public sealed class MaterialContentControlsTest
             window.Content = new StackPanel { Spacing = 12, Margin = new Thickness(16), Children = { blocked, dependency, tabs, card, constrained } };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 Assert.IsTrue(card.IsClickable);
@@ -135,6 +136,7 @@ public sealed class MaterialContentControlsTest
             var window = new Window { Width = 420, Height = 500, Content = new StackPanel { Children = { large, card, link, badge } } };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 Assert.IsTrue(double.IsNaN(large.LineHeight));
@@ -173,6 +175,7 @@ public sealed class MaterialContentControlsTest
             var window = new Window { Width = 420, Height = 300, Content = new StackPanel { Children = { text } } };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 Assert.AreEqual(24, text.LineHeight);

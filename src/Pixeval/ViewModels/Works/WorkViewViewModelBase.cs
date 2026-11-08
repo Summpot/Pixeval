@@ -6,6 +6,9 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
 using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Pixeval.Config;
@@ -80,22 +83,44 @@ public abstract partial class WorkViewViewModelBase<T, TViewModel>(AppSettings a
         OnPropertyChanged(nameof(View));
     }
 
+    public override void ShareSourceFrom(EntryViewViewModel<T, TViewModel> owner)
+    {
+        _filteredView?.Dispose();
+        _filteredView = null;
+        base.ShareSourceFrom(owner);
+        _filteredView = CreateFilteredView();
+        OnPropertyChanged(nameof(View));
+    }
+
     public void ResetSource(IAsyncEnumerable<object>? source, int itemsPerPage = 20, int itemLimit = -1)
     {
         CachedBlockedTags = [.. appSettings.BrowsingExperienceSettings.BlockedTags.ToFrozenSet()];
-        var typed = source as IAsyncEnumerable<T> ?? (source is not null ? CastSource(source) : null);
+        var typed = source as IAsyncEnumerable<T> ?? (source is IPageFeed<object> feed
+            ? new TypedPageFeed(source, feed)
+            : source is not null ? CastSource(source) : null);
         ResetSource(typed, static (info, _) => (TViewModel) (object) info, itemsPerPage, itemLimit);
+    }
 
-        static async IAsyncEnumerable<T> CastSource(IAsyncEnumerable<object> items)
+    private static async IAsyncEnumerable<T> CastSource(IAsyncEnumerable<object> items, [EnumeratorCancellation] CancellationToken token = default)
+    {
+        await foreach (var item in items.WithCancellation(token))
+            yield return (T) item;
+    }
+
+    private sealed class TypedPageFeed(IAsyncEnumerable<object> source, IPageFeed<object> feed) : IAsyncEnumerable<T>, IPageFeed<T>
+    {
+        public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken token = default) => CastSource(source, token).GetAsyncEnumerator(token);
+        public void Cancel() => feed.Cancel();
+        public async Task<(IReadOnlyList<T> Items, bool Exhausted)> FetchPageAsync(CancellationToken cancellationToken = default)
         {
-            await foreach (var item in items)
-                yield return (T) item;
+            var (items, exhausted) = await feed.FetchPageAsync(cancellationToken).ConfigureAwait(false);
+            return (items.Cast<T>().ToArray(), exhausted);
         }
     }
 
     private FilteredIncrementalCollection<TViewModel> CreateFilteredView()
     {
-        return new FilteredIncrementalCollection<TViewModel>((IncrementalLoadingCollection<TViewModel>) Source)
+        return new FilteredIncrementalCollection<TViewModel>((IncrementalLoadingCollection<TViewModel>) Source, ownsSource: false)
         {
             Comparer = ArtworkInfoExtensions.GetComparer(_sortOption),
             Filter = _userFilter

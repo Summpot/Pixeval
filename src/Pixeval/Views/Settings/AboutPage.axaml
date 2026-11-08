@@ -1,9 +1,8 @@
 <views:IconContentPage
     x:Class="Pixeval.Views.Settings.AboutPage"
     xmlns="https://github.com/avaloniaui"
+    xmlns:appCommon="using:Pixeval.Common"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:loc="using:Pixeval.Localization"
-    xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Pixeval.Controls"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
@@ -14,7 +13,10 @@
     xmlns:views="using:Pixeval.Views.Shell"
     mc:Ignorable="d"
     d:DesignHeight="600"
-    d:DesignWidth="800">
+    d:DesignWidth="800"
+    xmlns:loc="using:Pixeval.Localization"
+    xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
+    xmlns:markup="using:FluentIcons.Avalonia.Markup">
     <ScrollViewer>
         <StackPanel Margin="20" Spacing="20">
             <StackPanel Spacing="10">
@@ -44,7 +46,7 @@
                                 MinHeight="160"
                                 Padding="12"
                                 AutomationProperties.Name="{Binding Nickname}"
-                                Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                                Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                                 IsClickable="True"
                                 Tag="{Binding ProfileUri}"
                                 ToolTip.Tip="{Binding ProfileUri}">
@@ -106,7 +108,7 @@
                                         Margin="4"
                                         VerticalAlignment="Top"
                                         AutomationProperties.Name="{Binding Url}"
-                                        Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                                        Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                                         Symbol="OpenInNew"
                                         Tag="{Binding Url}"
                                         ToolTip.Tip="{Binding Url}" />

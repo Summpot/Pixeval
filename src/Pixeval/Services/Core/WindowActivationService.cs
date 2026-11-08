@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 using Pixeval.Views.Settings;
-using Pixeval.Views.ViewContainers;
+using Pixeval.Views.Shell;
 
-namespace Pixeval.AppManagement;
+namespace Pixeval.Services.Core;
 
 /// <summary>External update checks and release announcements for a newly opened window.</summary>
 public interface IWindowActivationService
@@ -75,9 +75,7 @@ internal sealed class WindowActivationService : IWindowActivationService
                 return;
 
             var readyVersion = AppInfo.AppVersion.PendingUpdateVersion ?? version;
-            container.ShowSuccess(I18NManager.GetResource(
-                SettingsMainViewResources.UpdateDownloadReadyFormatted,
-                readyVersion));
+            container.ShowSuccess(Strings.SettingsMainViewUpdateDownloadReadyFormatted(readyVersion));
         }
         catch (Exception exception)
         {

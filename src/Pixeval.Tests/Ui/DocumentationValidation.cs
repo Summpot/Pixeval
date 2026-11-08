@@ -19,7 +19,7 @@ using Avalonia.VisualTree;
 using ColorTextBlock.Avalonia;
 using Material3Expressive.Components;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Views.Settings;
 
 namespace Pixeval.Tests.Ui;
@@ -59,10 +59,11 @@ internal static class DocumentationValidation
 
     private static async Task VerifyAboutAsync(ThemeVariant theme, int width, string directory)
     {
-        var page = new AboutPage();
-        var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = page };
+        var page = UiTestSession.Create<AboutPage>();
+        var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = new PageTestHost { Content = page }.Shell };
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             await RenderAsync(window);
             var cards = page.GetVisualDescendants().OfType<Card>().Where(card => card.DataContext is Supporter).ToArray();
@@ -125,9 +126,10 @@ internal static class DocumentationValidation
     private static async Task VerifyHelpAsync(ThemeVariant theme, int width, string directory)
     {
         var page = new HelpPage();
-        var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = page };
+        var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = new PageTestHost { Content = page }.Shell };
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             await RenderAsync(window);
             var expanders = page.GetVisualDescendants().OfType<Expander>().Where(expander => expander.Classes.Contains("documentation-section")).ToArray();
@@ -145,7 +147,7 @@ internal static class DocumentationValidation
                 Require(expander.IsExpanded, "Enter did not expand help.");
                 var documents = expander.GetVisualDescendants().OfType<MarkdownBox>().ToArray();
                 Require(documents.Length > 0 && documents.All(document => !string.IsNullOrWhiteSpace(document.Markdown)), "Localized help content is empty.");
-                foreach (var copy in expander.GetVisualDescendants().OfType<IconButton>().Where(button => button.Classes.Contains("CopyButton")))
+                foreach (var copy in expander.GetVisualDescendants().OfType<Button>().Where(button => button.Classes.Contains("CopyButton")))
                 {
                     copy.BringIntoView();
                     await RenderAsync(window);
@@ -166,7 +168,7 @@ internal static class DocumentationValidation
                 PressKey(window, Key.Space, PhysicalKey.Space, " ");
                 await RenderAsync(window);
                 Require(!expander.IsExpanded, "Space did not collapse help.");
-                await UntilAsync(window, () => !expander.GetVisualDescendants().OfType<IconButton>().Any(button => button.IsEffectivelyVisible));
+                await UntilAsync(window, () => !expander.GetVisualDescendants().OfType<Button>().Any(button => button.Classes.Contains("CopyButton") && button.IsEffectivelyVisible));
             }
             Require(copied > 0, "The real localized help must exercise code-copy examples.");
             var section = page.GetVisualDescendants().OfType<McpHelpSection>().Single();
@@ -181,7 +183,7 @@ internal static class DocumentationValidation
             PressKey(window, Key.Enter, PhysicalKey.Enter, "\r");
             await RenderAsync(window);
             Require(refreshes is 1 && tools.IsExpanded, "Refreshing the tools must not collapse their section.");
-            Require(section.GetVisualDescendants().OfType<TextBlock>().Any(text => text.Text == I18NManager.GetResource(HelpPageResources.McpToolsStatus.Disabled)),
+            Require(section.GetVisualDescendants().OfType<TextBlock>().Any(text => text.Text == Strings.HelpPageMcpToolsStatusDisabled()),
                 "Disabled-server refresh must preserve the localized disabled status.");
             Save(window, $"help-{theme.Key}-{width}-mcp-tools.png", directory);
         }

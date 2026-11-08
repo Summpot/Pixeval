@@ -38,6 +38,7 @@ public sealed class PagePreviewSliderInputTest
             var window = new Window { Width = 320, Height = 480, RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light, Content = panel };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 await RenderAsync(window);
                 Assert.IsTrue(before.Focus());
@@ -133,6 +134,7 @@ public sealed class PagePreviewSliderInputTest
             var window = new Window { Width = 320, Height = 480, Content = panel };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 await RenderAsync(window);
                 Assert.AreEqual(1, first.SubscriberCount);

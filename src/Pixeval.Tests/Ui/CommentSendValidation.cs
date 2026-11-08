@@ -20,10 +20,8 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
-using Mako.Net.Responses;
-using Pixeval.I18N;
+using Pixeval.Mako;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views;
@@ -42,8 +40,8 @@ internal static class CommentSendValidation
     {
         var client = App.AppViewModel.MakoClient;
         using var fixture = new OfflineSearchFixture(client);
-        await client.SetTokenAsync("fixture-comment-send");
-        await client.ValidateTokenAsync();
+        client.SetRefreshToken("fixture-comment-send");
+        await FixtureAuthentication.IdentifyAsync(client);
         byte[] image;
         using (var asset = AssetLoader.Open(new Uri("avares://Pixeval/Assets/Platforms/pixiv.png")))
         using (var buffer = new MemoryStream())
@@ -77,13 +75,14 @@ internal static class CommentSendValidation
         List<string> report = [];
         try
         {
-            using (var closed = new CommentsViewViewModel(SimpleWorkType.Illustration, WorkId))
+            using (var closed = UiTestSession.Create<CommentsViewViewModel>(SimpleWorkKind.Illustration, WorkId))
             {
                 var page = new CommentContainer { DataContext = closed };
                 var host = new PageTestHost { Content = page };
                 var window = new Window { Width = 360, Height = 600, Content = host.Shell };
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     await RenderAsync(window);
                     var bar = page.FindControl<PixivReplyBar>("ReplyBar")!;
@@ -108,29 +107,30 @@ internal static class CommentSendValidation
                     window.Close();
                 }
             }
-            foreach (var type in new[] { SimpleWorkType.Illustration, SimpleWorkType.Novel })
+            foreach (var type in new[] { SimpleWorkKind.Illustration, SimpleWorkKind.Novel })
                 foreach (var reply in new[] { false, true })
                     foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                         foreach (var width in new[] { 360, 1000 })
                         {
                             using CommentsViewViewModel model = reply
-                                ? new CommentItemViewModel(Comment(ParentId, "Parent comment"), type, WorkId, true)
-                                : new CommentsViewViewModel(type, WorkId);
+                                ? UiTestSession.Create<CommentsViewViewModel>(type, WorkId).OpenReplies(ParentId)
+                                : UiTestSession.Create<CommentsViewViewModel>(type, WorkId);
                             var page = new CommentContainer { DataContext = model };
                             var host = new PageTestHost { Content = page };
                             var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = host.Shell };
-                            var key = $"{type}-{(reply ? "Reply" : "Comment")}-{theme.Key}-{width}";
+                            var key = $"{type}-{(reply ? "Reply" : "CommentRecord")}-{theme.Key}-{width}";
                             try
                             {
+                                Pixeval.Common.MaterialAnimation.Initialize(window);
                                 window.Show();
                                 await RenderAsync(window);
                                 var bar = page.FindControl<PixivReplyBar>("ReplyBar")!;
                                 var input = bar.FindControl<TextBox>("ReplyContentTextBox")!;
                                 var send = bar.FindControl<Button>("SendButton")!;
                                 var emoji = bar.FindControl<Button>("EmojiButton")!;
-                                Require(AutomationProperties.GetName(input) == I18NManager.GetResource(PixivReplyBarResources.ReplyContentRichEditBox.PlaceholderText)
-                                    && AutomationProperties.GetName(send) == I18NManager.GetResource(PixivReplyBarResources.SendButton.ToolTip)
-                                    && AutomationProperties.GetName(emoji) == I18NManager.GetResource(PixivReplyBarResources.OpenEmoji),
+                                Require(AutomationProperties.GetName(input) == Strings.PixivReplyBarReplyContentRichEditBoxPlaceholderText()
+                                    && AutomationProperties.GetName(send) == Strings.PixivReplyBarSendButtonToolTip()
+                                    && AutomationProperties.GetName(emoji) == Strings.PixivReplyBarOpenEmoji(),
                                     "The editor and icon actions expose localized purposes");
                                 Type(new string('x', 140));
                                 window.KeyTextInput("overflow");
@@ -159,7 +159,7 @@ internal static class CommentSendValidation
                                 await UntilAsync(() => !bar.IsSubmitting);
                                 Require(model.Source.Count == 0 && input.Text == Draft && send.IsEnabled,
                                     "A failed response preserves the draft and allows retry");
-                                Require(host.Notifications.Any(notification => notification.Title == I18NManager.GetResource(PixivReplyBarResources.SendFailed)),
+                                Require(host.Notifications.Any(notification => notification.Title == Strings.PixivReplyBarSendFailed()),
                                     "Failure displays the localized error");
                                 Save(window, directory, "comment-failed-" + key);
                                 await ActivateAsync(send);
@@ -232,8 +232,8 @@ internal static class CommentSendValidation
                                 void CheckPayload(Pending request, string field, string value)
                                 {
                                     var body = HttpUtility.ParseQueryString(request.Body);
-                                    Require(request.Uri.AbsolutePath == $"/v1/{(type == SimpleWorkType.Illustration ? "illust" : "novel")}/comment/add"
-                                        && body[type == SimpleWorkType.Illustration ? "illust_id" : "novel_id"] == WorkId.ToString()
+                                    Require(request.Uri.AbsolutePath == $"/v1/{(type == SimpleWorkKind.Illustration ? "illust" : "novel")}/comment/add"
+                                        && body[type == SimpleWorkKind.Illustration ? "illust_id" : "novel_id"] == WorkId.ToString()
                                         && body["parent_comment_id"] == (reply ? ParentId.ToString() : null) && body[field] == value,
                                         "The original work, parent, text and sticker payload is preserved: " + request.Body);
                                 }
@@ -244,14 +244,15 @@ internal static class CommentSendValidation
                                 window.Close();
                             }
                         }
-            using (var previous = new CommentsViewViewModel(SimpleWorkType.Illustration, WorkId))
-            using (var current = new CommentsViewViewModel(SimpleWorkType.Novel, WorkId + 1))
+            using (var previous = UiTestSession.Create<CommentsViewViewModel>(SimpleWorkKind.Illustration, WorkId))
+            using (var current = UiTestSession.Create<CommentsViewViewModel>(SimpleWorkKind.Novel, WorkId + 1))
             {
                 var page = new CommentContainer { DataContext = previous };
                 var host = new PageTestHost { Content = page };
                 var window = new Window { Width = 360, Height = 600, Content = host.Shell };
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     await RenderAsync(window);
                     var bar = page.FindControl<PixivReplyBar>("ReplyBar")!;
@@ -275,16 +276,16 @@ internal static class CommentSendValidation
                     report.Add("PASS context replacement: actual cancellation, new request, late completion ownership and recovery");
                     await SendAsync("Account switch draft");
                     var switched = await NextAsync();
-                    fixture.AuthResponseFactory = (_, _) => Task.FromResult(JsonSerializer.Serialize(TokenResponse.CreateDefault() with
+                    fixture.AuthResponseFactory = (_, _) => Task.FromResult(NativeFixtureData.Serialize(new TokenResponse { AccessToken = "fixture", RefreshToken = "fixture", TokenType = "Bearer", ExpiresIn = 3600 } with
                     {
                         AccessToken = "fixture-second-access",
                         RefreshToken = "fixture-second-refresh",
                         ExpiresIn = 3600,
-                        User = TokenUser.CreateDefault() with { Id = 900002, Name = "Fixture second account", Account = "fixture-second" }
+                        User = new TokenUser { Id = "", Name = "", Account = "" } with { Id = "900002", Name = "Fixture second account", Account = "fixture-second" }
                     }));
-                    await client.SetTokenAsync("fixture-second-account");
-                    await client.ValidateTokenAsync();
-                    Require(client.Me?.Id == 900002, "The comment sample actually changes the isolated account");
+                    client.SetRefreshToken("fixture-second-account");
+                    await FixtureAuthentication.IdentifyAsync(client);
+                    Require(client.GetUser()?.Id == "900002", "The comment sample actually changes the isolated account");
                     switched.Response.SetResult(Response(996203, "Previous account comment"));
                     await UntilAsync(() => !bar.IsSubmitting);
                     Require(current.Source.Count == 1 && input.Text == "Account switch draft", "A previous account cannot insert a late comment or clear the draft");
@@ -306,7 +307,7 @@ internal static class CommentSendValidation
                     window.Close();
                 }
             }
-            Require(fixture.UnexpectedRequests.IsEmpty, "Comment requests stay inside the fixed matrix: " + string.Join(", ", fixture.UnexpectedRequests));
+            Require(fixture.UnexpectedRequests.IsEmpty, "CommentRecord requests stay inside the fixed matrix: " + string.Join(", ", fixture.UnexpectedRequests));
             File.WriteAllLines(Path.Combine(directory, "comment-send-contracts.txt"), report);
             Console.WriteLine($"Validated {report.Count} comment-send groups.");
         }
@@ -320,16 +321,16 @@ internal static class CommentSendValidation
         Task<Pending> NextAsync() => requests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
     }
 
-    private static Comment Comment(long id, string content) => Mako.Model.Comment.CreateDefault() with
+    private static CommentRecord CommentRecord(long id, string content) => new CommentRecord() with
     {
         Id = id,
-        Content = content,
-        Date = DateTimeOffset.UnixEpoch,
-        User = AvatarUser.CreateDefault() with { Id = 900001, Name = "Fixture author", ProfileImageUrls = new() { Medium = ImageUri } }
+        Comment = content,
+        Date = DateTimeOffset.UnixEpoch.ToString("O"),
+        User = User.CreateDefault() with { Id = 900001, Name = "Fixture author", ProfileImageUrls = new() { Medium = ImageUri } }
     };
-    private static string Response(long id, string content, bool sticker = false) => JsonSerializer.Serialize(new
+    private static string Response(long id, string content, bool sticker = false) => NativeFixtureData.Serialize(new
     {
-        comment = Comment(id, content) with { Stamp = sticker ? Stamp.CreateDefault() with { StampId = 301, StampUrl = string.Format(CommentImageHelper.StickerDownloadUrl, 301) } : null }
+        comment = CommentRecord(id, content) with { Stamp = sticker ? new StampInfo() with { StampId = 301, StampUrl = string.Format(CommentImageHelper.StickerDownloadUrl, 301) } : null }
     });
     private static void Press(Window window, Key key, PhysicalKey physical)
     {

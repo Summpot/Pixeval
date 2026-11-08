@@ -4,7 +4,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.VisualTree;
-using Pixeval.Views.ViewContainers;
+using Pixeval.Views.Shell;
 
 namespace Pixeval.Tests.Ui;
 

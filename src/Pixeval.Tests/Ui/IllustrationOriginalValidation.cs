@@ -12,8 +12,8 @@ using Avalonia.Controls.Notifications;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.VisualTree;
-using Pixeval.I18N;
-using Pixeval.Models.Options;
+using Pixeval.Localization;
+using Pixeval.Config;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
@@ -26,10 +26,10 @@ internal static class IllustrationOriginalValidation
     internal static async Task RunAsync(string directory)
     {
         using var fixture = new IllustrationReaderFixture();
-        App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache = true;
+
         App.AppViewModel.AppSettings.BrowsingExperienceSettings.BrowseMode =
             System.Globalization.CultureInfo.CurrentUICulture.Name is "en-US" or "ru-RU" ? BrowseMode.Continuous : BrowseMode.Swipe;
-        var originalUri = "https://i.pximg.net/m3e/original-action.png";
+        var originalUri = $"https://i.pximg.net/m3e/original-action-{Guid.NewGuid():N}.png";
         TaskCompletionSource<HttpResponseMessage>? pending = null;
         CancellationToken requestToken = default;
         var requests = 0;
@@ -42,19 +42,20 @@ internal static class IllustrationOriginalValidation
             return pending.Task;
         };
         var entry = IllustrationReaderFixture.Sample(996410, 1) with { MetaSinglePage = new() { OriginalImageUrl = originalUri } };
-        var model = new IllustrationViewerPageViewModel(new IllustrationItemViewModel(entry), false);
+        var model = UiTestSession.Create<IllustrationViewerPageViewModel>((entry), false);
         var page = new IllustrationViewerPage(model);
         var host = new PageTestHost { Content = page };
         var window = new Window { Width = 700, Height = 760, Content = host.Shell };
         List<string> report = [];
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             await UntilAsync(() => model.CurrentImage?.CurrentPage?.LoadSuccessfully == true);
             await RenderAsync(window);
             var image = model.CurrentImage!.CurrentPage!;
             var viewer = page.GetVisualDescendants().OfType<SingleImageViewer>().Single(control => ReferenceEquals(control.DataContext, image));
-            var original = viewer.ContextMenu!.Items.OfType<MenuItem>().Single(item => item.Header?.ToString() == I18NManager.GetResource(EntryViewerPageResources.ViewOriginal));
+            var original = viewer.ContextMenu!.Items.OfType<MenuItem>().Single(item => item.Header?.ToString() == Strings.EntryViewerPageViewOriginal());
             var frame = image.DisplaySource.Frames[0];
             foreach (var malformed in new[] { false, true })
             {
@@ -79,19 +80,20 @@ internal static class IllustrationOriginalValidation
             report.Add("PASS original retry and decoded success");
             await IllustrationTransformValidation.DismissAsync(window);
             host.Shell.ClosePage(page);
-            originalUri = "https://i.pximg.net/m3e/original-close.png";
+            originalUri = $"https://i.pximg.net/m3e/original-close-{Guid.NewGuid():N}.png";
             entry = IllustrationReaderFixture.Sample(996411, 1) with { MetaSinglePage = new() { OriginalImageUrl = originalUri } };
-            model = new IllustrationViewerPageViewModel(new IllustrationItemViewModel(entry), false);
+            model = UiTestSession.Create<IllustrationViewerPageViewModel>((entry), false);
             page = new IllustrationViewerPage(model);
             host.Shell.NavigateTo(page);
             await UntilAsync(() => model.CurrentImage?.CurrentPage?.LoadSuccessfully == true);
             await RenderAsync(window);
             image = model.CurrentImage!.CurrentPage!;
             viewer = page.GetVisualDescendants().OfType<SingleImageViewer>().Single(control => ReferenceEquals(control.DataContext, image));
-            original = viewer.ContextMenu!.Items.OfType<MenuItem>().Single(item => item.Header?.ToString() == I18NManager.GetResource(EntryViewerPageResources.ViewOriginal));
+            original = viewer.ContextMenu!.Items.OfType<MenuItem>().Single(item => item.Header?.ToString() == Strings.EntryViewerPageViewOriginal());
             await BeginAsync();
             var closedTask = image.ViewOriginalCommand.ExecutionTask!;
             host.Shell.ClosePage(page);
+            await UntilAsync(() => requestToken.IsCancellationRequested);
             Require(requestToken.IsCancellationRequested, "Production close cancels the original download token");
             var changes = 0;
             image.PropertyChanged += (_, _) => changes++;

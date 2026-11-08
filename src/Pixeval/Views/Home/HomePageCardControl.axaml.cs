@@ -71,7 +71,7 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
 
     private static HomeCardDefinition DesignDefinition { get; } = new(
         HomePageCardSourceKind.WorkRecommended,
-        static _ => Task.FromResult(new HomeCardPreviewSource(new UserViewViewModel())),
+        static (_, _) => Task.FromResult(new HomeCardPreviewSource(new UserViewViewModel())),
         static (_, _) => { });
 
     public event EventHandler<HomeCardSelectedEventArgs>? CardSelected;
@@ -187,9 +187,14 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
     [RelayCommand(CanExecute = nameof(CanOpenCard))]
     private async Task OpenCardPageAsync()
     {
-        await PreviewViewModel.EnsureLoadedAsync();
-        var source = PreviewViewModel.Source;
-        if (source is null)
+        var version = ++_openRequestVersion;
+        var card = Card;
+        var preview = PreviewViewModel;
+        await preview.EnsureLoadedAsync();
+        var source = preview.Source;
+        if (source is null || _isDisposed || !IsLoaded || IsEditing
+            || version != _openRequestVersion || !ReferenceEquals(preview, PreviewViewModel)
+            || !Equals(card, Card))
             return;
 
         Definition.OpenCardPage(Card, source);
@@ -202,6 +207,9 @@ public sealed partial class HomePageCardControl : UserControl, IDisposable
 
         _isDisposed = true;
         _languageSubscription.Dispose();
+        _openRequestVersion++;
+        OpenPreviewItemCommand.NotifyCanExecuteChanged();
+        OpenCardPageCommand.NotifyCanExecuteChanged();
         CompleteEdit(false);
         CardSelected = null;
         EditPreview = null;

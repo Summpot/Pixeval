@@ -149,6 +149,10 @@ mod token_persistence_tests {
 
 type TokenPersistence = Arc<dyn Fn(&TokenResponse) -> Result<(), String> + Send + Sync>;
 
+#[cfg(test)]
+#[path = "series_tests.rs"]
+mod series_tests;
+
 #[derive(uniffi::Object, Clone)]
 pub struct MakoClient {
     token_persistence: Arc<parking_lot::RwLock<Option<TokenPersistence>>>,
@@ -161,6 +165,8 @@ pub struct MakoClient {
     web_cookie: Arc<parking_lot::RwLock<Option<String>>>,
     session_callback: Arc<parking_lot::RwLock<Option<Box<dyn MakoSessionCallback>>>>,
     tag_translation_cache: Arc<parking_lot::RwLock<std::collections::HashMap<String, String>>>,
+    // Bounded, account-scoped successful content cache; failed/cancelled loads are retryable.
+    novel_content_cache: Arc<parking_lot::Mutex<std::collections::VecDeque<(String, i64, NovelContent)>>>,
 }
 
 impl Drop for MakoClient {
@@ -230,7 +236,12 @@ impl MakoClient {
             web_cookie: Arc::new(parking_lot::RwLock::new(config.web_cookie)),
             session_callback: Arc::new(parking_lot::RwLock::new(None)),
             tag_translation_cache: Arc::new(parking_lot::RwLock::new(std::collections::HashMap::new())),
+            novel_content_cache: Arc::new(parking_lot::Mutex::new(std::collections::VecDeque::new())),
         }))
+    }
+
+    pub fn set_transport(&self, transport: Option<Box<dyn pixeval_maho::MahoTransport>>) {
+        self.http_client.read().set_transport(transport.map(Arc::from));
     }
 
     pub fn set_session_callback(&self, callback: Option<Box<dyn MakoSessionCallback>>) {
@@ -252,7 +263,11 @@ impl MakoClient {
     pub fn update_configuration(&self, config: MakoConfigurationDto) -> Result<(), MakoError> {
         let new_client = Self::build_client(&config)?;
         self.throttler.set_cooldown_ms(config.cooldown_ms);
-        *self.http_client.write() = new_client;
+        {
+            let mut current = self.http_client.write();
+            new_client.set_transport(current.transport());
+            *current = new_client;
+        }
         if let Some(tf) = config.target_filter {
             *self.target_filter.write() = tf;
         }
@@ -262,10 +277,12 @@ impl MakoClient {
     }
 
     pub fn set_refresh_token(&self, refresh_token: String) {
+        self.novel_content_cache.lock().clear();
         self.oauth.set_refresh_token(refresh_token);
     }
 
     pub fn clear_token(&self) {
+        self.novel_content_cache.lock().clear();
         self.oauth.clear();
     }
 
@@ -895,7 +912,7 @@ impl MakoClient {
     }
 
     pub fn novel_mypixiv(&self) -> Arc<NovelFeed> {
-        let initial_url = format!("{APP_API_BASE_URL}/v1/novel/mypixiv");
+        let initial_url = format!("{APP_API_BASE_URL}/v2/novel/mypixiv");
         let fetcher = Arc::new(NovelPageFetcher {
             client: self.clone(),
             initial_url: initial_url.clone(),
@@ -998,28 +1015,31 @@ impl MakoClient {
     }
 
     pub async fn get_novel_content_structured(&self, id: i64) -> Result<NovelContent, MakoError> {
-        let webview_url =
-            format!("{APP_API_BASE_URL}/webview/v2/novel?id={id}&viewer_version=20221031_ai");
-        if let Ok(resp) = self.request_get(&webview_url).await {
-            if let Ok(html) = resp.text().await {
-                if let Some(json_str) = extract_novel_json_from_html(&html) {
-                    if let Ok(content) = serde_json::from_str::<NovelContent>(&json_str) {
-                        return Ok(content);
-                    }
-                }
+        self.fetch_novel_content_structured(id).await
+    }
+
+    /// Reader navigation reuses successful bodies; explicit downloads still fetch fresh content.
+    pub async fn get_novel_content_cached(&self, id: i64) -> Result<NovelContent, MakoError> {
+        let account = self.oauth.get_user().map(|user| user.id).unwrap_or_default();
+        {
+            let mut cache = self.novel_content_cache.lock();
+            if let Some(index) = cache.iter().position(|(owner, novel_id, _)| owner == &account && *novel_id == id) {
+                let entry = cache.remove(index).unwrap();
+                let content = entry.2.clone();
+                cache.push_back(entry);
+                return Ok(content);
             }
         }
-
-        // Fallback to text endpoint if webview fails
-        let text_url = format!("{APP_API_BASE_URL}/v1/novel/text?novel_id={id}");
-        let text_resp = self.request_get(&text_url).await?;
-        let text = text_resp.text().await.unwrap_or_default();
-        Ok(NovelContent {
-            id,
-            text,
-            ..Default::default()
-        })
+        let content = self.fetch_novel_content_structured(id).await?;
+        if self.oauth.get_user().map(|user| user.id).unwrap_or_default() == account {
+            let mut cache = self.novel_content_cache.lock();
+            cache.retain(|(owner, novel_id, _)| owner != &account || *novel_id != id);
+            cache.push_back((account, id, content.clone()));
+            while cache.len() > 32 { cache.pop_front(); }
+        }
+        Ok(content)
     }
+
 
     pub async fn get_work_comments(
         &self,
@@ -1723,48 +1743,30 @@ impl MakoClient {
         kind: SimpleWorkKind,
         series_id: i64,
     ) -> Result<Arc<WorkSeriesQuery>, MakoError> {
-        let engine = self.work_series_unified(kind, series_id);
-        let first = engine.next().await;
-        let detail = match &first {
-            Some(WorkEntry::NovelWork { novel }) => Series {
-                id: series_id,
-                title: novel.title.clone(),
-                user: Some(novel.user.clone()),
-                mask_text: None,
-                cover_url: novel
-                    .image_urls
-                    .medium
-                    .clone()
-                    .or_else(|| novel.image_urls.square_medium.clone()),
-                published_content_count: Some(1),
-                latest_content_id: Some(novel.id),
-                last_published_content_datetime: None,
-            },
-            Some(WorkEntry::Illust { illustration }) => Series {
-                id: series_id,
-                title: illustration.title.clone(),
-                user: Some(illustration.user.clone()),
-                mask_text: None,
-                cover_url: illustration
-                    .image_urls
-                    .medium
-                    .clone()
-                    .or_else(|| illustration.image_urls.square_medium.clone()),
-                published_content_count: Some(1),
-                latest_content_id: Some(illustration.id),
-                last_published_content_datetime: None,
-            },
-            None => Series {
-                id: series_id,
-                title: String::new(),
-                ..Default::default()
-            },
+        let url = catalog::work_series_url(&self.filter(), kind, series_id);
+        let response: serde_json::Value = self.request_get(&url).await?.json().await?;
+        let detail_key = if kind.is_novel() { "novel_series_detail" } else { "illust_series_detail" };
+        let mut detail: Series = serde_json::from_value(response[detail_key].clone())
+            .map_err(|e| MakoError::Json { message: e.to_string() })?;
+        if detail.cover_url.is_none() {
+            detail.cover_url = response[detail_key]["cover_image_urls"]["medium"].as_str().map(str::to_owned);
+        }
+        let (first, items, next_url) = if kind.is_novel() {
+            let page: NovelResponse = serde_json::from_value(response.clone())
+                .map_err(|e| MakoError::Json { message: e.to_string() })?;
+            let first = serde_json::from_value::<Novel>(response["novel_series_first_novel"].clone()).ok()
+                .or_else(|| page.novels.first().cloned()).map(|novel| WorkEntry::NovelWork { novel });
+            (first, page.novels.into_iter().map(|novel| WorkEntry::NovelWork { novel }).collect(), page.next_url)
+        } else {
+            let page: IllustrationResponse = serde_json::from_value(response.clone())
+                .map_err(|e| MakoError::Json { message: e.to_string() })?;
+            let first = serde_json::from_value::<Illustration>(response["illust_series_first_illust"].clone()).ok()
+                .or_else(|| page.illusts.first().cloned()).map(|illustration| WorkEntry::Illust { illustration });
+            (first, page.illusts.into_iter().map(|illustration| WorkEntry::Illust { illustration }).collect(), page.next_url)
         };
-        Ok(Arc::new(WorkSeriesQuery {
-            detail,
-            first,
-            engine: self.work_series_unified(kind, series_id),
-        }))
+        let fetcher = Arc::new(WorkEntryPageFetcher { client: self.clone(), initial_url: url, is_novel: kind.is_novel() });
+        let engine = Arc::new(WorkFeed::new(Arc::new(MakoFeed::with_initial_page(fetcher, items, next_url))));
+        Ok(Arc::new(WorkSeriesQuery { detail, first, engine }))
     }
 
     pub fn work_comments(&self, kind: SimpleWorkKind, work_id: i64) -> Arc<CommentFeed> {
@@ -1877,58 +1879,18 @@ impl MakoClient {
         is_novel: bool,
         series_id: i64,
     ) -> Result<WorkSeriesDetailResult, MakoError> {
-        if is_novel {
-            let engine = self.novel_series(series_id);
-            let first = engine.next().await;
-            let (first_id, first_title, user) = match &first {
-                Some(n) => (Some(n.id), Some(n.title.clone()), Some(n.user.clone())),
-                None => (None, None, None),
-            };
-            let detail = Series {
-                id: series_id,
-                title: first_title.clone().unwrap_or_default(),
-                user,
-                mask_text: None,
-                cover_url: None,
-                published_content_count: Some(if first.is_some() { 1 } else { 0 }),
-                latest_content_id: first_id,
-                last_published_content_datetime: None,
-            };
-            Ok(WorkSeriesDetailResult {
-                detail,
-                first_work_id: first_id,
-                first_work_title: first_title,
-                total_works_count: if first.is_some() { 1 } else { 0 },
-            })
-        } else {
-            let engine = self.work_series(series_id);
-            let first = engine.next().await;
-            let (first_id, first_title, user, cover_url) = match &first {
-                Some(i) => (
-                    Some(i.id),
-                    Some(i.title.clone()),
-                    Some(i.user.clone()),
-                    i.image_urls.medium.clone().or_else(|| i.image_urls.square_medium.clone()),
-                ),
-                None => (None, None, None, None),
-            };
-            let detail = Series {
-                id: series_id,
-                title: first_title.clone().unwrap_or_default(),
-                user,
-                mask_text: None,
-                cover_url,
-                published_content_count: Some(if first.is_some() { 1 } else { 0 }),
-                latest_content_id: first_id,
-                last_published_content_datetime: None,
-            };
-            Ok(WorkSeriesDetailResult {
-                detail,
-                first_work_id: first_id,
-                first_work_title: first_title,
-                total_works_count: if first.is_some() { 1 } else { 0 },
-            })
-        }
+        let kind = if is_novel { SimpleWorkKind::Novel } else { SimpleWorkKind::Illustration };
+        let query = self.get_work_series(kind, series_id).await?;
+        let (first_work_id, first_work_title) = match query.first() {
+            Some(WorkEntry::NovelWork { novel }) => (Some(novel.id), Some(novel.title)),
+            Some(WorkEntry::Illust { illustration }) => (Some(illustration.id), Some(illustration.title)),
+            None => (None, None),
+        };
+        let detail = query.detail();
+        Ok(WorkSeriesDetailResult {
+            total_works_count: detail.published_content_count.unwrap_or(0),
+            detail, first_work_id, first_work_title,
+        })
     }
 
     pub async fn set_series_watchlist(
@@ -1956,6 +1918,30 @@ impl MakoClient {
 }
 
 impl MakoClient {
+    async fn fetch_novel_content_structured(&self, id: i64) -> Result<NovelContent, MakoError> {
+        let webview_url =
+            format!("{APP_API_BASE_URL}/webview/v2/novel?id={id}&viewer_version=20221031_ai");
+        if let Ok(resp) = self.request_get(&webview_url).await {
+            if let Ok(html) = resp.text().await {
+                if let Some(json_str) = extract_novel_json_from_html(&html) {
+                    if let Ok(content) = serde_json::from_str::<NovelContent>(&json_str) {
+                        return Ok(content);
+                    }
+                }
+            }
+        }
+
+        // Fallback to text endpoint if webview fails
+        let text_url = format!("{APP_API_BASE_URL}/v1/novel/text?novel_id={id}");
+        let text_resp = self.request_get(&text_url).await?;
+        let text = text_resp.text().await.unwrap_or_default();
+        Ok(NovelContent {
+            id,
+            text,
+            ..Default::default()
+        })
+    }
+
     async fn get_access_token_or_refresh(&self) -> Result<String, MakoError> {
         if let Some(token) = self.oauth.get_valid_access_token() {
             if let Some(response) = self.oauth.get_token_response() {
@@ -1982,7 +1968,9 @@ impl MakoClient {
     }
 
     pub async fn request_get(&self, url: &str) -> Result<MahoResponse, MakoError> {
-        let _gate_guard = self.throttler.acquire_gate().await;
+        // Serialize request starts, not response lifetimes: a slow metadata request
+        // must not block independent feeds or UI actions.
+        self.throttler.throttle().await;
         let token = self.get_access_token_or_refresh().await?;
 
         let mirror = self.mirror_host.read().clone();
@@ -2084,7 +2072,9 @@ impl MakoClient {
         url: &str,
         params: &[(&str, &str)],
     ) -> Result<MahoResponse, MakoError> {
-        let _gate_guard = self.throttler.acquire_gate().await;
+        // Serialize request starts, not response lifetimes: a slow metadata request
+        // must not block independent feeds or UI actions.
+        self.throttler.throttle().await;
         let token = self.get_access_token_or_refresh().await?;
 
         let mirror = self.mirror_host.read().clone();
@@ -2186,7 +2176,9 @@ impl MakoClient {
         url: &str,
         json_body: &str,
     ) -> Result<MahoResponse, MakoError> {
-        let _gate_guard = self.throttler.acquire_gate().await;
+        // Serialize request starts, not response lifetimes: a slow metadata request
+        // must not block independent feeds or UI actions.
+        self.throttler.throttle().await;
         let token = self.get_access_token_or_refresh().await?;
 
         let mirror = self.mirror_host.read().clone();

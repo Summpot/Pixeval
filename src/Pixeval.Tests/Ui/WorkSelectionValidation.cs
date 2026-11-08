@@ -12,14 +12,12 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
-using Misaki;
+using Pixeval.Mako;
 using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Models.Options;
+using Pixeval.Localization;
+using Pixeval.Config;
 using Pixeval.ViewModels;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests.Ui;
 
@@ -41,31 +39,33 @@ internal static class WorkSelectionValidation
                 foreach (var layout in new[] { ThumbnailLayoutType.LinedFlow, ThumbnailLayoutType.Grid, ThumbnailLayoutType.Masonry })
                 {
                     var scenario = $"{theme.Key}-{width}-{layout}";
-                    var entries = Enumerable.Range(0, 6).Select(index => (IArtworkInfo) (Illustration.CreateDefault() with
+                    var entries = Enumerable.Range(0, 6).Select(index => (IWorkEntry) (Illustration.CreateDefault() with
                     {
                         Id = 901001 + index,
                         Title = index < 2 ? $"Keep 中文 {index}" : $"Other 中文 {index}",
-                        Type = IllustrationType.Illustration,
+                        IllustType = IllustContentType.Illustration,
                         Width = 120 + 40 * index,
                         Height = 160,
                         PageCount = 1,
                         Visible = true,
                         SanityLevel = 2,
                         Series = null,
-                        TotalFavorite = index * 100,
-                        CreateDate = new DateTimeOffset(2024, 1, 1 + index, 0, 0, 0, TimeSpan.Zero),
-                        ThumbnailUrls = new() { SquareMedium = imageUri, Medium = imageUri, Large = imageUri },
+                        TotalBookmarks = index * 100,
+                        CreateDate = new DateTimeOffset(2024, 1, 1 + index, 0, 0, 0, TimeSpan.Zero).ToString("O"),
+                        ImageUrls = new() { SquareMedium = imageUri, Medium = imageUri, Large = imageUri },
                         MetaSinglePage = new() { OriginalImageUrl = imageUri },
                         User = new() { Id = 900001, Name = "Fixture author", Account = "fixture", ProfileImageUrls = new() { Medium = imageUri } }
                     })).ToArray();
                     var container = new WorkContainer();
                     var view = container.FindControl<WorkView>("WorkView")!;
                     view.LayoutType = layout;
-                    view.SetSource(entries, SimpleWorkType.Illustration);
+                    view.SetSource(entries, SimpleWorkKind.Illustration);
                     var model = (IOperableViewViewModel) view.DataContext!;
-                    var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = container };
+                    var host = new PageTestHost { Content = container };
+                    var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = host.Shell };
                     try
                     {
+                        Pixeval.Common.MaterialAnimation.Initialize(window);
                         window.Show();
                         await RenderAsync(window);
                         var filter = container.FindControl<WorkFilterAutoSuggestBox>("WorkFilterAutoSuggestBox")!;
@@ -89,11 +89,11 @@ internal static class WorkSelectionValidation
                         window.KeyTextInput("Keep");
                         Press(window, Key.Enter, PhysicalKey.Enter);
                         await RenderAsync(window);
-                        Require(model.View.Count == 2 && model.View.All(item => item.Entry.Title.StartsWith("Keep", StringComparison.Ordinal)),
+                        Require(model.View.Count == 2 && model.View.All(item => ((IWorkEntry)item).Title.StartsWith("Keep", StringComparison.Ordinal)),
                             "The filter submits through the real container and preserves matching identities");
                         sort.SelectedValue = LocalSortOption.PopularityDescending;
                         await RenderAsync(window);
-                        Require(model.View.First().Entry.Id == "901002", "Sort selection applies to the filtered collection");
+                        Require(((IWorkEntry)model.View.First()).Id.ToString() == "901002", "Sort selection applies to the filtered collection");
                         filter.Text = "";
                         Require(editor.Focus(), "Filter clearing retains its editor");
                         Press(window, Key.Enter, PhysicalKey.Enter);
@@ -104,7 +104,7 @@ internal static class WorkSelectionValidation
                             sort.SelectedValue = option;
                             await RenderAsync(window);
                             var expected = option == LocalSortOption.PublishDateDescending ? entries.Reverse() : entries;
-                            Require(model.View.Select(item => item.Entry.Id).SequenceEqual(expected.Select(item => item.Id)),
+                            Require(model.View.Select(item => ((IWorkEntry)item).Id.ToString()).SequenceEqual(expected.Select(item => item.Id.ToString())),
                                 $"{option} preserves the expected identity order");
                         }
 
@@ -128,9 +128,9 @@ internal static class WorkSelectionValidation
                         await ActivateAsync(window, selection, selection.PrimaryCommands.OfType<CommandBarButton>().ElementAt(1));
                         Require(model.SelectedEntries.Count == 0, "Invert removes an all-selected set");
                         list.Selection.Select(0);
-                        var selectedId = model.SelectedEntries.Single().Entry.Id;
+                        var selectedId = ((IWorkEntry)model.SelectedEntries.Single()).Id.ToString();
                         await ActivateAsync(window, selection, selection.PrimaryCommands.OfType<CommandBarButton>().ElementAt(1));
-                        Require(model.SelectedEntries.Count == entries.Length - 1 && model.SelectedEntries.All(item => item.Entry.Id != selectedId),
+                        Require(model.SelectedEntries.Count == entries.Length - 1 && model.SelectedEntries.All(item => ((IWorkEntry)item).Id.ToString() != selectedId),
                             "Invert preserves entry identity after sorting");
                         var clear = selection.PrimaryCommands.OfType<CommandBarButton>().ElementAt(2);
                         var clearInOverflow = clear.IsInOverflow;
@@ -179,7 +179,7 @@ internal static class WorkSelectionValidation
                         await ActivateAsync(window, right, extraSecondary);
                         Require(extraCalls == 2, "Both page-supplied toolbar surfaces preserve their actions");
                         model.IsSelecting = true;
-                        view.SetSource(entries.Take(2).ToArray(), SimpleWorkType.Illustration);
+                        view.SetSource(entries.Take(2).ToArray(), SimpleWorkKind.Illustration);
                         await RenderAsync(window);
                         var replacement = (IOperableViewViewModel) view.DataContext!;
                         Require(!ReferenceEquals(model, replacement) && !replacement.IsSelecting && toggle.IsChecked is false,

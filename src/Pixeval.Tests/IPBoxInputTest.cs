@@ -12,10 +12,9 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement.Settings;
+using Pixeval.Config;
 using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Models.Settings.Entries;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 using Pixeval.Views.Settings;
 
@@ -29,8 +28,8 @@ public sealed class IPBoxInputTest
     public static void Initialize(TestContext _)
     {
         var projectPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval"));
-        I18NManager.CandidatePaths.Add(projectPath);
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+
+        AppLocalization.Instance.SetLanguage("zh-Hans");
     }
 
     [TestMethod]
@@ -51,6 +50,7 @@ public sealed class IPBoxInputTest
             var window = new Window { Width = 480, Height = 480, Content = list };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render();
                 var address = list.GetVisualDescendants().OfType<IPBox>().Single();
@@ -136,6 +136,7 @@ public sealed class IPBoxInputTest
             var window = new Window { Width = 480, Height = 320, Content = new StackPanel { Children = { before, address, after } } };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render();
                 var input = address.GetVisualDescendants().OfType<TextBox>().Single();

@@ -71,6 +71,7 @@ public sealed class LocalizationTest
             using var refresh = AppLocalization.Instance.Subscribe(() => entry.RefreshLocalization());
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 foreach (var locale in Strings.SupportedLocales)
                 {

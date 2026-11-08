@@ -19,10 +19,9 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
+using Pixeval.Mako;
 using Material3Expressive.Components;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Controls;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
@@ -40,8 +39,8 @@ internal static class WorkSeriesValidation
     {
         var client = App.AppViewModel.MakoClient;
         using var fixture = new OfflineSearchFixture(client);
-        await client.SetTokenAsync("fixture-work-series");
-        await client.ValidateTokenAsync();
+        client.SetRefreshToken("fixture-work-series");
+        await FixtureAuthentication.IdentifyAsync(client);
         using (var asset = AssetLoader.Open(new Uri("avares://Pixeval/Assets/Platforms/pixiv.png")))
         using (var buffer = new MemoryStream())
         {
@@ -67,19 +66,20 @@ internal static class WorkSeriesValidation
         List<string> report = [];
         try
         {
-            using (var source = new SimpleOperableSourceView<IllustrationItemViewModel>([Sample(998001), Sample(998002)]))
-            using (var viewer = new IllustrationViewerPageViewModel(source.CloneSourceView(), 0, false))
+            using (var source = new FixtureEntries<object>([Sample(998001), Sample(998002)]))
+            using (var viewer = UiTestSession.Create<IllustrationViewerPageViewModel>(source.CloneSourceView(), 0, false))
             {
                 var old = await NextAsync();
                 Require(HttpUtility.ParseQueryString(old.Uri.Query)["illust_id"] == "998001", "Manga context uses the current illustration ID");
                 Require(viewer.SeriesInfo is { Id: SeriesId, Previous: null, Next: null }, "The known series remains available before context arrives");
                 viewer.CurrentWorkIndex = 1;
                 var current = await NextAsync();
+                await UntilAsync(() => old.Token.IsCancellationRequested);
                 Require(old.Token.IsCancellationRequested, "Switching illustration cancels the old series-context HTTP request");
                 Require(HttpUtility.ParseQueryString(current.Uri.Query)["illust_id"] == "998002", "The replacement context request uses the new work ID");
-                current.Response.SetResult(JsonSerializer.Serialize(Context(SeriesId, "Current series")));
+                current.Response.SetResult(NativeFixtureData.Serialize(Context(SeriesId, "Current series")));
                 await UntilAsync(() => viewer.SeriesInfo?.Title == "Current series");
-                old.Response.SetResult(JsonSerializer.Serialize(Context(998999, "Stale series")));
+                old.Response.SetResult(NativeFixtureData.Serialize(Context(998999, "Stale series")));
                 await FlushAsync();
                 Require(viewer.SeriesInfo?.Title == "Current series", "A late previous context cannot replace the active series");
                 viewer.CurrentWorkIndex = 0;
@@ -90,8 +90,9 @@ internal static class WorkSeriesValidation
                 viewer.CurrentWorkIndex = 1;
                 var closing = await NextAsync();
                 viewer.Dispose();
+                await UntilAsync(() => closing.Token.IsCancellationRequested);
                 Require(closing.Token.IsCancellationRequested, "Closing the viewer cancels the pending series-context request");
-                closing.Response.SetResult(JsonSerializer.Serialize(Context(998999, "Closed series")));
+                closing.Response.SetResult(NativeFixtureData.Serialize(Context(998999, "Closed series")));
                 await FlushAsync();
                 Require(viewer.SeriesInfo?.Id == SeriesId && viewer.SeriesInfo.Next is null, "A closed viewer cannot adopt late neighbors");
                 report.Add("PASS manga context: original IDs, fallback, switch/close HTTP cancellation, failure and late-result ownership");
@@ -99,63 +100,64 @@ internal static class WorkSeriesValidation
 
             var hidden = Context(SeriesId, Title) with
             {
-                Context = MangaSeriesContext.CreateDefault() with
+                Context = new MangaSeriesContextInfo() with
                 {
                     ContentOrder = 10,
-                    Previous = Sample(998010) with { Visible = false },
-                    Next = Sample(0)
+                    PrevIllust = Sample(998010) with { Visible = false },
+                    NextIllust = Sample(0)
                 }
             };
             Require(WorkSeriesInfoViewModel.Create(hidden) is { Previous: null, Next: null }, "Unavailable or zero-ID manga neighbors are not actionable");
-            var novelContent = NovelContent.CreateDefault() with
+            var novelContent = new NovelContent { Text = "", CoverUrl = "" } with
             {
                 SeriesId = SeriesId,
                 SeriesTitle = Title,
                 SeriesNavigation = new()
                 {
-                    PrevNovel = NovelNavigation.CreateDefault() with { Id = 998010, Viewable = true, Title = "Previous " + Title },
-                    NextNovel = NovelNavigation.CreateDefault() with { Id = 998012, Viewable = true, Title = "Next " + Title }
+                    PrevNovel = new NovelNavigation() with { Id = 998010, Viewable = true, Title = "Previous " + Title },
+                    NextNovel = new NovelNavigation() with { Id = 998012, Viewable = true, Title = "Next " + Title }
                 }
             };
-            Require(WorkSeriesInfoViewModel.Create(novelContent with { SeriesId = null, SeriesTitle = "" }, new SimpleSeries { Id = SeriesId, Title = Title }) is { Id: SeriesId, Title: Title }, "Novel metadata retains its known series fallback");
-            Require(WorkSeriesInfoViewModel.Create(NovelContent.CreateDefault(), null) is null
-                && WorkSeriesInfoViewModel.Create((WorkBase?) null, SimpleWorkType.Illustration) is null, "Non-series works do not expose an empty series entry");
+            Require(WorkSeriesInfoViewModel.Create(novelContent with { SeriesId = null, SeriesTitle = "" }, new Series { Id = SeriesId, Title = Title }) is { Id: SeriesId, Title: Title }, "Mako.Novel metadata retains its known series fallback");
+            Require(WorkSeriesInfoViewModel.Create(new NovelContent { Text = "", CoverUrl = "" }, null) is null
+                && WorkSeriesInfoViewModel.Create((object?) null, SimpleWorkKind.Illustration) is null, "Non-series works do not expose an empty series entry");
             Require(WorkSeriesInfoViewModel.Create(novelContent with
             {
-                SeriesNavigation = new() { PrevNovel = NovelNavigation.CreateDefault() with { Id = 998010, Viewable = false } }
+                SeriesNavigation = new() { PrevNovel = new NovelNavigation() with { Id = 998010, Viewable = false } }
             }, null) is { Previous: null, Next: null }, "Unavailable novel neighbors are hidden");
             report.Add("PASS factories: manga/novel available-neighbor gates, absent series and original fallback metadata");
 
-            foreach (var type in new[] { SimpleWorkType.Illustration, SimpleWorkType.Novel })
+            foreach (var type in new[] { SimpleWorkKind.Illustration, SimpleWorkKind.Novel })
                 foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                     foreach (var width in new[] { 300, 360, 1000 })
                     {
-                        var model = type == SimpleWorkType.Illustration
+                        var model = type == SimpleWorkKind.Illustration
                             ? WorkSeriesInfoViewModel.Create(Context(SeriesId, Title))
                             : WorkSeriesInfoViewModel.Create(novelContent, null)!;
                         var pane = new WorkSeriesInfoPane { DataContext = model };
-                        List<(Type Type, long? SeriesId, SimpleWorkType? WorkType, string? ArtworkId)> routes = [];
+                        List<(Type Type, long? SeriesId, SimpleWorkKind? WorkKind, string? ArtworkId)> routes = [];
                         var host = new PageTestHost
                         {
                             Content = pane,
                             NavigationObserver = target => routes.Add((target.GetType(),
                                 (target.DataContext as SeriesViewerPageViewModel)?.Id,
-                                (target.DataContext as SeriesViewerPageViewModel)?.WorkType,
-                                (target.DataContext as IllustrationViewerPageViewModel)?.CurrentIllustration?.Entry.Id))
+                                (target.DataContext as SeriesViewerPageViewModel)?.WorkKind,
+                                ((target.DataContext as IllustrationViewerPageViewModel)?.CurrentIllustration as IWorkEntry)?.Id.ToString()))
                         };
                         var window = new Window { Width = width, Height = 500, RequestedThemeVariant = theme, Content = host.Shell };
                         var key = $"{type}-{theme.Key}-{width}";
                         try
                         {
+                            Pixeval.Common.MaterialAnimation.Initialize(window);
                             window.Show();
                             await RenderAsync(window);
                             var open = pane.FindControl<Card>("OpenSeriesButton")!;
                             var previous = pane.FindControl<Card>("PreviousButton")!;
                             var next = pane.FindControl<Card>("NextButton")!;
                             Require(pane.IsVisible && open.IsClickable && previous.IsClickable && next.IsClickable, "All original series destinations remain clickable");
-                            Require(AutomationProperties.GetName(open) == I18NManager.GetResource(EntryItemResources.OpenSeries)
-                                && AutomationProperties.GetName(previous) == I18NManager.GetResource(EntryViewerPageResources.PreviousSeriesWork)
-                                && AutomationProperties.GetName(next) == I18NManager.GetResource(EntryViewerPageResources.NextSeriesWork)
+                            Require(AutomationProperties.GetName(open) == Strings.EntryItemOpenSeries()
+                                && AutomationProperties.GetName(previous) == Strings.EntryViewerPagePreviousSeriesWork()
+                                && AutomationProperties.GetName(next) == Strings.EntryViewerPageNextSeriesWork()
                                 && AutomationProperties.GetHelpText(open) == Title
                                 && AutomationProperties.GetHelpText(previous) == model.Previous!.Title
                                 && AutomationProperties.GetHelpText(next) == model.Next!.Title, "Series actions expose localized direction and complete titles");
@@ -180,18 +182,22 @@ internal static class WorkSeriesValidation
                             Require(previous.IsFocused, "Shift+Tab returns to the previous work");
                             await ActivateAsync(window, open, Key.Enter, PhysicalKey.Enter);
                             Require(routes.Count == 1 && routes[0].Type == typeof(SeriesViewerPage)
-                                && routes[0].SeriesId == SeriesId && routes[0].WorkType == type, "Series navigation retains original ID and work type exactly once");
+                                && routes[0].SeriesId == SeriesId && routes[0].WorkKind == type, "Series navigation retains original ID and work type exactly once");
                             host.CloseDestinationAndReturn();
                             await ActivateAsync(window, previous, Key.Space, PhysicalKey.Space);
-                            Require(routes.Count == 2 && routes[1].Type == (type == SimpleWorkType.Novel ? typeof(NovelViewerPage) : typeof(IllustrationViewerPage)), "Previous work navigates once with Space");
+                            Require(routes.Count == 2 && routes[1].Type == (type == SimpleWorkKind.Novel ? typeof(NovelViewerPage) : typeof(IllustrationViewerPage)), "Previous work navigates once with Space");
+                            if (type == SimpleWorkKind.Novel)
+                                await UntilAsync(() => destinations.Any(d => d.Uri.AbsolutePath == "/v2/novel/detail" && System.Web.HttpUtility.ParseQueryString(d.Uri.Query)["novel_id"] == "998010"));
                             host.CloseDestinationAndReturn();
                             var target = next.TranslatePoint(new Point(next.Bounds.Width / 2, next.Bounds.Height / 2), window)!.Value;
                             window.MouseDown(target, MouseButton.Left);
                             window.MouseUp(target, MouseButton.Left);
                             await RenderAsync(window);
                             Require(routes.Count == 3 && routes[2].Type == routes[1].Type, "Next work navigates once with pointer input");
+                            if (type == SimpleWorkKind.Novel)
+                                await UntilAsync(() => destinations.Any(d => d.Uri.AbsolutePath == "/v2/novel/detail" && System.Web.HttpUtility.ParseQueryString(d.Uri.Query)["novel_id"] == "998012"));
                             host.CloseDestinationAndReturn();
-                            if (type == SimpleWorkType.Illustration)
+                            if (type == SimpleWorkKind.Illustration)
                             {
                                 Require(routes[1].ArtworkId == "998010"
                                     && routes[2].ArtworkId == "998012", "Cached manga neighbors retain their original work objects and IDs");
@@ -199,10 +205,10 @@ internal static class WorkSeriesValidation
                             else
                             {
                                 Require(destinations.Any(d => d.Uri.AbsolutePath == "/v2/novel/detail" && HttpUtility.ParseQueryString(d.Uri.Query)["novel_id"] == "998010")
-                                    && destinations.Any(d => d.Uri.AbsolutePath == "/v2/novel/detail" && HttpUtility.ParseQueryString(d.Uri.Query)["novel_id"] == "998012"), "Novel neighbors retain their exact detail request IDs");
+                                    && destinations.Any(d => d.Uri.AbsolutePath == "/v2/novel/detail" && HttpUtility.ParseQueryString(d.Uri.Query)["novel_id"] == "998012"), "Mako.Novel neighbors retain their exact detail request IDs");
                             }
                             Save(window, directory, "series-navigation-" + key);
-                            if (type == SimpleWorkType.Illustration)
+                            if (type == SimpleWorkKind.Illustration)
                             {
                                 pane.DataContext = model with { Previous = new WorkSeriesNavigationViewModel(998020, "ID-only " + Title) };
                                 await RenderAsync(window);
@@ -228,15 +234,16 @@ internal static class WorkSeriesValidation
             foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                 foreach (var width in new[] { 360, 1000 })
                 {
-                    using var viewer = new IllustrationViewerPageViewModel(new IllustrationItemViewModel(Sample(998030)), false);
-                    var response = await NextAsync();
-                    response.Response.SetResult(JsonSerializer.Serialize(Context(SeriesId, Title)));
+                    using var viewer = UiTestSession.Create<IllustrationViewerPageViewModel>((Sample(998030)), false);
+                    var response = await NextAsync(998030);
+                    response.Response.SetResult(NativeFixtureData.Serialize(Context(SeriesId, Title)));
                     await UntilAsync(() => viewer.SeriesInfo?.Next is not null);
                     var pane = new IllustrationViewerInfoPane { DataContext = viewer };
                     var host = new PageTestHost { Content = pane };
                     var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = host.Shell };
                     try
                     {
+                        Pixeval.Common.MaterialAnimation.Initialize(window);
                         window.Show();
                         await RenderAsync(window);
                         var seriesPane = pane.GetVisualDescendants().OfType<WorkSeriesInfoPane>().Single();
@@ -260,7 +267,15 @@ internal static class WorkSeriesValidation
             File.WriteAllLines(Path.Combine(directory, "work-series-requests.txt"), fixture.RequestLog);
         }
         return;
-        Task<Pending> NextAsync() => requests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
+        async Task<Pending> NextAsync(long? workId = null)
+        {
+            while (true)
+            {
+                var request = await requests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
+                if (!request.Token.IsCancellationRequested && (workId is null || HttpUtility.ParseQueryString(request.Uri.Query)["illust_id"] == workId.ToString())) return request;
+                request.Response.TrySetResult("{}");
+            }
+        }
     }
 
     private static Illustration Sample(long id) => Illustration.CreateDefault() with
@@ -271,19 +286,19 @@ internal static class WorkSeriesValidation
         Width = 100,
         Height = 100,
         PageCount = 1,
-        User = UserInfo.CreateDefault() with { Id = 900001, Name = "Fixture author", ProfileImageUrls = new() { Medium = ImageUri } },
-        ThumbnailUrls = new() { Medium = ImageUri, Large = ImageUri, SquareMedium = ImageUri },
+        User = User.CreateDefault() with { Id = 900001, Name = "Fixture author", ProfileImageUrls = new() { Medium = ImageUri } },
+        ImageUrls = new() { Medium = ImageUri, Large = ImageUri, SquareMedium = ImageUri },
         MetaSinglePage = new() { OriginalImageUrl = ImageUri },
-        Series = new SimpleSeries { Id = SeriesId, Title = Title }
+        Series = new Series { Id = SeriesId, Title = Title }
     };
-    private static MangaSeriesContextResponse Context(long id, string title) => MangaSeriesContextResponse.CreateDefault() with
+    private static MangaSeriesContextResult Context(long id, string title) => new MangaSeriesContextResult() with
     {
-        Detail = MangaSeriesDetail.CreateDefault() with { Id = id, Title = title, SeriesWorkCount = 12345 },
-        Context = MangaSeriesContext.CreateDefault() with
+        Series = Series.CreateDefault() with { Id = id, Title = title, PublishedContentCount = 12345 },
+        Context = new MangaSeriesContextInfo() with
         {
             ContentOrder = 1234,
-            Previous = Sample(998010) with { Series = null },
-            Next = Sample(998012) with { Series = null }
+            PrevIllust = Sample(998010) with { Series = null },
+            NextIllust = Sample(998012) with { Series = null }
         }
     };
     private static void Press(Window window, Key key, PhysicalKey physical, RawInputModifiers modifiers = RawInputModifiers.None)

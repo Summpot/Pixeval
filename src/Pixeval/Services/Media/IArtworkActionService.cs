@@ -58,7 +58,7 @@ public interface IArtworkActionService
 
     Task CopyImageAsync(Image? image);
 
-    Task CopyBitmapAsync(Bitmap bitmap);
+    Task CopyBitmapAsync(Bitmap bitmap, CancellationToken token = default);
 
-    Task SaveBitmapAsAsync(Bitmap bitmap, string suggestedFileName);
+    Task SaveBitmapAsAsync(Bitmap bitmap, string suggestedFileName, CancellationToken token = default);
 }

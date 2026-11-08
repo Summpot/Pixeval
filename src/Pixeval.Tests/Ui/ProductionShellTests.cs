@@ -15,7 +15,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Utilities;
 using Pixeval.Views.Login;
 using Pixeval.Views.Search;
-using Pixeval.Views.ViewContainers;
+using Pixeval.Views.Shell;
 
 namespace Pixeval.Tests.Ui;
 
@@ -37,6 +37,7 @@ public sealed class ProductionShellTests
         try
         {
             await App.OpenInitialPageAsync(shell);
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             Render(window);
             Assert.IsInstanceOfType<LoginPage>(shell.SelectedPage);
@@ -61,14 +62,15 @@ public sealed class ProductionShellTests
     {
         var client = App.AppViewModel.MakoClient;
         using var responses = new OfflineSearchFixture(client);
-        await client.SetTokenAsync("fixture-shell");
-        await client.ValidateTokenAsync();
+        client.SetRefreshToken("fixture-shell");
+        await FixtureAuthentication.IdentifyAsync(client);
         var shell = App.CreateViewContainer();
-        var page = new SearchPage();
+        var page = UiTestSession.Create<SearchPage>();
         var window = new Window { Width = 1000, Height = 720, Content = shell };
         try
         {
             shell.NavigateTo(page);
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             Render(window);
             var box = page.FindControl<AutoCompleteBox>("SearchAutoCompleteBox")!;
@@ -102,7 +104,7 @@ public sealed class ProductionShellTests
     [TestMethod]
     public Task ShutdownDrainsHistoryRestoreBeforeDisposingDatabase() => UiTestSession.RunAsync(TestContext, async _ =>
     {
-        var history = App.AppViewModel.HistoryPersistHelper;
+        var history = App.AppViewModel;
         await App.AppViewModel.App.DisposeAsync();
         Assert.IsTrue(history.RestoreTask.IsCompletedSuccessfully);
     });
@@ -119,18 +121,19 @@ public sealed class ProductionShellTests
             return response.Task; // Deliberately ignore cancellation until after shutdown.
         };
         var shell = App.CreateViewContainer();
-        var page = new LoginPage();
+        var page = UiTestSession.Create<LoginPage>();
         var window = new Window { Width = 1000, Height = 720, Content = shell };
         try
         {
             shell.NavigateTo(page);
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             Render(window);
             var model = (LoginPageViewModel) page.DataContext!;
             await model.LoadUsersAsync();
             model.RefreshToken = "fixture-shutdown";
             var button = page.GetVisualDescendants().OfType<Button>().Single(control =>
-                Equals(control.Content, Pixeval.I18N.I18NManager.GetResource(LoginPageResources.RefreshTokenButton.Content)));
+                Equals(control.Content, Strings.LoginPageRefreshTokenButtonContent()));
             button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             await requested.Task.WaitAsync(TimeSpan.FromSeconds(5));
             var completion = page.LoginCompletion;
@@ -174,6 +177,7 @@ public sealed class ProductionShellTests
                 var window = new Window { Width = 800, Height = 600, Content = shell };
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     Render(window);
                     using var frame = window.CaptureRenderedFrame();
@@ -194,6 +198,7 @@ public sealed class ProductionShellTests
         var window = new Window { Width = 800, Height = 600, Content = driver.Shell };
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             Render(window);
             driver.Shell.NavigateTo(destination);
@@ -226,6 +231,7 @@ public sealed class ProductionShellTests
         var window = new Window { Width = 800, Height = 600, Content = driver.Shell };
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             Render(window);
             driver.Shell.NavigateTo(replacement, removeCurrentPage: true);

@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using Avalonia;
+using Avalonia.Interactivity;
 using Pixeval.ViewModels.Viewers;
 
 namespace Pixeval.Views.Viewers;
@@ -52,13 +53,20 @@ public partial class CommentsPage : IconNavigationPage
             EnsureViewModel();
     }
 
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+        EnsureViewModel();
+    }
+
     private void EnsureViewModel()
     {
-        if (_container is null)
+        if (_container is null || !IsLoaded)
             return;
 
         if (!IsVisible || ParentId <= 0)
         {
+            (_container.DataContext as System.IDisposable)?.Dispose();
             _container.DataContext = null;
             return;
         }
@@ -68,6 +76,7 @@ public partial class CommentsPage : IconNavigationPage
             && existing.ParentType == ParentType)
             return;
 
+        (_container.DataContext as System.IDisposable)?.Dispose();
         _container.DataContext = new CommentsViewViewModel(
             ParentType,
             ParentId,

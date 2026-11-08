@@ -30,7 +30,11 @@ public sealed class LocalizedDownloadTextExtension(string property) : MarkupExte
     {
         public IDisposable Subscribe(IObserver<string> observer)
         {
-            var subscription = AppLocalization.Instance.Subscribe(() => observer.OnNext(Strings.CurrentLocale));
+            var application = Application.Current;
+            var subscription = AppLocalization.Instance.Subscribe(() =>
+            {
+                if (ReferenceEquals(application, Application.Current)) observer.OnNext(Strings.CurrentLocale);
+            });
             try
             {
                 observer.OnNext(Strings.CurrentLocale);

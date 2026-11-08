@@ -1,8 +1,8 @@
 <controls:SettingsExpander
     x:Class="Pixeval.Views.Settings.WorkSubscriptionsSettingsExpander"
     xmlns="https://github.com/avaloniaui"
+    xmlns:nativeStorage="using:Pixeval.Storage"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:loc="using:Pixeval.Localization"
     xmlns:avalonia="using:AutoSettingsPage.Avalonia"
     xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:controls1="using:Pixeval.Controls"
@@ -14,17 +14,19 @@
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Common.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:options="using:Pixeval.Config"
     xmlns:pixeval="using:Pixeval"
-    xmlns:storage="using:Pixeval.Storage"
     x:DataType="{x:Type entries:WorkSubscriptionsSettingsEntry}"
-    Description="{avalonia:SettingsDescription}"
+    x:Name="Root"
+    Description="{Binding Converter={x:Static avalonia:SettingsEntryHelper.DescriptionConverter}}"
     Header="{Binding Header}"
     Tag="{Binding Token}"
     mc:Ignorable="d"
     d:DesignHeight="450"
-    d:DesignWidth="800">
+    d:DesignWidth="800"
+    xmlns:loc="using:Pixeval.Localization"
+    xmlns:converters="using:Pixeval.Common.Converters"
+    xmlns:storage="using:Pixeval.Storage">
     <controls:SettingsExpander.HeaderIcon>
         <fluent:SymbolIcon Symbol="{Binding Icon}" />
     </controls:SettingsExpander.HeaderIcon>
@@ -42,15 +44,19 @@
                 x:Name="EditorGrid"
                 ColumnDefinitions="180,*,*,Auto"
                 ColumnSpacing="8"
-                RowDefinitions="Auto,Auto"
-                RowSpacing="8">
-                <TextBox x:Name="TargetIdTextBox" PlaceholderText="{CompiledBinding [WorkSubscriptionsSettingsExpander-TargetIdTextBox-PlaceholderText], Source={x:Static loc:LocalizationManager.Instance}}" />
+                RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                RowSpacing="8"
+                SizeChanged="EditorGrid_OnSizeChanged">
+                <TextBox
+                    x:Name="TargetIdTextBox"
+                    AutomationProperties.Name="{CompiledBinding [WorkSubscriptionsSettingsExpander-TargetIdTextBox-PlaceholderText], Source={x:Static loc:LocalizationManager.Instance}}"
+                    PlaceholderText="{CompiledBinding [WorkSubscriptionsSettingsExpander-TargetIdTextBox-PlaceholderText], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <controls1:SymbolComboBox
                     x:Name="SubscriptionTypeComboBox"
                     Grid.Row="0"
                     Grid.Column="1"
                     HorizontalAlignment="Stretch"
-                    AutomationProperties.Name="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources.SubscriptionType}}"
+                    AutomationProperties.Name="{CompiledBinding [WorkSubscriptionsSettingsExpander-SubscriptionType], Source={x:Static loc:LocalizationManager.Instance}}"
                     IconMode="False"
                     ItemsSource="{markup1:EnumResources x:TypeArguments=options:WorkSubscriptionType}"
                     SelectedIndex="0"
@@ -60,19 +66,19 @@
                     Grid.Row="0"
                     Grid.Column="2"
                     HorizontalAlignment="Stretch"
-                    AutomationProperties.Name="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources.WorkKind}}"
+                    AutomationProperties.Name="{CompiledBinding [WorkSubscriptionsSettingsExpander-WorkKind], Source={x:Static loc:LocalizationManager.Instance}}"
                     IconMode="False"
                     SelectedIndex="0" />
                 <m3:IconButton
                     x:Name="AddSubscriptionButton"
                     Grid.Row="0"
                     Grid.Column="3"
-                    AutomationProperties.Name="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+AddSubscriptionButton.Label}}"
+                    AutomationProperties.Name="{CompiledBinding [WorkSubscriptionsSettingsExpander-AddSubscriptionButton-Label], Source={x:Static loc:LocalizationManager.Instance}}"
                     Click="AddButton_OnClicked"
                     IsEnabled="{Binding !#Root.IsAdding}"
                     Symbol="Add"
                     Theme="{StaticResource MaterialTonalIconButtonTheme}"
-                    ToolTip.Tip="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+AddSubscriptionButton.Label}}" />
+                    ToolTip.Tip="{CompiledBinding [WorkSubscriptionsSettingsExpander-AddSubscriptionButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <controls1:InfoBar
                     x:Name="ErrorTextBlock"
                     Grid.Row="3"
@@ -84,7 +90,7 @@
                     x:Name="AddProgress"
                     Grid.Row="4"
                     Grid.ColumnSpan="4"
-                    AutomationProperties.Name="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+AddSubscriptionButton.Label}}"
+                    AutomationProperties.Name="{CompiledBinding [WorkSubscriptionsSettingsExpander-AddSubscriptionButton-Label], Source={x:Static loc:LocalizationManager.Instance}}"
                     IsIndeterminate="True"
                     IsVisible="{Binding #Root.IsAdding}" />
             </Grid>
@@ -95,18 +101,25 @@
             IsVisible="{Binding !!$parent[local:WorkSubscriptionsSettingsExpander].Subscriptions.Count}">
             <ItemsControl x:Name="SubscriptionItemsControl" ItemsSource="{Binding $parent[local:WorkSubscriptionsSettingsExpander].Subscriptions}">
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="{x:Type storage:WorkSubscriptionRecord}">
+                    <DataTemplate x:DataType="{x:Type nativeStorage:WorkSubscriptionRecord}">
                         <Grid
-                            Margin="10"
-                            ColumnDefinitions="Auto,Auto,*,Auto,Auto"
-                            ColumnSpacing="8">
-                            <controls1:UserBasicInfoPresenter Grid.Column="0" User="{Binding}" />
+                            Margin="4"
+                            ColumnDefinitions="*,Auto,Auto"
+                            ColumnSpacing="8"
+                            RowDefinitions="Auto,Auto"
+                            RowSpacing="4">
+                            <controls1:UserBasicInfoPresenter
+                                Grid.Column="0"
+                                AutomationProperties.Name="{Binding DisplayName}"
+                                ToolTip.Tip="{Binding DisplayName}"
+                                User="{Binding}" />
                             <TextBlock
-                                Grid.Column="1"
-                                VerticalAlignment="Center"
-                                Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                <Run Text="{Binding Type, Converter={x:Static converters:PixevalConverters.WorkSubscriptionTypeText}}" /><LineBreak />
-                                <Run Text="{Binding Kind, Converter={x:Static converters:PixevalConverters.WorkSubscriptionKindText}}" />
+                                Grid.Row="1"
+                                Grid.ColumnSpan="3"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                TextWrapping="Wrap">
+                                <Run Text="{Binding SubscriptionTypeText}" /><Run Text=" · " />
+                                <Run Text="{Binding WorkKindText}" />
                             </TextBlock>
                             <m3:IconButton
                                 x:Name="SyncSubscriptionButton"
@@ -121,11 +134,11 @@
                                 x:Name="DeleteSubscriptionButton"
                                 Grid.Column="2"
                                 VerticalAlignment="Center"
-                                AutomationProperties.Name="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+RemoveSubscriptionButton.Label}}"
+                                AutomationProperties.Name="{CompiledBinding [WorkSubscriptionsSettingsExpander-RemoveSubscriptionButton-Label], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Click="DeleteButton_OnClicked"
                                 Symbol="Delete"
                                 Tag="{Binding}"
-                                ToolTip.Tip="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+RemoveSubscriptionButton.Label}}" />
+                                ToolTip.Tip="{CompiledBinding [WorkSubscriptionsSettingsExpander-RemoveSubscriptionButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                         </Grid>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

@@ -1,6 +1,7 @@
 <controls:SettingsExpander
     x:Class="Pixeval.Views.Settings.DownloadMacroSettingsExpander"
     xmlns="https://github.com/avaloniaui"
+    xmlns:appCommon="using:Pixeval.Common"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:loc="using:Pixeval.Localization"
     xmlns:avalonia="using:AutoSettingsPage.Avalonia"
@@ -34,7 +35,7 @@
                 <StackPanel.DataTemplates>
                     <DataTemplate x:DataType="{x:Type controls2:SymbolComboBoxItem}">
                         <m3:AssistChip
-                            Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                            Click="{x:Static appCommon:AvaloniaHelper.CopyTagToClipboard}"
                             Content="{Binding Value}"
                             Tag="{Binding Value}"
                             ToolTip.Tip="{Binding Description}" />

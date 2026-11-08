@@ -39,6 +39,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
     private CancellationTokenSource? _reloadCancellationTokenSource;
 
     private bool _isLoaded;
+    private IWorkSubscriptionService? _observedService;
 
     public ObservableCollection<WorkSubscriptionRecord> Subscriptions { get; } = [];
 
@@ -47,7 +48,7 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         set
         {
             DataContext = value;
-            _ = ReloadAsync();
+            if (_isLoaded) _ = ReloadAsync();
         }
     }
 
@@ -118,8 +119,9 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
             workKind = selectedWorkKind;
         }
 
-        var client = App.AppViewModel.MakoClient;
-        var accountId = client.Me?.Id;
+        var client = this.GetRequiredUiService<MakoClient>();
+        var storage = this.GetRequiredUiService<StorageEngine>();
+        var accountId = client.GetUser()?.Id;
         var input = TargetIdTextBox.Text;
         var source = new CancellationTokenSource();
         _addCancellationTokenSource = source;
@@ -127,26 +129,59 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
         IsAdding = true;
         try
         {
-            var simpleWorkType = workKind is WorkSubscriptionWorkKind.Novel
-                ? SimpleWorkKind.Novel
-                : SimpleWorkKind.Illustration;
-            var storage = this.GetRequiredUiService<StorageEngine>();
-            var query = await this.GetRequiredUiService<MakoClient>().GetWorkSeriesAsync(simpleWorkType, targetId);
-            var detail = query.Detail();
-            var first = query.First()?.AsWorkEntry;
-            var engine = query.Engine();
-            _ = WorkSubscriptionHelper.TryAddOrUpdateSeries(targetId, workKind, storage, SubscriptionService, detail, first);
+            bool added;
+            if (subscriptionType is WorkSubscriptionType.Series)
+            {
+                var simpleWorkType = workKind is WorkSubscriptionWorkKind.Novel
+                    ? SimpleWorkKind.Novel
+                    : SimpleWorkKind.Illustration;
+                var query = await client.GetWorkSeriesAsync(simpleWorkType, targetId, token);
+                var detail = query.Detail();
+                var first = query.First()?.AsWorkEntry;
+                if (!IsCurrent())
+                    return;
+                added = detail.Id == targetId && WorkSubscriptionHelper.TryAddOrUpdateSeries(targetId, workKind, storage, SubscriptionService, detail, first);
+            }
+            else
+            {
+                var user = (await client.GetUserDetailAsync(targetId, token)).UserEntity;
+                if (!IsCurrent())
+                    return;
+                added = user.Id == targetId && WorkSubscriptionHelper.TryAddOrUpdateUser(user, subscriptionType, workKind, storage, SubscriptionService);
+            }
+
+            if (!added)
+            {
+                ShowError(Strings.WorkSubscriptionsSettingsExpanderAddFailed());
+                return;
+            }
+            if (TargetIdTextBox.Text == input
+                && SubscriptionTypeComboBox.GetSelectedValue<WorkSubscriptionType>() == subscriptionType
+                && WorkKindComboBox.SelectedValue is WorkSubscriptionWorkKind currentKind && currentKind == workKind)
+                TargetIdTextBox.Text = "";
+            await ReloadAsync();
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
-            var storage = this.GetRequiredUiService<StorageEngine>();
-            var user = (await this.GetRequiredUiService<MakoClient>().GetUserDetailAsync(targetId)).User;
-            _ = WorkSubscriptionHelper.TryAddOrUpdateUser(user, subscriptionType, workKind, storage, SubscriptionService);
+        }
+        catch (Exception)
+        {
+            if (IsCurrent())
+                ShowError(Strings.WorkSubscriptionsSettingsExpanderAddFailed());
+        }
+        finally
+        {
+            if (ReferenceEquals(_addCancellationTokenSource, source))
+            {
+                _addCancellationTokenSource = null;
+                IsAdding = false;
+            }
+            source.Dispose();
         }
 
         bool IsCurrent() => _isLoaded && !token.IsCancellationRequested
             && ReferenceEquals(_addCancellationTokenSource, source)
-            && accountId is > 0 && client.Me?.Id == accountId;
+            && !string.IsNullOrEmpty(accountId) && client.GetUser()?.Id == accountId;
     }
 
     private void CancelAdd()
@@ -262,8 +297,9 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
     {
         base.OnLoaded(e);
         _isLoaded = true;
-        SubscriptionService.SubscriptionUpdated -= SubscriptionServiceOnSubscriptionUpdated;
-        SubscriptionService.SubscriptionUpdated += SubscriptionServiceOnSubscriptionUpdated;
+        _observedService = SubscriptionService;
+        _observedService.SubscriptionUpdated -= SubscriptionServiceOnSubscriptionUpdated;
+        _observedService.SubscriptionUpdated += SubscriptionServiceOnSubscriptionUpdated;
         _ = ReloadAsync();
     }
 
@@ -271,7 +307,9 @@ public partial class WorkSubscriptionsSettingsExpander : SettingsExpander, IEntr
     {
         _isLoaded = false;
         CancelAdd();
-        SubscriptionService.SubscriptionUpdated -= SubscriptionServiceOnSubscriptionUpdated;
+        if (_observedService is { } service)
+            service.SubscriptionUpdated -= SubscriptionServiceOnSubscriptionUpdated;
+        _observedService = null;
         _reloadCancellationTokenSource?.Cancel();
         _reloadCancellationTokenSource?.Dispose();
         _reloadCancellationTokenSource = null;

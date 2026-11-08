@@ -2,6 +2,9 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using Avalonia.Controls;
+using System.Collections.Generic;
+using Pixeval.Views.Works;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,12 +38,18 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Id))]
     [NotifyPropertyChangedFor(nameof(Header))]
+    [NotifyPropertyChangedFor(nameof(TabPages))]
     [NotifyPropertyChangedFor(nameof(AvatarUrl))]
     [NotifyPropertyChangedFor(nameof(BackgroundUrl))]
     [NotifyPropertyChangedFor(nameof(CurrentUiState))]
     public partial SingleUserResponse? UserDetail { get; private set; }
 
     public UserUiState? CurrentUiState => UserDetail?.User is { } u ? UserUiStateStore.GetOrCreate(u) : null;
+
+    private IReadOnlyList<ContentPage>? _tabPages;
+    public IReadOnlyList<ContentPage> TabPages => !_disposed && UserDetail is { User: var user }
+        ? _tabPages ??= [new WorkPostsPage { User = user }, new WorkBookmarksPage { User = user }, new UserFollowingPage { UserId = Id }, new UserMyPixivPage { UserId = Id }, new RelatedUsersPage { UserId = Id }]
+        : [];
 
     public string Header => UserDetail?.User.Name ?? Id.ToString();
 
@@ -135,12 +144,12 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         {
             var loaded = await _makoClient.GetUserDetailAsync(userId, token);
             var userDetail = _blockedContent?.Replace(loaded) ?? loaded;
-            if (_disposed)
+            if (_disposed || token.IsCancellationRequested)
                 return;
 
             if (userDetail.UserEntity.Id != userId)
             {
-                LoadErrorMessage = I18NManager.GetResource(EntryViewerPageResources.LoadFailed);
+                LoadErrorMessage = Strings.EntryViewerPageLoadFailed();
                 return;
             }
 
@@ -161,11 +170,11 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private bool CanFollow => Id != (_userSessionService?.CurrentUserId ?? 0);
+    private bool CanFollow => !_disposed && !IsLoading && !IsChangingFollow && UserDetail is not null && Id > 0
+                             && _userSessionService is { CurrentUserId: > 0 } && Id != _userSessionService.CurrentUserId;
 
-    private bool CanBlockUser =>
-        UserDetail is { UserEntity: var user }
-        && (_blockedContent is null || !_blockedContent.IsBlocked(user));
+    private bool CanBlockUser => !_disposed && !IsLoading && !IsChangingFollow && UserDetail is { UserEntity: var user }
+                                 && (_blockedContent is null || !_blockedContent.IsBlocked(user));
 
     [RelayCommand(CanExecute = nameof(CanBlockUser))]
     private void BlockUser()
@@ -178,37 +187,43 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand(CanExecute = nameof(CanFollow))]
-    private async Task FollowAsync()
-    {
-        if (UserDetail?.User is not { } targetUser) return;
-        var result = await _actions.SetFollowUserAsync(targetUser, true, false, _loadingCts.Token);
-        if (result)
-        {
-            IsFollowed = true;
-        }
-    }
+    private Task FollowAsync() => SetFollowAsync(PrivacyRestrict.Public);
 
     [RelayCommand(CanExecute = nameof(CanFollow))]
-    private async Task FollowPrivatelyAsync()
-    {
-        if (UserDetail?.User is not { } targetUser) return;
-        var result = await _actions.SetFollowUserAsync(targetUser, true, true, _loadingCts.Token);
-        if (result)
-        {
-            IsFollowed = true;
-        }
-    }
+    private Task FollowPrivatelyAsync() => SetFollowAsync(PrivacyRestrict.Private);
 
     [RelayCommand(CanExecute = nameof(CanFollow))]
     private Task UnfollowAsync() => SetFollowAsync(null);
 
-    private async Task SetFollowAsync(PrivacyPolicy? privacy)
+    private async Task SetFollowAsync(PrivacyRestrict? privacy)
     {
-        if (UserDetail?.User is not { } targetUser) return;
-        var result = await _actions.SetFollowUserAsync(targetUser, false, false, _loadingCts.Token);
-        if (result)
+        if (!CanFollow || UserDetail is not { } detail)
+            return;
+
+        var accountId = _userSessionService?.CurrentUserId;
+        var token = _loadingCts.Token;
+        IsChangingFollow = true;
+        try
         {
-            IsFollowed = false;
+            var result = await _actions.SetFollowUserAsync(detail.User, privacy is not null, privacy is PrivacyRestrict.Private, token);
+            if (result && !_disposed && !token.IsCancellationRequested && _userSessionService?.CurrentUserId == accountId
+                && UserDetail == detail)
+            {
+                IsFollowed = privacy is not null;
+            }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+        }
+        catch (Exception error)
+        {
+            if (!_disposed && !token.IsCancellationRequested)
+                LoadErrorMessage = error.Message;
+        }
+        finally
+        {
+            if (!_disposed)
+                IsChangingFollow = false;
         }
     }
 
@@ -229,6 +244,8 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         NotifyActionCommands();
         _loadingCts.Cancel();
         _loadingCts.Dispose();
+        foreach (var page in _tabPages ?? []) ViewModelDisposal.Dispose(page);
+        _tabPages = null;
     }
 
     #endregion

@@ -9,3 +9,7 @@ OriginalImageLoadedSuccessfully = 原图加载成功
 OriginalImageLoadFailed = 原图加载失败
 
 TransformerExtensionFailed = 图片转换扩展应用失败
+
+SaveImageFailed = 无法保存显示的图片，请检查保存位置后重试
+
+CopyImageFailed = 无法复制显示的图片，请重试

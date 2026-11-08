@@ -27,16 +27,10 @@ public partial class UserView : UserControl
 
     private void UserItem_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Control { DataContext: User vm })
+        if (sender is not UserItem { DataContext: User vm } || !ReferenceEquals(e.Source, sender))
             return;
-        if (this.AppNavigation is { } navigator)
-            navigator.CreateUserPage(vm.UserId);
-    }
-
-    private void ListBox_OnContainerPrepared(object? sender, ContainerPreparedEventArgs e)
-    {
-        if (e.Container is ListBoxItem lbi)
-            lbi.Tapped += UserItem_OnTapped;
+        e.Handled = true;
+        this.AppNavigation?.CreateUserPage(vm.UserId);
     }
 
     #region Disposal

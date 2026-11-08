@@ -15,8 +15,8 @@ using Avalonia.VisualTree;
 using ColorTextBlock.Avalonia;
 using CommunityToolkit.Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement;
-using Pixeval.AppManagement.Settings;
+using Pixeval.Services.Core;
+using Pixeval.Config;
 using Pixeval.Controls;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
@@ -32,17 +32,18 @@ internal static class NovelReadingSettingsValidation
     internal static async Task RunAsync(string directory)
     {
         using var fixture = new NovelReaderFixture();
-        await App.AppViewModel.MakoClient.SetTokenAsync("fixture-reading-settings");
-        await App.AppViewModel.MakoClient.ValidateTokenAsync();
-        using var source = new SimpleOperableSourceView<NovelItemViewModel>([
+        App.AppViewModel.MakoClient.SetRefreshToken("fixture-reading-settings");
+        await FixtureAuthentication.IdentifyAsync(App.AppViewModel.MakoClient);
+        using var source = new FixtureEntries<Mako.Novel>([
             NovelReaderFixture.Sample(996001), NovelReaderFixture.Sample(996002)]);
-        var model = new NovelViewerPageViewModel(source.CloneSourceView(), 0, false);
+        var model = UiTestSession.Create<NovelViewerPageViewModel>(source.CloneSourceView(), 0, false);
         var page = new NovelViewerPage(model);
         var host = new PageTestHost { Content = page };
         var window = new Window { Width = 1200, Height = 900, Content = host.Shell };
         List<string> report = [];
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             (await fixture.NextAsync()).Complete("Reading presentation\n\n[[rb:漢字 > かんじ]]\n\n" + string.Join('\n', Enumerable.Repeat("A long reading paragraph 中文 🌸", 80)));
             await UntilAsync(() => !model.IsLoading);

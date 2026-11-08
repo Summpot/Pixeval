@@ -15,4 +15,5 @@ bytes.workspace = true
 url.workspace = true
 
 [dev-dependencies]
+async-trait = "0.1"
 tokio = { workspace = true, features = ["full"] }

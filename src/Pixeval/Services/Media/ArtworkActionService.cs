@@ -292,10 +292,16 @@ public sealed class ArtworkActionService : IArtworkActionService
         var state = UserUiStateStore.GetOrCreate(user);
         if ((state.FollowState & HeartButtonState.Pending) is not 0) return false;
         var previous = (state.FollowState & HeartButtonState.Checked) is not 0;
+        var account = _makoClient.GetUser()?.Id;
         UserUiStateStore.SetFollowPending(user);
         try
         {
             var result = await _makoClient.SetFollowAsync(user.Id, followed, privately ? PrivacyRestrict.Private : PrivacyRestrict.Public, token);
+            if (token.IsCancellationRequested || _makoClient.GetUser()?.Id != account)
+            {
+                UserUiStateStore.RevertFollowPending(user, previous);
+                return false;
+            }
             if (result.Success) UserUiStateStore.SetFollowState(user, followed);
             else UserUiStateStore.RevertFollowPending(user, previous);
             return result.Success;
@@ -317,16 +323,21 @@ public sealed class ArtworkActionService : IArtworkActionService
         await CopyBitmapAsync(bitmap);
     }
 
-    public async Task CopyBitmapAsync(Bitmap bitmap)
+    public async Task CopyBitmapAsync(Bitmap bitmap, CancellationToken token = default)
     {
         await _clipboard.SetBitmapAsync(bitmap);
+        if (token.IsCancellationRequested) return;
         await _clipboard.FlushAsync();
+        if (token.IsCancellationRequested) return;
         _notifications.ShowSuccess(Strings.MiscCopied());
     }
 
-    public async Task SaveBitmapAsAsync(Bitmap bitmap, string suggestedFileName)
+    public async Task SaveBitmapAsAsync(Bitmap bitmap, string suggestedFileName, CancellationToken token = default)
     {
-        var file = await _storagePicker.SaveFileAsync(new()
+        using var snapshot = Streams.RentStream();
+        bitmap.Save(snapshot, new PngBitmapEncoderOptions());
+        snapshot.Position = 0;
+        using var file = await _storagePicker.SaveFileAsync(new()
         {
             FileTypeChoices =
             [
@@ -340,11 +351,18 @@ public sealed class ArtworkActionService : IArtworkActionService
             SuggestedFileName = suggestedFileName
         });
 
-        if (file is null)
+        if (file is null || token.IsCancellationRequested)
             return;
 
         await using var stream = await file.OpenWriteAsync();
-        bitmap.Save(stream, new PngBitmapEncoderOptions());
+        if (token.IsCancellationRequested)
+            return;
+        if (stream.CanSeek)
+            stream.SetLength(0);
+        await snapshot.CopyToAsync(stream, token);
+        await stream.FlushAsync(token);
+        if (token.IsCancellationRequested)
+            return;
         _notifications.ShowSuccess(Strings.MiscSaved(), file.Path.OriginalString);
     }
 }
@@ -373,6 +391,6 @@ public sealed class NullArtworkActionService : IArtworkActionService
     public Task<bool> SetFollowUserAsync(User user, bool followed, bool privately = false, CancellationToken token = default) => Task.FromResult(false);
     public bool BlockUser(User user) => false;
     public Task CopyImageAsync(Image? image) => Task.CompletedTask;
-    public Task CopyBitmapAsync(Bitmap bitmap) => Task.CompletedTask;
-    public Task SaveBitmapAsAsync(Bitmap bitmap, string suggestedFileName) => Task.CompletedTask;
+    public Task CopyBitmapAsync(Bitmap bitmap, CancellationToken token = default) => Task.CompletedTask;
+    public Task SaveBitmapAsAsync(Bitmap bitmap, string suggestedFileName, CancellationToken token = default) => Task.CompletedTask;
 }

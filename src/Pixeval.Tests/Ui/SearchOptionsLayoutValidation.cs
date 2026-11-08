@@ -12,9 +12,9 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
+using Pixeval.Mako;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.ViewModels.Search;
 using Pixeval.Views.Search;
 
@@ -29,14 +29,15 @@ internal static class SearchOptionsLayoutValidation
             foreach (var width in new[] { 360, 1000 })
                 foreach (var novel in new[] { false, true })
                 {
-                    SearchArgumentsFormViewModelBase model = novel ? new NovelSearchFormViewModel() : new IllustrationSearchFormViewModel();
+                    SearchArgumentsFormViewModelBase model = novel ? UiTestSession.Create<NovelSearchFormViewModel>() : UiTestSession.Create<IllustrationSearchFormViewModel>();
                     ContentPage page = novel ? new NovelSearchOptionsPage() : new IllustrationSearchOptionsPage();
                     page.DataContext = model;
                     var scroll = new ScrollViewer { Content = page, Margin = new Thickness(20), HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
                     var window = new Window { Width = width, Height = 600, RequestedThemeVariant = theme, Content = scroll };
-                    var scenario = $"{theme.Key}-{width}-{(novel ? "Novel" : "Illustration")}";
+                    var scenario = $"{theme.Key}-{width}-{(novel ? "Mako.Novel" : "Illustration")}";
                     try
                     {
+                        Pixeval.Common.MaterialAnimation.Initialize(window);
                         window.Show();
                         await RenderAsync(window);
                         var rows = page.GetVisualDescendants().OfType<Grid>().Where(grid => grid.Children.FirstOrDefault() is TextBlock).ToArray();
@@ -79,17 +80,17 @@ internal static class SearchOptionsLayoutValidation
                         Activate(window, startToggle);
                         Require(!model.StartDateOption.IsEnabled && model.StartDateOption.Value == new DateTime(2021, 4, 5), "Disabling a date keeps its editable value");
 
-                        await ToggleAsync(SearchResources.Common.ShowAiWorks, () => model.AiType);
-                        await ToggleAsync(SearchResources.Common.MergePlainKeywordResults, () => model.MergePlainKeywordResults);
-                        await ToggleAsync(SearchResources.Common.IncludeTranslatedTagResults, () => model.IncludeTranslatedTagResults);
-                        await ToggleAsync(SearchResources.Common.IncludePotentialViolationWorks, () => model.IncludePotentialViolationWorks);
-                        await SelectSymbolAsync(SearchResources.Common.SortOption, () => model.SortOption);
+                        await ToggleAsync("Search-Common-ShowAiWorks", () => model.AiType);
+                        await ToggleAsync("Search-Common-MergePlainKeywordResults", () => model.MergePlainKeywordResults);
+                        await ToggleAsync("Search-Common-IncludeTranslatedTagResults", () => model.IncludeTranslatedTagResults);
+                        await ToggleAsync("Search-Common-IncludePotentialViolationWorks", () => model.IncludePotentialViolationWorks);
+                        await SelectSymbolAsync("Search-Common-SortOption", () => model.SortOption);
 
                         if (model is IllustrationSearchFormViewModel illustration)
                         {
-                            await SelectSymbolAsync(SearchResources.Illustration.MatchOption, () => illustration.MatchOption);
-                            await SelectSymbolAsync(SearchResources.Illustration.ContentType, () => illustration.ContentType);
-                            await SelectSymbolAsync(SearchResources.Illustration.RatioPattern, () => illustration.RatioPattern);
+                            await SelectSymbolAsync("Search-Illustration-MatchOption", () => illustration.MatchOption);
+                            await SelectSymbolAsync("Search-Illustration-ContentType", () => illustration.ContentType);
+                            await SelectSymbolAsync("Search-Illustration-RatioPattern", () => illustration.RatioPattern);
                             var numbers = page.GetVisualDescendants().OfType<NumericUpDown>().ToArray();
                             var options = new[] { illustration.WidthMinOption, illustration.WidthMaxOption, illustration.HeightMinOption, illustration.HeightMaxOption };
                             Require(numbers.Length == options.Length, "All illustration dimension fields are retained");
@@ -107,10 +108,10 @@ internal static class SearchOptionsLayoutValidation
                         }
                         else if (model is NovelSearchFormViewModel fiction)
                         {
-                            await SelectSymbolAsync(SearchResources.Novel.MatchOption, () => fiction.MatchOption);
-                            await SelectSymbolAsync(SearchResources.Novel.ContentLengthOption, () => fiction.ContentLengthOption);
-                            await ToggleAsync(SearchResources.Novel.IsOriginalOnly, () => fiction.IsOriginalOnly);
-                            await ToggleAsync(SearchResources.Novel.IsReplaceableOnly, () => fiction.IsReplaceableOnly);
+                            await SelectSymbolAsync("Search-Novel-MatchOption", () => fiction.MatchOption);
+                            await SelectSymbolAsync("Search-Novel-ContentLengthOption", () => fiction.ContentLengthOption);
+                            await ToggleAsync("Search-Novel-IsOriginalOnly", () => fiction.IsOriginalOnly);
+                            await ToggleAsync("Search-Novel-IsReplaceableOnly", () => fiction.IsReplaceableOnly);
                             fiction.ContentLengthOption = SearchNovelContentLengthOption.WordCount;
                             var numbers = page.GetVisualDescendants().OfType<NumericUpDown>().ToArray();
                             var options = new[] { fiction.ContentLengthMinOption, fiction.ContentLengthMaxOption };
@@ -120,7 +121,7 @@ internal static class SearchOptionsLayoutValidation
                                 await RevealAsync(window, toggle);
                                 Activate(window, toggle);
                                 await EditNumberAsync(window, numbers[index], 5000 + index * 14999);
-                                Require(options[index].IsEnabled && options[index].Value == 5000 + index * 14999, "Novel length edit preserves its range and unit mapping");
+                                Require(options[index].IsEnabled && options[index].Value == 5000 + index * 14999, "Mako.Novel length edit preserves its range and unit mapping");
                             }
                             fiction.ContentLengthOption = SearchNovelContentLengthOption.None;
                             await RenderAsync(window);
@@ -145,7 +146,7 @@ internal static class SearchOptionsLayoutValidation
                         async Task ToggleAsync(string resource, Func<bool> value)
                         {
                             var toggle = rows.SelectMany(row => row.Children).OfType<ToggleSwitch>()
-                                .Single(control => AutomationProperties.GetName(control) == I18NManager.GetResource(resource));
+                                .Single(control => AutomationProperties.GetName(control) == FixtureLocalization.GetResource(resource));
                             await RevealAsync(window, toggle);
                             var before = value();
                             Activate(window, toggle);
@@ -157,7 +158,7 @@ internal static class SearchOptionsLayoutValidation
                         async Task SelectSymbolAsync(string resource, Func<object> value)
                         {
                             var selector = page.GetVisualDescendants().OfType<SymbolComboBox>()
-                                .Single(control => AutomationProperties.GetName(control) == I18NManager.GetResource(resource));
+                                .Single(control => AutomationProperties.GetName(control) == FixtureLocalization.GetResource(resource));
                             await RevealAsync(window, selector);
                             var inner = selector.GetVisualDescendants().OfType<ComboBox>().Single();
                             var next = selector.SelectedIndex == 0 ? 1 : selector.SelectedIndex - 1;

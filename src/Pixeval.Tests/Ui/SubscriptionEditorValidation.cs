@@ -19,14 +19,12 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Model;
-using Mako.Net.Responses;
+using Pixeval.Mako;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Controls;
-using Pixeval.Models.Database.Managers;
-using Pixeval.Models.Options;
-using Pixeval.Models.Settings.Entries;
-using Pixeval.Models.Subscriptions;
+using Pixeval.Storage;
+using Pixeval.Config;
+using Pixeval.Services.Background;
 using Pixeval.Views.Settings;
 
 namespace Pixeval.Tests.Ui;
@@ -38,10 +36,10 @@ internal static class SubscriptionEditorValidation
     {
         var client = App.AppViewModel.MakoClient;
         using var fixture = new OfflineSearchFixture(client);
-        await client.SetTokenAsync("fixture-subscription-editor");
-        await client.ValidateTokenAsync();
-        await App.AppViewModel.HistoryPersistHelper.RestoreTask;
-        var manager = App.AppViewModel.AppServiceProvider.GetRequiredService<WorkSubscriptionPersistentManager>();
+        client.SetRefreshToken("fixture-subscription-editor");
+        await FixtureAuthentication.IdentifyAsync(client);
+        await App.AppViewModel.RestoreTask;
+        var manager = App.AppViewModel.StorageEngine;
         var service = App.AppViewModel.AppServiceProvider.GetRequiredService<WorkSubscriptionDownloadService>();
         var requests = Channel.CreateUnbounded<Pending>();
         var blockNext = 0;
@@ -66,6 +64,7 @@ internal static class SubscriptionEditorValidation
             var editor = new WorkSubscriptionsSettingsExpander { Entry = new WorkSubscriptionsSettingsEntry(group => group.WorkSubscriptions), IsExpanded = true };
             var host = new PageTestHost { Content = editor };
             var window = new Window { Width = 1000, Height = 900, Content = host.Shell };
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show(); await RenderAsync(window);
             var target = editor.FindControl<TextBox>("TargetIdTextBox")!;
             var add = editor.GetVisualDescendants().OfType<Button>().Single(button => button is Material3Expressive.Components.IconButton icon && icon.Symbol.ToString() == "Add");
@@ -75,10 +74,11 @@ internal static class SubscriptionEditorValidation
             host.Content = null; await RenderAsync(window);
             try
             {
+                await UntilAsync(() => operation.Token.IsCancellationRequested);
                 Require(operation.Token.IsCancellationRequested, "Unloading the subscription editor cancels its pending metadata request");
                 operation.Response.SetResult(Metadata(operation.Uri));
                 await RenderAsync(window);
-                Require(manager.Count == 0, "A late metadata response cannot create a subscription after the editor closes");
+                Require(manager.GetAllSubscriptions().Count == 0, "A late metadata response cannot create a subscription after the editor closes");
             }
             finally
             {
@@ -94,6 +94,7 @@ internal static class SubscriptionEditorValidation
                     window = new Window { Width = width, Height = 900, RequestedThemeVariant = theme, Content = host.Shell };
                     try
                     {
+                        Pixeval.Common.MaterialAnimation.Initialize(window);
                         window.Show(); await RenderAsync(window);
                         await Task.Delay(300); await RenderAsync(window); // SettingsExpander's opening transition must expose the last input row.
                         target = editor.FindControl<TextBox>("TargetIdTextBox")!;
@@ -109,11 +110,11 @@ internal static class SubscriptionEditorValidation
                         Save(window, directory, $"subscription-empty-{theme}-{width}");
                         foreach (var invalid in new[] { "", "0", "-1", "abc", "9223372036854775808" })
                         {
-                            var before = fixture.RequestLog.Count;
+                            var before = fixture.RequestLog.Count(request => !request.Contains("/v1/user/ai-show-settings", StringComparison.Ordinal));
                             target.Text = invalid; Click(window, add); await RenderAsync(window);
                             if (!error.IsVisible) Save(window, directory, "invalid-input-diagnostic");
-                            Require(error.IsVisible && (target.Text ?? "") == invalid && fixture.RequestLog.Count == before && manager.Count == 0,
-                                $"Invalid target preserves input and makes no request: {invalid}; error={error.IsVisible}, text={target.Text ?? "<null>"}, requests={fixture.RequestLog.Count - before}, rows={manager.Count}, enabled={add.IsEnabled}");
+                            Require(error.IsVisible && (target.Text ?? "") == invalid && fixture.RequestLog.Count(request => !request.Contains("/v1/user/ai-show-settings", StringComparison.Ordinal)) == before && manager.GetAllSubscriptions().Count == 0,
+                                $"Invalid target preserves input and makes no request: {invalid}; error={error.IsVisible}, text={target.Text ?? "<null>"}, requests={fixture.RequestLog.Count - before}, rows={manager.GetAllSubscriptions().Count}, enabled={add.IsEnabled}");
                         }
                         foreach (var subscriptionType in Enum.GetValues<WorkSubscriptionType>())
                         {
@@ -138,10 +139,10 @@ internal static class SubscriptionEditorValidation
                                 Require(query[parameter] == id.ToString(), "Metadata request retains the target ID and work category");
                                 target.Text = "new draft";
                                 pending.Response.SetResult(Metadata(pending.Uri));
-                                await UntilAsync(() => add.IsEnabled && manager.GetBySubscriptionKey(id, subscriptionType, workKind) is not null && !service.IsSyncInProgress);
-                                await UntilAsync(() => editor.Subscriptions.Any(item => item.Entry.Id == id && item.Entry.SubscriptionType == subscriptionType && item.Entry.WorkKind == workKind));
+                                await UntilAsync(() => add.IsEnabled && manager.GetSubscriptionByKey(id, (uint)subscriptionType, (uint)workKind) is not null && !service.IsSyncInProgress);
+                                await UntilAsync(() => editor.Subscriptions.Any(item => item.Id == id && item.SubscriptionType == (uint)subscriptionType && item.WorkKind == (uint)workKind));
                                 Require(target.Text == "new draft" && !error.IsVisible, "Successful add preserves edits made during the request");
-                                Require(manager.GetBySubscriptionKey(id, subscriptionType, workKind)!.Name == LongName, "The original subscription stores resolved metadata");
+                                Require(manager.GetSubscriptionByKey(id, (uint)subscriptionType, (uint)workKind)!.Value.Title == LongName, "The original subscription stores resolved metadata");
                                 if (subscriptionType != WorkSubscriptionType.Series)
                                 {
                                     var path = subscriptionType == WorkSubscriptionType.Bookmarks
@@ -158,7 +159,7 @@ internal static class SubscriptionEditorValidation
                                     Require(pending.Uri.AbsolutePath == (workKind == WorkSubscriptionWorkKind.Novel ? "/v2/novel/series" : "/v1/illust/series"), "Series work kind selects the matching API");
                             }
                         }
-                        Require(manager.Count == 7 && editor.Subscriptions.Count == 7, "All seven supported type/work-kind combinations persist independently");
+                        Require(manager.GetAllSubscriptions().Count == 7 && editor.Subscriptions.Count == 7, "All seven supported type/work-kind combinations persist independently");
                         foreach (var presenter in editor.GetVisualDescendants().OfType<UserBasicInfoPresenter>())
                         {
                             InWindow(window, presenter);
@@ -167,45 +168,46 @@ internal static class SubscriptionEditorValidation
                         Save(window, directory, $"subscription-editor-{theme}-{width}");
                         // Re-adding an existing key updates metadata instead of duplicating it.
                         type.SelectedValue = WorkSubscriptionType.Posts; kind.SelectedValue = WorkSubscriptionWorkKind.Illustration;
-                        var existing = editor.Subscriptions.Single(item => item.Entry.SubscriptionType == WorkSubscriptionType.Posts && item.Entry.WorkKind == WorkSubscriptionWorkKind.Illustration);
-                        target.Text = existing.Entry.Id.ToString(); Click(window, add);
+                        var existing = editor.Subscriptions.Single(item => item.SubscriptionType == (uint)WorkSubscriptionType.Posts && item.WorkKind == (uint)WorkSubscriptionWorkKind.Illustration);
+                        target.Text = existing.Id.ToString(); Click(window, add);
                         await UntilAsync(() => add.IsEnabled && target.Text == "" && !service.IsSyncInProgress);
-                        Require(manager.Count == 7, "Repeated add keeps the existing subscription identity");
+                        Require(manager.GetAllSubscriptions().Count == 7, "Repeated add keeps the existing subscription identity");
                         foreach (var failureType in new[] { WorkSubscriptionType.Posts, WorkSubscriptionType.Series })
                         {
                             type.SelectedValue = failureType; kind.SelectedValue = WorkSubscriptionWorkKind.Illustration;
                             target.Text = "998700"; blockNext = 1; Click(window, add);
                             var pending = await NextAsync(requests); pending.Response.SetResult("{}");
                             await UntilAsync(() => add.IsEnabled); await RenderAsync(window);
-                            Require(error.IsVisible && target.Text == "998700" && manager.Count == 7, "Unavailable user/series cannot create a default subscription and retains the draft");
+                            Require(error.IsVisible && target.Text == "998700" && manager.GetAllSubscriptions().Count == 7, "Unavailable user/series cannot create a default subscription and retains the draft");
                         }
                         // Account changes cannot publish a previous account's pending metadata.
                         type.SelectedValue = WorkSubscriptionType.Posts; target.Text = "998701"; blockNext = 1; Click(window, add);
                         var oldAccount = await NextAsync(requests);
-                        fixture.AuthResponseFactory = (_, _) => Task.FromResult(JsonSerializer.Serialize(TokenResponse.CreateDefault() with
+                        fixture.AuthResponseFactory = (_, _) => Task.FromResult(NativeFixtureData.Serialize(new TokenResponse { AccessToken = "fixture", RefreshToken = "fixture", TokenType = "Bearer", ExpiresIn = 3600 } with
                         {
                             AccessToken = "fixture-new-access",
                             RefreshToken = "fixture-new-refresh",
                             ExpiresIn = 3600,
-                            User = TokenUser.CreateDefault() with { Id = 900002, Name = "Second fixture account", Account = "second" }
+                            User = new TokenUser { Id = "", Name = "", Account = "" } with { Id = "900002", Name = "Second fixture account", Account = "second" }
                         }));
-                        await client.SetTokenAsync("fixture-new-account"); await client.ValidateTokenAsync();
+                        client.SetRefreshToken("fixture-new-account"); await FixtureAuthentication.IdentifyAsync(client);
                         oldAccount.Response.SetResult(Metadata(oldAccount.Uri));
                         await UntilAsync(() => add.IsEnabled);
-                        Require(manager.Count == 7 && target.Text == "998701", "Old account metadata cannot persist or clear the current editor");
-                        fixture.AuthResponseFactory = null; await client.SetTokenAsync("fixture-subscription-editor"); await client.ValidateTokenAsync();
+                        Require(manager.GetAllSubscriptions().Count == 7 && target.Text == "998701", "Old account metadata cannot persist or clear the current editor");
+                        fixture.AuthResponseFactory = null; client.SetRefreshToken("fixture-subscription-editor"); await FixtureAuthentication.IdentifyAsync(client);
                         // Rebinding cancels the old add; its finally cannot unlock a newer request.
                         target.Text = "998702"; blockNext = 1; Click(window, add); var oldContext = await NextAsync(requests);
                         editor.Entry = new WorkSubscriptionsSettingsEntry(group => group.WorkSubscriptions);
+                        await UntilAsync(() => oldContext.Token.IsCancellationRequested);
                         Require(oldContext.Token.IsCancellationRequested, "Changing editor context cancels the old metadata request");
                         target.Text = "998703"; blockNext = 1; Click(window, add); var newContext = await NextAsync(requests);
                         oldContext.Response.SetResult(Metadata(oldContext.Uri)); await RenderAsync(window);
-                        Require(!add.IsEnabled && manager.Count == 7, "Old completion cannot unlock or persist into the replacement context");
+                        Require(!add.IsEnabled && manager.GetAllSubscriptions().Count == 7, "Old completion cannot unlock or persist into the replacement context");
                         newContext.Response.SetResult("{}"); await UntilAsync(() => add.IsEnabled);
                         await UntilAsync(() => editor.Subscriptions.Count == 7);
                         // Single sync belongs to the service and survives an editor close/reopen.
-                        var item = editor.Subscriptions.Single(item => item.Entry.SubscriptionType == WorkSubscriptionType.Posts && item.Entry.WorkKind == WorkSubscriptionWorkKind.Illustration);
-                        var sync = RowButton(editor, item.Entry.HistoryEntryId, "SyncSubscriptionButton");
+                        var item = editor.Subscriptions.Single(item => item.SubscriptionType == (uint)WorkSubscriptionType.Posts && item.WorkKind == (uint)WorkSubscriptionWorkKind.Illustration);
+                        var sync = RowButton(editor, item.HistoryEntryId, "SyncSubscriptionButton");
                         sync.BringIntoView(); await RenderAsync(window); blockNext = 1; Click(window, sync);
                         var syncRequest = await NextAsync(requests);
                         host.Content = null; await RenderAsync(window);
@@ -213,27 +215,28 @@ internal static class SubscriptionEditorValidation
                         host.Content = scroll; await RenderAsync(window); syncRequest.Response.SetResult(Metadata(syncRequest.Uri));
                         await UntilAsync(() => !service.IsSyncInProgress && editor.Subscriptions.Count == 7);
                         // A delete during metadata refresh cancels that service request and prevents late resurrection.
-                        sync = RowButton(editor, item.Entry.HistoryEntryId, "SyncSubscriptionButton");
+                        sync = RowButton(editor, item.HistoryEntryId, "SyncSubscriptionButton");
                         sync.BringIntoView(); await RenderAsync(window); blockNext = 1; Click(window, sync);
                         var deletedRequest = await NextAsync(requests);
-                        var remove = RowButton(editor, item.Entry.HistoryEntryId, "DeleteSubscriptionButton");
+                        var remove = RowButton(editor, item.HistoryEntryId, "DeleteSubscriptionButton");
                         Click(window, remove);
-                        await UntilAsync(() => manager.GetByKey(item.Entry.HistoryEntryId) is null);
+                        await UntilAsync(() => manager.GetSubscriptionByHistoryId(item.HistoryEntryId) is null);
+                        await UntilAsync(() => deletedRequest.Token.IsCancellationRequested);
                         Require(deletedRequest.Token.IsCancellationRequested, "Deleting a syncing subscription cancels its metadata refresh");
                         deletedRequest.Response.SetResult(Metadata(deletedRequest.Uri));
                         await UntilAsync(() => !service.IsSyncInProgress && editor.Subscriptions.Count == 6);
-                        Require(manager.GetByKey(item.Entry.HistoryEntryId) is null && App.AppViewModel.HistoryPersistHelper.DownloadManager.QueuedTasks.Count == 0,
+                        Require(manager.GetSubscriptionByHistoryId(item.HistoryEntryId) is null && App.AppViewModel.DownloadManager.OrdinaryItems.Count == 0,
                             "Deleted subscription stays absent after late metadata and no downloads are queued");
                         scroll.Offset = default; await RenderAsync(window);
                         var requestsBefore = fixture.RequestLog.Count;
                         Click(window, editor.FindControl<Button>("SyncAllSubscriptionsButton")!);
                         await UntilAsync(() => fixture.RequestLog.Count > requestsBefore && !service.IsSyncInProgress);
-                        Require(manager.Count == 6 && App.AppViewModel.HistoryPersistHelper.DownloadManager.QueuedTasks.Count == 0, "Sync all preserves remaining empty subscriptions without duplicate tasks");
+                        Require(manager.GetAllSubscriptions().Count == 6 && App.AppViewModel.DownloadManager.OrdinaryItems.Count == 0, "Sync all preserves remaining empty subscriptions without duplicate tasks");
                         foreach (var entry in editor.Subscriptions.ToArray())
-                            await service.TryRemoveAsync(entry.Entry.HistoryEntryId);
+                            await service.TryRemoveAsync(entry.HistoryEntryId);
                         editor.Entry = new WorkSubscriptionsSettingsEntry(group => group.WorkSubscriptions);
                         await UntilAsync(() => editor.Subscriptions.Count == 0);
-                        Require(manager.Count == 0, "All cleanup remains in the isolated subscription database");
+                        Require(manager.GetAllSubscriptions().Count == 0, "All cleanup remains in the isolated subscription database");
                         report.Add($"PASS {theme}/{width}: seven parameter pairs, invalid/default records, busy/draft/duplicates, account/context isolation, single/all sync, editor lifetime, delete cancellation and late response");
                     }
                     finally { host.Content = null; window.Close(); }
@@ -251,8 +254,8 @@ internal static class SubscriptionEditorValidation
         }
     }
 
-    private static Button RowButton(WorkSubscriptionsSettingsExpander editor, int id, string name) => editor.GetVisualDescendants().OfType<Button>()
-        .Single(button => button.Name == name && button.Tag is Pixeval.ViewModels.Settings.WorkSubscriptionItemViewModel item && item.Entry.HistoryEntryId == id);
+    private static Button RowButton(WorkSubscriptionsSettingsExpander editor, long id, string name) => editor.GetVisualDescendants().OfType<Button>()
+        .Single(button => button.Name == name && button.Tag is Pixeval.Storage.WorkSubscriptionRecord item && item.HistoryEntryId == id);
     private static async Task UntilAsync(Func<bool> predicate)
     {
         var stop = DateTime.UtcNow.AddSeconds(10);
@@ -278,13 +281,13 @@ internal static class SubscriptionEditorValidation
     private static string Metadata(Uri uri)
     {
         var query = HttpUtility.ParseQueryString(uri.Query);
-        if (uri.AbsolutePath == "/v1/user/detail")
-            return JsonSerializer.Serialize(SingleUserResponse.CreateDefault() with { UserEntity = SingleUserInfo.CreateDefault() with { Id = long.Parse(query["user_id"]!), Name = LongName, Account = "fixture-subscription" } });
+        if (uri.AbsolutePath == "/v2/user/detail")
+            return NativeFixtureData.Serialize(SingleUserResponse.CreateDefault() with { User = User.CreateDefault() with { Id = long.Parse(query["user_id"]!), Name = LongName, Account = "fixture-subscription" } });
         var novel = uri.AbsolutePath.Contains("novel", StringComparison.Ordinal);
         var id = long.Parse(query[novel ? "series_id" : "illust_series_id"]!);
         return novel
-            ? JsonSerializer.Serialize(new { novel_series_detail = NovelSeriesDetail.CreateDefault() with { Id = id, Title = LongName }, novel_series_first_novel = Novel.CreateDefault(), novel_series_latest_novel = Novel.CreateDefault(), novels = Array.Empty<Novel>(), next_url = (string?) null })
-            : JsonSerializer.Serialize(new { illust_series_detail = MangaSeriesDetail.CreateDefault() with { Id = id, Title = LongName }, illust_series_first_illust = Illustration.CreateDefault(), illusts = Array.Empty<Illustration>(), next_url = (string?) null });
+            ? NativeFixtureData.Serialize(new { novel_series_detail = Series.CreateDefault() with { Id = id, Title = LongName }, novel_series_first_novel = Mako.Novel.CreateDefault(), novel_series_latest_novel = Mako.Novel.CreateDefault(), novels = Array.Empty<Mako.Novel>(), next_url = (string?) null })
+            : NativeFixtureData.Serialize(new { illust_series_detail = Series.CreateDefault() with { Id = id, Title = LongName }, illust_series_first_illust = Illustration.CreateDefault(), illusts = Array.Empty<Illustration>(), next_url = (string?) null });
     }
     private static Task<Pending> NextAsync(Channel<Pending> requests) => requests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
     private sealed record Pending(Uri Uri, CancellationToken Token)

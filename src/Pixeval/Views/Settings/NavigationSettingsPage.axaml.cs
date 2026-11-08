@@ -35,6 +35,12 @@ public sealed partial class NavigationSettingsPage : ContentPage
         EditorLayout.Classes.Set("narrow", narrow);
         EditorLayout.ColumnDefinitions[1].Width = new GridLength(narrow ? 0 : 320);
         EditorLayout.ColumnSpacing = narrow ? 0 : 12;
+        // Bound the toolbar even though the navigation header measures its auto column
+        // with infinite width. Long localized commands then move into overflow.
+        EditorCommands.MaxWidth = Math.Max(48, e.NewSize.Width / 2);
+        EditorCommands.DefaultLabelPosition = narrow
+            ? CommandBarDefaultLabelPosition.Collapsed
+            : CommandBarDefaultLabelPosition.Right;
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

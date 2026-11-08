@@ -18,6 +18,13 @@ public partial class NovelItem : WorkItem
         SizeChanged += (_, e) => CoverBounds.MaxWidth = e.NewSize.Width < 360 ? 80 : double.PositiveInfinity;
     }
 
+    private void AuthorButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (DataContext is Mako.Novel novel)
+            this.AppNavigation?.NavigateToUser(novel.User.Id, this);
+    }
+
     internal override void Recycle()
     {
         base.Recycle();

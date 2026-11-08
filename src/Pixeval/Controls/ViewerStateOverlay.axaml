@@ -1,11 +1,11 @@
 <ResourceDictionary
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
-    xmlns:pixeval="using:Pixeval">
+    xmlns:pixeval="using:Pixeval"
+    xmlns:loc="using:Pixeval.Localization">
     <ControlTheme x:Key="{x:Type controls:ViewerStateOverlay}" TargetType="{x:Type controls:ViewerStateOverlay}">
         <Setter Property="Background" Value="{DynamicResource LayerFillColorDefaultBrush}" />
         <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -20,9 +20,16 @@
                         <StackPanel
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
-                            Spacing="10">
-                            <ProgressBar Width="160" IsIndeterminate="{TemplateBinding IsLoading}" />
-                            <TextBlock Text="{CompiledBinding [EntryViewerPage-LoadingTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
+                            Spacing="16">
+                            <ProgressBar
+                                Width="160"
+                                AutomationProperties.Name="{CompiledBinding [EntryViewerPage-LoadingTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
+                                IsIndeterminate="{TemplateBinding IsLoading}" />
+                            <TextBlock
+                                m3:MaterialText.Style="{m3:Typography BodyMedium}"
+                                Text="{CompiledBinding [EntryViewerPage-LoadingTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
+                                TextAlignment="Center"
+                                TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                     <Border Background="{TemplateBinding Background}" IsVisible="{TemplateBinding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
@@ -41,7 +48,7 @@
                                     Symbol="ErrorCircle" />
                                 <ScrollViewer
                                     Grid.Row="1"
-                                    AutomationProperties.Name="{I18N {x:Static pixeval:EntryViewerPageResources.LoadFailed}}"
+                                    AutomationProperties.Name="{CompiledBinding [EntryViewerPage-LoadFailed], Source={x:Static loc:LocalizationManager.Instance}}"
                                     Focusable="True"
                                     VerticalScrollBarVisibility="Auto">
                                     <TextBlock
@@ -55,7 +62,7 @@
                                     Grid.Row="2"
                                     HorizontalAlignment="Center"
                                     Command="{TemplateBinding RetryCommand}"
-                                    Content="{I18N {x:Static pixeval:WorkContainerResources+RefreshButton.Label}}"
+                                    Content="{CompiledBinding [WorkContainer-RefreshButton-Label], Source={x:Static loc:LocalizationManager.Instance}}"
                                     IsVisible="{TemplateBinding RetryCommand,
                                                                 Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </Grid>

@@ -2,9 +2,9 @@
     x:Class="Pixeval.Views.Viewers.SingleImageViewer"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:loc="using:Pixeval.Localization"
     xmlns:ai="using:AnimatedControls.Avalonia"
     xmlns:common="using:FluentIcons.Common"
+    xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Common.Markup"
@@ -12,7 +12,8 @@
     xmlns:scroll="using:SmoothScroll.Avalonia.Controls"
     xmlns:vm="using:Pixeval.ViewModels.Viewers"
     x:DataType="{x:Type vm:SingleViewerViewModel}"
-    x:Name="Root">
+    x:Name="Root"
+    xmlns:loc="using:Pixeval.Localization">
     <UserControl.Resources>
         <DataTemplate x:Key="ScrollableImageTemplate" DataType="{x:Type vm:SingleViewerViewModel}">
             <!--  图片查看器（缩放/平移）  -->
@@ -63,7 +64,10 @@
             <!--  播放/暂停（仅动图可见）  -->
             <MenuItem
                 Command="{Binding PlayPauseCommand}"
-                Header="{CompiledBinding [Misc-Play], Source={x:Static loc:LocalizationManager.Instance}}"
+                Header="{markup1:EitherBinding {Binding IsPlaying},
+                                               {CompiledBinding [Misc-Pause], Source={x:Static loc:LocalizationManager.Instance}},
+                                               {CompiledBinding [Misc-Play], Source={x:Static loc:LocalizationManager.Instance}},
+                                               x:TypeArguments=x:Object}"
                 Icon="{markup1:SymbolIconEx Symbol={markup1:EitherBinding {Binding IsPlaying},
                                                                           Pause,
                                                                           Play,

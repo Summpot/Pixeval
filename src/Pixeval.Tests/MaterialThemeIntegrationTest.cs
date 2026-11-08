@@ -57,6 +57,7 @@ public sealed class MaterialThemeIntegrationTest
             try
             {
                 Application.Current!.RequestedThemeVariant = ThemeVariant.Light;
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 foreach (var control in controls)
@@ -108,6 +109,7 @@ public sealed class MaterialThemeIntegrationTest
             window.Content = new StackPanel { Children = { button, textBox } };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 App.ApplyAppFontFamily(["fonts:PixevalCjk#Noto Sans SC"]);
@@ -142,6 +144,7 @@ public sealed class MaterialThemeIntegrationTest
             };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 var scope = AnimationScope.GetRoot(window);
                 var animationFailures = new List<Exception>();
@@ -183,6 +186,7 @@ public sealed class MaterialThemeIntegrationTest
             };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 Assert.IsNotNull(lightCard.Template);
@@ -243,6 +247,7 @@ public sealed class MaterialThemeIntegrationTest
             window.Content = new StackPanel { Children = { bar } };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 Assert.IsTrue(primary.GetVisualDescendants().OfType<MaterialSurface>().Any());
@@ -294,6 +299,7 @@ public sealed class MaterialThemeIntegrationTest
             window.Content = new StackPanel { Children = { button, tokens } };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 var buttonContent = button.GetVisualDescendants().OfType<ContentPresenter>()
@@ -326,6 +332,7 @@ public sealed class MaterialThemeIntegrationTest
             window.Content = new Border();
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 var host = new ContentDialogHost(window);
@@ -384,6 +391,7 @@ public sealed class MaterialThemeIntegrationTest
             };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 Assert.IsTrue(nativeViewer.GetVisualDescendants().OfType<ScrollViewerPresenter>().Any());
@@ -442,6 +450,7 @@ public sealed class MaterialThemeIntegrationTest
             ScrollAnimationStartingEventArgs? scrollAnimation = null;
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 presenter = list.GetVisualDescendants().OfType<ScrollViewerPresenter>().Single();
@@ -521,9 +530,8 @@ public sealed class MaterialThemeIntegrationTest
         {
             // Match App.Initialize: localized shared styles need language resources before loading.
             var project = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval"));
-            if (!I18NManager.CandidatePaths.Contains(project))
-                I18NManager.CandidatePaths.Add(project);
-            I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+
+            AppLocalization.Instance.SetLanguage("zh-Hans");
             Styles.Add((Styles) AvaloniaXamlLoader.Load(new Uri("avares://Pixeval/Themes/PixevalTheme.axaml")));
         }
 

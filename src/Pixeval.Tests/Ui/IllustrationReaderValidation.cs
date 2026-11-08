@@ -11,8 +11,8 @@ using Avalonia.Input;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
 using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Models.Options;
+using Pixeval.Localization;
+using Pixeval.Config;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
@@ -25,21 +25,22 @@ internal static class IllustrationReaderValidation
     internal static async Task RunAsync(string directory)
     {
         using var fixture = new IllustrationReaderFixture();
-        await App.AppViewModel.MakoClient.SetTokenAsync("fixture-illustration-reader");
-        await App.AppViewModel.MakoClient.ValidateTokenAsync();
+        App.AppViewModel.MakoClient.SetRefreshToken("fixture-illustration-reader");
+        await FixtureAuthentication.IdentifyAsync(App.AppViewModel.MakoClient);
         List<string> report = [];
         foreach (var mode in new[] { BrowseMode.Swipe, BrowseMode.Continuous })
             foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
             {
                 App.AppViewModel.AppSettings.BrowsingExperienceSettings.BrowseMode = mode;
-                using var source = new SimpleOperableSourceView<IllustrationItemViewModel>([
+                using var source = new FixtureEntries<object>([
                     IllustrationReaderFixture.Sample(996001), IllustrationReaderFixture.Sample(996002, 1)]);
-                var model = new IllustrationViewerPageViewModel(source.CloneSourceView(), 0, false);
+                var model = UiTestSession.Create<IllustrationViewerPageViewModel>(source.CloneSourceView(), 0, false);
                 var page = new IllustrationViewerPage(model);
                 var host = new PageTestHost { Content = page };
                 var window = new Window { Width = 1100, Height = 780, RequestedThemeVariant = theme, Content = host.Shell };
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     await UntilAsync(() => model.CurrentImage?.CurrentPage?.LoadSuccessfully == true);
                     await RenderAsync(window);
@@ -50,7 +51,7 @@ internal static class IllustrationReaderValidation
                     var wrapper = page.FindControl<ImageViewerWrapper>("I")!;
                     Require(wrapper.IsSwipeMode == (mode == BrowseMode.Swipe), "The configured viewer kernel is retained");
                     var navigationFocus = page.GetVisualDescendants().OfType<ToggleButton>()
-                        .Single(button => Equals(ToolTip.GetTip(button), I18NManager.GetResource(EntryViewerPageResources.Pin)));
+                        .Single(button => Equals(ToolTip.GetTip(button), Strings.EntryViewerPagePin()));
                     Require(navigationFocus.Focus(NavigationMethod.Tab), "A real viewer action accepts focus for bubbling navigation shortcuts");
                     Press(window, Key.Right, PhysicalKey.ArrowRight);
                     await RenderAsync(window);
@@ -58,7 +59,7 @@ internal static class IllustrationReaderValidation
                     Press(window, Key.Down, PhysicalKey.ArrowDown);
                     await UntilAsync(() => model.CurrentWorkIndex == 1 && model.CurrentImage?.CurrentPage?.LoadSuccessfully == true);
                     Require(model.PageCount == 1 && model.CurrentPageIndex == 0, "Down changes work and resets the selected image page");
-                    Require(!ReferenceEquals(panePages, model.PanePages) && model.CurrentIllustration?.Entry.Id == "996002", "Information pages follow the newly selected work");
+                    Require(!ReferenceEquals(panePages, model.PanePages) && (model.CurrentIllustration as IWorkEntry)?.Id == 996002, "Information pages follow the newly selected work");
                     Press(window, Key.Up, PhysicalKey.ArrowUp);
                     await UntilAsync(() => model.CurrentWorkIndex == 0 && model.CurrentImage?.CurrentPage?.LoadSuccessfully == true);
                     Require(navigationFocus.Focus(NavigationMethod.Tab), "Page navigation can resume");
@@ -125,12 +126,13 @@ internal static class IllustrationReaderValidation
 
     private static async Task FailuresAsync(IllustrationReaderFixture fixture, string directory, List<string> report)
     {
-        var model = new IllustrationViewerPageViewModel(IllustrationReaderFixture.Identity(996010));
+        var model = UiTestSession.Create<IllustrationViewerPageViewModel>(IllustrationReaderFixture.Identity(996010), "pixiv");
         var page = new IllustrationViewerPage(model);
         var host = new PageTestHost { Content = page };
         var window = new Window { Width = 360, Height = 760, Content = host.Shell };
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             var first = await fixture.NextDetailAsync();
             Require(first.Id == 996010 && model.IsLoading, "ID-only navigation starts the exact detail request");
@@ -151,7 +153,7 @@ internal static class IllustrationReaderValidation
             Save(window, directory, "illustration-detail-recovered");
             report.Add("PASS ID-only detail error, exact-ID keyboard retry, busy gate and recovered image pages");
 
-            var invalid = new IllustrationViewerPageViewModel(IllustrationReaderFixture.Identity(996012));
+            var invalid = UiTestSession.Create<IllustrationViewerPageViewModel>(IllustrationReaderFixture.Identity(996012), "pixiv");
             var invalidPage = new IllustrationViewerPage(invalid);
             host.Shell.NavigateTo(invalidPage);
             var invalidResponse = await fixture.NextDetailAsync();
@@ -162,21 +164,21 @@ internal static class IllustrationReaderValidation
             host.Shell.ClosePage(invalidPage);
             report.Add("PASS invalid detail identity: unrelated response does not become the current illustration");
 
-            host.Shell.CreateIllustrationPage("000996013", "pixiv");
+            host.Shell.AppNavigation.CreateIllustrationPage("000996013", "pixiv");
             var normalizedPage = (IllustrationViewerPage) host.Shell.SelectedPage!;
             var normalized = (IllustrationViewerPageViewModel) normalizedPage.DataContext!;
             var normalizedResponse = await fixture.NextDetailAsync();
             Require(normalizedResponse.Id == 996013, "The existing platform service normalizes a numeric app-link identity");
             normalizedResponse.Complete();
             await UntilAsync(() => normalized.CurrentImage?.CurrentPage?.LoadSuccessfully == true);
-            Require(normalized.CurrentIllustration?.Entry.Id == "996013" && normalized.LoadErrorMessage is null,
+            Require((normalized.CurrentIllustration as IWorkEntry)?.Id == 996013 && normalized.LoadErrorMessage is null,
                 "Leading-zero Pixiv app links still open their canonical artwork after identity validation");
             host.Shell.ClosePage(normalizedPage);
             report.Add("PASS numeric app-link compatibility: leading zeros resolve to the same canonical Pixiv artwork");
 
-            using var source = new SimpleOperableSourceView<IllustrationItemViewModel>([
+            using var source = new FixtureEntries<object>([
                 IllustrationReaderFixture.Sample(996020), IllustrationReaderFixture.Sample(996021)]);
-            var refreshed = new IllustrationViewerPageViewModel(source.CloneSourceView(), 0, true);
+            var refreshed = UiTestSession.Create<IllustrationViewerPageViewModel>(source.CloneSourceView(), 0, true);
             var refreshedPage = new IllustrationViewerPage(refreshed);
             host.Shell.NavigateTo(refreshedPage);
             var obsolete = await fixture.NextDetailAsync();
@@ -189,7 +191,7 @@ internal static class IllustrationReaderValidation
             var activeImage = refreshed.CurrentImage;
             obsolete.Complete();
             await RenderAsync(window);
-            Require(ReferenceEquals(activeImage, refreshed.CurrentImage) && refreshed.CurrentIllustration?.Entry.Id == "996021",
+            Require(ReferenceEquals(activeImage, refreshed.CurrentImage) && (refreshed.CurrentIllustration as IWorkEntry)?.Id == 996021,
                 "A late obsolete response cannot replace the selected work");
             refreshed.CurrentWorkIndex = 0;
             var closed = await fixture.NextDetailAsync();

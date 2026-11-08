@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System.Threading.Tasks;
+using Pixeval.Utilities;
 using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 
@@ -19,8 +20,21 @@ public sealed class ClipboardService : IClipboardService
     public Task<string?> GetTextAsync() =>
         _host.TopLevel?.Clipboard?.TryGetTextAsync() ?? Task.FromResult<string?>(null);
 
-    public Task SetBitmapAsync(Bitmap bitmap) =>
-        _host.TopLevel?.Clipboard?.SetBitmapAsync(bitmap) ?? Task.CompletedTask;
+    public async Task SetBitmapAsync(Bitmap bitmap)
+    {
+        if (_host.TopLevel?.Clipboard is not { } clipboard)
+            return;
+        var transfer = new BitmapDataTransfer(bitmap);
+        try
+        {
+            await clipboard.SetDataAsync(transfer);
+        }
+        catch
+        {
+            transfer.Dispose();
+            throw;
+        }
+    }
 
     public Task<Bitmap?> TryGetBitmapAsync() =>
         _host.TopLevel?.Clipboard?.TryGetBitmapAsync() ?? Task.FromResult<Bitmap?>(null);

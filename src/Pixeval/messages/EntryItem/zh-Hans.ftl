@@ -25,3 +25,5 @@ DownloadTaskCreated = 已创建下载任务
 TheIllustrationIsAMangaFormatted = 这是一副图集，内含{ $count }张图片
 
 TheIllustrationIsAnUgoira = 这是一张动图
+
+DownloadTaskCreationFailed = 无法创建下载任务

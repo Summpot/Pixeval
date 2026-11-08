@@ -3,9 +3,9 @@ using System.Globalization;
 using System.IO;
 using Avalonia.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
-using Pixeval.Views.Converters;
+using Pixeval.Common.Converters;
 
 namespace Pixeval.Tests;
 
@@ -16,8 +16,8 @@ public sealed class DateTimeOffsetTextConverterTest
     [ClassInitialize]
     public static void Initialize(TestContext _)
     {
-        I18NManager.CandidatePaths.Add(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval")));
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+
+        AppLocalization.Instance.SetLanguage("zh-Hans");
     }
 
     [TestMethod]
@@ -55,6 +55,6 @@ public sealed class DateTimeOffsetTextConverterTest
             text, typeof(DateTimeOffset), null, CultureInfo.InvariantCulture));
         Assert.AreEqual(BindingErrorType.DataValidationError, result.ErrorType);
         Assert.IsFalse(result.HasValue);
-        Assert.AreEqual(I18NManager.GetResource(SettingsMainViewResources.InvalidDateTimeOffset), result.Error?.Message);
+        Assert.AreEqual(Strings.SettingsMainViewInvalidDateTimeOffset(), result.Error?.Message);
     }
 }

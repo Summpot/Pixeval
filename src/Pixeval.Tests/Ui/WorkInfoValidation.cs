@@ -18,18 +18,15 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
-using Mako.Net.Responses;
+using Pixeval.Mako;
 using Material3Expressive.Components;
-using Misaki;
 using Pixeval.Controls;
-using Pixeval.AppManagement;
-using Pixeval.I18N;
+using Pixeval.Services.Core;
+using Pixeval.Localization;
 using Pixeval.Views.Search;
 using Pixeval.Views.Viewers;
 using Pixeval.Views;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
@@ -48,8 +45,8 @@ internal static class WorkInfoValidation
     internal static async Task RunAsync(string directory)
     {
         using var fixture = new OfflineSearchFixture(App.AppViewModel.MakoClient);
-        await App.AppViewModel.MakoClient.SetTokenAsync("fixture-work-info");
-        await App.AppViewModel.MakoClient.ValidateTokenAsync();
+        App.AppViewModel.MakoClient.SetRefreshToken("fixture-work-info");
+        await FixtureAuthentication.IdentifyAsync(App.AppViewModel.MakoClient);
         using (var asset = AssetLoader.Open(new Uri("avares://Pixeval/Assets/Platforms/pixiv.png")))
         using (var buffer = new MemoryStream())
         {
@@ -58,7 +55,7 @@ internal static class WorkInfoValidation
         }
         fixture.SearchResponseFactory = (_, _) => Task.FromResult("{\"illusts\":[],\"novels\":[],\"next_url\":null}");
         List<string> report = [];
-        foreach (var type in new[] { SimpleWorkType.Illustration, SimpleWorkType.Novel })
+        foreach (var type in new[] { SimpleWorkKind.Illustration, SimpleWorkKind.Novel })
             foreach (var lite in new[] { false, true })
                 foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                     foreach (var width in new[] { 360, 1000 })
@@ -67,7 +64,7 @@ internal static class WorkInfoValidation
                         var authorResponse = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
                         fixture.UserResponseFactory = (request, token) =>
                         {
-                            if (request.RequestUri!.AbsolutePath != "/v1/user/detail")
+                            if (request.RequestUri!.AbsolutePath != "/v2/user/detail")
                                 return Task.FromResult("{\"user_previews\":[],\"next_url\":null}");
                             authorRequest.TrySetResult(token);
                             return authorResponse.Task;
@@ -99,6 +96,7 @@ internal static class WorkInfoValidation
                         var key = $"{type}-{(lite ? "Lite" : "Full")}-{theme.Key}-{width}";
                         try
                         {
+                            Pixeval.Common.MaterialAnimation.Initialize(window);
                             window.Show();
                             await RenderAsync(window);
                             Save(window, directory, "work-info-top-" + key);
@@ -136,7 +134,7 @@ internal static class WorkInfoValidation
                                 Require(copyButtons.Length == 2, "Both work and author ID copy actions remain available");
                                 foreach (var copy in copyButtons)
                                 {
-                                    Require(AutomationProperties.GetName(copy) == I18NManager.GetResource(WorkInfoPageResources.CopyId)
+                                    Require(AutomationProperties.GetName(copy) == Strings.WorkInfoPageCopyId()
                                         && copy.Bounds.Width >= 40 && copy.Bounds.Height >= 40, "ID copy buttons expose their localized purpose and usable target size");
                                     copy.BringIntoView();
                                     await RenderAsync(window);
@@ -147,7 +145,7 @@ internal static class WorkInfoValidation
                                     Require(await window.Clipboard!.TryGetTextAsync() == (string) copy.Tag!
                                         && host.Navigations == count, "Copying an ID never opens the enclosing author card");
                                 }
-                                var chip = pane.GetVisualDescendants().OfType<SuggestionChip>().Single(control => control.CommandParameter is Tag { Name: LongTag });
+                                var chip = pane.GetVisualDescendants().OfType<SuggestionChip>().Single(control => control.CommandParameter is WorkInfoTag { Name: LongTag });
                                 chip.BringIntoView();
                                 await RenderAsync(window);
                                 location = chip.TranslatePoint(default, pane)!.Value;
@@ -204,10 +202,12 @@ internal static class WorkInfoValidation
                             await RenderAsync(window);
                             Require(host.Navigations == previousNavigations + 1 && host.LastPageType == typeof(UserViewerPage),
                                 "The author card opens exactly one original profile page");
+                            var pendingAuthor = await authorRequest.Task.WaitAsync(TimeSpan.FromSeconds(10));
                             host.CloseDestinationAndReturn();
-                            Require((await authorRequest.Task.WaitAsync(TimeSpan.FromSeconds(10))).IsCancellationRequested,
+                            await RenderAsync(window);
+                            Require(pendingAuthor.IsCancellationRequested,
                                 "Closing the observed author destination cancels its detail request");
-                            authorResponse.TrySetResult(JsonSerializer.Serialize(SingleUserResponse.CreateDefault()));
+                            authorResponse.TrySetResult(NativeFixtureData.Serialize(SingleUserResponse.CreateDefault()));
                             report.Add($"PASS {key}: full author/title space, bounded statistics, description keyboard scrolling, action zone" + (lite ? "" : ", named/nested ID copy, long tag/search/context copy/block"));
                         }
                         finally
@@ -229,49 +229,50 @@ internal static class WorkInfoValidation
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
             foreach (var width in new[] { 360, 1000 })
             {
-                var item = new IllustrationItemViewModel((Illustration) Sample(SimpleWorkType.Illustration));
-                using var model = new IllustrationViewerPageViewModel(item, false);
+                var item = ((Illustration) Sample(SimpleWorkKind.Illustration));
+                using var model = UiTestSession.Create<IllustrationViewerPageViewModel>(item, false);
                 var pane = new IllustrationViewerInfoPane { DataContext = model };
                 var host = new PageTestHost { Content = pane };
                 var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = host.Shell };
                 var key = $"{theme.Key}-{width}";
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     await RenderAsync(window);
                     var lite = pane.FindControl<WorkInfoPane>("InfoPaneSection")!;
                     var tabs = pane.FindControl<TabbedPage>("TabbedPageSection")!;
                     Require(!pane.IsDocked && lite.IsEffectivelyVisible && !tabs.IsEffectivelyVisible
-                        && ReferenceEquals(lite.ArtworkInfo, item.Entry), "The floating illustration pane keeps the current work in its compact view");
+                        && Equals(lite.ArtworkInfo, item), "The floating illustration pane keeps the current work in its compact view");
                     var bar = pane.FindControl<CommandBar>("BottomActionBar")!;
                     var buttons = bar.PrimaryCommands.OfType<CommandBarButton>().ToArray();
-                    Require(buttons.Any(button => ReferenceEquals(button.Command, item.BookmarkCommand))
-                        && buttons.Any(button => ReferenceEquals(button.Command, item.SaveCommand))
-                        && buttons.Any(button => ReferenceEquals(button.Command, item.AddToWatchLaterCommand)),
+                    Require(buttons.Any(button => ReferenceEquals(button.Command, App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().BookmarkCommand))
+                        && buttons.Any(button => ReferenceEquals(button.Command, App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().SaveCommand))
+                        && buttons.Any(button => ReferenceEquals(button.Command, App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().AddToWatchLaterCommand)),
                         "Information layout preserves the viewer's original bookmark, download and watch-later command instances");
                     var pin = pane.GetVisualDescendants().OfType<ToggleButton>()
-                        .Single(button => Equals(ToolTip.GetTip(button), I18NManager.GetResource(EntryViewerPageResources.Pin)));
+                        .Single(button => Equals(ToolTip.GetTip(button), Strings.EntryViewerPagePin()));
                     Require(pin.Focus(NavigationMethod.Tab), "The floating pane's pin action is keyboard reachable");
                     Press(window, Key.Enter, PhysicalKey.Enter);
                     Require(pane.IsLocked, "The original pin action changes the pane lock state");
                     var expand = pane.GetVisualDescendants().OfType<Button>()
-                        .Single(button => Equals(ToolTip.GetTip(button), I18NManager.GetResource(EntryViewerPageResources.InfoAndComments)));
+                        .Single(button => Equals(ToolTip.GetTip(button), Strings.EntryViewerPageInfoAndComments()));
                     Require(expand.Focus(NavigationMethod.Tab), "The information expansion action is keyboard reachable");
                     Press(window, Key.Enter, PhysicalKey.Enter);
                     await RenderAsync(window);
                     Require(pane.IsDocked && !lite.IsEffectivelyVisible && tabs.IsEffectivelyVisible,
                         "Expanding uses the existing tabbed information view");
                     var pages = tabs.Pages!.Cast<Page>().ToArray();
-                    Require(pages.Length == 3 && pages[0] is WorkInfoPage && pages[1] is CommentsPage && pages[2] is Pixeval.Views.Capability.WorkRelatedPage,
+                    Require(pages.Length == 3 && pages[0] is WorkInfoPage && pages[1] is CommentsPage && pages[2] is WorkRelatedPage,
                         "The info, comments and related-work destinations retain their order");
                     var full = pages[0].GetVisualDescendants().OfType<WorkInfoPane>().Single();
-                    Require(ReferenceEquals(full.ArtworkInfo, item.Entry) && full.ActionZone is Border { Width: 32, Height: 32 },
+                    Require(Equals(full.ArtworkInfo, item) && full.ActionZone is Border { Width: 32, Height: 32 },
                         "The full page shares the same work and preserves the expansion-button reserved area");
                     Save(window, directory, "viewer-info-expanded-" + key);
                     Require(expand.Focus(NavigationMethod.Tab), "The expanded pane can return by keyboard");
                     Press(window, Key.Enter, PhysicalKey.Enter);
                     await RenderAsync(window);
-                    Require(!pane.IsDocked && lite.IsEffectivelyVisible && pane.IsLocked && ReferenceEquals(lite.ArtworkInfo, item.Entry),
+                    Require(!pane.IsDocked && lite.IsEffectivelyVisible && pane.IsLocked && Equals(lite.ArtworkInfo, item),
                         "Collapsing preserves the current work and pin state");
                     Save(window, directory, "viewer-info-collapsed-" + key);
                     report.Add($"PASS viewer-{key}: compact/full pane, original action bindings, pin and keyboard expand/collapse, shared work and three original destinations");
@@ -285,12 +286,12 @@ internal static class WorkInfoValidation
             }
     }
 
-    private static IArtworkInfo Sample(SimpleWorkType type)
+    private static IWorkEntry Sample(SimpleWorkKind type)
     {
-        var user = UserInfo.CreateDefault() with { Id = 995007, Name = AuthorName, ProfileImageUrls = new() { Medium = ImageUri } };
+        var user = User.CreateDefault() with { Id = 995007, Name = AuthorName, ProfileImageUrls = new() { Medium = ImageUri } };
         var tags = new[] { Tag.CreateDefault() with { Name = LongTag, TranslatedName = Translation }, Tag.CreateDefault() with { Name = "短标签", TranslatedName = "Short tag" } };
-        var image = Illustration.CreateDefault() with { Id = 995001, Title = Title, Description = Caption, User = user, Tags = tags, TotalView = int.MaxValue, TotalFavorite = int.MaxValue, CreateDate = new DateTimeOffset(2026, 11, 8, 0, 0, 0, TimeSpan.Zero), Width = 640, Height = 480, PageCount = 1, ThumbnailUrls = new() { Medium = ImageUri, SquareMedium = ImageUri, Large = ImageUri }, MetaSinglePage = new() { OriginalImageUrl = ImageUri } };
-        return type == SimpleWorkType.Illustration ? image : Novel.CreateDefault() with { Id = image.Id, Title = Title, Description = Caption, User = user, Tags = tags, TotalView = image.TotalView, TotalFavorite = image.TotalFavorite, CreateDate = image.CreateDate, ThumbnailUrls = image.ThumbnailUrls };
+        var image = Illustration.CreateDefault() with { Id = 995001, Title = Title, Caption = Caption, User = user, Tags = [.. tags], TotalView = int.MaxValue, TotalBookmarks = int.MaxValue, CreateDate = new DateTimeOffset(2026, 11, 8, 0, 0, 0, TimeSpan.Zero).ToString("O"), Width = 640, Height = 480, PageCount = 1, ImageUrls = new() { Medium = ImageUri, SquareMedium = ImageUri, Large = ImageUri }, MetaSinglePage = new() { OriginalImageUrl = ImageUri } };
+        return type == SimpleWorkKind.Illustration ? image : Mako.Novel.CreateDefault() with { Id = image.Id, Title = Title, Caption = Caption, User = user, Tags = [.. tags], TotalView = image.TotalView, TotalBookmarks = image.TotalBookmarks, CreateDate = image.CreateDate, ImageUrls = image.ImageUrls };
     }
     private static void Press(Window window, Key key, PhysicalKey physical)
     {

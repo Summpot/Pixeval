@@ -2,6 +2,7 @@
     x:Class="Pixeval.Views.Settings.SettingsMainView"
     x:Name="Root"
     xmlns="https://github.com/avaloniaui"
+    xmlns:appCommon="using:Pixeval.Common"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:loc="using:Pixeval.Localization"
     xmlns:appManagement="using:Pixeval.Services.Core"
@@ -47,7 +48,7 @@
                 <controls:SettingsExpander.Items>
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
-                        Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                        Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                         Description="{CompiledBinding [SettingsMainView-OpenTempEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
                         Header="{CompiledBinding [SettingsMainView-OpenTempEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon FolderLightning}"
@@ -55,7 +56,7 @@
                         Tag="{x:Static appManagement:AppInfo.TempFolder}" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon ChevronRight}"
-                        Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                        Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                         Description="ms-windows-store://pdp/?ProductId=9P1RZL9Z8454"
                         Header="{CompiledBinding [SettingsMainView-MsStoreCheckForUpdatesEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon StoreMicrosoft}"
@@ -63,7 +64,7 @@
                         Tag="ms-windows-store://pdp/?ProductId=9P1RZL9Z8454" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon ChevronRight}"
-                        Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                        Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                         Description="https://github.com/Pixeval/Pixeval/releases"
                         Header="{CompiledBinding [SettingsMainView-GitHubCheckForUpdatesEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         IsClickEnabled="True"
@@ -90,7 +91,7 @@
                             DefaultLabelPosition="Collapsed"
                             IsDynamicOverflowEnabled="True">
                             <CommandBarButton
-                                Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                                Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                                 Tag="https://github.com/Pixeval/Pixeval/issues/new/choose"
                                 ToolTip.Tip="{CompiledBinding [SettingsMainView-GitHubBugReportEntry-ToolTip], Source={x:Static loc:LocalizationManager.Instance}}">
                                 <CommandBarButton.Icon>
@@ -98,12 +99,12 @@
                                 </CommandBarButton.Icon>
                             </CommandBarButton>
                             <CommandBarButton
-                                Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                                Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                                 Icon="{markup:SymbolIcon Mail}"
                                 Tag="mailto:poker_sang@outlook.com"
                                 ToolTip.Tip="{CompiledBinding [SettingsMainView-EMailBugReportEntry-ToolTip], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <CommandBarButton
-                                Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                                Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                                 Tag="https://jq.qq.com/?_wv=1027&amp;k=trDeCrog"
                                 ToolTip.Tip="{CompiledBinding [SettingsMainView-QQBugReportEntry-ToolTip], Source={x:Static loc:LocalizationManager.Instance}}">
                                 <CommandBarButton.Icon>
@@ -114,7 +115,7 @@
                     </controls:SettingsCard>
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
-                        Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                        Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                         Description="{CompiledBinding [SettingsMainView-OpenLogEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
                         Header="{CompiledBinding [SettingsMainView-OpenLogEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon FolderList}"
@@ -122,7 +123,7 @@
                         Tag="{x:Static appManagement:AppInfo.LogsFolder}" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
-                        Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                        Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                         Description="{CompiledBinding [SettingsMainView-OpenTempEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
                         Header="{CompiledBinding [SettingsMainView-OpenTempEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon FolderLightning}"
@@ -130,7 +131,7 @@
                         Tag="{x:Static appManagement:AppInfo.TempFolder}" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
-                        Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                        Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                         Description="{CompiledBinding [SettingsMainView-OpenLocalEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
                         Header="{CompiledBinding [SettingsMainView-OpenLocalEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon FolderBriefcase}"
@@ -138,7 +139,7 @@
                         Tag="{x:Static appManagement:AppInfo.ApplicationFolderPath}" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
-                        Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                        Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                         Description="{CompiledBinding [SettingsMainView-OpenExtensionsEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
                         Header="{CompiledBinding [SettingsMainView-OpenExtensionsEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon FolderAdd}"
@@ -146,7 +147,7 @@
                         Tag="{x:Static appManagement:AppInfo.ExtensionsFolder}" />
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
-                        Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                        Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                         Description="{CompiledBinding [SettingsMainView-OpenSettingsEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
                         Header="{CompiledBinding [SettingsMainView-OpenSettingsEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon FolderPerson}"
@@ -157,7 +158,7 @@
 
             <controls:SettingsCard
                 ActionIcon="{markup:SymbolIcon Open}"
-                Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                 Description="{CompiledBinding [SettingsMainView-RateEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
                 Header="{CompiledBinding [SettingsMainView-RateEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                 HeaderIcon="{markup:SymbolIcon Star}"
@@ -187,7 +188,7 @@
                 <controls:SettingsExpander.Items>
                     <controls:SettingsCard
                         ActionIcon="{markup:SymbolIcon Open}"
-                        Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                        Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                         Description="{CompiledBinding [SettingsMainView-OpenSettingsEntry-Description], Source={x:Static loc:LocalizationManager.Instance}}"
                         Header="{CompiledBinding [SettingsMainView-OpenSettingsEntry-Header], Source={x:Static loc:LocalizationManager.Instance}}"
                         HeaderIcon="{markup:SymbolIcon FolderPerson}"

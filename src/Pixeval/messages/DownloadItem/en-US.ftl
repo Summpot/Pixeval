@@ -33,3 +33,5 @@ GoToPageItem-Label = View
 OpenDownloadLocationItem-Label = Open download location
 
 ResetItem-Label = Redownload
+
+GroupProgressFormatted = Active: { $arg0 } · Completed: { $arg1 } · Failed: { $arg2 }

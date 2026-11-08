@@ -3,9 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement;
+using Pixeval.Services.Core;
 using Pixeval.Extensions.Common;
-using Pixeval.Models.Extensions;
+using Pixeval.Services.Background;
 using Pixeval.Utilities;
 
 namespace Pixeval.Tests;

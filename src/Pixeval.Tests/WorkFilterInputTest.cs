@@ -9,11 +9,10 @@ using Avalonia.Input.Raw;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Filters.Analysis;
-using Pixeval.Filters.Text;
-using Pixeval.I18N;
+using Pixeval.Filters;
+using Pixeval.Localization;
 using Pixeval.Utilities;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests;
 
@@ -24,8 +23,8 @@ public sealed class WorkFilterInputTest
     [ClassInitialize]
     public static void Initialize(TestContext _)
     {
-        I18NManager.CandidatePaths.Add(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval")));
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+
+        AppLocalization.Instance.SetLanguage("zh-Hans");
     }
 
     [TestMethod]
@@ -56,8 +55,8 @@ public sealed class WorkFilterInputTest
         await RunAsync((window, filter, box, editor) =>
         {
             filter.Text = "#to AND +ai";
-            var completion = new FilterCompletionItem("touhou", "touhou", new(1, 2), IsHintOnly: hintOnly);
-            filter.Analyze = (_, _) => new(null, [], [completion]);
+            var completion = new FilterCompletionItem("touhou", "touhou", "#touhou AND +ai", new(1, 2), null, hintOnly, FilterCompletionKind.Value);
+            filter.Analyze = (_, _) => new(false, true, [], [completion], null, null);
             filter.RefreshCompletions();
             box.IsDropDownOpen = true;
             window.UpdateLayout();
@@ -87,8 +86,8 @@ public sealed class WorkFilterInputTest
         await RunAsync((window, filter, box, editor) =>
         {
             filter.Text = "#";
-            filter.Analyze = (_, _) => new(null, [],
-                [new("first", "first", new(1, 0)), new("second", "second", new(1, 0))]);
+            filter.Analyze = (_, _) => new(false, true, [],
+                [new("first", "first", "#first", new(1, 0), null, false, FilterCompletionKind.Value), new("second", "second", "#second", new(1, 0), null, false, FilterCompletionKind.Value)], null, null);
             filter.RefreshCompletions();
             var items = box.ItemsSource!.Cast<FilterCompletionItem>().ToArray();
             box.IsDropDownOpen = true;
@@ -115,7 +114,7 @@ public sealed class WorkFilterInputTest
         await RunAsync((window, filter, box, editor) =>
         {
             filter.Text = "#";
-            filter.Analyze = (_, _) => new(null, [], [new("fixture", "fixture", new(1, 0))]);
+            filter.Analyze = (_, _) => new(false, true, [], [new("fixture", "fixture", "#fixture", new(1, 0), null, false, FilterCompletionKind.Value)], null, null);
             filter.RefreshCompletions();
             box.SelectedItem = box.ItemsSource!.Cast<FilterCompletionItem>().Single();
             box.IsDropDownOpen = true;
@@ -147,7 +146,7 @@ public sealed class WorkFilterInputTest
             filter.ClearSelection();
             Assert.AreEqual(3, editor.SelectionStart);
             Assert.AreEqual(3, editor.SelectionEnd);
-            filter.HighlightDiagnostic(FilterTextSpan.EmptyAt(1));
+            filter.HighlightDiagnostic(new FilterTextSpan(1, 0));
             Assert.AreEqual(1, editor.SelectionStart);
             Assert.AreEqual(2, editor.SelectionEnd);
         });
@@ -181,6 +180,7 @@ public sealed class WorkFilterInputTest
             var window = new Window { Width = 640, Height = 480, Content = filter };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 window.UpdateLayout();
                 Dispatcher.UIThread.RunJobs();

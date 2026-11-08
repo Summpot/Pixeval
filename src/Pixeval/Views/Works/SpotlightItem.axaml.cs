@@ -7,7 +7,7 @@ using Pixeval.Pixiv;
 
 namespace Pixeval.Views.Works;
 
-public partial class SpotlightItem : Card
+public partial class SpotlightItem : EntryItem
 {
     public SpotlightItem() => InitializeComponent();
 

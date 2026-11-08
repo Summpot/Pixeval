@@ -8,7 +8,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using Material3Expressive.Components;
 using MaterialSymbols;
-using Pixeval.I18N;
+using Pixeval.Localization;
 
 namespace Pixeval.Controls;
 
@@ -22,7 +22,7 @@ internal static class MarkdownCodeCopyButton
             VerticalAlignment = VerticalAlignment.Center
         };
         button.Classes.Add("CopyButton");
-        var label = I18NManager.GetResource(MiscResources.CopyCode);
+        var label = Strings.MiscCopyCode();
         ToolTip.SetTip(button, label);
         AutomationProperties.SetName(button, label);
         button.Click += async (_, _) =>

@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Pixeval.Collections;
+namespace Pixeval.Common.Collections;
 
 internal static class IncrementalPageLifetime
 {

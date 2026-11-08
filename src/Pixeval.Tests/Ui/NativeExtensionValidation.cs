@@ -16,10 +16,10 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement;
+using Pixeval.Services.Core;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.Commands.Transformers;
-using Pixeval.Models.Extensions;
+using Pixeval.Services.Background;
 using Pixeval.Utilities;
 using Pixeval.Views;
 using Pixeval.Views.Settings;
@@ -102,7 +102,7 @@ internal static class NativeExtensionValidation
 
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
-            await CaptureAsync(new ExtensionsPage(), $"extensions-{theme.Key}.png", theme);
+            await CaptureAsync(UiTestSession.Create<ExtensionsPage>(), $"extensions-{theme.Key}.png", theme);
             await CaptureAsync(new SettingsSubView(group), $"extension-settings-{theme.Key}.png", theme);
         }
         foreach (var entry in group)
@@ -135,6 +135,7 @@ internal static class NativeExtensionValidation
             var window = new Window { Width = 1000, Height = 900, RequestedThemeVariant = theme, Content = navigation };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 window.UpdateLayout();
                 Dispatcher.UIThread.RunJobs();

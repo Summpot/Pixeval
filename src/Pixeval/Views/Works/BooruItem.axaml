@@ -1,6 +1,7 @@
 <work:WorkItem
     x:Class="Pixeval.Views.Works.BooruItem"
     xmlns="https://github.com/avaloniaui"
+    xmlns:appCommon="using:Pixeval.Common"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
@@ -37,17 +38,17 @@
                     Icon="{markup:SymbolIcon Save}" />
                 <Separator />
                 <MenuItem
-                    Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                    Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                     Header="{CompiledBinding [EntryItem-OpenInWebBrowser], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup:SymbolIcon GlobeArrowUp}"
                     Tag="{Binding WebsiteUri}" />
                 <MenuItem
-                    Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                    Click="{x:Static appCommon:AvaloniaHelper.CopyTagToClipboard}"
                     Header="{CompiledBinding [EntryItem-GenerateWebLink], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup:SymbolIcon LinkMultiple}"
                     Tag="{Binding WebsiteUri}" />
                 <MenuItem
-                    Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                    Click="{x:Static appCommon:AvaloniaHelper.CopyTagToClipboard}"
                     Header="{CompiledBinding [EntryItem-GenerateLink], Source={x:Static loc:LocalizationManager.Instance}}"
                     Icon="{markup:SymbolIcon Link}"
                     Tag="{Binding AppUri}" />

@@ -26,6 +26,13 @@ public static class LocalSettingsEntryHelper
 {
     private static readonly IDisposable _Localization;
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, IDisposable> _HeaderSubscriptions = new();
+    private static IDataTemplate DoubleValueTemplate { get; } =
+        new FuncDataTemplate<INumberSettingsEntry<double>>(static (entry, _) => new DoubleSettingsValue { Entry = entry });
+
+    // A calendar-only editor would silently lose the extension's time, ticks and offset.
+    private static IDataTemplate DateTimeOffsetValueTemplate { get; } =
+        new FuncDataTemplate<ISingleValueSettingsEntry<DateTimeOffset>>(static (entry, _) => new DateTimeOffsetSettingsValue { Entry = entry });
+
     private static IDataTemplate LanguageValueTemplate { get; } =
         new FuncDataTemplate<ISingleValueSettingsEntry<string>>(static (entry, _) => new LanguageSettingsValue { Entry = entry });
 

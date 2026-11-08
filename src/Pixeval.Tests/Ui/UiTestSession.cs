@@ -4,13 +4,13 @@ using System.Globalization;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Headless;
-using Mako;
+using Pixeval.Mako;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement;
-using Pixeval.AppManagement.Settings;
+using Pixeval.Services.Core;
+using Pixeval.Config;
 using Pixeval.Utilities;
-using Pixeval.Views.ViewContainers;
+using Pixeval.Views.Shell;
 
 namespace Pixeval.Tests.Ui;
 
@@ -19,6 +19,9 @@ internal static class UiTestSession
     // Headless creates and tears down a fresh App/services scope per dispatch. Keep
     // its worker thread for the assembly: AvaloniaEdit caches dispatcher-affine
     // KeyBindings for the process, as it does in the single-threaded desktop app.
+    internal static T Create<T>(params object[] arguments) where T : class =>
+        ActivatorUtilities.CreateInstance<T>(App.AppViewModel.AppServiceProvider, arguments);
+
     private static readonly Lazy<HeadlessUnitTestSession> Session = new(() =>
         HeadlessUnitTestSession.StartNew(typeof(UiTestApplication), AvaloniaTestIsolationLevel.PerTest));
 
@@ -69,22 +72,22 @@ internal static class UiTestSession
         }
     }
 
-    public sealed class UiTestApplication : App
+    public sealed class UiTestApplication
     {
-        protected internal override void ConfigureServices(IServiceCollection services) =>
-            services.AddSingleton<IWindowActivationService, OfflineWindowActivation>();
-
-        protected internal override MakoClient CreateMakoClient(MakoConfiguration configuration, FileLogger logger)
-        {
-            var client = base.CreateMakoClient(configuration, logger);
-            OfflineHttpTransport.Install(client);
-            return client;
-        }
-
-        public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<UiTestApplication>()
+        public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure(() => new App
+            {
+                EnableDeveloperTools = false,
+                ConfigureServices = services => services.AddSingleton<IWindowActivationService, OfflineWindowActivation>().AddSingleton<Pixeval.Services.Update.IAppUpdateNotificationCoordinator, OfflineUpdates>(),
+                ConfigureTransport = (mako, maho, images, downloads) => { OfflineHttpTransport.Install(mako, maho, images.ImageCache); downloads.SetTransport(OfflineHttpTransport.For(mako)); }
+            })
             .UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false, ShouldRenderOnUIThread = true })
             .WithPixevalFonts();
+    }
+
+    private sealed class OfflineUpdates : Pixeval.Services.Update.IAppUpdateNotificationCoordinator
+    {
+        public Task CheckAndNotifyUpdatesAsync() => Task.CompletedTask;
     }
 
     private sealed class OfflineWindowActivation : IWindowActivationService

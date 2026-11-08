@@ -1,11 +1,12 @@
 <Styles
     xmlns="https://github.com/avaloniaui"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:pixeval="using:Pixeval">
 
     <Style Selector="CommandBar /template/ CommandBarButton#PART_OverflowButton">
-        <Setter Property="controls:CommandBarOverflowLabel.Text" Value="{I18N {x:Static pixeval:MiscResources.MoreCommands}}" />
+        <Setter Property="controls:CommandBarOverflowLabel.Text" Value="{CompiledBinding [Misc-MoreCommands], Source={x:Static loc:LocalizationManager.Instance}}" />
     </Style>
 
     <Style Selector="CommandBarButton[IsInOverflow=True] /template/ ContentPresenter#PART_Label, CommandBarToggleButton[IsInOverflow=True] /template/ ContentPresenter#PART_Label">

@@ -1,7 +1,9 @@
 using System.Threading.Tasks;
+using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Search;
 using Pixeval.Views.Works;
@@ -23,17 +25,38 @@ public partial class SauceNaoSearchPage : ContentPage
 
     private async Task OpenFileButton_OnClickAsync(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not SauceNaoSearchPageViewModel viewModel)
+        if (_isPicking || DataContext is not SauceNaoSearchPageViewModel { IsApiKeyExisted: true } viewModel)
             return;
-        if (await this.StoragePicker.OpenFilesAsync(new FilePickerOpenOptions { AllowMultiple = false }) is not [{ } file])
-            return;
-        await using var stream = await file.OpenReadAsync();
-        await viewModel.LoadAsync(stream);
+        var attachmentVersion = _attachmentVersion;
+        _isPicking = true;
+        try
+        {
+            if (await this.StoragePicker.OpenFilesAsync(new FilePickerOpenOptions
+            {
+                AllowMultiple = false,
+                FileTypeFilter = [FilePickerFileTypes.ImageAll, FilePickerFileTypes.All]
+            }) is not [{ } file])
+                return;
+            using (file)
+                if (attachmentVersion == _attachmentVersion && ReferenceEquals(DataContext, viewModel))
+                    await viewModel.LoadFileAsync(file);
+        }
+        catch (Exception)
+        {
+            if (attachmentVersion == _attachmentVersion)
+                TopLevel.GetTopLevel(this)?.ViewContainer?.ShowError(
+                    Strings.MiscExceptionEncountered(),
+                    Strings.SearchSauceNAOImageLoadFailed());
+        }
+        finally
+        {
+            _isPicking = false;
+        }
     }
 
     private void SearchButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not SauceNaoSearchPageViewModel viewModel)
+        if (DataContext is not SauceNaoSearchPageViewModel { IsApiKeyExisted: true, CanSearch: true } viewModel)
             return;
 
         var nav = this.GetRequiredUiService<INavigationService>();

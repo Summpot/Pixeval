@@ -97,7 +97,16 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
 
     partial void OnSeriesDetailChanged(Series? value)
     {
-        IsWatchlistAdded = false;
+        IsWatchlistAdded = value?.WatchlistAdded is true;
+        NotifyWatchlistCommands();
+    }
+
+    partial void OnIsLoadingChanged(bool value) => NotifyWatchlistCommands();
+
+    partial void OnIsChangingWatchlistChanged(bool value) => NotifyWatchlistCommands();
+
+    private void NotifyWatchlistCommands()
+    {
         AddToWatchlistCommand.NotifyCanExecuteChanged();
         RemoveFromWatchlistCommand.NotifyCanExecuteChanged();
     }
@@ -114,8 +123,11 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
             var first = query.First()?.AsWorkEntry;
             var engine = query.Engine();
 
-            if (_disposed)
+            if (_disposed || token.IsCancellationRequested)
                 return;
+
+            if (detail.Id != Id)
+                throw new InvalidOperationException(Strings.EntryViewerPageLoadFailed());
 
             FirstWork = first;
             SeriesDetail = detail;
@@ -137,30 +149,41 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
     }
 
     private bool CanChangeWatchlist => !_disposed && !IsLoading && !IsChangingWatchlist && SeriesDetail is { Id: > 0 }
-                                      && App.AppViewModel.MakoClient.Me is not null;
+                                      && _makoClient.GetUser() is not null;
 
     [RelayCommand(CanExecute = nameof(CanChangeWatchlist))]
-    private async Task AddToWatchlistAsync()
-    {
-        if (!(await _makoClient.SetSeriesWatchlistUnifiedAsync(WorkKind, Id, true, _loadingCts.Token)).Success)
-            return;
-
-        if (SeriesDetail is { } s1)
-            SeriesDetail = s1 with { WatchlistAdded = true };
-        IsWatchlistAdded = true;
-    }
+    private Task AddToWatchlistAsync() => SetWatchlistAsync(true);
 
     [RelayCommand(CanExecute = nameof(CanChangeWatchlist))]
     private Task RemoveFromWatchlistAsync() => SetWatchlistAsync(false);
 
     private async Task SetWatchlistAsync(bool added)
     {
-        if (!(await _makoClient.SetSeriesWatchlistUnifiedAsync(WorkKind, Id, false, _loadingCts.Token)).Success)
+        if (!CanChangeWatchlist || SeriesDetail is not { } detail)
             return;
 
-        if (SeriesDetail is { } s2)
-            SeriesDetail = s2 with { WatchlistAdded = false };
-        IsWatchlistAdded = false;
+        var client = _makoClient;
+        var accountId = client.GetUser()?.Id;
+        var token = _loadingCts.Token;
+        IsChangingWatchlist = true;
+        try
+        {
+            var result = await client.SetSeriesWatchlistUnifiedAsync(WorkKind, Id, added, token);
+            if (result.Success && !_disposed && !token.IsCancellationRequested && client.GetUser()?.Id == accountId
+                && SeriesDetail == detail)
+            {
+                SeriesDetail = detail with { WatchlistAdded = added };
+                IsWatchlistAdded = added;
+            }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (!_disposed)
+                IsChangingWatchlist = false;
+        }
     }
 
     #region Dispose

@@ -119,8 +119,13 @@ public partial class WorkContainer : UserControl
         }
     }
 
-    private void CancelSelectionButton_OnClicked(object? sender, RoutedEventArgs e) =>
+    private void CancelSelectionButton_OnClicked(object? sender, RoutedEventArgs e)
+    {
+        var fromOverflow = SelectionToolBar.IsOpen;
+        SelectionToolBar.IsOpen = false;
         WorkView.WorkListBox.UnselectAll();
+        if (fromOverflow) SelectionToggleButton.Focus();
+    }
 
     private void SortOptionComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e) => SetSortOption();
 
@@ -164,7 +169,8 @@ public partial class WorkContainer : UserControl
         FilterCoordinator.PerformSearch(DataContext as IOperableViewViewModel, WorkFilterAutoSuggestBox, this.Notifications, e.Text, e.CaretIndex);
 
     private FilterAnalysisResult AnalyzeFilter(string? text, int caret) =>
-        FilterCoordinator.AnalyzeFilter(DataContext as IOperableViewViewModel, text, caret);
+        this.GetUiService<LocalizedFilterSession>() is null ? FilterAnalysisResult.Empty
+            : FilterCoordinator.AnalyzeFilter(DataContext as IOperableViewViewModel, text, caret);
 
     public void ResetSource(IAsyncEnumerable<object> source, SimpleWorkKind workType) =>
         WorkView.ResetSource(source, workType);

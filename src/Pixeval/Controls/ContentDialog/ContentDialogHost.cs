@@ -171,7 +171,7 @@ public class ContentDialogHost : TemplatedControl
                 }, DispatcherPriority.Loaded);
             }
 
-            dialog.CompleteClose();
+            dialog.CompleteClose(result);
         }
     }
 

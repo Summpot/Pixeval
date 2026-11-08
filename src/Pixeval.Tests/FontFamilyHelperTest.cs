@@ -59,6 +59,7 @@ public sealed class FontFamilyHelperTest
             var window = new Window { Width = 480, Height = 160, Content = text };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 window.UpdateLayout();
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick(1);

@@ -1,11 +1,7 @@
 <views:IconContentPage
     x:Class="Pixeval.Views.Works.SeriesPage"
     xmlns="https://github.com/avaloniaui"
-    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:loc="using:Pixeval.Localization"
-    xmlns:di="using:Pixeval.Common.Markup"
-    xmlns:settings="using:Pixeval.Config"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:entry="using:Pixeval.Views.Works"
@@ -17,7 +13,10 @@
     xmlns:views="using:Pixeval.Views.Shell"
     mc:Ignorable="d"
     d:DesignHeight="450"
-    d:DesignWidth="800">
+    d:DesignWidth="800"
+    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
+    xmlns:loc="using:Pixeval.Localization"
+    xmlns:settings="using:Pixeval.Config">
     <DockPanel>
         <Grid
             Margin="12,8"
@@ -30,10 +29,10 @@
                 IsDynamicOverflowEnabled="True">
                 <CommandBarButton
                     x:Name="RefreshButton"
-                    AutomationProperties.Name="{I18N {x:Static pixeval:WorkContainerResources+RefreshButton.Label}}"
+                    AutomationProperties.Name="{CompiledBinding [WorkContainer-RefreshButton-Label], Source={x:Static loc:LocalizationManager.Instance}}"
                     Click="RefreshButton_OnClick"
                     Icon="{markup:SymbolIcon ArrowClockwise}"
-                    ToolTip.Tip="{CompiledBinding [WorkContainer-RefreshButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
+                    Label="{CompiledBinding [WorkContainer-RefreshButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
             </CommandBar>
             <StackPanel
                 VerticalAlignment="Center"
@@ -41,8 +40,9 @@
                 Spacing="5">
                 <controls:SymbolComboBox
                     x:Name="SimpleWorkTypeComboBox"
+                    AutomationProperties.Name="{CompiledBinding [HomePage-Source-SimpleWorkTypeTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                     ItemsSource="{markup1:EnumResources x:TypeArguments=nativeMako:SimpleWorkKind}"
-                    SelectedValue="{Binding SearchSettings.DefaultSimpleWorkType, Source={di:Service Type={x:Type settings:AppSettings}}, DataType={x:Type settings:AppSettings}, Mode=OneTime}"
+
                     SelectionChanged="SimpleWorkTypeComboBox_OnSelectionChanged" />
             </StackPanel>
         </Grid>

@@ -1,28 +1,35 @@
-<shell:IconContentPage
+<views:IconContentPage
     x:Class="Pixeval.Views.Settings.ExtensionsPage"
     xmlns="https://github.com/avaloniaui"
+    xmlns:localSettings="using:Pixeval.Views.Settings"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:CommunityToolkit.Avalonia.Controls"
     xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:extensions="using:Pixeval.Services.Background"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
     xmlns:views="using:Pixeval.Views"
-    xmlns:shell="using:Pixeval.Views.Shell"
-    xmlns:settings="using:Pixeval.Views.Settings"
     mc:Ignorable="d"
     d:DesignHeight="800"
-    d:DesignWidth="600">
+    d:DesignWidth="600"
+    xmlns:loc="using:Pixeval.Localization"
+    xmlns:shell="using:Pixeval.Views.Shell"
+    xmlns:settings="using:Pixeval.Views.Settings">
     <DockPanel>
         <WrapPanel
             Margin="20"
             DockPanel.Dock="Top"
-            Orientation="Horizontal"
-            Spacing="20">
-            <TextBlock Text="{CompiledBinding [ExtensionsPage-TitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" Theme="{StaticResource TitleTextBlockStyle}" />
+            ItemSpacing="20"
+            LineSpacing="8"
+            Orientation="Horizontal">
+            <TextBlock
+                MaxWidth="{Binding $parent[WrapPanel].Bounds.Width}"
+                Text="{CompiledBinding [ExtensionsPage-TitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
+                TextWrapping="Wrap"
+                Theme="{StaticResource TitleTextBlockStyle}" />
             <TextBlock VerticalAlignment="Bottom" Theme="{StaticResource SubtitleTextBlockStyle}">
                 <Run Text="{CompiledBinding [ExtensionsPage-SubtitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <Run Text="{x:Static extensions:ExtensionService.CurrentVersion}" />
@@ -52,7 +59,7 @@
                 Label="{CompiledBinding [ExtensionsPage-UninstallOutdatedExtensionsButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
         </CommandBar>
         <ScrollViewer Margin="20,10,20,20">
-            <ItemsControl ItemsSource="{Binding $parent[settings:ExtensionsPage].Models}">
+            <ItemsControl ItemsSource="{Binding $parent[localSettings:ExtensionsPage].Models}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="{x:Type extensions:ExtensionsHostModel}">
                         <controls:SettingsCard
@@ -83,10 +90,12 @@
                                     <CommandBarButton
                                         Click="ExtensionsPriorityUpOnClick"
                                         Icon="{markup:SymbolIcon ChevronUp}"
+                                        Label="{CompiledBinding [ExtensionsPage-ExtensionsPriorityUpButton-Label], Source={x:Static loc:LocalizationManager.Instance}}"
                                         ToolTip.Tip="{CompiledBinding [ExtensionsPage-ExtensionsPriorityUpButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                                     <CommandBarButton
                                         Click="ExtensionsPriorityDownOnClick"
                                         Icon="{markup:SymbolIcon ChevronDown}"
+                                        Label="{CompiledBinding [ExtensionsPage-ExtensionsPriorityDownButton-Label], Source={x:Static loc:LocalizationManager.Instance}}"
                                         ToolTip.Tip="{CompiledBinding [ExtensionsPage-ExtensionsPriorityDownButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                                     <CommandBar.SecondaryCommands>
                                         <CommandBarButton
@@ -116,4 +125,4 @@
             </ItemsControl>
         </ScrollViewer>
     </DockPanel>
-</shell:IconContentPage>
+</views:IconContentPage>

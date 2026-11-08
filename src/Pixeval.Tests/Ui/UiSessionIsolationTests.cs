@@ -8,7 +8,7 @@ using Avalonia.Input;
 using Avalonia.Threading;
 using AvaloniaEdit;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.AppManagement;
+using Pixeval.Services.Core;
 using Pixeval.Utilities;
 using Pixeval.Views.Settings;
 
@@ -43,12 +43,13 @@ public sealed class UiSessionIsolationTests
                 previousDirectory = AppInfo.ApplicationFolderPath;
                 File.WriteAllText(Path.Combine(previousDirectory, "session-marker"), culture);
 
-                var page = new NavigationSettingsPage();
+                var page = UiTestSession.Create<NavigationSettingsPage>();
                 var shell = App.CreateViewContainer();
                 shell.NavigateTo(page);
                 var window = new Window { Width = 1000, Height = 720, Content = shell };
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     window.UpdateLayout();
                     Dispatcher.UIThread.RunJobs();

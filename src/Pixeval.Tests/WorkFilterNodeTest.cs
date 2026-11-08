@@ -84,7 +84,8 @@ public sealed class WorkFilterNodeTest
 
     private static FilterQuery Parse(string text)
     {
-        var analysis = WorkFilterLanguage.Instance.Analyze(text);
+        using var engine = FilterSession.CreateDefault();
+        var analysis = engine.Analyze(text);
         Assert.IsTrue(analysis.IsSuccess, text);
         return analysis.Query!;
     }

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -39,6 +40,7 @@ public partial class WorkBookmarksPage : IconContentPage
     private IWorkViewViewModel? _viewModel;
     private bool _suppressChangeSource;
     private bool _initialized;
+    private CancellationTokenSource? _tagLoadCancellation;
 
     public static IReadOnlyList<BookmarkTag> DefaultTags { get; } = [AllBookmarkTag.Instance, UncategorizedBookmarkTag.Instance];
 
@@ -89,6 +91,11 @@ public partial class WorkBookmarksPage : IconContentPage
         InitializeComponent();
         _initialTag = tag;
         Configure(simpleWorkType, privacyPolicy, viewModel);
+        var selected = DefaultTags.FirstOrDefault(item => item.Name == tag);
+        if (tag is not null && selected.Name != tag)
+            selected = new BookmarkTag(tag, 0, false);
+        TagComboBox.ItemsSource = tag is null ? DefaultTags : [.. DefaultTags.Where(item => item.Name != tag), selected];
+        TagComboBox.SelectedItem = selected;
         User = user;
     }
 
@@ -185,13 +192,36 @@ public partial class WorkBookmarksPage : IconContentPage
     {
         if (!EnsureServices())
             return;
+        FetchTags();
         ChangeSource();
+    }
+
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+        if (EnsureServices()) FetchTags();
+    }
+
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        CancelTagLoad();
+        base.OnUnloaded(e);
+    }
+
+    private void CancelTagLoad()
+    {
+        var cancellation = _tagLoadCancellation;
+        _tagLoadCancellation = null;
+        cancellation?.Cancel();
+        cancellation?.Dispose();
     }
 
     private void FetchTags() => _ = FetchTagsAsync();
 
     private async Task FetchTagsAsync()
     {
+        if (!IsLoaded) return;
+        CancelTagLoad();
         if (_user.Id <= 0)
         {
             _suppressChangeSource = true;
@@ -201,25 +231,42 @@ public partial class WorkBookmarksPage : IconContentPage
             return;
         }
 
+        var cancellation = _tagLoadCancellation = new CancellationTokenSource();
+        var token = cancellation.Token;
         try
         {
             var tags = await _client!.GetBookmarkTagsAsync(
                 _user.Id,
                 SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>(),
-                PrivacyPolicyComboBox.GetSelectedValue<PrivacyRestrict>());
+                PrivacyPolicyComboBox.GetSelectedValue<PrivacyRestrict>(), token);
+
+            if (!IsLoaded || token.IsCancellationRequested || !ReferenceEquals(_tagLoadCancellation, cancellation))
+                return;
+            var selected = TagComboBox.SelectedItem is BookmarkTag tag ? tag : AllBookmarkTag.Instance;
+            if (!tags.Any(item => item.Name == selected.Name))
+                tags.Add(new BookmarkTag(selected.Name, 0, false));
 
             _suppressChangeSource = true;
             TagComboBox.ItemsSource = tags;
-            TagComboBox.SelectedItem = tags.Cast<BookmarkTag?>().FirstOrDefault(tag => tag!.Value.Name == _initialTag) ?? AllBookmarkTag.Instance;
+            TagComboBox.SelectedItem = tags.First(item => item.Name == selected.Name);
             _suppressChangeSource = false;
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
         }
         catch (Exception ex)
         {
-            _logger!.LogError(nameof(FetchTags), ex);
-            _suppressChangeSource = true;
-            TagComboBox.ItemsSource = new List<BookmarkTag> { AllBookmarkTag.Instance, UncategorizedBookmarkTag.Instance };
-            TagComboBox.SelectedItem = AllBookmarkTag.Instance;
-            _suppressChangeSource = false;
+            if (IsLoaded && !token.IsCancellationRequested && ReferenceEquals(_tagLoadCancellation, cancellation))
+            {
+                _logger!.LogError(nameof(FetchTags), ex);
+                this.Notifications.ShowError(Strings.EntryViewerPageLoadFailed(), ex.Message);
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(_tagLoadCancellation, cancellation))
+                _tagLoadCancellation = null;
+            cancellation.Dispose();
         }
     }
 

@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace Pixeval.AppManagement;
+namespace Pixeval.Services.Core;
 
 internal static class ApplicationDataDirectory
 {

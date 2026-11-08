@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Metadata;
+using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
@@ -23,6 +24,7 @@ public class ContentDialog : ContentControl
     private const string PcCompact = ":compact";
     private const string DefaultButtonClass = "default";
 
+    private const string PartTitlePresenter = "PART_TitlePresenter";
     private const string PartPrimaryButton = "PART_PrimaryButton";
     private const string PartSecondaryButton = "PART_SecondaryButton";
     private const string PartCloseButton = "PART_CloseButton";
@@ -30,8 +32,10 @@ public class ContentDialog : ContentControl
     private Button? _primaryButton;
     private Button? _secondaryButton;
     private Button? _closeButton;
+    private ContentPresenter? _titlePresenter;
     private ContentDialogHost? _host;
     private TaskCompletionSource<ContentDialogResult>? _completion;
+    private int _isClosing;
 
     /// <summary>
     /// Defines the <see cref="Title"/> property.
@@ -183,6 +187,31 @@ public class ContentDialog : ContentControl
         set => SetValue(IsLightDismissEnabledProperty, value);
     }
 
+    /// <summary>
+    /// Occurs when the primary action button is clicked, before the dialog starts closing.
+    /// </summary>
+    public event EventHandler<ContentDialog, ContentDialogButtonClickEventArgs>? PrimaryButtonClick;
+
+    /// <summary>
+    /// Occurs when the secondary action button is clicked, before the dialog starts closing.
+    /// </summary>
+    public event EventHandler<ContentDialog, ContentDialogButtonClickEventArgs>? SecondaryButtonClick;
+
+    /// <summary>
+    /// Occurs when the close action button is clicked, before the dialog starts closing.
+    /// </summary>
+    public event EventHandler<ContentDialog, ContentDialogButtonClickEventArgs>? CloseButtonClick;
+
+    /// <summary>
+    /// Occurs when the dialog is closing. Handlers can cancel or defer the close.
+    /// </summary>
+    public event EventHandler<ContentDialog, ContentDialogClosingEventArgs>? Closing;
+
+    /// <summary>
+    /// Occurs after the dialog has closed.
+    /// </summary>
+    public event EventHandler<ContentDialog, ContentDialogClosedEventArgs>? Closed;
+
     static ContentDialog()
     {
         DefaultButtonProperty.Changed.AddClassHandler<ContentDialog>((x, _) => x.UpdateDefaultButton());
@@ -202,10 +231,10 @@ public class ContentDialog : ContentControl
     /// </summary>
     /// <param name="result">The result to report to callers awaiting <see cref="ShowAsync(ContentDialogHost, CancellationToken)"/>.</param>
     /// <returns>The result passed to the close request.</returns>
-    public Task<ContentDialogResult> HideAsync(ContentDialogResult result = ContentDialogResult.None)
+    public async Task<ContentDialogResult> HideAsync(ContentDialogResult result = ContentDialogResult.None)
     {
-        RequestClose(result);
-        return Task.FromResult(result);
+        await RequestCloseAsync(result, ToButton(result));
+        return result;
     }
 
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
@@ -216,6 +245,7 @@ public class ContentDialog : ContentControl
         _secondaryButton?.Click -= SecondaryButtonOnClick;
         _closeButton?.Click -= CloseButtonOnClick;
 
+        _titlePresenter = e.NameScope.Find<ContentPresenter>(PartTitlePresenter);
         _primaryButton = e.NameScope.Find<Button>(PartPrimaryButton);
         _secondaryButton = e.NameScope.Find<Button>(PartSecondaryButton);
         _closeButton = e.NameScope.Find<Button>(PartCloseButton);
@@ -233,6 +263,7 @@ public class ContentDialog : ContentControl
 
         _host = host;
         _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        _isClosing = 0;
     }
 
     internal Task<ContentDialogResult> WaitForCloseAsync()
@@ -243,10 +274,12 @@ public class ContentDialog : ContentControl
         return _completion.Task;
     }
 
-    internal void CompleteClose()
+    internal void CompleteClose(ContentDialogResult result)
     {
         _host = null;
         _completion = null;
+        Interlocked.Exchange(ref _isClosing, 0);
+        Closed?.Invoke(this, new(result));
     }
 
     internal void AbortForHostClose() => _completion?.TrySetResult(ContentDialogResult.None);
@@ -258,16 +291,16 @@ public class ContentDialog : ContentControl
         Focus(NavigationMethod.Directional);
     }
 
-    private void PrimaryButtonOnClick(object? sender, RoutedEventArgs e) =>
-        RequestClose(ContentDialogResult.Primary);
+    private async void PrimaryButtonOnClick(object? sender, RoutedEventArgs e) =>
+        await RequestCloseAsync(ContentDialogResult.Primary, ContentDialogButton.Primary);
 
-    private void SecondaryButtonOnClick(object? sender, RoutedEventArgs e) =>
-        RequestClose(ContentDialogResult.Secondary);
+    private async void SecondaryButtonOnClick(object? sender, RoutedEventArgs e) =>
+        await RequestCloseAsync(ContentDialogResult.Secondary, ContentDialogButton.Secondary);
 
-    private void CloseButtonOnClick(object? sender, RoutedEventArgs e) =>
-        RequestClose(ContentDialogResult.Close);
+    private async void CloseButtonOnClick(object? sender, RoutedEventArgs e) =>
+        await RequestCloseAsync(ContentDialogResult.Close, ContentDialogButton.Close);
 
-    protected override void OnKeyDown(KeyEventArgs e)
+    protected override async void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
 
@@ -290,23 +323,62 @@ public class ContentDialog : ContentControl
         if (e.Key is Key.Enter && IsButtonAvailable(DefaultButton))
         {
             e.Handled = true;
-            RequestClose(ToResult(DefaultButton));
+            await RequestCloseAsync(ToResult(DefaultButton), DefaultButton);
             return;
         }
 
         if (e.Key is Key.Escape && IsButtonAvailable(ContentDialogButton.Close))
         {
             e.Handled = true;
-            RequestClose(ContentDialogResult.Close);
+            await RequestCloseAsync(ContentDialogResult.Close, ContentDialogButton.Close);
         }
     }
 
-    private void RequestClose(ContentDialogResult result)
+    private async Task RequestCloseAsync(ContentDialogResult result, ContentDialogButton button)
     {
         if (_completion is not { } completion || _host is null)
             return;
 
-        _completion.TrySetResult(result);
+        if (Interlocked.Exchange(ref _isClosing, 1) is 1)
+            return;
+
+        try
+        {
+            var buttonArgs = new ContentDialogButtonClickEventArgs(button, result);
+            switch (button)
+            {
+                case ContentDialogButton.Primary:
+                    PrimaryButtonClick?.Invoke(this, buttonArgs);
+                    break;
+                case ContentDialogButton.Secondary:
+                    SecondaryButtonClick?.Invoke(this, buttonArgs);
+                    break;
+                case ContentDialogButton.Close:
+                    CloseButtonClick?.Invoke(this, buttonArgs);
+                    break;
+            }
+
+            var buttonWait = await Task.WhenAny(buttonArgs.WaitForDeferralsAsync(), completion.Task);
+            await buttonWait;
+
+            if (buttonArgs.Cancel || completion.Task.IsCompleted)
+                return;
+
+            var closingArgs = new ContentDialogClosingEventArgs(result);
+            Closing?.Invoke(this, closingArgs);
+            var closingWait = await Task.WhenAny(closingArgs.WaitForDeferralsAsync(), completion.Task);
+            await closingWait;
+
+            if (closingArgs.Cancel || completion.Task.IsCompleted)
+                return;
+
+            completion.TrySetResult(result);
+        }
+        finally
+        {
+            if (ReferenceEquals(_completion, completion) && !completion.Task.IsCompleted)
+                Interlocked.Exchange(ref _isClosing, 0);
+        }
     }
 
     private bool IsButtonAvailable(ContentDialogButton button) =>
@@ -332,5 +404,14 @@ public class ContentDialog : ContentControl
             ContentDialogButton.Secondary => ContentDialogResult.Secondary,
             ContentDialogButton.Close => ContentDialogResult.Close,
             _ => ContentDialogResult.None
+        };
+
+    private static ContentDialogButton ToButton(ContentDialogResult result) =>
+        result switch
+        {
+            ContentDialogResult.Primary => ContentDialogButton.Primary,
+            ContentDialogResult.Secondary => ContentDialogButton.Secondary,
+            ContentDialogResult.Close => ContentDialogButton.Close,
+            _ => ContentDialogButton.None
         };
 }

@@ -27,3 +27,7 @@ StopButton-Label = Отмена
 DeleteButton-Label = Удалить
 
 DeleteLocalFiles-Content = Также удалить локальные файлы
+
+StatusFilter = Состояние загрузки
+
+SelectedCountFormatted = Выбрано: { $arg0 }

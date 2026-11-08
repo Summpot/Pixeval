@@ -101,3 +101,25 @@ SauceNAO-Or = 或
 SauceNAO-PasteFromClipboard = 从剪切板粘贴图片
 
 SauceNAO-ProvideApiKey = 请先在设置页提供 SauceNAO API Key 再使用此功能
+
+AdvancedOptions-Header = 高级搜索
+
+Validation-CompletionFailed = 无法获取标签补全。已保留输入内容，你仍可直接搜索，或修改关键词后重试。
+
+Validation-PremiumLength-Title = 长度范围不可用
+
+Validation-PremiumLength-TextContent = 非会员可选不限或以下区间：
+    ≤4999、5000–19999
+    20000–79999、≥80000
+
+Validation-PremiumLength-ReadingTimeContent = 非会员可选不限或以下分钟数：
+    ≤9、10–59
+    60–179、≥180
+
+SauceNAO-Retry = 重试搜索
+
+SauceNAO-RequestFailed = 搜索失败或服务暂时不可用。请稍后重试。
+
+SauceNAO-ImageLoadFailed = 无法读取图片。已保留之前的选择，请选择有效图片后重试。
+
+SauceNAO-ClipboardHasNoImage = 剪贴板中没有图片。

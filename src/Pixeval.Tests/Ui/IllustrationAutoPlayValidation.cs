@@ -9,9 +9,9 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement;
-using Pixeval.I18N;
-using Pixeval.Models.Options;
+using Pixeval.Services.Core;
+using Pixeval.Localization;
+using Pixeval.Config;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
@@ -26,13 +26,13 @@ internal static class IllustrationAutoPlayValidation
     internal static async Task RunAsync(string directory)
     {
         using var fixture = new IllustrationReaderFixture();
-        await App.AppViewModel.MakoClient.SetTokenAsync("fixture-illustration-autoplay");
-        await App.AppViewModel.MakoClient.ValidateTokenAsync();
+        App.AppViewModel.MakoClient.SetRefreshToken("fixture-illustration-autoplay");
+        await FixtureAuthentication.IdentifyAsync(App.AppViewModel.MakoClient);
         App.AppViewModel.AppSettings.BrowsingExperienceSettings.BrowseMode = BrowseMode.Swipe;
         List<string> report = [];
-        using var source = new SimpleOperableSourceView<IllustrationItemViewModel>([
+        using var source = new FixtureEntries<object>([
             IllustrationReaderFixture.Sample(996201, 2), IllustrationReaderFixture.Sample(996202, 2)]);
-        var model = new IllustrationViewerPageViewModel(source.CloneSourceView(), 0, false);
+        var model = UiTestSession.Create<IllustrationViewerPageViewModel>(source.CloneSourceView(), 0, false);
         List<string> states = [];
         model.PropertyChanged += (_, e) =>
         {
@@ -44,11 +44,12 @@ internal static class IllustrationAutoPlayValidation
         var window = new Window { Width = 1100, Height = 780, Content = host.Shell };
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             await UntilAsync(() => model.CurrentImage?.Images.All(image => image.LoadSuccessfully) == true);
             await RenderAsync(window);
             var bar = page.FindControl<CommandBar>("ZoomPane")!;
-            var toggle = bar.PrimaryCommands.OfType<CommandBarToggleButton>().Single(button => button.Label == I18NManager.GetResource(EntryViewerPageResources.AutoPlay));
+            var toggle = bar.PrimaryCommands.OfType<CommandBarToggleButton>().Single(button => button.Label == Strings.EntryViewerPageAutoPlay());
             await SelectAsync(1);
             await SelectAsync(IllustrationViewerAutoPlayMode.Sequential);
             await SelectAsync(IllustrationViewerAutoPlayScope.CurrentWork);
@@ -87,7 +88,7 @@ internal static class IllustrationAutoPlayValidation
 
             await SelectAsync(IllustrationViewerAutoPlayScope.CurrentWork);
             await ToggleAsync();
-            host.Shell.NavigateTo(new SearchPage());
+            host.Shell.NavigateTo(UiTestSession.Create<SearchPage>());
             await RenderAsync(window);
             var hiddenPage = model.CurrentPageIndex;
             await Task.Delay(1150);
@@ -115,7 +116,7 @@ internal static class IllustrationAutoPlayValidation
                 "The original autoplay fields and enum values round-trip through isolated settings YAML");
             report.Add("PASS narrow context menu, interval bounds and unchanged settings serialization");
 
-            var single = new IllustrationViewerPageViewModel(new IllustrationItemViewModel(IllustrationReaderFixture.Sample(996203, 2)), false);
+            var single = UiTestSession.Create<IllustrationViewerPageViewModel>((IllustrationReaderFixture.Sample(996203, 2)), false);
             var singlePage = new IllustrationViewerPage(single);
             host.Shell.NavigateTo(singlePage);
             await UntilAsync(() => single.CurrentImage?.Images.All(image => image.LoadSuccessfully) == true);
@@ -135,9 +136,9 @@ internal static class IllustrationAutoPlayValidation
                 "Closing the production tab cancels the timer without late notifications");
             report.Add("PASS single-work all-work loop and production close cancellation");
 
-            using var pendingSource = new SimpleOperableSourceView<IllustrationItemViewModel>([
+            using var pendingSource = new FixtureEntries<object>([
                 IllustrationReaderFixture.Sample(996204, 1), IllustrationReaderFixture.Sample(996205, 1)]);
-            var pendingModel = new IllustrationViewerPageViewModel(pendingSource.CloneSourceView(), 0, true);
+            var pendingModel = UiTestSession.Create<IllustrationViewerPageViewModel>(pendingSource.CloneSourceView(), 0, true);
             var pendingPage = new IllustrationViewerPage(pendingModel);
             host.Shell.NavigateTo(pendingPage);
             var firstDetail = await fixture.NextDetailAsync();

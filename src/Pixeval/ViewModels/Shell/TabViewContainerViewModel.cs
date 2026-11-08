@@ -255,9 +255,16 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
         AiShowIdle = false;
         try
         {
-            var aiShow = await _makoClient.GetAiShowSettingsAsync();
+            var aiShow = await _makoClient.GetAiShowSettingsAsync(generation.Token);
             if (IsCurrentGeneration(generation))
                 AiShowCache = aiShow.ShowAi;
+        }
+        catch (OperationCanceledException) when (generation.IsCancellationRequested)
+        {
+        }
+        catch (MakoError)
+        {
+            // Keep the last setting when the optional account preference cannot be read.
         }
         finally
         {

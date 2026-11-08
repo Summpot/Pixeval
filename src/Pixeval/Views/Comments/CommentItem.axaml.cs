@@ -3,6 +3,8 @@
 
 using System;
 using System.Threading.Tasks;
+using System.Threading;
+using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
@@ -15,10 +17,13 @@ namespace Pixeval.Views.Comments;
 
 public partial class CommentItem : UserControl
 {
+    private CancellationTokenSource? _deletion;
+    private IUserSessionService? _session;
+
     public CommentItem()
     {
         InitializeComponent();
-        DataContextChanged += (_, _) => UpdateReplyButton();
+        DataContextChanged += (_, _) => { CancelDeletion(); UpdateReplyButton(); };
     }
 
     public event Action<CommentRecord>? OpenRepliesButtonClick;
@@ -31,11 +36,44 @@ public partial class CommentItem : UserControl
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
+        _session = this.GetUiService<IUserSessionService>();
+        if (_session is not null) _session.PropertyChanged += SessionChanged;
         UpdateReplyButton();
     }
 
+    private void SessionChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(IUserSessionService.CurrentUserId))
+        {
+            CancelDeletion();
+            UpdateReplyButton();
+        }
+    }
+
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        CancelDeletion();
+        if (_session is not null) _session.PropertyChanged -= SessionChanged;
+        _session = null;
+        base.OnUnloaded(e);
+    }
+
+    private void CancelDeletion()
+    {
+        var pending = _deletion;
+        _deletion = null;
+        pending?.Cancel();
+        DeleteButton.IsEnabled = true;
+    }
+
     private void UpdateReplyButton() =>
-        OpenRepliesButton.IsVisible = ListViewModel?.AllowsReplies ?? false;
+        UpdateActionVisibility();
+
+    private void UpdateActionVisibility()
+    {
+        RepliesButton.IsVisible = ListViewModel?.AllowsReplies ?? false;
+        DeleteButton.IsVisible = DataContext is CommentRecord comment && ListViewModel?.IsOwnComment(comment) == true;
+    }
 
     private void PosterButton_OnClicked(object? sender, RoutedEventArgs e)
     {
@@ -45,7 +83,7 @@ public partial class CommentItem : UserControl
 
     private void OpenRepliesButton_OnClicked(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is CommentRecord comment)
+        if (ListViewModel?.AllowsReplies == true && DataContext is CommentRecord comment)
             OpenRepliesButtonClick?.Invoke(comment);
     }
 
@@ -57,7 +95,32 @@ public partial class CommentItem : UserControl
         if (ListViewModel is not { } list || DataContext is not CommentRecord comment)
             return;
 
-        if (await list.DeleteCommentAsync(comment))
-            DeleteButtonClick?.Invoke(comment);
+        if (!DeleteButton.IsEnabled || !list.IsOwnComment(comment))
+            return;
+        using var cancellation = new CancellationTokenSource();
+        _deletion = cancellation;
+        var userId = _session?.CurrentUserId;
+        DeleteButton.IsEnabled = false;
+        try
+        {
+            if (await list.DeleteCommentAsync(comment, cancellation.Token)
+                && !cancellation.IsCancellationRequested && userId == _session?.CurrentUserId
+                && Equals(DataContext, comment) && ReferenceEquals(ListViewModel, list))
+                DeleteButtonClick?.Invoke(comment);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+        catch (Exception error)
+        {
+            if (!cancellation.IsCancellationRequested)
+                this.Notifications.ShowError(Strings.CommentItemDeleteFailed(), error.Message);
+        }
+        finally
+        {
+            if (ReferenceEquals(_deletion, cancellation))
+            {
+                _deletion = null;
+                DeleteButton.IsEnabled = true;
+            }
+        }
     }
 }

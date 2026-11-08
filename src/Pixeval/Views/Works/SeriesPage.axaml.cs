@@ -12,11 +12,14 @@ namespace Pixeval.Views.Works;
 public partial class SeriesPage : IconContentPage
 {
     private readonly MakoClient _client;
+    private bool _initialized;
 
-    public SeriesPage(MakoClient client)
+    public SeriesPage(MakoClient client, Pixeval.Config.AppSettings settings)
     {
         _client = client;
         InitializeComponent();
+        SimpleWorkTypeComboBox.SelectedValue = settings.SearchSettings.DefaultSimpleWorkType;
+        _initialized = true;
         ChangeSource();
     }
 
@@ -29,6 +32,7 @@ public partial class SeriesPage : IconContentPage
 
     private void ChangeSource()
     {
+        if (!_initialized) return;
         var workType = SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>();
         (SeriesView.DataContext as SeriesViewViewModel)?.ResetSource(
             _client.WorkSeriesWatchlistUnified(workType),

@@ -65,6 +65,7 @@ public sealed class SourceLoadLifetimeTest
             Assert.IsNull(image.Source);
 
             window.Content = image;
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             window.UpdateLayout();
 
@@ -93,6 +94,7 @@ public sealed class SourceLoadLifetimeTest
 
             var image = new Image();
             window.Content = image;
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             window.UpdateLayout();
 
@@ -123,6 +125,7 @@ public sealed class SourceLoadLifetimeTest
 
             var image = new Image();
             window.Content = image;
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             window.UpdateLayout();
 
@@ -179,6 +182,7 @@ public sealed class SourceLoadLifetimeTest
 
             var image = new Image();
             window.Content = image;
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             window.UpdateLayout();
 
@@ -209,6 +213,7 @@ public sealed class SourceLoadLifetimeTest
 
             var image = new Image();
             window.Content = image;
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             window.UpdateLayout();
 
@@ -251,6 +256,7 @@ public sealed class SourceLoadLifetimeTest
 
             var box = new MarkdownBox();
             window.Content = box;
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             window.UpdateLayout();
 

@@ -449,18 +449,7 @@ public class MarkdownBox : MarkdownScrollViewer
 
         langLabel.VerticalAlignment = VerticalAlignment.Center;
 
-        var copyButton = new Button
-        {
-            Content = new SymbolIcon
-            {
-                Symbol = Symbol.Clipboard,
-                FontSize = 14
-            },
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        copyButton.Classes.Add("CopyButton");
-        ToolTip.SetTip(copyButton, "复制代码");
-        copyButton.Command = new AsyncRelayCommand(() => Clipboard.SetTextAsync(textEditor.Text ?? ""));
+        var copyButton = MarkdownCodeCopyButton.Create(() => textEditor.Text ?? "");
 
         var toolbar = new StackPanel
         {

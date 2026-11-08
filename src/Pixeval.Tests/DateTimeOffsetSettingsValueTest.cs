@@ -9,7 +9,7 @@ using Avalonia.Headless;
 using Avalonia.Styling;
 using Material3Expressive.Components;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 using Pixeval.Views.Settings;
 
@@ -22,8 +22,8 @@ public sealed class DateTimeOffsetSettingsValueTest
     [ClassInitialize]
     public static void Initialize(TestContext _)
     {
-        I18NManager.CandidatePaths.Add(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval")));
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+
+        AppLocalization.Instance.SetLanguage("zh-Hans");
     }
 
     [TestMethod]
@@ -41,6 +41,7 @@ public sealed class DateTimeOffsetSettingsValueTest
             var window = new Window { Width = 600, Height = 300, Content = editor, RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 window.UpdateLayout();
                 Assert.AreEqual(initial.ToString("O", CultureInfo.InvariantCulture), editor.Text);
@@ -50,8 +51,8 @@ public sealed class DateTimeOffsetSettingsValueTest
                 editor.Text = "invalid";
                 Assert.IsTrue(DataValidationErrors.GetHasErrors(editor));
                 Assert.IsTrue(MaterialTextField.GetIsError(editor));
-                Assert.AreEqual(I18NManager.GetResource(SettingsMainViewResources.InvalidDateTimeOffset), MaterialTextField.GetSupportingText(editor));
-                Assert.AreEqual(I18NManager.GetResource(SettingsMainViewResources.InvalidDateTimeOffset), AutomationProperties.GetHelpText(editor));
+                Assert.AreEqual(Strings.SettingsMainViewInvalidDateTimeOffset(), MaterialTextField.GetSupportingText(editor));
+                Assert.AreEqual(Strings.SettingsMainViewInvalidDateTimeOffset(), AutomationProperties.GetHelpText(editor));
                 editor.Entry = second;
                 Assert.IsFalse(DataValidationErrors.GetHasErrors(editor));
                 var secondText = editor.Text;

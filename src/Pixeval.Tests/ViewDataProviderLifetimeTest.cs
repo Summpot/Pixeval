@@ -3,12 +3,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Collections.Specialized;
 using System.Threading;
 using System.Threading.Tasks;
-using Mako.Model;
+using Pixeval.Mako;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.Collections;
+using Pixeval.Common.Collections;
 using Pixeval.ViewModels;
 
 namespace Pixeval.Tests;
@@ -19,10 +20,10 @@ public sealed class ViewDataProviderLifetimeTest
     [TestMethod]
     public async Task ResetDisposesUnpublishedItemsAndRejectsLateResults()
     {
-        using var provider = new SimpleViewDataProvider<Illustration, TrackedEntry>();
+        using var provider = new TestProvider();
         var oldEngine = new ControlledEntries();
         var created = new List<TrackedEntry>();
-        provider.ResetEngine(oldEngine, (entry, _) => Track(created, entry), 2);
+        provider.ResetSource(oldEngine, (entry, _) => Track(created, entry), 2);
         var oldSource = (IncrementalLoadingCollection<TrackedEntry>) provider.Source;
         var loading = oldSource.LoadMoreItemsAsync(0);
         await oldEngine.Pending.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -30,7 +31,7 @@ public sealed class ViewDataProviderLifetimeTest
         Assert.IsEmpty(oldSource);
 
         var newEngine = new ControlledEntries(10);
-        provider.ResetEngine(newEngine, (entry, _) => Track(created, entry), 1);
+        provider.ResetSource(newEngine, (entry, _) => Track(created, entry), 1);
         Assert.IsTrue(oldEngine.Token.IsCancellationRequested);
         Assert.AreEqual(0, oldEngine.DisposeCount);
         oldEngine.Completion.SetResult(Illustration.CreateDefault() with { Id = 2 });
@@ -52,13 +53,13 @@ public sealed class ViewDataProviderLifetimeTest
     [TestMethod]
     public async Task FailedPageDisposesUnpublishedItemsAndReportsOriginalError()
     {
-        using var provider = new SimpleViewDataProvider<Illustration, TrackedEntry>();
+        using var provider = new TestProvider();
         var engine = new ControlledEntries();
         var created = new List<TrackedEntry>();
-        provider.ResetEngine(engine, (entry, _) => Track(created, entry), 2);
+        provider.ResetSource(engine, (entry, _) => Track(created, entry), 2);
         var source = (IncrementalLoadingCollection<TrackedEntry>) provider.Source;
         Exception? reported = null;
-        source.OnError += exception => reported = exception;
+        ((System.ComponentModel.INotifyPropertyChanged)source).PropertyChanged += (_, args) => { if (args.PropertyName == nameof(source.LoadError)) reported = source.LoadError; };
         var loading = source.LoadMoreItemsAsync(0);
         await engine.Pending.Task.WaitAsync(TimeSpan.FromSeconds(5));
         var failure = new InvalidOperationException("Fixed page failure");
@@ -79,11 +80,11 @@ public sealed class ViewDataProviderLifetimeTest
     [TestMethod]
     public async Task ClosingTheProviderDuringTheFirstAddReleasesTheRestOfThePage()
     {
-        using var provider = new SimpleViewDataProvider<Illustration, TrackedEntry>();
+        using var provider = new TestProvider();
         var engine = new ControlledEntries();
         engine.Completion.SetResult(Illustration.CreateDefault() with { Id = 2 });
         var created = new List<TrackedEntry>();
-        provider.ResetEngine(engine, (entry, _) => Track(created, entry), 2);
+        provider.ResetSource(engine, (entry, _) => Track(created, entry), 2);
         var source = (IncrementalLoadingCollection<TrackedEntry>) provider.Source;
         source.CollectionChanged += (_, change) =>
         {
@@ -123,40 +124,23 @@ public sealed class ViewDataProviderLifetimeTest
     }
 
     [TestMethod]
-    public async Task SharedSourceRemainsLiveUntilItsLastViewCloses()
+    public async Task ReaderRecordSnapshotsSurviveSourceReset()
     {
-        using var first = new SharableViewDataProvider<Illustration, TrackedEntry>();
+        using var provider = new NativeWorkSource();
         var engine = new ControlledEntries();
-        var created = new List<TrackedEntry>();
-        first.ResetEngine(engine, (entry, _) => Track(created, entry), 2);
-        using var second = first.CloneRef();
-        var shared = (IncrementalLoadingCollection<TrackedEntry>) first.Source;
-        Assert.AreSame(shared, second.Source);
-        var loading = shared.LoadMoreItemsAsync(0);
-        await engine.Pending.Task.WaitAsync(TimeSpan.FromSeconds(5));
-
-        var replacement = new ControlledEntries(10);
-        first.ResetEngine(replacement, (entry, _) => Track(created, entry), 1);
-        Assert.IsFalse(engine.Token.IsCancellationRequested);
-        Assert.AreEqual(0, created[0].DisposeCount);
-        engine.Completion.SetResult(Illustration.CreateDefault() with { Id = 2 });
-        Assert.AreEqual(2, await loading);
-        Assert.HasCount(2, second.Source);
-        Assert.IsEmpty(first.Source);
-        Assert.AreSame(created[0], second.View[0]);
-        Assert.AreSame(created[1], second.View[1]);
-
-        second.Dispose();
-        second.Dispose();
+        provider.ResetSource(engine, itemsPerPage: 1);
+        Assert.AreEqual(1, await ((IIncrementalLoading)provider.Source).LoadMoreItemsAsync(0));
+        var readerSnapshot = provider.Source.ToArray();
+        provider.ResetSource(new ControlledEntries(10), itemsPerPage: 1);
         Assert.AreEqual(1, engine.DisposeCount);
-        Assert.AreEqual(1, created[0].DisposeCount);
-        Assert.AreEqual(1, created[1].DisposeCount);
-        Assert.AreEqual(0, replacement.DisposeCount);
-        Assert.AreEqual(1, await ((IIncrementalLoading) first.Source).LoadMoreItemsAsync(0));
-        first.Dispose();
-        Assert.AreEqual(1, created[2].DisposeCount);
-        Assert.AreEqual(1, replacement.DisposeCount);
+        Assert.AreEqual(1L, readerSnapshot.Single().Id);
+        Assert.AreEqual(1, await ((IIncrementalLoading)provider.Source).LoadMoreItemsAsync(0));
+        Assert.AreEqual(10L, provider.Source.Single().Id);
+        provider.Dispose();
+        Assert.AreEqual(1L, readerSnapshot.Single().Id);
     }
+
+    private sealed class NativeWorkSource : Pixeval.ViewModels.Works.EntryViewViewModel<Illustration, Illustration>;
 
     [TestMethod]
     public async Task CleanupContinuesAfterDisposalFailuresAndPreservesThePageError()
@@ -212,10 +196,13 @@ public sealed class ViewDataProviderLifetimeTest
         return result;
     }
 
-    private sealed class TrackedEntry(Illustration entry) : EntryViewModel<Illustration>(entry), IDisposable
+    private sealed class TestProvider : Pixeval.ViewModels.Works.EntryViewViewModel<Illustration, TrackedEntry>;
+
+    private sealed class TrackedEntry(Illustration entry) : IDisposable
     {
-        public override Uri AppUri => new("pixeval://illustration/1");
-        public override Uri WebsiteUri => new("https://www.pixiv.net/artworks/1");
+        public Uri AppUri => new("pixeval://illustration/1");
+        public Uri WebsiteUri => new("https://www.pixiv.net/artworks/1");
+        public Illustration Entry { get; } = entry;
         public int DisposeCount { get; private set; }
         public Exception? DisposeError { get; set; }
 
@@ -235,7 +222,7 @@ public sealed class ViewDataProviderLifetimeTest
         public int DisposeCount { get; private set; }
         public TaskCompletionSource Pending { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource<Illustration?> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public Illustration Current { get; private set; } = null!;
+        public Illustration Current { get; private set; } = default;
 
         public IAsyncEnumerator<Illustration> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
@@ -254,7 +241,7 @@ public sealed class ViewDataProviderLifetimeTest
                 return false;
             Pending.SetResult();
             var entry = await Completion.Task;
-            Current = entry!;
+            Current = entry.GetValueOrDefault();
             return entry is not null;
         }
 

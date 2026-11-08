@@ -191,23 +191,23 @@ public sealed class HomeCardDefinitions
         }
     }
 
-    private Func<HomePageCardLayout, Task<HomeCardPreviewSource>> CreateWorkPreviewSourceFactory(
+    private Func<HomePageCardLayout, CancellationToken, Task<HomeCardPreviewSource>> CreateWorkPreviewSourceFactory(
         Func<HomePageCardLayout, IAsyncEnumerable<object>> engineFactory) =>
-        card => Task.FromResult(CreateWorkPreviewSource(card, engineFactory(card)));
+        (card, _) => Task.FromResult(CreateWorkPreviewSource(card, engineFactory(card)));
 
-    private Func<HomePageCardLayout, Task<HomeCardPreviewSource>> CreateUserPreviewSourceFactory(
+    private Func<HomePageCardLayout, CancellationToken, Task<HomeCardPreviewSource>> CreateUserPreviewSourceFactory(
         Func<HomePageCardLayout, IAsyncEnumerable<User>> engineFactory) =>
-        card => Task.FromResult(CreateUserPreviewSource(engineFactory(card)));
+        (card, _) => Task.FromResult(CreateUserPreviewSource(engineFactory(card)));
 
-    private Task<HomeCardPreviewSource> CreateSpotlightViewModelAsync(HomePageCardLayout card)
+    private Task<HomeCardPreviewSource> CreateSpotlightViewModelAsync(HomePageCardLayout card, CancellationToken token)
     {
         var engine = _makoClient.Spotlight(SpotlightCategory.All);
         return Task.FromResult(new HomeCardPreviewSource(CreateSpotlightViewModel(engine)));
     }
 
-    private async Task<HomeCardPreviewSource> CreateSingleSeriesPreviewSourceAsync(HomePageCardLayout card)
+    private async Task<HomeCardPreviewSource> CreateSingleSeriesPreviewSourceAsync(HomePageCardLayout card, CancellationToken token)
     {
-        var query = await _makoClient.GetWorkSeriesAsync(card.SimpleWorkKind, card.SeriesId);
+        var query = await _makoClient.GetWorkSeriesAsync(card.SimpleWorkKind, card.SeriesId, token);
         var detail = query.Detail();
         var firstWork = query.First()?.AsWorkEntry;
         var engine = query.Engine();
@@ -218,25 +218,25 @@ public sealed class HomeCardDefinitions
         return new(viewModel, new SingleSeriesOpeningContext(detail, firstWork));
     }
 
-    private async Task<HomeCardPreviewSource> CreateSingleImageViewModelAsync(HomePageCardLayout card)
+    private async Task<HomeCardPreviewSource> CreateSingleImageViewModelAsync(HomePageCardLayout card, CancellationToken token)
     {
-        var engine = Single(await _makoClient.GetIllustrationAsync(card.EntryId));
+        var engine = Single(await _makoClient.GetIllustrationAsync(card.EntryId, token));
         var viewModel = new IllustrationViewViewModel(_appSettings, _blockedContent);
         viewModel.ResetSource(engine.AsObjects());
         return new(viewModel);
     }
 
-    private async Task<HomeCardPreviewSource> CreateSingleNovelViewModelAsync(HomePageCardLayout card)
+    private async Task<HomeCardPreviewSource> CreateSingleNovelViewModelAsync(HomePageCardLayout card, CancellationToken token)
     {
-        var engine = Single(await _makoClient.GetNovelAsync(card.EntryId));
+        var engine = Single(await _makoClient.GetNovelAsync(card.EntryId, token));
         var viewModel = new NovelViewViewModel(_appSettings, _blockedContent);
         viewModel.ResetSource(engine);
         return new(viewModel);
     }
 
-    private async Task<HomeCardPreviewSource> CreateSingleUserViewModelAsync(HomePageCardLayout card)
+    private async Task<HomeCardPreviewSource> CreateSingleUserViewModelAsync(HomePageCardLayout card, CancellationToken token)
     {
-        var userDetail = await _makoClient.GetUserDetailAsync(card.UserId);
+        var userDetail = await _makoClient.GetUserDetailAsync(card.UserId, token);
         var engine = Single(userDetail.User);
         return new(CreateUserViewModel(engine), new SingleUserOpeningContext(userDetail));
     }
@@ -267,91 +267,114 @@ public sealed class HomeCardDefinitions
         return viewModel;
     }
 
+    private IWorkViewViewModel ShareWorks(HomeCardPreviewSource source)
+    {
+        if (source.ViewModel is NovelViewViewModel novels)
+        {
+            var copy = new NovelViewViewModel(_appSettings, _blockedContent);
+            copy.ShareSourceFrom(novels);
+            return copy;
+        }
+        var illustrations = new IllustrationViewViewModel(_appSettings, _blockedContent);
+        illustrations.ShareSourceFrom(source.GetViewModel<IllustrationViewViewModel>());
+        return illustrations;
+    }
+
+    private UserViewViewModel ShareUsers(HomeCardPreviewSource source)
+    {
+        var copy = new UserViewViewModel(_blockedContent);
+        copy.ShareSourceFrom(source.GetViewModel<UserViewViewModel>());
+        return copy;
+    }
+
     private void OpenWorkRecommendedPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        _navigation.NavigateTo<WorkRecommendedPage>(card.WorkKind);
+        _navigation.NavigateTo<WorkRecommendedPage>((card.WorkKind, ShareWorks(source)));
     }
 
     private void OpenWorkNewPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        _navigation.NavigateTo<WorkNewPage>(card.WorkKind);
+        _navigation.NavigateTo<WorkNewPage>((card.WorkKind, ShareWorks(source)));
     }
 
     private void OpenWorkPostsPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        _navigation.NavigateTo<WorkPostsPage>((CreateUserBasicInfo(card), card.WorkKind));
+        _navigation.NavigateTo<WorkPostsPage>((CreateUserBasicInfo(card), card.WorkKind, ShareWorks(source)));
     }
 
     private void OpenWorkBookmarksPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
         _navigation.NavigateTo<WorkBookmarksPage>(
-            (CreateUserBasicInfo(card), card.SimpleWorkKind, card.PrivacyRestrict, card.Tag));
+            (CreateUserBasicInfo(card), card.SimpleWorkKind, card.PrivacyRestrict, card.Tag, ShareWorks(source)));
     }
 
     private void OpenWorkRankingPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
         _navigation.NavigateTo<WorkRankingPage>(
-            (card.SimpleWorkKind, card.RankMode, card.GetRankingDate().LocalDateTime));
+            (card.SimpleWorkKind, card.RankMode, card.GetRankingDate().LocalDateTime, ShareWorks(source)));
     }
 
     private void OpenWorkFollowingPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        _navigation.NavigateTo<WorkFollowingPage>((card.SimpleWorkKind, card.PrivacyRestrict));
+        _navigation.NavigateTo<WorkFollowingPage>((card.SimpleWorkKind, card.PrivacyRestrict, ShareWorks(source)));
     }
 
     private void OpenWorkMyPixivPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        _navigation.NavigateTo<WorkMyPixivPage>(card.SimpleWorkKind);
+        _navigation.NavigateTo<WorkMyPixivPage>((card.SimpleWorkKind, ShareWorks(source)));
     }
 
     private void OpenWorkRelatedPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        _navigation.NavigateTo<WorkRelatedPage>((card.EntryId, card.SimpleWorkKind));
+        _navigation.NavigateTo<WorkRelatedPage>((card.EntryId, card.SimpleWorkKind, ShareWorks(source)));
     }
 
     private void OpenSingleSeries(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        _navigation.NavigateToSeries(card.SimpleWorkKind, card.SeriesId);
+        var context = source.GetOpeningContext<SingleSeriesOpeningContext>();
+        _navigation.NavigateToSeries(card.SimpleWorkKind, card.SeriesId, context.SeriesDetail, context.FirstWork, ShareWorks(source));
     }
 
     private void OpenWorkSearchPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
         var searchText = card.SearchText ?? "";
-        _navigation.NavigateToWorkSearch(
+        _navigation.NavigateTo<WorkSearchResultPage>((
             searchText,
             QueryEnums.IllustrationKeyword(searchText),
             QueryEnums.NovelKeyword(searchText),
-            card.SimpleWorkKind);
+            card.SimpleWorkKind, ShareWorks(source)));
     }
 
     private void OpenUserRecommendedPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        _navigation.NavigateTo<UserRecommendedPage>();
+        _navigation.NavigateTo<UserRecommendedPage>(ShareUsers(source));
     }
 
     private void OpenUserSearchPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        _navigation.NavigateToUserSearch(card.SearchText);
+        _navigation.NavigateTo<UserSearchResultPage>((card.SearchText ?? "", ShareUsers(source)));
     }
 
     private void OpenUserFollowingPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        _navigation.NavigateTo<UserFollowingPage>((card.UserId, card.PrivacyRestrict));
+        _navigation.NavigateTo<UserFollowingPage>((card.UserId, card.PrivacyRestrict, ShareUsers(source)));
     }
 
     private void OpenUserFollowerPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        _navigation.NavigateTo<UserFollowerPage>();
+        _navigation.NavigateTo<UserFollowerPage>(ShareUsers(source));
     }
 
     private void OpenUserMyPixivPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        _navigation.NavigateTo<UserMyPixivPage>(card.UserId);
+        _navigation.NavigateTo<UserMyPixivPage>((card.UserId, ShareUsers(source)));
     }
 
     private void OpenSpotlightPage(HomePageCardLayout card, HomeCardPreviewSource source)
     {
-        _navigation.NavigateTo<SpotlightPage>();
+        var copy = new SpotlightViewViewModel(_blockedContent);
+        copy.ShareSourceFrom(source.GetViewModel<SpotlightViewViewModel>());
+        _navigation.NavigateTo<SpotlightPage>(copy);
     }
 
     private void OpenSingleImage(HomePageCardLayout card, HomeCardPreviewSource source)

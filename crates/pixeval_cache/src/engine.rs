@@ -192,6 +192,10 @@ impl ImageCache {
         }))
     }
 
+    pub fn set_transport(&self, transport: Option<Box<dyn pixeval_maho::MahoTransport>>) {
+        self.http_client.read().set_transport(transport.map(Arc::from));
+    }
+
     pub fn update_network_options(
         &self,
         domain_fronting_enabled: bool,
@@ -206,7 +210,9 @@ impl ImageCache {
             proxy_url.as_deref(),
         );
 
-        *self.http_client.write() = new_client;
+        let mut current = self.http_client.write();
+        new_client.set_transport(current.transport());
+        *current = new_client;
     }
 
     pub fn set_proxy(&self, proxy_url: Option<String>) {

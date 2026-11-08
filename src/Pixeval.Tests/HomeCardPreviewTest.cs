@@ -37,7 +37,7 @@ public sealed class HomeCardPreviewTest
         var model = new UserViewViewModel();
         model.ResetSource(engine);
         using var preview = new HomeCardPreviewViewModel(new HomePageCardLayout(),
-            _ => Task.FromResult(new HomeCardPreviewSource(model)));
+            (_, _) => Task.FromResult(new HomeCardPreviewSource(model)));
 
         await preview.LoadAsync();
 
@@ -51,7 +51,7 @@ public sealed class HomeCardPreviewTest
     public async Task FailedPageShowsFailureAndRetryCreatesAFreshSource()
     {
         var factories = 0;
-        using var preview = new HomeCardPreviewViewModel(new HomePageCardLayout(), _ =>
+        using var preview = new HomeCardPreviewViewModel(new HomePageCardLayout(), (_, _) =>
         {
             var model = new UserViewViewModel();
             model.ResetSource(++factories <= 2 ? Fail() : Single(new User { Id = 1 }));
@@ -77,7 +77,7 @@ public sealed class HomeCardPreviewTest
     {
         var model = new UserViewViewModel();
         using var preview = new HomeCardPreviewViewModel(new HomePageCardLayout(),
-            _ => Task.FromResult(new HomeCardPreviewSource(model)));
+            (_, _) => Task.FromResult(new HomeCardPreviewSource(model)));
 
         await preview.LoadAsync();
 
@@ -92,7 +92,7 @@ public sealed class HomeCardPreviewTest
         var model = new UserViewViewModel();
         model.ResetSource(engine);
         var preview = new HomeCardPreviewViewModel(new HomePageCardLayout(),
-            _ => Task.FromResult(new HomeCardPreviewSource(model)));
+            (_, _) => Task.FromResult(new HomeCardPreviewSource(model)));
 
         var loading = preview.LoadAsync();
         preview.Dispose();
@@ -133,7 +133,7 @@ public sealed class HomeCardPreviewTest
     {
         model.ResetSource(Single(item));
         using var preview = new HomeCardPreviewViewModel(new HomePageCardLayout(),
-            _ => Task.FromResult(new HomeCardPreviewSource(model)));
+            (_, _) => Task.FromResult(new HomeCardPreviewSource(model)));
         var notifications = 0;
         preview.PropertyChanged += (_, e) =>
         {

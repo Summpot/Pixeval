@@ -11,8 +11,8 @@ using Avalonia.Input;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
 using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Models.Options;
+using Pixeval.Localization;
+using Pixeval.Config;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
@@ -30,20 +30,21 @@ internal static class IllustrationNavigationValidation
             foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
             {
                 App.AppViewModel.AppSettings.BrowsingExperienceSettings.BrowseMode = mode;
-                using var source = new SimpleOperableSourceView<IllustrationItemViewModel>([
+                using var source = new FixtureEntries<object>([
                     IllustrationReaderFixture.Sample(996101), IllustrationReaderFixture.Sample(996102, 2)]);
-                var model = new IllustrationViewerPageViewModel(source.CloneSourceView(), 0, false);
+                var model = UiTestSession.Create<IllustrationViewerPageViewModel>(source.CloneSourceView(), 0, false);
                 var page = new IllustrationViewerPage(model);
                 var host = new PageTestHost { Content = page };
                 var window = new Window { Width = 420, Height = 780, RequestedThemeVariant = theme, Content = host.Shell };
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     await UntilAsync(() => model.CurrentImage?.CurrentPage?.LoadSuccessfully == true);
                     await RenderAsync(window);
                     var slider = page.GetVisualDescendants().OfType<PagePreviewSlider>().Single();
                     Require(slider.Focus(NavigationMethod.Tab), "The original image viewer exposes a keyboard page selector");
-                    Require(AutomationProperties.GetName(slider) == I18NManager.GetResource(EntryViewerPageResources.PageSelector),
+                    Require(AutomationProperties.GetName(slider) == Strings.EntryViewerPagePageSelector(),
                         "The page selector has a localized accessible name");
                     Press(window, Key.End, PhysicalKey.End);
                     await RenderAsync(window);
@@ -63,10 +64,10 @@ internal static class IllustrationNavigationValidation
 
                     var info = page.GetVisualDescendants().OfType<IllustrationViewerInfoPane>().Single();
                     var infoBar = info.FindControl<CommandBar>("BottomActionBar")!;
-                    var bookmark = infoBar.PrimaryCommands.OfType<CommandBarButton>().Single(button => button.Label == I18NManager.GetResource(EntryItemResources.AddToBookmark));
-                    var save = infoBar.PrimaryCommands.OfType<CommandBarButton>().Single(button => button.Label == I18NManager.GetResource(EntryItemResources.Save));
-                    Require(ReferenceEquals(bookmark.Command, model.CurrentIllustration!.BookmarkCommand)
-                        && ReferenceEquals(save.Command, model.CurrentIllustration.SaveCommand),
+                    var bookmark = infoBar.PrimaryCommands.OfType<CommandBarButton>().Single(button => button.Label == Strings.EntryItemAddToBookmark());
+                    var save = infoBar.PrimaryCommands.OfType<CommandBarButton>().Single(button => button.Label == Strings.EntryItemSave());
+                    Require(ReferenceEquals(bookmark.Command, App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().BookmarkCommand)
+                        && ReferenceEquals(save.Command, App.AppViewModel.AppServiceProvider.GetRequiredService<WorkCommands>().SaveCommand),
                         "Information commands in overflow follow the new work rather than losing their binding context");
 
                     var bar = page.FindControl<CommandBar>("ZoomPane")!;

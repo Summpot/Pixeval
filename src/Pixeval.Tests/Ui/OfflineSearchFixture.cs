@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
-using Pixeval.AppManagement;
+using Pixeval.Services.Core;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -10,13 +10,9 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Web;
-using Mako;
-using Mako.Net;
-using Mako.Net.EndPoints;
+using Pixeval.Mako;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
-using WebApiClientCore;
 
 namespace Pixeval.Tests.Ui;
 
@@ -36,6 +32,7 @@ internal sealed class OfflineSearchFixture : IDisposable
     internal Func<Uri, string>? TrendingResponseFactory { get; set; }
     internal Func<Uri, string>? RankingResponseFactory { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? ArtworkDetailResponseFactory { get; set; }
+    internal Func<HttpRequestMessage, CancellationToken, Task<string>>? NovelTextResponseFactory { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? UserResponseFactory { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? SeriesResponseFactory { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? WorkFeedResponseFactory { get; set; }
@@ -96,10 +93,22 @@ internal sealed class OfflineSearchFixture : IDisposable
             case "/v1/user/ai-show-settings":
                 json = "{\"show_ai\":true}";
                 break;
+            case "/v1/novel/text" when NovelTextResponseFactory is { } novelText:
+                json = await novelText(request, token).ConfigureAwait(false);
+                break;
+            case "/v2/novel/markers" when NovelTextResponseFactory is not null:
+                json = "{\"novels\":[],\"next_url\":null}";
+                break;
+            case "/v1/novel/marker/add" or "/v1/novel/marker/delete" when NovelTextResponseFactory is not null:
+                json = "{}";
+                break;
             case "/v1/illust/comment/add" or "/v1/novel/comment/add" or "/v3/illust/comments" or "/v3/novel/comments"
                 or "/v2/illust/comment/replies" or "/v2/novel/comment/replies"
                 or "/v1/illust/comment/delete" or "/v1/novel/comment/delete" or "/m3e/comments-next" when CommentResponseFactory is { } comment:
                 json = await comment(request, token).ConfigureAwait(false);
+                break;
+            case "/v1/search/popular-preview/illust" or "/v1/search/popular-preview/novel":
+                json = "{\"illusts\":[],\"novels\":[],\"next_url\":null}";
                 break;
             case "/v1/search/illust" or "/v1/search/novel" when SearchResponseFactory is { } search:
                 SearchRequests.Enqueue(uri);
@@ -123,11 +132,11 @@ internal sealed class OfflineSearchFixture : IDisposable
             case "/v1/watchlist/manga" or "/v1/watchlist/novel" or "/m3e/series-next"
                 or "/v1/watchlist/manga/add" or "/v1/watchlist/manga/delete" or "/v1/watchlist/novel/add" or "/v1/watchlist/novel/delete"
                 or "/v1/illust/series" or "/v2/novel/series" or "/v1/illust/detail" or "/v2/novel/detail"
-                or "/v1/user/detail" or "/v1/illust-series/illust" when SeriesResponseFactory is { } series:
+                or "/v2/user/detail" or "/v1/illust-series/illust" when SeriesResponseFactory is { } series:
                 json = await series(request, token).ConfigureAwait(false);
                 break;
             case "/v1/user/recommended" or "/v1/search/user" or "/v1/user/following" or "/v1/user/follower"
-                or "/v1/user/mypixiv" or "/v1/user/related" or "/v1/user/detail" or "/v1/user/follow/add"
+                or "/v1/user/mypixiv" or "/v1/user/related" or "/v2/user/detail" or "/v1/user/follow/add"
                 or "/v1/user/follow/delete" or "/m3e/user-next" when UserResponseFactory is { } users:
                 json = await users(request, token).ConfigureAwait(false);
                 break;
@@ -151,7 +160,7 @@ internal sealed class OfflineSearchFixture : IDisposable
                       "access_token":"fixture-access", "refresh_token":"fixture-refresh",
                       "expires_in":3600, "token_type":"bearer", "scope":"",
                       "user": {
-                        "id":900001, "name":"M3E Fixture", "account":"fixture", "mail_address":"",
+                        "id":"900001", "name":"M3E Fixture", "account":"fixture", "mail_address":"",
                         "is_premium":{{(IsPremium ? "true" : "false")}}, "x_restrict":0, "is_mail_authorized":true,
                         "require_policy_agreement":false,
                         "profile_image_urls":{"px_16x16":"", "px_50x50":"", "px_170x170":""}

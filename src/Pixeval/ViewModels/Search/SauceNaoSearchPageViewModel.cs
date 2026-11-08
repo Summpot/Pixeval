@@ -31,6 +31,14 @@ public sealed partial class SauceNaoSearchPageViewModel : ViewModelBase, IDispos
 
     private readonly AppSettings _appSettings;
     private readonly IClipboardService _clipboard;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSearch))]
+    public partial bool IsLoading { get; private set; }
+
+    [ObservableProperty]
+    public partial string? ErrorMessage { get; private set; }
+
+    public bool CanSearch => FileSelected && !IsLoading;
 
     public SauceNaoSearchPageViewModel(AppSettings appSettings, IClipboardService clipboard)
     {
@@ -71,24 +79,31 @@ public sealed partial class SauceNaoSearchPageViewModel : ViewModelBase, IDispos
         Bitmap? candidate = null;
         try
         {
-            if (stream is MemoryStream ms)
+            (candidate, var bytes) = await read(operation.Token);
+            if (operation.IsCancellationRequested || _isDisposed)
+                return;
+            if (candidate is null)
             {
-                File = ms.ToArray();
+                ErrorMessage = Strings.SearchSauceNAOClipboardHasNoImage();
+                return;
             }
-            else
-            {
-                using var memoryStream = new MemoryStream();
-                await stream.CopyToAsync(memoryStream);
-                File = memoryStream.ToArray();
-            }
+
+            // Publish only a completely decoded image/file pair. A failed replacement keeps
+            // the previous selection available, and a late read never owns the preview.
+            var previous = Image;
+            File = bytes;
+            Image = candidate;
+            candidate = null;
             FileSelected = true;
-            using var readStream = new MemoryStream(File.ToArray());
-            Image?.Dispose();
-            Image = new Bitmap(readStream);
+            previous?.Dispose();
+        }
+        catch (Exception) when (operation.IsCancellationRequested || _isDisposed)
+        {
+            // A closed page or a newer image owns the state, including any error message.
         }
         catch (Exception)
         {
-            ErrorMessage = I18NManager.GetResource(SearchResources.SauceNAO.ImageLoadFailed);
+            ErrorMessage = Strings.SearchSauceNAOImageLoadFailed();
         }
         finally
         {
@@ -107,12 +122,15 @@ public sealed partial class SauceNaoSearchPageViewModel : ViewModelBase, IDispos
         _ = control;
         ObjectDisposedException.ThrowIf(_isDisposed, this);
 
-        if (await _clipboard.TryGetBitmapAsync() is { } bitmap)
+        await LoadImageAsync(async token =>
+        {
+            var bitmap = await _clipboard.TryGetBitmapAsync();
             try
             {
-                Image?.Dispose();
-                Image = bitmap;
-                using var memoryStream = new MemoryStream();
+                token.ThrowIfCancellationRequested();
+                if (bitmap is null)
+                    return (null, []);
+                using var memoryStream = Streams.RentStream();
                 bitmap.Save(memoryStream, new PngBitmapEncoderOptions());
                 return (bitmap, memoryStream.ToArray());
             }

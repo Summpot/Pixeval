@@ -16,10 +16,9 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako;
-using Mako.Engine;
-using Mako.Global.Enum;
-using Pixeval.I18N;
+using Pixeval.Mako;
+
+using Pixeval.Localization;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Search;
 using Pixeval.Views.Search;
@@ -36,9 +35,9 @@ internal static class SearchArgumentsValidation
         await LoginAsync(false);
         List<string> completed = [];
 
-        var illustration = new IllustrationSearchFormViewModel
+        var illustration = new IllustrationSearchFormViewModel(App.AppViewModel.UserSession)
         {
-            MatchOption = SearchIllustrationTagMatchOption.ExactMatchForTags,
+            MatchOption = IllustSearchTarget.ExactMatchForTags,
             ContentType = SearchIllustrationContentType.Manga,
             RatioPattern = SearchIllustrationRatioPattern.Portrait,
             Tool = "Fixture tool"
@@ -49,11 +48,11 @@ internal static class SearchArgumentsValidation
         Set(illustration.HeightMinOption, 480);
         Set(illustration.HeightMaxOption, 2560);
         Require(illustration.TryValidate(out _, out _), "Valid illustration form is accepted");
-        var illustrationQuery = await RequestAsync(client.IllustrationSearch(illustration.BuildArguments("固定 条件")));
+        var illustrationQuery = await RequestAsync(client.IllustrationSearchAdvanced(illustration.ToSearchParams("固定 条件")));
         AssertCommon(illustrationQuery);
         Expect(illustrationQuery, "search_target", "exact_match_for_tags");
         Expect(illustrationQuery, "content_type", "manga");
-        Expect(illustrationQuery, "ratio_pattern", "portrait");
+        Expect(illustrationQuery, "ratio_pattern", "vertical");
         Expect(illustrationQuery, "width_min", "320");
         Expect(illustrationQuery, "width_max", "1920");
         Expect(illustrationQuery, "height_min", "480");
@@ -65,27 +64,27 @@ internal static class SearchArgumentsValidation
         illustration.WidthMaxOption.IsEnabled = false;
         illustration.StartDateOption.IsEnabled = false;
         illustration.EndDateOption.IsEnabled = false;
-        var disabled = illustration.BuildArguments("fixed");
+        var disabled = illustration.ToSearchParams("fixed");
         Require(disabled.WidthMin is null && disabled.WidthMax is null && disabled.StartDate is null && disabled.EndDate is null,
             "Disabled options are omitted");
         Require(illustration.WidthMinOption.Value is 320 && illustration.WidthMaxOption.Value is 1920
             && illustration.StartDateOption.Value == new DateTime(2020, 2, 3), "Disabling preserves editable values");
         Set(illustration.WidthMinOption, 2000);
         Set(illustration.WidthMaxOption, 1000);
-        Reject(illustration, SearchResources.Validation.InvalidNumericRange.Title);
+        Reject(illustration, "Search-Validation-InvalidNumericRange-Title");
         illustration.WidthMinOption.IsEnabled = false;
         illustration.WidthMaxOption.IsEnabled = false;
         illustration.StartDateOption.IsEnabled = true;
         illustration.StartDateOption.Value = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(9)).Date.AddDays(1);
-        Reject(illustration, SearchResources.Validation.InvalidDateRange.Title);
+        Reject(illustration, "Search-Validation-InvalidDateRange-Title");
         illustration.StartDateOption.IsEnabled = false;
-        illustration.SortOption = WorkSortOption.PopularityDescending;
-        Reject(illustration, SearchResources.Validation.PremiumSort.Title);
+        illustration.SortOption = SortOrder.PopularDesc;
+        Reject(illustration, "Search-Validation-PremiumSort-Title");
         completed.Add("Illustration: disabled fields retain values; reversed ranges, future dates and non-premium popularity are rejected with localized errors");
 
-        var novel = new NovelSearchFormViewModel
+        var novel = new NovelSearchFormViewModel(App.AppViewModel.UserSession)
         {
-            MatchOption = SearchNovelTagMatchOption.Text,
+            MatchOption = NovelSearchTarget.Text,
             Language = "ja",
             IsOriginalOnly = true,
             IsReplaceableOnly = true,
@@ -108,8 +107,8 @@ internal static class SearchArgumentsValidation
                 Set(novel.ContentLengthMinOption, min);
                 Set(novel.ContentLengthMaxOption, max);
                 Require(novel.TryValidate(out _, out _), $"Allowed free-account {key} range is accepted");
-                var arguments = novel.BuildArguments("固定 条件");
-                var query = await RequestAsync(client.NovelSearch(arguments));
+                var arguments = novel.ToSearchParams("固定 条件");
+                var query = await RequestAsync(client.NovelSearchAdvanced(arguments));
                 AssertCommon(query);
                 Expect(query, "search_target", "text");
                 Expect(query, "lang", "ja");
@@ -127,30 +126,30 @@ internal static class SearchArgumentsValidation
             var accepted = novel.TryValidate(out var title, out var message);
             if (accepted)
             {
-                var unsupported = novel.BuildArguments("fixed");
-                var engine = client.NovelSearch(unsupported);
+                var unsupported = novel.ToSearchParams("fixed");
+                var engine = client.NovelSearchAdvanced(unsupported);
                 Console.WriteLine($"Baseline {option}: form accepted 123..456, engine produced {unsupported.ContentLengthMin?.ToString() ?? "null"}..{unsupported.ContentLengthMax?.ToString() ?? "null"}");
-                engine.EngineHandle.Cancel();
+                engine.Cancel();
             }
             Require(!accepted && !string.IsNullOrWhiteSpace(title) && !string.IsNullOrWhiteSpace(message),
                 "Unsupported free-account ranges must be rejected before the engine silently removes them");
             Require(novel.ContentLengthMinOption.Value is 123 && novel.ContentLengthMaxOption.Value is 456,
                 "Validation keeps the user's unsupported range available for correction");
-            completed.Add($"Novel {key}: five allowed free-account ranges reach HTTP unchanged; custom range is visibly rejected without losing input");
+            completed.Add($"Mako.Novel {key}: five allowed free-account ranges reach HTTP unchanged; custom range is visibly rejected without losing input");
         }
 
         novel.ContentLengthOption = SearchNovelContentLengthOption.None;
         novel.IsOriginalOnly = false;
         novel.Language = "";
         Require(novel.TryValidate(out _, out _), "Disabled length restriction ignores retained custom values");
-        var inactive = novel.BuildArguments("fixed");
-        Require(inactive.ContentLengthMin is null && inactive.ContentLengthMax is null && inactive.GenreId is null && inactive.LangCode is null,
+        var inactive = novel.ToSearchParams("fixed");
+        Require(inactive.ContentLengthMin is null && inactive.ContentLengthMax is null && inactive.Genre is null && inactive.Lang is null,
             "Inactive length/genre/language are omitted");
         Require(novel.GenreId is 1 && novel.ContentLengthMinOption.Value is 123, "Inactive fields retain their editable values");
-        completed.Add("Novel: disabling length/original-only/language omits request fields and retains editable range/genre");
+        completed.Add("Mako.Novel: disabling length/original-only/language omits request fields and retains editable range/genre");
 
         await LoginAsync(true);
-        novel.SortOption = WorkSortOption.PopularityDescending;
+        novel.SortOption = SortOrder.PopularDesc;
         foreach (var (option, key) in new[]
                  {
                      (SearchNovelContentLengthOption.TextLength, "text_length"),
@@ -160,7 +159,7 @@ internal static class SearchArgumentsValidation
         {
             novel.ContentLengthOption = option;
             Require(novel.TryValidate(out _, out _), "Premium custom range and popularity remain available");
-            var query = await RequestAsync(client.NovelSearch(novel.BuildArguments("fixed")));
+            var query = await RequestAsync(client.NovelSearchAdvanced(novel.ToSearchParams("fixed")));
             Expect(query, key + "_min", "123");
             Expect(query, key + "_max", "456");
             Expect(query, "sort", "popular_desc");
@@ -177,12 +176,12 @@ internal static class SearchArgumentsValidation
         async Task LoginAsync(bool premium)
         {
             fixture.IsPremium = premium;
-            await client.SetTokenAsync(premium ? "fixture-premium" : "fixture-free");
-            await client.ValidateTokenAsync();
-            Require(client.Me?.Id is 900001 && client.Me.IsPremium == premium, "Isolated account has the requested capability");
+            client.SetRefreshToken(premium ? "fixture-premium" : "fixture-free");
+            await FixtureAuthentication.IdentifyAsync(client);
+            Require(client.GetUser()?.Id is "900001" && client.GetUser()!.Value.IsPremium == premium, "Isolated account has the requested capability");
         }
 
-        async Task<NameValueCollection> RequestAsync<T>(IFetchEngine<T> engine)
+        async Task<NameValueCollection> RequestAsync<T>(IAsyncEnumerable<T> engine)
         {
             var count = fixture.SearchRequests.Count;
             await using var enumerator = engine.GetAsyncEnumerator();
@@ -196,19 +195,20 @@ internal static class SearchArgumentsValidation
     {
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
-            var model = SearchPageViewModel.Instance;
+            var model = App.AppViewModel.AppServiceProvider.GetRequiredService<SearchPageViewModel>();
             model.SearchText = "fixture-novel";
-            model.SelectedAdvancedOptionsType = SimpleWorkType.Novel;
+            model.SelectedAdvancedOptionsType = SimpleWorkKind.Novel;
             model.NovelForm.ContentLengthOption = SearchNovelContentLengthOption.TextLength;
             Set(model.NovelForm.ContentLengthMinOption, 123);
             Set(model.NovelForm.ContentLengthMaxOption, 456);
-            var page = new SearchPage();
+            var page = UiTestSession.Create<SearchPage>();
             var navigation = new NavigationPage();
             await navigation.PushAsync(page);
             var container = new PageTestHost { Content = navigation };
             var window = new Window { Width = 1000, Height = 720, RequestedThemeVariant = theme, Content = container.Shell };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 var expander = page.FindControl<Expander>("AdvancedExpander")
                     ?? throw new InvalidOperationException("Missing advanced search options.");
@@ -219,7 +219,7 @@ internal static class SearchArgumentsValidation
                 minimum.BringIntoView();
                 Render();
                 var input = minimum.GetVisualDescendants().OfType<TextBox>().First();
-                Require(input.Focus(), "Novel minimum editor can receive focus");
+                Require(input.Focus(), "Mako.Novel minimum editor can receive focus");
                 input.SelectAll();
                 window.KeyTextInput("321");
                 window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, "\r");
@@ -229,13 +229,17 @@ internal static class SearchArgumentsValidation
                 var search = page.FindControl<AutoCompleteBox>("SearchAutoCompleteBox")
                     ?? throw new InvalidOperationException("Missing search input.");
                 var button = search.InnerRightContent as Button ?? throw new InvalidOperationException("Missing search action.");
-                button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                button.BringIntoView();
+                Render();
+                Require(button.Focus(NavigationMethod.Tab), "Search action receives keyboard focus");
+                window.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.Space, null);
+                window.KeyRelease(Key.Space, RawInputModifiers.None, PhysicalKey.Space, null);
                 Render();
                 Require(container.Navigations is 0, "Unsupported free-account range does not navigate");
                 Require(container.Notifications.Any(notification => notification.Type is NotificationType.Warning
-                    && notification.Title == I18NManager.GetResource(SearchResources.Validation.PremiumLength.Title)),
+                    && notification.Title == Strings.SearchValidationPremiumLengthTitle()),
                     "Actual search action displays the range validation error");
-                var hint = I18NManager.GetResource(SearchResources.Validation.PremiumLength.TextContent);
+                var hint = Strings.SearchValidationPremiumLengthTextContent();
                 var hintBlock = window.GetVisualDescendants().OfType<TextBlock>().Single(block => block.Text == hint);
                 Console.WriteLine($"{theme.Key} range hint: width={hintBlock.Bounds.Width}, maxLines={hintBlock.MaxLines}, collapsed={hintBlock.TextLayout.TextLines.Any(line => line.HasCollapsed)}");
                 Require(hintBlock.TextLayout.TextLines.All(line => !line.HasCollapsed), "All allowed ranges are visible without ellipsis");
@@ -245,9 +249,13 @@ internal static class SearchArgumentsValidation
                     frame.Save(Path.Combine(directory, $"search-range-error-{theme.Key}.png"), new PngBitmapEncoderOptions());
 
                 model.NovelForm.ContentLengthOption = SearchNovelContentLengthOption.ReadingTime;
-                button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                button.BringIntoView();
                 Render();
-                var timeHint = I18NManager.GetResource(SearchResources.Validation.PremiumLength.ReadingTimeContent);
+                Require(button.Focus(NavigationMethod.Tab), "Search action receives keyboard focus");
+                window.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.Space, null);
+                window.KeyRelease(Key.Space, RawInputModifiers.None, PhysicalKey.Space, null);
+                Render();
+                var timeHint = Strings.SearchValidationPremiumLengthReadingTimeContent();
                 var timeBlock = window.GetVisualDescendants().OfType<TextBlock>().Single(block => block.Text == timeHint);
                 Require(timeBlock.TextLayout.TextLines.All(line => !line.HasCollapsed), "All allowed reading-time ranges are visible without ellipsis");
                 Require(container.Navigations is 0, "Unsupported reading-time range also stays on the form");
@@ -255,7 +263,11 @@ internal static class SearchArgumentsValidation
                 model.NovelForm.ContentLengthOption = SearchNovelContentLengthOption.TextLength;
                 Set(model.NovelForm.ContentLengthMinOption, 5000);
                 Set(model.NovelForm.ContentLengthMaxOption, 19999);
-                button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                button.BringIntoView();
+                Render();
+                Require(button.Focus(NavigationMethod.Tab), "Search action receives keyboard focus");
+                window.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.Space, null);
+                window.KeyRelease(Key.Space, RawInputModifiers.None, PhysicalKey.Space, null);
                 Require(container.Navigations is 1 && container.LastPageType == typeof(WorkSearchResultPage),
                     "Corrected allowed range uses the existing search route exactly once");
                 container.CloseDestinationAndReturn();
@@ -279,7 +291,7 @@ internal static class SearchArgumentsValidation
 
     private static void SetCommon(SearchArgumentsFormViewModelBase form)
     {
-        form.SortOption = WorkSortOption.PublishDateAscending;
+        form.SortOption = SortOrder.DateAsc;
         form.AiType = true;
         form.MergePlainKeywordResults = false;
         form.IncludeTranslatedTagResults = false;
@@ -313,7 +325,7 @@ internal static class SearchArgumentsValidation
     private static void Reject(SearchArgumentsFormViewModelBase form, string titleKey)
     {
         Require(!form.TryValidate(out var title, out var message)
-            && title == I18NManager.GetResource(titleKey) && !string.IsNullOrWhiteSpace(message),
+            && title == FixtureLocalization.GetResource(titleKey) && !string.IsNullOrWhiteSpace(message),
             "Invalid form must preserve a specific localized validation error");
     }
 

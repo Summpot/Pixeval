@@ -22,6 +22,17 @@ mod tests {
     use crate::models::{RawSauceNaoResponse, map_raw_result};
 
     #[test]
+    fn malformed_matches_do_not_discard_valid_results() {
+        let parsed: RawSauceNaoResponse = serde_json::from_str(r#"{
+            "header": {"status": 0},
+            "results": [null, {"header": {}},
+                {"header": {"similarity": "97.5", "index_id": 5}, "data": {"pixiv_id": 42}}]
+        }"#).unwrap();
+        assert_eq!(parsed.results.len(), 1);
+        assert_eq!(map_raw_result(parsed.results.into_iter().next().unwrap()).artwork_id.as_deref(), Some("42"));
+    }
+
+    #[test]
     fn test_parse_pixiv_response() {
         let json = r#"{
             "header": {

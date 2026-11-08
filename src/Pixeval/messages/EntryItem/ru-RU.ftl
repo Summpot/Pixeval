@@ -25,3 +25,5 @@ DownloadTaskCreated = Задача загрузки создана
 TheIllustrationIsAMangaFormatted = { "Это галерея из " }{ $count }{ " изображений" }
 
 TheIllustrationIsAnUgoira = Это анимация (Ugoira)
+
+DownloadTaskCreationFailed = Не удалось создать задачу загрузки

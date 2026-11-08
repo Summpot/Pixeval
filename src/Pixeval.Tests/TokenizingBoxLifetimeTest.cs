@@ -48,6 +48,7 @@ public sealed class TokenizingBoxLifetimeTest
             {
                 first.Add("before mounting");
                 Assert.AreEqual(2, editor.TokenCount);
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 window.UpdateLayout();
                 editor.ItemsSource = second;

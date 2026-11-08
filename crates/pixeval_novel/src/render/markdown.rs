@@ -9,7 +9,7 @@ pub fn render_pages_markdown(
     image_lookup: &HashMap<i64, String>,
     illust_lookup: &HashMap<(i64, i32), (String, String)>,
 ) -> Vec<String> {
-    if doc.pages.is_empty() {
+    if doc.pages.is_empty() || (doc.pages.len() == 1 && doc.pages[0].nodes.is_empty()) {
         return vec![String::new()];
     }
 

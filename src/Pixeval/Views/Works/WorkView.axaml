@@ -1,22 +1,24 @@
 <UserControl
     x:Class="Pixeval.Views.Works.WorkView"
     xmlns="https://github.com/avaloniaui"
+    xmlns:nativeMako="using:Pixeval.Mako"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:entry="using:Pixeval.Views.Works"
     xmlns:local="using:Pixeval.Views.Works"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:di="using:Pixeval.Common.Markup"
-    xmlns:settings="using:Pixeval.Config"
+    xmlns:views="using:Pixeval.Views"
     xmlns:vm="using:Pixeval.ViewModels.Works"
-    xmlns:mako="using:Pixeval.Mako"
-    xmlns:booru="using:Pixeval.Booru"
     x:DataType="{x:Type vm:IOperableViewViewModel}"
     DataContextChanged="StyledElement_OnDataContextChanged"
     mc:Ignorable="d"
     d:DesignHeight="450"
-    d:DesignWidth="800">
+    d:DesignWidth="800"
+    xmlns:di="using:Pixeval.Common.Markup"
+    xmlns:settings="using:Pixeval.Config"
+    xmlns:mako="using:Pixeval.Mako"
+    xmlns:booru="using:Pixeval.Booru">
     <entry:EntryView
         x:Name="EntryView"
         HasNoItem="{Binding !View.Count}"
@@ -24,7 +26,7 @@
         <local:WorkListBox
             x:Name="WorkListBox"
             controls:IncrementalLoadingBehavior.IsEnabled="True"
-            controls:IncrementalLoadingBehavior.Threshold="800"
+            controls:IncrementalLoadingBehavior.Threshold="200"
             AutoScrollToSelectedItem="False"
             ContainerClearing="ListBox_OnContainerClearing"
             ContainerPrepared="ListBox_OnContainerPrepared"
@@ -37,15 +39,15 @@
                 <controls:ItemsViewListBoxStyles />
             </ListBox.Styles>
             <ListBox.DataTemplates>
-                <DataTemplate x:DataType="{x:Type mako:Novel}">
-                    <local:NovelItem />
+                <DataTemplate x:DataType="{x:Type nativeMako:Novel}">
+                    <local:NovelItem
+                        Click="WorkItem_OnClick" />
                 </DataTemplate>
-                <DataTemplate x:DataType="{x:Type mako:Illustration}">
-                    <local:IllustrationItem />
+                <DataTemplate x:DataType="{x:Type nativeMako:Illustration}">
+                    <local:IllustrationItem
+                        Click="WorkItem_OnClick" />
                 </DataTemplate>
-                <DataTemplate x:DataType="{x:Type booru:BooruPost}">
-                    <local:BooruItem />
-                </DataTemplate>
+            <DataTemplate x:DataType="{x:Type booru:BooruPost}"><local:BooruItem Click="WorkItem_OnClick" /></DataTemplate>
             </ListBox.DataTemplates>
         </local:WorkListBox>
     </entry:EntryView>

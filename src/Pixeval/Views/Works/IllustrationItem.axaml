@@ -1,8 +1,10 @@
 <work:WorkItem
     x:Class="Pixeval.Views.Works.IllustrationItem"
     xmlns="https://github.com/avaloniaui"
+    xmlns:di="using:Pixeval.Common.Markup"
+    xmlns:commands="using:Pixeval.ViewModels.Works"
+    xmlns:appCommon="using:Pixeval.Common"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -10,147 +12,84 @@
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Common.Markup"
-    xmlns:mako="using:Pixeval.Mako"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
     xmlns:utilities="using:Pixeval.Common"
     xmlns:viewModels="using:Pixeval.ViewModels.Works"
     xmlns:work="using:Pixeval.Views.Works"
     x:DataType="{x:Type mako:Illustration}"
-    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+    AutomationProperties.Name="{Binding Title}"
+    Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerLow}}"
     Design.DataContext="{x:Static utilities:DesignHelper.DesignIllustrationViewModel}"
     RenderTransformOrigin="50%,50%"
     Theme="{StaticResource WorkCardButtonTheme}"
     ToolTip.Tip="{Binding Tooltip}"
     mc:Ignorable="d"
     d:DesignHeight="250"
-    d:DesignWidth="300">
+    d:DesignWidth="300"
+    xmlns:loc="using:Pixeval.Localization"
+    xmlns:mako="using:Pixeval.Mako">
     <work:WorkItem.ContextMenu>
         <ContextMenu>
             <MenuItem
-                AutomationProperties.Name="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
-                Command="{Binding BookmarkCommand}"
-                CommandParameter="{Binding $self, Mode=OneTime}"
-                ContextRequested="AddToBookmark_OnRightClick"
-                Header="{I18N {x:Static pixeval:EntryItemResources.AddToBookmark}}"
-                Icon="{markup1:SymbolIconEx Heart,
-                                            IconVariant={Binding IsBookmarkedDisplay,
-                                                                 Converter={x:Static converters:PixevalConverters.StateToIconVariant}}}"
+                AutomationProperties.Name="{CompiledBinding [EntryItem-AddToBookmark], Source={x:Static loc:LocalizationManager.Instance}}"
+                controls:ArtworkStateBehavior.TrackBookmark="True" Command="{Binding BookmarkCommand, Source={di:Service Type={x:Type commands:WorkCommands}}, DataType={x:Type commands:WorkCommands}}"
+                CommandParameter="{Binding}"
+                controls:BookmarkTagSelectorBehavior.IsEnabled="True"
+                Header="{CompiledBinding [EntryItem-AddToBookmark], Source={x:Static loc:LocalizationManager.Instance}}"
+                Icon="{markup1:SymbolIconEx Heart}"
                 IsVisible="{Binding IsBookmarkSupported}" />
             <MenuItem
-                Command="{Binding AddToWatchLaterCommand}"
-                CommandParameter="{Binding $self, Mode=OneTime}"
-                Header="{I18N {x:Static pixeval:EntryItemResources.AddToWatchLater}}"
-                Icon="{markup1:SymbolIconEx Clock,
-                                            IconVariant={Binding IsInWatchLater,
-                                                                 Converter={x:Static converters:PixevalConverters.BoolToIconVariant}}}" />
+                controls:ArtworkStateBehavior.TrackWatchLater="True" Command="{Binding AddToWatchLaterCommand, Source={di:Service Type={x:Type commands:WorkCommands}}, DataType={x:Type commands:WorkCommands}}"
+                CommandParameter="{Binding}"
+                Header="{CompiledBinding [EntryItem-AddToWatchLater], Source={x:Static loc:LocalizationManager.Instance}}"
+                Icon="{markup1:SymbolIconEx Clock}" />
             <MenuItem
-                Click="OpenUserInfoPage_OnClicked"
-                Header="{I18N {x:Static pixeval:EntryItemResources.OpenUserInfoPage}}"
+                Command="{Binding OpenUserInfoPageCommand, Source={di:Service Type={x:Type commands:WorkCommands}}, DataType={x:Type commands:WorkCommands}}" CommandParameter="{Binding}"
+                Header="{CompiledBinding [EntryItem-OpenUserInfoPage], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon Person}" />
             <MenuItem
                 Click="BlockAuthor_OnClicked"
-                Header="{I18N {x:Static pixeval:BlockedContentResources.BlockAuthor}}"
+                Header="{CompiledBinding [BlockedContent-BlockAuthor], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon PersonProhibited}"
-                IsVisible="{Binding CanBlockAuthor}" />
+                IsVisible="{Binding IsBookmarkSupported}" />
             <MenuItem
-                Click="OpenSeriesPage_OnClicked"
-                Header="{I18N {x:Static pixeval:EntryItemResources.OpenSeries}}"
+                Command="{Binding OpenSeriesPageCommand, Source={di:Service Type={x:Type commands:WorkCommands}}, DataType={x:Type commands:WorkCommands}}" CommandParameter="{Binding}"
+                Header="{CompiledBinding [EntryItem-OpenSeries], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon SquareMultiple}"
                 IsVisible="{Binding HasSeries}" />
             <Separator />
             <MenuItem
-                Command="{Binding CopyCommand}"
+                Command="{Binding CopyCommand, Source={di:Service Type={x:Type commands:WorkCommands}}, DataType={x:Type commands:WorkCommands}}"
                 CommandParameter="{Binding #ThumbnailImage, Mode=OneTime}"
-                Header="{I18N {x:Static pixeval:EntryItemResources.Copy}}"
+                Header="{CompiledBinding [EntryItem-Copy], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon Copy}"
                 IsEnabled="{Binding #ThumbnailImage.(controls:Source.Loaded)}" />
             <MenuItem
-                Command="{Binding SaveCommand}"
-                CommandParameter="{Binding $self, Mode=OneTime}"
-                Header="{I18N {x:Static pixeval:EntryItemResources.Save}}"
+                Command="{Binding SaveCommand, Source={di:Service Type={x:Type commands:WorkCommands}}, DataType={x:Type commands:WorkCommands}}"
+                CommandParameter="{Binding}"
+                Header="{CompiledBinding [EntryItem-Save], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon Save}" />
             <Separator />
             <MenuItem
-                Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                Header="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
+                Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                Header="{CompiledBinding [EntryItem-OpenInWebBrowser], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon GlobeArrowUp}"
                 Tag="{Binding WebsiteUri}" />
             <MenuItem
-                Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                Header="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
+                Click="{x:Static appCommon:AvaloniaHelper.CopyTagToClipboard}"
+                Header="{CompiledBinding [EntryItem-GenerateWebLink], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon LinkMultiple}"
                 Tag="{Binding WebsiteUri}" />
             <MenuItem
-                Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                Header="{I18N {x:Static pixeval:EntryItemResources.GenerateLink}}"
+                Click="{x:Static appCommon:AvaloniaHelper.CopyTagToClipboard}"
+                Header="{CompiledBinding [EntryItem-GenerateLink], Source={x:Static loc:LocalizationManager.Instance}}"
                 Icon="{markup:SymbolIcon Link}"
                 Tag="{Binding AppUri}" />
         </ContextMenu>
     </work:WorkItem.ContextMenu>
     <ContentControl ClipToBounds="True">
-        <ContentControl.ContextMenu>
-            <ContextMenu>
-                <MenuItem
-                    controls:ArtworkStateBehavior.TrackBookmark="True"
-                    controls:BookmarkTagSelectorBehavior.IsEnabled="True"
-                    Command="{Binding BookmarkCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
-                    CommandParameter="{Binding}"
-                    Header="{CompiledBinding [EntryItem-AddToBookmark], Source={x:Static loc:LocalizationManager.Instance}}"
-                    Icon="{markup1:SymbolIconEx Heart}"
-                    IsVisible="{Binding IsBookmarkSupported}" />
-                <MenuItem
-                    controls:ArtworkStateBehavior.TrackWatchLater="True"
-                    Command="{Binding AddToWatchLaterCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
-                    CommandParameter="{Binding}"
-                    Header="{CompiledBinding [EntryItem-AddToWatchLater], Source={x:Static loc:LocalizationManager.Instance}}"
-                    Icon="{markup1:SymbolIconEx Clock}" />
-                <MenuItem
-                    Command="{Binding OpenUserInfoPageCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
-                    CommandParameter="{Binding}"
-                    Header="{CompiledBinding [EntryItem-OpenUserInfoPage], Source={x:Static loc:LocalizationManager.Instance}}"
-                    Icon="{markup:SymbolIcon Person}" />
-                <MenuItem
-                    Click="BlockAuthor_OnClicked"
-                    Header="{CompiledBinding [BlockedContent-BlockAuthor], Source={x:Static loc:LocalizationManager.Instance}}"
-                    Icon="{markup:SymbolIcon PersonProhibited}"
-                    IsVisible="{Binding IsBookmarkSupported}" />
-                <MenuItem
-                    Command="{Binding OpenSeriesPageCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
-                    CommandParameter="{Binding}"
-                    Header="{CompiledBinding [EntryItem-OpenSeries], Source={x:Static loc:LocalizationManager.Instance}}"
-                    Icon="{markup:SymbolIcon SquareMultiple}"
-                    IsVisible="{Binding HasSeries}" />
-                <Separator />
-                <MenuItem
-                    Command="{Binding CopyCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
-                    CommandParameter="{Binding #ThumbnailImage, Mode=OneTime}"
-                    Header="{CompiledBinding [EntryItem-Copy], Source={x:Static loc:LocalizationManager.Instance}}"
-                    Icon="{markup:SymbolIcon Copy}"
-                    IsEnabled="{Binding #ThumbnailImage.(controls:Source.Loaded)}" />
-                <MenuItem
-                    Command="{Binding SaveCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
-                    CommandParameter="{Binding}"
-                    Header="{CompiledBinding [EntryItem-Save], Source={x:Static loc:LocalizationManager.Instance}}"
-                    Icon="{markup:SymbolIcon Save}" />
-                <Separator />
-                <MenuItem
-                    Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
-                    Header="{CompiledBinding [EntryItem-OpenInWebBrowser], Source={x:Static loc:LocalizationManager.Instance}}"
-                    Icon="{markup:SymbolIcon GlobeArrowUp}"
-                    Tag="{Binding WebsiteUri}" />
-                <MenuItem
-                    Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                    Header="{CompiledBinding [EntryItem-GenerateWebLink], Source={x:Static loc:LocalizationManager.Instance}}"
-                    Icon="{markup:SymbolIcon LinkMultiple}"
-                    Tag="{Binding WebsiteUri}" />
-                <MenuItem
-                    Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
-                    Header="{CompiledBinding [EntryItem-GenerateLink], Source={x:Static loc:LocalizationManager.Instance}}"
-                    Icon="{markup:SymbolIcon Link}"
-                    Tag="{Binding AppUri}" />
-            </ContextMenu>
-        </ContentControl.ContextMenu>
+
         <Border HorizontalAlignment="Stretch">
             <Panel>
                 <controls:ConstrainedBox
@@ -160,6 +99,7 @@
                     <Image
                         x:Name="ThumbnailImage"
                         controls:Source.Cache="{Binding ThumbnailUrl}"
+                        controls:Source.DecodeTarget="{Binding #ThumbnailBounds}"
                         Stretch="UniformToFill" />
                 </controls:ConstrainedBox>
                 <controls:Skeleton IsVisible="{Binding !#ThumbnailImage.(controls:Source.Loaded)}" />
@@ -168,15 +108,29 @@
                     Height="40"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
-                    controls:ArtworkStateBehavior.TrackBookmark="True"
-                    Command="{Binding BookmarkCommand, Source={markup1:Service Type={x:Type viewModels:WorkCommands}}, DataType={x:Type viewModels:WorkCommands}}"
-                    CommandParameter="{Binding}"
-                    IsVisible="{Binding IsBookmarkSupported}">
-                    
-                    <controls:HeartButton.CacheMode>
-                        <BitmapCache SnapsToDevicePixels="False" RenderAtScale="1"/>
-                    </controls:HeartButton.CacheMode>
-                </controls:HeartButton>
+                    Background="Transparent"
+                    DoubleTapped="BookmarkButtonHost_OnTapped"
+                    IsVisible="{Binding IsBookmarkSupported}"
+                    PointerPressed="BookmarkButtonHost_OnPointerPressed"
+                    Tapped="BookmarkButtonHost_OnTapped">
+                    <controls:HeartButton
+                        Width="40"
+                        Height="40"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        AutomationProperties.Name="{CompiledBinding [EntryItem-AddToBookmark], Source={x:Static loc:LocalizationManager.Instance}}"
+                        controls:ArtworkStateBehavior.TrackBookmark="True" Command="{Binding BookmarkCommand, Source={di:Service Type={x:Type commands:WorkCommands}}, DataType={x:Type commands:WorkCommands}}"
+                        CommandParameter="{Binding}"
+                        FocusAdorner="{StaticResource WorkCardFocusAdorner}"
+                        IsVisible="{Binding IsBookmarkSupported}"
+                        Theme="{StaticResource TransparentButtonStyle}"
+                        ToolTip.Tip="{CompiledBinding [EntryItem-AddToBookmark], Source={x:Static loc:LocalizationManager.Instance}}">
+
+                        <controls:HeartButton.CacheMode>
+                            <BitmapCache RenderAtScale="1" SnapsToDevicePixels="False" />
+                        </controls:HeartButton.CacheMode>
+                    </controls:HeartButton>
+                </Border>
                 <Border
                     Margin="5"
                     Padding="5"

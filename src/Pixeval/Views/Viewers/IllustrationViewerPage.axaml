@@ -1,12 +1,12 @@
 <ContentPage
     x:Class="Pixeval.Views.Viewers.IllustrationViewerPage"
+    controls:IllustrationAutoPlayBehavior.IsEnabled="True"
     xmlns="https://github.com/avaloniaui"
+    xmlns:settings="using:Pixeval.Config"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:loc="using:Pixeval.Localization"
     xmlns:common="using:FluentIcons.Common"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:di="using:Pixeval.Common.Markup"
     xmlns:local="using:Pixeval.Views.Viewers"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
@@ -19,11 +19,12 @@
     xmlns:views="using:Pixeval.Config"
     x:DataType="{x:Type viewers:IllustrationViewerPageViewModel}"
     x:Name="Root"
-    controls:IllustrationAutoPlayBehavior.IsEnabled="True"
     Header="{Binding Title, FallbackValue={x:Null}}"
     mc:Ignorable="d"
     d:DesignHeight="450"
-    d:DesignWidth="800">
+    d:DesignWidth="800"
+    xmlns:loc="using:Pixeval.Localization"
+    xmlns:di="using:Pixeval.Common.Markup">
     <ContentPage.Icon>
         <Image
             Width="16"
@@ -118,6 +119,13 @@
             <Setter Property="Opacity" Value="1" />
         </Style>
 
+        <Style Selector="Border#FloatingToolbarPane.temporary-visible">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
+        <Style Selector="Border#FloatingToolbarPane:focus-within, Border#FloatingToolbarPane.command-menu-open">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
     </ContentPage.Styles>
 
     <Grid>
@@ -125,7 +133,7 @@
         <controls:FloatingPaneView
             x:Name="EntryViewerFloatingPaneView"
             Grid.Row="0"
-            IsDocked="{Binding OpenWorkInfo, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}, Mode=TwoWay}"
+            IsDocked="{Binding OpenWorkInfo, Source={di:Service Type={x:Type settings:PixevalSettings}}, DataType={x:Type settings:PixevalSettings}, Mode=TwoWay}"
             PaneVerticalAlignment="Top">
             <controls:FloatingPaneView.Pane>
                 <Border Name="FloatingPaneBorder">
@@ -243,7 +251,10 @@
                                                                                                   x:TypeArguments=common:Symbol}}"
                                         IsChecked="{Binding CurrentImage.CurrentPage.IsPlaying, Mode=TwoWay, FallbackValue={x:False}}"
                                         IsEnabled="{Binding CurrentImage.CurrentPage.LoadSuccessfully, FallbackValue={x:False}}"
-                                        Label="{CompiledBinding [Misc-Play], Source={x:Static loc:LocalizationManager.Instance}}">
+                                        Label="{markup1:EitherBinding {Binding CurrentImage.CurrentPage.IsPlaying, FallbackValue={x:False}},
+                                                                      {CompiledBinding [Misc-Pause], Source={x:Static loc:LocalizationManager.Instance}},
+                                                                      {CompiledBinding [Misc-Play], Source={x:Static loc:LocalizationManager.Instance}},
+                                                                      x:TypeArguments=x:Object}">
                                         <CommandBarToggleButton.IsVisible>
                                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                                                 <Binding FallbackValue="False" Path="IsPicGif" />

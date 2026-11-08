@@ -9,7 +9,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Web;
 using Avalonia.Platform;
-using Mako.Model;
+using Pixeval.Mako;
 using Pixeval.ViewModels;
 
 namespace Pixeval.Tests.Ui;
@@ -37,24 +37,24 @@ internal sealed class NovelReaderFixture : IDisposable
             await ContentRequests.Writer.WriteAsync(pending, token);
             return await pending.Response.Task;
         };
-        Http.ArtworkDetailResponseFactory = (request, _) => Task.FromResult(JsonSerializer.Serialize(new
+        Http.ArtworkDetailResponseFactory = (request, _) => Task.FromResult(NativeFixtureData.Serialize(new
         {
             novel = Sample(long.Parse(HttpUtility.ParseQueryString(request.RequestUri!.Query)["novel_id"]!))
         }));
         Http.CommentResponseFactory = (_, _) => Task.FromResult("{\"comments\":[],\"next_url\":null}");
+        Http.NovelTextResponseFactory = (_, _) => Task.FromException<string>(new HttpRequestException("Fixed novel fallback content unavailable"));
         Http.RelatedResponseFactory = (_, _) => Task.FromResult("{\"novels\":[],\"next_url\":null}");
     }
 
     internal Task<Pending> NextAsync() => ContentRequests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
 
-    internal static Novel Sample(long id) => Novel.CreateDefault() with
+    internal static Mako.Novel Sample(long id) => Mako.Novel.CreateDefault() with
     {
         Id = id,
         Title = Title + " / " + id,
-        Visible = true,
         Series = null,
-        User = UserInfo.CreateDefault() with { Id = 900001, Name = "Fixture author", ProfileImageUrls = new() { Medium = ImageUri } },
-        ThumbnailUrls = new() { Medium = ImageUri, Large = ImageUri, SquareMedium = ImageUri }
+        User = User.CreateDefault() with { Id = 900001, Name = "Fixture author", ProfileImageUrls = new() { Medium = ImageUri } },
+        ImageUrls = new() { Medium = ImageUri, Large = ImageUri, SquareMedium = ImageUri }
     };
 
     internal static string Html(long id, string text, bool withImages = false)
@@ -76,23 +76,22 @@ internal sealed class NovelReaderFixture : IDisposable
             marker = (object?) null,
             illusts = withImages ? new Dictionary<string, NovelIllustration>
             {
-                ["994101-1"] = NovelIllustration.CreateDefault() with
+                ["994101-1"] = new NovelIllustration() with
                 {
                     Id = 994101,
                     Page = 1,
-                    Visible = true,
-                    Illustration = NovelIllustrationInfo.CreateDefault() with
+                                Illust = new NovelIllustrationInfo() with
                     {
-                        Images = NovelIllustrationUrls.CreateDefault() with { Medium = ImageUri }
+                        Images = new NovelIllustrationUrls() with { Medium = ImageUri }
                     }
                 }
             } : [],
-            images = withImages ? new Dictionary<string, NovelImage>
+            images = withImages ? new Dictionary<string, object>
             {
-                ["11"] = NovelImage.CreateDefault() with
+                ["11"] = new
                 {
-                    NovelImageId = 11,
-                    Urls = NovelImageUrls.CreateDefault() with { X1200 = ImageUri, Original = ImageUri }
+                    novelImageId = 11,
+                    urls = new { x1200 = ImageUri, original = ImageUri }
                 }
             } : [],
             seriesNavigation = (object?) null,
@@ -105,7 +104,7 @@ internal sealed class NovelReaderFixture : IDisposable
             language = "ja"
         };
         // Preserve the nested bootstrap-object boundary consumed by Mako's webview parser.
-        return "<script>{{{}" + JsonSerializer.Serialize(content) + "}}</script>";
+        return "<script>{{{}" + NativeFixtureData.Serialize(content) + "}}</script>";
     }
 
     public void Dispose()

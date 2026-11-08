@@ -43,6 +43,7 @@ struct EngineInner {
     is_running: bool,
     global_cancel: CancellationToken,
     active_sub_cancel: Option<CancellationToken>,
+    active_subscription_id: Option<i64>,
     daemon_cancel: Option<CancellationToken>,
     daemon_interval_secs: u64,
     is_daemon_running: bool,
@@ -85,6 +86,7 @@ impl SubscriptionSync {
                 is_running: false,
                 global_cancel: CancellationToken::new(),
                 active_sub_cancel: None,
+                active_subscription_id: None,
                 daemon_cancel: None,
                 daemon_interval_secs: 1800,
                 is_daemon_running: false,
@@ -116,6 +118,7 @@ impl SubscriptionSync {
                 is_running: false,
                 global_cancel: CancellationToken::new(),
                 active_sub_cancel: None,
+                active_subscription_id: None,
                 daemon_cancel: None,
                 daemon_interval_secs: 1800,
                 is_daemon_running: false,
@@ -161,11 +164,9 @@ impl SubscriptionSync {
     pub fn remove_pending_subscription(&self, subscription_id: i64) {
         let mut inner = self.inner.lock();
         inner.queue.remove_subscription(subscription_id);
-        if let Some(SyncRequestKind::Single { subscription_id: active_id }) = inner.active_request {
-            if active_id == subscription_id {
-                if let Some(ref token) = inner.active_sub_cancel {
-                    token.cancel();
-                }
+        if inner.active_subscription_id == Some(subscription_id) {
+            if let Some(ref token) = inner.active_sub_cancel {
+                token.cancel();
             }
         }
     }
@@ -466,6 +467,7 @@ impl SubscriptionSync {
                 let mut inner = inner_arc.lock();
                 inner.active_request = None;
                 inner.active_sub_cancel = None;
+                inner.active_subscription_id = None;
             }
         }
     }
@@ -494,7 +496,7 @@ impl SubscriptionSync {
                 if g.global_cancel.is_cancelled() {
                     break;
                 }
-                let token = CancellationToken::new();
+                let token = cancel_token.child_token();
                 g.active_sub_cancel = Some(token.clone());
                 token
             };
@@ -564,6 +566,7 @@ impl SubscriptionSync {
         cancel_token: CancellationToken,
     ) -> u32 {
         let history_id = sub.history_entry_id;
+        inner.lock().active_subscription_id = Some(history_id);
         download.set_overwrite(config.overwrite);
         let subscription_type = subscription_type_name(sub.subscription_type);
 
@@ -587,7 +590,12 @@ impl SubscriptionSync {
         // 2. Metadata refresh if empty
         if sub.title.is_empty() || sub.avatar.is_empty() {
             if sub.subscription_type == 0 || sub.subscription_type == 1 {
-                if let Ok(user_resp) = mako.get_user_detail(sub.id).await {
+                let response = tokio::select! {
+                    biased;
+                    _ = cancel_token.cancelled() => None,
+                    response = mako.get_user_detail(sub.id) => response.ok(),
+                };
+                if let Some(user_resp) = response {
                     let name = user_resp.user.name;
                     let account = user_resp.user.account;
                     let avatar = user_resp
@@ -620,7 +628,11 @@ impl SubscriptionSync {
             }
 
             'outer_novel: for engine in engines {
-                while let Some(novel) = engine.next().await {
+                while let Some(novel) = tokio::select! {
+                    biased;
+                    _ = cancel_token.cancelled() => None,
+                    item = engine.next() => item,
+                } {
                     if cancel_token.is_cancelled() {
                         break 'outer_novel;
                     }
@@ -735,7 +747,11 @@ impl SubscriptionSync {
             }
 
             'outer_illust: for engine in engines {
-                while let Some(illust) = engine.next().await {
+                while let Some(illust) = tokio::select! {
+                    biased;
+                    _ = cancel_token.cancelled() => None,
+                    item = engine.next() => item,
+                } {
                     if cancel_token.is_cancelled() {
                         break 'outer_illust;
                     }
@@ -872,6 +888,24 @@ mod metadata_tests {
         fn on_new_works_ingested(&self, _: u32) {}
         fn on_daemon_state_changed(&self, _: bool) {}
     }
+    #[test]
+    fn removing_an_active_subscription_cancels_single_and_batch_sync() {
+        for request in [SyncRequestKind::Single { subscription_id: 42 }, SyncRequestKind::All] {
+            let sync = SubscriptionSync::new(None, None);
+            let token = CancellationToken::new();
+            {
+                let mut inner = sync.inner.lock();
+                inner.active_request = Some(request);
+                inner.active_subscription_id = Some(42);
+                inner.active_sub_cancel = Some(token.clone());
+            }
+            sync.remove_pending_subscription(43);
+            assert!(!token.is_cancelled());
+            sync.remove_pending_subscription(42);
+            assert!(token.is_cancelled());
+        }
+    }
+
     #[test]
     fn metadata_callback_can_read_the_committed_record() {
         let storage = Arc::new(StorageEngine::new(":memory:".into()).unwrap());

@@ -19,17 +19,15 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
-using Pixeval.Collections;
+using Pixeval.Mako;
+using Pixeval.Common.Collections;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views;
-using Pixeval.Views.Capability;
-using Pixeval.Views.Entry;
+using Pixeval.Views.Works;
 using Pixeval.Views.Viewers;
 
 namespace Pixeval.Tests.Ui;
@@ -66,27 +64,27 @@ internal static class SeriesPageValidation
             await asset.CopyToAsync(buffer);
             fixture.ImageResponses[imageUri] = buffer.ToArray();
         }
-        await client.SetTokenAsync("fixture-series-page");
-        await client.ValidateTokenAsync();
-        var originalType = PixevalSettings.SimpleWorkType;
+        client.SetRefreshToken("fixture-series-page");
+        await FixtureAuthentication.IdentifyAsync(client);
+        var originalType = App.AppViewModel.AppSettings.SearchSettings.DefaultSimpleWorkType;
         List<string> report = [];
         try
         {
             foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                 foreach (var width in new[] { 360, 1000 })
-                    foreach (var workType in new[] { SimpleWorkType.Illustration, SimpleWorkType.Novel })
+                    foreach (var workType in new[] { SimpleWorkKind.Illustration, SimpleWorkKind.Novel })
                     {
                         App.AppViewModel.AppSettings.SearchSettings.DefaultSimpleWorkType = workType;
-                        var page = new SeriesPage();
+                        var page = UiTestSession.Create<SeriesPage>();
                         var view = page.FindControl<SeriesView>("SeriesView")!;
                         var model = (SeriesViewViewModel) view.DataContext!;
-                        List<(Type Page, long Id, SimpleWorkType? WorkType)> routes = [];
+                        List<(Type Page, long Id, SimpleWorkKind? WorkKind)> routes = [];
                         var container = new PageTestHost
                         {
                             Content = page,
                             NavigationObserver = destination => routes.Add(destination.DataContext switch
                             {
-                                SeriesViewerPageViewModel series => (destination.GetType(), series.Id, series.WorkType),
+                                SeriesViewerPageViewModel series => (destination.GetType(), series.Id, series.WorkKind),
                                 UserViewerPageViewModel user => (destination.GetType(), user.Id, null),
                                 _ => (destination.GetType(), 0, null)
                             })
@@ -95,6 +93,7 @@ internal static class SeriesPageValidation
                         var key = $"{workType}-{theme.Key}-{width}";
                         try
                         {
+                            Pixeval.Common.MaterialAnimation.Initialize(window);
                             window.Show();
                             var first = await NextAsync();
                             Require(first.Uri.AbsolutePath == PathFor(workType), "The watchlist uses the selected manga/novel endpoint");
@@ -139,7 +138,7 @@ internal static class SeriesPageValidation
                             Require(routes.Count == count + 3 && routes[^1].Page == LatestPage(workType), "Latest-content keyboard action opens only the correct work viewer");
                             container.CloseDestinationAndReturn();
                             Require(details.Any(request => request.Uri.AbsolutePath == DetailPath(workType)
-                                && HttpUtility.ParseQueryString(request.Uri.Query)[workType == SimpleWorkType.Novel ? "novel_id" : "illust_id"] == "940001"),
+                                && HttpUtility.ParseQueryString(request.Uri.Query)[workType == SimpleWorkKind.Novel ? "novel_id" : "illust_id"] == "940001"),
                                 "The latest-content request preserves its work ID");
                             await ClickAsync(window, latest);
                             Require(routes.Count == count + 4 && routes[^1].Page == LatestPage(workType), "Pointer latest-content action does not also open series detail");
@@ -154,21 +153,21 @@ internal static class SeriesPageValidation
                             menu.Close();
                             await OpenContextAsync();
                             var entries = menu.Items.OfType<MenuItem>().ToArray();
-                            Require(Equals(entries.Single(item => Equals(item.Header, I18NManager.GetResource(EntryItemResources.OpenInWebBrowser))).Tag,
-                                ((SeriesItemViewModel) card.DataContext!).WebsiteUri), "Open in browser retains the original type-specific series URL");
-                            var copy = entries.Single(item => Equals(item.Header, I18NManager.GetResource(EntryItemResources.GenerateWebLink)));
+                            Require(Equals(entries.Single(item => Equals(item.Header, Strings.EntryItemOpenInWebBrowser())).Tag,
+                                ((Series) card.DataContext!).WebsiteUri), "Open in browser retains the original type-specific series URL");
+                            var copy = entries.Single(item => Equals(item.Header, Strings.EntryItemGenerateWebLink()));
                             await ActivateAsync(window, copy, Key.Enter, PhysicalKey.Enter);
-                            Require(await window.Clipboard!.TryGetTextAsync() == ((SeriesItemViewModel) card.DataContext!).WebsiteUri.ToString(), "Series website copy preserves the type-specific URL");
+                            Require(await window.Clipboard!.TryGetTextAsync() == ((Series) card.DataContext!).WebsiteUri.ToString(), "Series website copy preserves the type-specific URL");
                             await OpenContextAsync();
-                            await ActivateAsync(window, entries.Single(item => Equals(item.Header, I18NManager.GetResource(EntryItemResources.GenerateLink))), Key.Enter, PhysicalKey.Enter);
-                            Require(await window.Clipboard!.TryGetTextAsync() == ((SeriesItemViewModel) card.DataContext!).AppUri.ToString(), "Series app-link copy preserves work type and series ID");
+                            await ActivateAsync(window, entries.Single(item => Equals(item.Header, Strings.EntryItemGenerateLink())), Key.Enter, PhysicalKey.Enter);
+                            Require(await window.Clipboard!.TryGetTextAsync() == ((Series) card.DataContext!).AppUri.ToString(), "Series app-link copy preserves work type and series ID");
                             await OpenContextAsync();
                             count = routes.Count;
-                            await ActivateAsync(window, entries.Single(item => Equals(item.Header, I18NManager.GetResource(SeriesPageResources.ViewLatestContent))), Key.Enter, PhysicalKey.Enter);
+                            await ActivateAsync(window, entries.Single(item => Equals(item.Header, Strings.SeriesPageViewLatestContent())), Key.Enter, PhysicalKey.Enter);
                             Require(routes.Count == count + 1 && routes[^1].Page == LatestPage(workType), "The context-menu latest action uses the same single destination");
                             container.CloseDestinationAndReturn();
                             await OpenContextAsync();
-                            await ActivateAsync(window, entries.Single(item => Equals(item.Header, I18NManager.GetResource(EntryItemResources.OpenUserInfoPage))), Key.Enter, PhysicalKey.Enter);
+                            await ActivateAsync(window, entries.Single(item => Equals(item.Header, Strings.EntryItemOpenUserInfoPage())), Key.Enter, PhysicalKey.Enter);
                             Require(routes.Count == count + 2 && routes[^1] == (typeof(UserViewerPage), 900007L, null), "The context-menu author action retains its ID without opening the series");
                             container.CloseDestinationAndReturn();
                             await OpenContextAsync();
@@ -178,7 +177,7 @@ internal static class SeriesPageValidation
                             Require(!menu.IsOpen, "Escape closes the series context menu");
 
                             var refresh = page.FindControl<CommandBarButton>("RefreshButton")!;
-                            Require(refresh.Label == I18NManager.GetResource(WorkContainerResources.RefreshButton.Label), "Series refresh exposes its localized label");
+                            Require(refresh.Label == Strings.WorkContainerRefreshButtonLabel(), "Series refresh exposes its localized label");
                             await ActivateAsync(window, refresh, Key.Space, PhysicalKey.Space);
                             var refreshed = await NextAsync();
                             Require(refreshed.Uri.AbsolutePath == PathFor(workType), "Refresh retains the selected work type");
@@ -187,15 +186,15 @@ internal static class SeriesPageValidation
                             Require(next.Uri.AbsolutePath == "/m3e/series-next" && HttpUtility.ParseQueryString(next.Uri.Query)["offset"] == "1", "Series pagination uses the exact service next_url");
                             next.Complete([Sample(930003), Sample(930004)]);
                             await UntilAsync(() => model.Source.Count == 2 && !Source().IsLoading);
-                            Require(model.Source.Select(item => item.Entry.Id).SequenceEqual(new long[] { 930003, 930004 }), "Series pagination preserves order and de-duplicates IDs");
+                            Require(model.Source.Select(item => item.Id).SequenceEqual(new long[] { 930003, 930004 }), "Series pagination preserves order and de-duplicates IDs");
 
                             var selector = page.FindControl<SymbolComboBox>("SimpleWorkTypeComboBox")!.GetVisualDescendants().OfType<ComboBox>().Single();
                             Require(!string.IsNullOrWhiteSpace(AutomationProperties.GetName(selector)), "The series work-type selector is named");
-                            await ActivateAsync(window, selector, workType == SimpleWorkType.Illustration ? Key.Down : Key.Up,
-                                workType == SimpleWorkType.Illustration ? PhysicalKey.ArrowDown : PhysicalKey.ArrowUp);
+                            await ActivateAsync(window, selector, workType == SimpleWorkKind.Illustration ? Key.Down : Key.Up,
+                                workType == SimpleWorkKind.Illustration ? PhysicalKey.ArrowDown : PhysicalKey.ArrowUp);
                             var switched = await NextAsync();
                             Require(switched.Uri.AbsolutePath != PathFor(workType), "Keyboard selection switches between manga and novel watchlists");
-                            selector.SelectedIndex = workType == SimpleWorkType.Illustration ? 0 : 1;
+                            selector.SelectedIndex = workType == SimpleWorkKind.Illustration ? 0 : 1;
                             switched.Complete([Sample(939999)], "https://app-api.pixiv.net/m3e/obsolete-series-next");
                             var restored = await NextAsync();
                             Require(restored.Uri.AbsolutePath == PathFor(workType), "Restoring the selector restores its original endpoint");
@@ -217,8 +216,8 @@ internal static class SeriesPageValidation
                                 await ClickAsync(window, card, new Point(20, 25), MouseButton.Right);
                                 Require(menu.IsOpen, "The existing series context menu remains reachable with a right click");
                             }
-                            SeriesItem Card(long id) => view.GetVisualDescendants().OfType<SeriesItem>().Single(item => item.DataContext is SeriesItemViewModel row && row.Entry.Id == id);
-                            IncrementalLoadingCollection<SeriesItemViewModel> Source() => (IncrementalLoadingCollection<SeriesItemViewModel>) model.Source;
+                            SeriesItem Card(long id) => view.GetVisualDescendants().OfType<SeriesItem>().Single(item => item.DataContext is Series row && row.Id == id);
+                            IncrementalLoadingCollection<Series> Source() => (IncrementalLoadingCollection<Series>) model.Source;
                         }
                         finally
                         {
@@ -243,15 +242,15 @@ internal static class SeriesPageValidation
         Series Sample(long id) => Series.CreateDefault() with
         {
             Id = id, Title = LongTitle, CoverUrl = imageUri,
-            User = UserInfo.CreateDefault() with { Id = 900007, Name = "长作者名 / A very long author name" },
+            User = User.CreateDefault() with { Id = 900007, Name = "长作者名 / A very long author name" },
             PublishedContentCount = 1234, LatestContentId = id + 10000,
-            LastPublishedContentDatetime = new DateTimeOffset(2026, 11, 7, 0, 0, 0, TimeSpan.Zero)
+            LastPublishedContentDatetime = new DateTimeOffset(2026, 11, 7, 0, 0, 0, TimeSpan.Zero).ToString("O")
         };
     }
 
-    private static string PathFor(SimpleWorkType type) => type == SimpleWorkType.Novel ? "/v1/watchlist/novel" : "/v1/watchlist/manga";
-    private static string DetailPath(SimpleWorkType type) => type == SimpleWorkType.Novel ? "/v2/novel/detail" : "/v1/illust/detail";
-    private static Type LatestPage(SimpleWorkType type) => type == SimpleWorkType.Novel ? typeof(NovelViewerPage) : typeof(IllustrationViewerPage);
+    private static string PathFor(SimpleWorkKind type) => type == SimpleWorkKind.Novel ? "/v1/watchlist/novel" : "/v1/watchlist/manga";
+    private static string DetailPath(SimpleWorkKind type) => type == SimpleWorkKind.Novel ? "/v2/novel/detail" : "/v1/illust/detail";
+    private static Type LatestPage(SimpleWorkKind type) => type == SimpleWorkKind.Novel ? typeof(NovelViewerPage) : typeof(IllustrationViewerPage);
 
     private static async Task ActivateAsync(Window window, Control control, Key key, PhysicalKey physical)
     {
@@ -319,6 +318,6 @@ internal static class SeriesPageValidation
         internal Uri Uri { get; } = uri;
         internal TaskCompletionSource<string> Response { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal void Complete(IReadOnlyList<Series> series, string? next = null) =>
-            Response.SetResult(JsonSerializer.Serialize(new { series, next_url = next }));
+            Response.SetResult(NativeFixtureData.Serialize(new { series, next_url = next }));
     }
 }

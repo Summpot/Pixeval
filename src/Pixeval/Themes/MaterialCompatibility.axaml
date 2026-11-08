@@ -1,4 +1,4 @@
-﻿<Styles xmlns="https://github.com/avaloniaui" xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia">
+<Styles xmlns="https://github.com/avaloniaui" xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia">
     <!--
         Mixed-theme compatibility verified against Material3Expressive 859a69e5 and Avalonia 12.1.5.
         MaterialCompatibilityTest and ColorPickerThemeTest cover the retained rules.

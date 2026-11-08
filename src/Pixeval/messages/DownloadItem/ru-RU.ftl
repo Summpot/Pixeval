@@ -33,3 +33,5 @@ GoToPageItem-Label = Перейти к странице
 OpenDownloadLocationItem-Label = Открыть папку скачивания
 
 ResetItem-Label = Перескачать
+
+GroupProgressFormatted = Активно: { $arg0 } · Завершено: { $arg1 } · Ошибок: { $arg2 }

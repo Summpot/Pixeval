@@ -97,3 +97,13 @@ SauceNAO-Or = or
 SauceNAO-PasteFromClipboard = Paste image from clipboard
 
 SauceNAO-ProvideApiKey = Please provide a SauceNAO API Key in Settings before using this feature.
+
+AdvancedOptions-Header = Advanced search
+
+SauceNAO-Retry = Retry search
+
+SauceNAO-RequestFailed = The search failed or the service is temporarily unavailable. Please try again later.
+
+SauceNAO-ImageLoadFailed = The image could not be read. Your previous selection is kept. Choose a valid image and try again.
+
+SauceNAO-ClipboardHasNoImage = There is no image on the clipboard.

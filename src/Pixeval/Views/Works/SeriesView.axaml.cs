@@ -27,9 +27,9 @@ public partial class SeriesView : UserControl
 
     private void SeriesItem_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Control { DataContext: Series viewModel })
+        if (sender is not SeriesItem { DataContext: Series viewModel } || !ReferenceEquals(e.Source, sender))
             return;
-
+        e.Handled = true;
         this.AppNavigation?.CreateSeriesPage(viewModel.WorkKind, viewModel.Id);
     }
 

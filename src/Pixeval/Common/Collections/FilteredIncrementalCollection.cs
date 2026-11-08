@@ -15,14 +15,16 @@ public class FilteredIncrementalCollection<T> : ObservableRangeCollection<T>, II
     where T : notnull
 {
     private readonly IncrementalLoadingCollection<T> _source;
+    private readonly bool _ownsSource;
     private Predicate<object>? _filter;
     private IComparer<object>? _comparer;
     private bool _isDisposed;
 
-    public FilteredIncrementalCollection(IncrementalLoadingCollection<T> source)
+    public FilteredIncrementalCollection(IncrementalLoadingCollection<T> source, bool ownsSource = true)
     {
         ArgumentNullException.ThrowIfNull(source);
         _source = source;
+        _ownsSource = ownsSource;
         _source.CollectionChanged += OnSourceCollectionChanged;
         Rebuild();
     }
@@ -172,7 +174,7 @@ public class FilteredIncrementalCollection<T> : ObservableRangeCollection<T>, II
 
         _isDisposed = true;
         _source.CollectionChanged -= OnSourceCollectionChanged;
-        _source.Dispose();
+        if (_ownsSource) _source.Dispose();
         Clear();
     }
 }

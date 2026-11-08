@@ -896,9 +896,9 @@ pub fn work_related_url(filter: &str, kind: SimpleWorkKind, id: i64) -> String {
 
 pub fn work_mypixiv_url(kind: SimpleWorkKind) -> String {
     if kind.is_novel() {
-        format!("{APP_API_BASE_URL}/v1/novel/mypixiv")
+        format!("{APP_API_BASE_URL}/v2/novel/mypixiv")
     } else {
-        format!("{APP_API_BASE_URL}/v1/illust/mypixiv")
+        format!("{APP_API_BASE_URL}/v2/illust/mypixiv")
     }
 }
 
@@ -1011,6 +1011,12 @@ pub fn bookmark_detail_url(kind: SimpleWorkKind, id: i64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mypixiv_work_feeds_use_v2_for_both_kinds() {
+        assert!(work_mypixiv_url(SimpleWorkKind::Illustration).contains("/v2/illust/mypixiv"));
+        assert!(work_mypixiv_url(SimpleWorkKind::Novel).contains("/v2/novel/mypixiv"));
+    }
 
     #[test]
     fn illustration_search_url_uses_typed_protocol_fields() {

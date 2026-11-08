@@ -1,13 +1,12 @@
 <DrawerPage
     x:Class="Pixeval.Views.Home.HomePage"
     xmlns="https://github.com/avaloniaui"
+    xmlns:settings="using:Pixeval.Config"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:loc="using:Pixeval.Localization"
     xmlns:appManagement="using:Pixeval.Services.Core"
     xmlns:capability="using:Pixeval.Views.Works"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:di="using:Pixeval.Common.Markup"
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:home="using:Pixeval.Views.Home"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
@@ -26,7 +25,9 @@
     IsOpen="{Binding IsEditMode}"
     mc:Ignorable="d"
     d:DesignHeight="450"
-    d:DesignWidth="800">
+    d:DesignWidth="800"
+    xmlns:loc="using:Pixeval.Localization"
+    xmlns:di="using:Pixeval.Common.Markup">
     <DrawerPage.Styles>
         <Style Selector="DrawerPage /template/ Border#PART_TopBar">
             <Setter Property="IsVisible" Value="False" />
@@ -85,12 +86,12 @@
                 <CommandBarToggleButton
                     x:Name="HideHomePageCardTitleButton"
                     Icon="{markup:SymbolIcon AppTitle}"
-                    IsChecked="{Binding HideHomePageCardTitle, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}, Mode=TwoWay}"
+                    IsChecked="{Binding HideHomePageCardTitle, Source={di:Service Type={x:Type settings:PixevalSettings}}, DataType={x:Type settings:PixevalSettings}, Mode=TwoWay}"
                     Label="{CompiledBinding [HomePage-HideCardTitleButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <CommandBarToggleButton
                     x:Name="HideHomePageToolbarButton"
                     Icon="{markup:SymbolIcon WindowHeaderHorizontal}"
-                    IsChecked="{Binding HideHomePageToolbar, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}, Mode=TwoWay}"
+                    IsChecked="{Binding HideHomePageToolbar, Source={di:Service Type={x:Type settings:PixevalSettings}}, DataType={x:Type settings:PixevalSettings}, Mode=TwoWay}"
                     Label="{CompiledBinding [HomePage-HideToolbarButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
                 <CommandBarToggleButton
                     x:Name="EditHomeButton"
@@ -127,7 +128,11 @@
         <ScrollViewer>
             <StackPanel Margin="16" Spacing="16">
                 <StackPanel Spacing="4">
-                    <TextBlock Text="{CompiledBinding [HomePage-EditPaneTitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" Theme="{StaticResource BodyLargeStrongTextBlockStyle}" />
+                    <TextBlock
+                        x:Name="EditPaneTitle"
+                        Text="{CompiledBinding [HomePage-EditPaneTitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
+                        TextWrapping="Wrap"
+                        Theme="{StaticResource BodyLargeStrongTextBlockStyle}" />
                     <TextBlock
                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                         Text="{CompiledBinding [HomePage-EditPaneDescriptionTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
@@ -137,14 +142,18 @@
                 <Border Classes="editor-section">
                     <StackPanel Spacing="10">
                         <TextBlock FontWeight="SemiBold" Text="{CompiledBinding [HomePage-GridSizeTitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
-                        <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8">
+                        <Grid
+                            ColumnDefinitions="Auto,*"
+                            ColumnSpacing="8"
+                            RowDefinitions="Auto,Auto"
+                            RowSpacing="8">
                             <TextBlock
                                 Grid.Column="0"
                                 Classes="editor-label"
                                 Text="{CompiledBinding [HomePage-GridColumnsTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <NumericUpDown
                                 Grid.Column="1"
-                                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+GridColumnsTextBlock.Text}}"
+                                AutomationProperties.Name="{CompiledBinding [HomePage-GridColumnsTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Classes="integer-editor"
                                 Maximum="{x:Static home:HomePage.MaximumGridSize}"
                                 Minimum="{x:Static home:HomePage.MinimumGridSize}"
@@ -157,7 +166,7 @@
                             <NumericUpDown
                                 Grid.Row="1"
                                 Grid.Column="1"
-                                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+GridRowsTextBlock.Text}}"
+                                AutomationProperties.Name="{CompiledBinding [HomePage-GridRowsTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Classes="integer-editor"
                                 Maximum="{x:Static home:HomePage.MaximumGridSize}"
                                 Minimum="{x:Static home:HomePage.MinimumGridSize}"
@@ -185,7 +194,7 @@
                             <NumericUpDown
                                 x:Name="CardColumnEditor"
                                 Grid.Column="1"
-                                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+PositionXTextBlock.Text}}"
+                                AutomationProperties.Name="{CompiledBinding [HomePage-PositionXTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Classes="integer-editor card-layout-editor"
                                 Maximum="{Binding ColumnCount}"
                                 Value="{Binding SelectedColumnValue, Mode=TwoWay}" />
@@ -198,7 +207,7 @@
                                 x:Name="CardRowEditor"
                                 Grid.Row="1"
                                 Grid.Column="1"
-                                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+PositionYTextBlock.Text}}"
+                                AutomationProperties.Name="{CompiledBinding [HomePage-PositionYTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Classes="integer-editor card-layout-editor"
                                 Maximum="{Binding RowCount}"
                                 Value="{Binding SelectedRowValue, Mode=TwoWay}" />
@@ -215,7 +224,7 @@
                             <NumericUpDown
                                 x:Name="CardWidthEditor"
                                 Grid.Column="1"
-                                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+WidthTextBlock.Text}}"
+                                AutomationProperties.Name="{CompiledBinding [HomePage-WidthTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Classes="integer-editor card-layout-editor"
                                 Maximum="{Binding ColumnCount}"
                                 Value="{Binding SelectedWidthValue, Mode=TwoWay}" />
@@ -228,7 +237,7 @@
                                 x:Name="CardHeightEditor"
                                 Grid.Row="1"
                                 Grid.Column="1"
-                                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+HeightTextBlock.Text}}"
+                                AutomationProperties.Name="{CompiledBinding [HomePage-HeightTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Classes="integer-editor card-layout-editor"
                                 Maximum="{Binding RowCount}"
                                 Value="{Binding SelectedHeightValue, Mode=TwoWay}" />
@@ -307,7 +316,7 @@
 
                                 <DataTemplate x:DataType="{x:Type viewModels:HomeCardRankingDateParameterEditorViewModel}">
                                     <StackPanel Spacing="4">
-                                        <TextBlock Text="{Binding Header}" />
+                                        <TextBlock Text="{Binding Header}" TextWrapping="Wrap" />
                                         <CheckBox Content="{CompiledBinding [HomePage-Source-UseSpecifiedRankingDateCheckBox-Content], Source={x:Static loc:LocalizationManager.Instance}}" IsChecked="{Binding UseSpecifiedDate, Mode=TwoWay}" />
                                         <CalendarDatePicker
                                             HorizontalAlignment="Stretch"
@@ -341,7 +350,7 @@
 
                 <StackPanel Spacing="8">
                     <TextBlock FontWeight="SemiBold" Text="{CompiledBinding [HomePage-CardLibraryTitleTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}" />
-                    <ItemsControl ItemsSource="{Binding CardTemplates}">
+                    <ItemsControl x:Name="CardLibrary" ItemsSource="{Binding CardTemplates}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="{x:Type home:HomeCardDefinition}">
                                 <Button

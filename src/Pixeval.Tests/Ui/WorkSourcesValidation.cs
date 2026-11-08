@@ -16,13 +16,11 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
+using Pixeval.Mako;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.ViewModels;
-using Pixeval.Views.Capability;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests.Ui;
 
@@ -41,21 +39,21 @@ internal static class WorkSourcesValidation
             await requests.Writer.WriteAsync(response);
             return await response.Response.Task;
         };
-        await client.SetTokenAsync("fixture-work-sources");
-        await client.ValidateTokenAsync();
+        client.SetRefreshToken("fixture-work-sources");
+        await FixtureAuthentication.IdentifyAsync(client);
         List<string> report = [];
         try
         {
             foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                 foreach (var width in new[] { 360, 1000 })
-                    foreach (var type in Enum.GetValues<WorkType>())
+                    foreach (var type in Enum.GetValues<WorkKind>())
                         foreach (var kind in new[] { "recommended", "new", "posts" })
                         {
                             WorkTypeWorksPage page = kind switch
                             {
-                                "recommended" => new WorkRecommendedPage(type),
-                                "new" => new WorkNewPage(type),
-                                _ => new WorkPostsPage(UserInfo.CreateDefault() with { Id = 900007, Name = "Fixture author" }, type)
+                                "recommended" => UiTestSession.Create<WorkRecommendedPage>(type),
+                                "new" => UiTestSession.Create<WorkNewPage>(type),
+                                _ => UiTestSession.Create<WorkPostsPage>(User.CreateDefault() with { Id = 900007, Name = "Fixture author" }, type)
                             };
                             var works = page.FindControl<WorkContainer>("WorkContainer")!;
                             var view = works.FindControl<WorkView>("WorkView")!;
@@ -65,6 +63,7 @@ internal static class WorkSourcesValidation
                             var key = $"{kind}-{type}-{theme.Key}-{width}";
                             try
                             {
+                                Pixeval.Common.MaterialAnimation.Initialize(window);
                                 window.Show();
                                 var first = await NextAsync();
                                 Validate(first.Uri, type, kind);
@@ -73,9 +72,9 @@ internal static class WorkSourcesValidation
                                 await RenderAsync(window);
                                 var field = page.FindControl<SymbolComboBox>("WorkTypeComboBox")!;
                                 var selector = field.GetVisualDescendants().OfType<ComboBox>().Single();
-                                Require(AutomationProperties.GetName(selector) == I18NManager.GetResource(HomePageResources.Source.WorkTypeTextBlock.Text)
+                                Require(AutomationProperties.GetName(selector) == Strings.HomePageSourceWorkTypeTextBlockText()
                                     && !field.IconMode, "The shared work type exposes a readable selected value and a purpose label");
-                                Require(Equals(field.SelectedValue, type) && Model().RequireAdaptiveGrid == (type == WorkType.Novel),
+                                Require(Equals(field.SelectedValue, type) && Model().RequireAdaptiveGrid == (type == WorkKind.Novel),
                                     "An explicit initial work type retains its corresponding list model");
                                 var origin = field.TranslatePoint(default, window)!.Value;
                                 Require(origin.X >= -1 && origin.X + field.Bounds.Width <= window.ClientSize.Width + 1, "The shared type field stays inside the narrow viewport");
@@ -89,7 +88,7 @@ internal static class WorkSourcesValidation
 
                                 var originalIndex = selector.SelectedIndex;
                                 var otherIndex = originalIndex == 2 ? 1 : originalIndex + 1;
-                                var otherType = (WorkType) field.ItemsSource![otherIndex].Value;
+                                var otherType = (WorkKind) field.ItemsSource![otherIndex].Value;
                                 var oldModel = Model();
                                 var oldSource = oldModel.Source;
                                 Require(selector.Focus(NavigationMethod.Tab), "The work kind selector receives keyboard focus");
@@ -98,7 +97,7 @@ internal static class WorkSourcesValidation
                                 window.KeyRelease(down ? Key.Down : Key.Up, RawInputModifiers.None, down ? PhysicalKey.ArrowDown : PhysicalKey.ArrowUp, null);
                                 var switched = await NextAsync();
                                 Validate(switched.Uri, otherType, kind);
-                                if ((otherType == WorkType.Novel) != (type == WorkType.Novel))
+                                if ((otherType == WorkKind.Novel) != (type == WorkKind.Novel))
                                     Require(!ReferenceEquals(Model(), oldModel) && oldSource.Count == 0, "Crossing the novel boundary releases the old typed model");
                                 field.SelectedValue = type;
                                 switched.Complete(Json(otherType, [979999], "https://app-api.pixiv.net/m3e/obsolete-source-next"));
@@ -109,7 +108,7 @@ internal static class WorkSourcesValidation
                                 Require(next.Uri.PathAndQuery == "/m3e/feed-next?offset=1", "The source follows the exact current next_url");
                                 next.Complete(Json(type, [970003, 970004]));
                                 await UntilAsync(() => Model().Source.Count == 2 && !Loading());
-                                Require(Model().Source.Select(item => item.Entry.Id).SequenceEqual(new[] { "970003", "970004" }),
+                                Require(Model().Source.Select(item => ((IWorkEntry)item).Id.ToString()).SequenceEqual(new[] { "970003", "970004" }),
                                     "Restored pagination keeps order, removes duplicate identities and rejects the obsolete response");
 
                                 await RefreshAsync();
@@ -159,24 +158,24 @@ internal static class WorkSourcesValidation
         Task<PendingSource> NextAsync() => requests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
     }
 
-    private static void Validate(Uri uri, WorkType type, string kind)
+    private static void Validate(Uri uri, WorkKind type, string kind)
     {
-        var novel = type == WorkType.Novel;
+        var novel = type == WorkKind.Novel;
         var expected = kind == "posts" ? (novel ? "/v1/user/novels" : "/v1/user/illusts")
             : $"/v1/{(novel ? "novel" : "illust")}/{kind}";
         var query = HttpUtility.ParseQueryString(uri.Query);
         Require(uri.AbsolutePath == expected && query["filter"] == "for_android", "The original endpoint and default target filter are preserved");
         if (kind == "posts")
-            Require(query["user_id"] == "900007" && (novel || query["type"] == (type == WorkType.Manga ? "manga" : "illust")), "Posts preserve the explicit author and artwork subtype");
+            Require(query["user_id"] == "900007" && (novel || query["type"] == (type == WorkKind.Manga ? "manga" : "illust")), "Posts preserve the explicit author and artwork subtype");
         else if (kind == "new" && !novel)
-            Require(query["content_type"] == (type == WorkType.Manga ? "manga" : "illust"), "New works retain their manga/illustration content type");
+            Require(query["content_type"] == (type == WorkKind.Manga ? "manga" : "illust"), "New works retain their manga/illustration content type");
         else if (kind == "recommended")
             Require(query[novel ? "include_ranking_novels" : "include_ranking_illusts"] == "true" && query["include_privacy_policy"] == "true", "Recommendations retain their ranking/privacy flags");
     }
 
-    private static string Json(WorkType type, long[] ids, string? next = null) => type == WorkType.Novel
-        ? JsonSerializer.Serialize(new { novels = ids.Select(id => Novel.CreateDefault() with { Id = id, Title = "固定小说 / Fixture novel", User = UserInfo.CreateDefault() with { Id = 900007, Name = "Fixture author" } }).ToArray(), next_url = next })
-        : JsonSerializer.Serialize(new { illusts = ids.Select(id => Illustration.CreateDefault() with { Id = id, Title = "固定作品 / Fixture artwork", User = UserInfo.CreateDefault() with { Id = 900007, Name = "Fixture author" }, Width = 640, Height = 480, PageCount = 1 }).ToArray(), next_url = next });
+    private static string Json(WorkKind type, long[] ids, string? next = null) => type == WorkKind.Novel
+        ? NativeFixtureData.Serialize(new { novels = ids.Select(id => Mako.Novel.CreateDefault() with { Id = id, Title = "固定小说 / Fixture novel", User = User.CreateDefault() with { Id = 900007, Name = "Fixture author" } }).ToArray(), next_url = next })
+        : NativeFixtureData.Serialize(new { illusts = ids.Select(id => Illustration.CreateDefault() with { Id = id, Title = "固定作品 / Fixture artwork", User = User.CreateDefault() with { Id = 900007, Name = "Fixture author" }, Width = 640, Height = 480, PageCount = 1 }).ToArray(), next_url = next });
 
     private static async Task RenderAsync(Window window)
     {

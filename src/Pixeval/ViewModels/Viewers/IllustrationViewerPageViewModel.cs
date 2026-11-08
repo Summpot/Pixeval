@@ -1,3 +1,6 @@
+using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Threading;
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
@@ -13,6 +16,8 @@ using Pixeval.Pixiv;
 using Pixeval.Config;
 using Pixeval.Booru;
 using Pixeval.Mako;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Viewers;
@@ -27,6 +32,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         if (_isLocalizedLoadError) LoadErrorMessage = Strings.EntryViewerPageLoadFailed();
         base.OnLanguageChanged();
     }
+    private bool _isPlaybackActive;
 
     private readonly MakoClient _makoClient;
     private readonly AppSettings _appSettings;
@@ -45,6 +51,18 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     private CancellationTokenSource _loadingCts = new();
 
     private readonly IReadOnlyList<object>? _illustrations;
+    private string? _initialId;
+    private string? _initialPlatform;
+    private object? _paneEntry;
+    private IReadOnlyList<Page> _panePages = [];
+
+    private bool CanRetry => !_disposed && !IsLoading && LoadErrorMessage is not null;
+
+    [RelayCommand(CanExecute = nameof(CanRetry))]
+    private Task RetryAsync() => !CanRetry ? Task.CompletedTask
+        : CurrentIllustration is null && _initialId is { } id && _initialPlatform is { } platform
+            ? LoadSingleIllustrationAsync(id, platform, ResetLoadingToken())
+            : LoadCurrentIllustrationAsync();
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RetryCommand))]
@@ -142,6 +160,8 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         _blockedContent = blockedContent;
         _logger = logger;
         _booruClient = booruClient;
+        _initialId = id;
+        _initialPlatform = platform;
         _ = LoadSingleIllustrationAsync(id, platform, _loadingCts.Token);
     }
 
@@ -194,6 +214,47 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         _needRefresh = needRefresh;
         _illustrations = illustrations;
         CurrentWorkIndex = currentIllustrationIndex;
+    }
+
+    public IReadOnlyList<Page> PanePages
+    {
+        get
+        {
+            var entry = _disposed ? null : CurrentIllustration;
+            if (ReferenceEquals(entry, _paneEntry))
+                return _panePages;
+            _paneEntry = entry;
+            return _panePages = CreatePanePages(entry);
+        }
+    }
+
+    private IReadOnlyList<Page> CreatePanePages(object? entry)
+    {
+        if (entry is not Illustration { Id: var id } illustration)
+            return [];
+
+        var pages = new List<Page>
+        {
+            new WorkInfoPage(illustration)
+            {
+                ActionZone = new Border
+                {
+                    Width = 32,
+                    Height = 32,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    VerticalAlignment = VerticalAlignment.Top,
+                    IsHitTestVisible = false
+                }
+            }
+        };
+
+        if (!BlockedContentHelper.IsBlockedPlaceholder(illustration))
+        {
+            pages.Add(new CommentsPage { ParentType = SimpleWorkKind.Illustration, ParentId = id });
+            pages.Add(new WorkRelatedPage(illustration.Id, SimpleWorkKind.Illustration, _makoClient) { IsCommandBarCollapsed = true });
+        }
+
+        return pages;
     }
 
     #region Current相关
@@ -358,9 +419,9 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
         try
         {
-            var response = await _makoClient.GetWorkSeriesContextAsync(illustration.Id);
+            var response = await _makoClient.GetWorkSeriesContextAsync(illustration.Id, token);
             token.ThrowIfCancellationRequested();
-            if (response.Detail.Id > 0 && index == CurrentWorkIndex && !_disposed)
+            if (index == CurrentWorkIndex && !_disposed)
                 SeriesInfo = WorkSeriesInfoViewModel.Create(response);
         }
         catch (OperationCanceledException)
@@ -387,9 +448,9 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         LoadErrorMessage = null;
         try
         {
-            var entry = await ViewerHelper.TryGetArtworkAsync(platform, id, _makoClient, _booruClient, _logger);
+            var entry = await ViewerHelper.TryGetArtworkAsync(platform, id, _makoClient, _booruClient, _logger, token);
             token.ThrowIfCancellationRequested();
-            if (entry is null || !MatchesRequestedArtwork(entry, info))
+            if (entry is null || !MatchesRequestedArtwork(entry, id, platform))
             {
                 _isLocalizedLoadError = true;
                 LoadErrorMessage = Strings.EntryViewerPageLoadFailed();
@@ -407,8 +468,10 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         catch (Exception e)
         {
             if (!token.IsCancellationRequested)
+            {
                 _isLocalizedLoadError = false;
                 LoadErrorMessage = e.Message;
+            }
             return null;
         }
         finally
@@ -418,18 +481,14 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         }
     }
 
-    private static bool MatchesRequestedArtwork(IArtworkInfo entry, IIdentityInfo requested)
+    private static bool MatchesRequestedArtwork(object entry, string id, string platform) => entry switch
     {
-        if (entry.Platform != requested.Platform)
-            return false;
-        if (entry.Id == requested.Id)
-            return true;
-        // Pixiv's existing service parses numeric IDs, including leading zeros
-        // from app links. Compare the same identity without accepting another work.
-        return requested.Platform == IPlatformInfo.Pixiv
-            && long.TryParse(requested.Id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id)
-            && id > 0 && entry.Id == id.ToString(CultureInfo.InvariantCulture);
-    }
+        Illustration illustration => platform == PlatformConstants.Pixiv
+            && long.TryParse(id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number)
+            && illustration.Id == number,
+        BooruPost post => string.Equals(post.Id.ToString(), id, StringComparison.Ordinal),
+        _ => false
+    };
 
     /// <summary>
     /// 当前插画的页面索引
@@ -457,7 +516,6 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
     private void NotifyCurrentPageIndexChanged()
     {
-        RestartAutoPlayTimer();
         OnPropertyChanged(nameof(CurrentPageIndex));
         NotifyPageNavigationChanged();
     }
@@ -547,6 +605,14 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
     [ObservableProperty] public partial bool IsAutoPlaying { get; set; }
 
+
+    // Temporary tab detachment suspends the clock without discarding the user's
+    // requested play state. A return starts a full interval on the current page.
+    internal void SetPlaybackActive(bool active)
+    {
+        _isPlaybackActive = active && !_disposed;
+    }
+
     public void MoveAutoPlayNext()
     {
         // A detail refresh temporarily has no pages; do not skip the pending work
@@ -601,8 +667,6 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
             return;
 
         _disposed = true;
-        _autoPlayTimer.Stop();
-        _autoPlayTimer.Tick -= AutoPlayTimerOnTick;
         RetryCommand.NotifyCanExecuteChanged();
         IsLoading = false;
         _loadingCts.Cancel();

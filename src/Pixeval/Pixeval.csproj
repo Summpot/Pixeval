@@ -62,7 +62,11 @@
 		<PackageReference Include="HarfBuzzSharp" Version="14.2.1.201" />
 		<PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="14.2.1.201" />
 		<PackageReference Include="HarfBuzzSharp.NativeAssets.WebAssembly" Version="14.2.1.201" />
-		<PackageReference Include="UniFFISharp" Version="0.3.11" />
+		<PackageReference Include="Shirasagi0012.SmoothScroll.Avalonia" Version="12.0.0.1" />
+        <PackageReference Include="SkiaSharp" Version="4.152.1" />
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.152.1" />
+        <PackageReference Include="SkiaSharp.NativeAssets.WebAssembly" Version="4.152.1" />
+        <PackageReference Include="UniFFISharp" Version="0.3.11" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -71,7 +75,6 @@
 		<ProjectReference Include="..\lib\AnimatedControls.Avalonia\AnimatedControls.Avalonia\AnimatedControls.Avalonia.csproj" />
 		<ProjectReference Include="..\lib\FluentAvalonia\FluentAvalonia.csproj" />
 		<ProjectReference Include="..\lib\Material3Expressive.Avalonia\src\Material3Expressive\Material3Expressive.csproj" />
-		<ProjectReference Include="..\lib\SmoothScroll.Avalonia\src\SmoothScroll.Avalonia.Controls\SmoothScroll.Avalonia.Controls.csproj" />
 		<ProjectReference Include="..\Pixeval.Utilities\Pixeval.Utilities.csproj" />
 		<ProjectReference Include="..\Pixeval.SourceGen\Pixeval.SourceGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="False" />
 	</ItemGroup>

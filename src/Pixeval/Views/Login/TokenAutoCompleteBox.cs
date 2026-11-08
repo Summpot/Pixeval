@@ -9,7 +9,7 @@ using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Data.Converters;
-using Pixeval.Models.Database;
+using Pixeval.Storage;
 
 namespace Pixeval.Views.Login;
 
@@ -20,8 +20,8 @@ public sealed class TokenAutoCompleteBox : AutoCompleteBox
 
     // A blank automation name lets content peers fall back to the entry's
     // ToString(), which is its token. Match the presenter's numeric-ID fallback.
-    public static FuncValueConverter<LoginUserEntry?, string> AccountNameConverter { get; } =
-        new(user => user is null ? "" : string.IsNullOrWhiteSpace(user.Name) ? user.UserId.ToString() : user.Name);
+    public static FuncValueConverter<LoginUserRecord?, string> AccountNameConverter { get; } =
+        new(user => user is not { } account ? "" : string.IsNullOrWhiteSpace(account.Name) ? account.UserId.ToString() : account.Name);
 
     protected override Type StyleKeyOverride => typeof(AutoCompleteBox);
 

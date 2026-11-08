@@ -13,7 +13,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
 using ColorTextBlock.Avalonia;
-using Mako.Model;
+using Pixeval.Mako;
 using Pixeval.Controls;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
@@ -34,8 +34,8 @@ internal static class NovelMarkdownValidation
     internal static async Task RunAsync(string directory)
     {
         using var fixture = new NovelReaderFixture();
-        await App.AppViewModel.MakoClient.SetTokenAsync("fixture-novel-markdown");
-        await App.AppViewModel.MakoClient.ValidateTokenAsync();
+        App.AppViewModel.MakoClient.SetRefreshToken("fixture-novel-markdown");
+        await FixtureAuthentication.IdentifyAsync(App.AppViewModel.MakoClient);
         var illustration = Illustration.CreateDefault() with
         {
             Id = 994101,
@@ -44,23 +44,24 @@ internal static class NovelMarkdownValidation
             Width = 256,
             Height = 256,
             PageCount = 1,
-            User = UserInfo.CreateDefault() with { Id = 900001, Name = "Fixture author", ProfileImageUrls = new() { Medium = NovelReaderFixture.ImageUri } },
-            ThumbnailUrls = new() { Medium = NovelReaderFixture.ImageUri, Large = NovelReaderFixture.ImageUri, SquareMedium = NovelReaderFixture.ImageUri },
+            User = User.CreateDefault() with { Id = 900001, Name = "Fixture author", ProfileImageUrls = new() { Medium = NovelReaderFixture.ImageUri } },
+            ImageUrls = new() { Medium = NovelReaderFixture.ImageUri, Large = NovelReaderFixture.ImageUri, SquareMedium = NovelReaderFixture.ImageUri },
             MetaSinglePage = new() { OriginalImageUrl = NovelReaderFixture.ImageUri }
         };
-        fixture.Http.ArtworkDetailResponseFactory = (_, _) => Task.FromResult(JsonSerializer.Serialize(new { illust = illustration }));
+        fixture.Http.ArtworkDetailResponseFactory = (_, _) => Task.FromResult(NativeFixtureData.Serialize(new { illust = illustration }));
         List<string> report = [];
         long id = 994001;
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
             foreach (var width in new[] { 1100, 360 })
             {
-                var model = new NovelViewerPageViewModel(NovelItemViewModel.CreateInstance(NovelReaderFixture.Sample(id++)), false);
+                var model = UiTestSession.Create<NovelViewerPageViewModel>(NovelReaderFixture.Sample(id++), false);
                 var page = new NovelViewerPage(model);
                 var host = new PageTestHost { Content = page };
                 var window = new Window { Width = width, Height = 850, RequestedThemeVariant = theme, Content = host.Shell };
                 var key = theme.Key + "-" + width;
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     (await fixture.NextAsync()).Complete(RichText, withImages: true);
                     await UntilAsync(() => !model.IsLoading);
@@ -82,7 +83,7 @@ internal static class NovelMarkdownValidation
                     var document = scrolls.First();
                     var code = scrolls.Single(viewer => viewer.Classes.Contains("CodeBlock"));
                     Require(markdown.GetVisualDescendants().OfType<CTextBlock>().Any(block => block.Text.Contains("Indented prose stays prose.")),
-                        "Novel paragraph indentation is not misclassified as a code block");
+                        "Mako.Novel paragraph indentation is not misclassified as a code block");
                     foreach (var scroll in scrolls) scroll.IsScrollInertiaEnabled = false;
                     Save(window, directory, "novel-markdown-top-" + key);
 
@@ -176,7 +177,7 @@ internal static class NovelMarkdownValidation
             await RenderAsync(window);
             var current = block.TranslatePoint(new Point(8, block.Bounds.Height / 2), window)!.Value;
             if (Math.Abs(current.Y - point.Y) < 0.1) { point = current; break; }
-            if (DateTime.UtcNow > deadline) throw new TimeoutException("Novel link scroll did not settle");
+            if (DateTime.UtcNow > deadline) throw new TimeoutException("Mako.Novel link scroll did not settle");
             point = current;
         }
         string? clicked = null;

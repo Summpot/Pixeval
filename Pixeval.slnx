@@ -5,8 +5,6 @@
     <Project Path="src/lib/AutoSettingsPage/AutoSettingsPage/AutoSettingsPage.csproj" />
     <Project Path="src/lib/AutoSettingsPage/SettingsControls.Avalonia/SettingsControls.Avalonia.csproj" />
     <Project Path="src/lib/FluentAvalonia/FluentAvalonia.csproj" />
-    <Project Path="src/lib/SmoothScroll.Avalonia/src/SmoothScroll.Avalonia.Controls/SmoothScroll.Avalonia.Controls.csproj" />
-    <Project Path="src/lib/SmoothScroll.Avalonia/src/SmoothScroll.Avalonia.Interaction/SmoothScroll.Avalonia.Interaction.csproj" />
   </Folder>
   <Folder Name="/Lib/Material/">
     <Project Path="src/lib/Material3Expressive.Avalonia/modules/ComposeAnimation/ComposeAnimation.Avalonia/ComposeAnimation.Avalonia.csproj" />

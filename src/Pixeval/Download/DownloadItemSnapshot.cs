@@ -11,6 +11,8 @@ namespace Pixeval.Download;
 
 public partial record struct DownloadItemSnapshot
 {
+    public string GroupProgressMessage => Strings.DownloadItemGroupProgressFormatted((int)ActiveCount, (int)CompletedCount, (int)ErrorCount);
+
     public bool ShowGroupStats => ActiveCount + CompletedCount + ErrorCount > 1;
 
     public bool IsPending => State is DownloadState.Pending;

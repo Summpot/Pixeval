@@ -47,7 +47,7 @@ public partial class ImageCache
                     });
             }
 
-            var bytes = await GetOrFetchAsync(url, referer, callback);
+            var bytes = await GetOrFetchAsync(url, referer, callback, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             progress?.Report(100.0);
             return new MemoryStream(bytes, writable: false);

@@ -18,18 +18,15 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
-using Mako.Net.Responses;
+using Pixeval.Mako;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement;
-using Pixeval.Models.Home;
-using Pixeval.Models.Options;
+using Pixeval.Services.Core;
+using Pixeval.Config;
 using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Home;
 using Pixeval.ViewModels.Viewers;
-using Pixeval.Views.Capability;
+using Pixeval.Views.Works;
 using Pixeval.Views.Home;
 using Pixeval.Views.Search;
 using Pixeval.Views.Viewers;
@@ -47,8 +44,8 @@ internal static class HomeSourcesValidation
         var app = App.AppViewModel;
         using var fixture = new OfflineSearchFixture(app.MakoClient);
         fixture.BookmarkResponseFactory = (_, _) => Task.FromResult("{\"bookmark_tags\":[],\"next_url\":null}");
-        await app.MakoClient.SetTokenAsync("fixture-home-sources");
-        await app.MakoClient.ValidateTokenAsync();
+        app.MakoClient.SetRefreshToken("fixture-home-sources");
+        await FixtureAuthentication.IdentifyAsync(app.MakoClient);
         using (var asset = AssetLoader.Open(new Uri("avares://Pixeval/Assets/Platforms/pixiv.png")))
         using (var buffer = new MemoryStream())
         {
@@ -64,7 +61,7 @@ internal static class HomeSourcesValidation
         fixture.WorkFeedResponseFactory = fixture.BookmarkWorksResponseFactory = fixture.RelatedResponseFactory =
             fixture.UserResponseFactory = fixture.SeriesResponseFactory = fixture.SpotlightResponseFactory = fixture.SearchResponseFactory = response;
         fixture.RankingResponseFactory = uri => { requests.Enqueue(uri); return Response(uri.AbsolutePath); };
-        // Novel body caching belongs to the shared work model, independently of the
+        // Mako.Novel body caching belongs to the shared work model, independently of the
         // home source. This mode observes destination identity, not reader content.
         fixture.WorkCardResponseFactory = (_, _) => throw new HttpRequestException("Fixed unavailable novel body; destination identity only.");
         var logger = app.AppServiceProvider.GetRequiredService<FileLogger>();
@@ -76,10 +73,10 @@ internal static class HomeSourcesValidation
         {
             fixture.SeriesResponseFactory = (_, _) => throw new HttpRequestException("Fixed home detail failure");
             var card = new HomePageCardLayout(kind, 0, 0) { EntryId = SourceId, UserId = SourceId, SeriesId = SourceId };
-            using var preview = new HomeCardPreviewViewModel(card, HomeCardDefinitions.Get(kind).CreatePreviewSourceAsync);
+            using var preview = new HomeCardPreviewViewModel(card, App.AppViewModel.AppServiceProvider.GetRequiredService<HomeCardDefinitions>().Get(kind).CreatePreviewSourceAsync);
             await preview.LoadAsync();
             Require(preview.Items.Count == 0 && preview.ViewModel is null
-                && preview.PlaceholderText == Pixeval.I18N.I18NManager.GetResource(HomePageResources.CardPreview.FailedTextBlock.Text),
+                && preview.PlaceholderText == Strings.HomePageCardPreviewFailedTextBlockText(),
                 "A failed " + kind + " detail stays a failed preview instead of a successful default record");
             report.Add($"PASS {kind}: failed details never publish a default record");
         }
@@ -96,10 +93,11 @@ internal static class HomeSourcesValidation
                 return await completion.Task;
             };
             var card = new HomePageCardLayout(kind, 0, 0) { EntryId = SourceId, UserId = SourceId, SeriesId = SourceId };
-            var control = new HomePageCardControl(card, 1, 1);
+            var control = UiTestSession.Create<HomePageCardControl>(card, 1, 1);
             var load = control.PreviewViewModel.LoadAsync();
             var token = await started.Task.WaitAsync(TimeSpan.FromSeconds(10));
             control.Dispose();
+            await NovelReaderValidation.UntilAsync(() => token.IsCancellationRequested);
             var cancelled = token.IsCancellationRequested;
             completion.TrySetResult(Response(ExpectedRequest(card).Path));
             await load;
@@ -110,12 +108,12 @@ internal static class HomeSourcesValidation
         }
         fixture.SeriesResponseFactory = response;
         foreach (var novel in new[] { false, true })
-            foreach (var definition in HomeCardDefinitions.All)
+            foreach (var definition in App.AppViewModel.AppServiceProvider.GetRequiredService<HomeCardDefinitions>().All)
             {
                 app.HomePageCards.Clear();
                 AppInfo.SaveHomePageCards(app.HomePageCards);
                 requests.Clear();
-                var page = new HomePage();
+                var page = UiTestSession.Create<HomePage>();
                 var host = new PageTestHost
                 {
                     Content = page,
@@ -125,7 +123,7 @@ internal static class HomeSourcesValidation
                         if (target.DataContext is UserViewerPageViewModel user)
                             Require(user.Id == SourceId, "Single-user navigation retains its ID");
                         if (target.DataContext is SeriesViewerPageViewModel series)
-                            Require(series.Id == SourceId && series.WorkType == (novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration),
+                            Require(series.Id == SourceId && series.WorkKind == (novel ? SimpleWorkKind.Novel : SimpleWorkKind.Illustration),
                                 "Series navigation retains its ID and work type");
                     }
                 };
@@ -133,6 +131,7 @@ internal static class HomeSourcesValidation
                 var key = $"{definition.SourceKind}-{(novel ? "novel" : "illustration")}";
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     page.ViewModel.IsEditMode = true;
                     await RenderAsync(window);
@@ -145,11 +144,10 @@ internal static class HomeSourcesValidation
                     Require(app.HomePageCards.Count == 1 && page.ViewModel.HasSelectedCard && !page.ViewModel.IsAddingConfiguredCard,
                         "The actual Add action creates and selects exactly one card and restores its enabled state");
                     var saved = app.HomePageCards.Single();
-                    draft!.ColumnSpan = saved.ColumnSpan;
-                    draft.RowSpan = saved.RowSpan;
-                    Require(JsonSerializer.Serialize(draft) == JsonSerializer.Serialize(saved), "Adding preserves every configured source value");
+                    draft = draft!.Value with { ColumnSpan = saved.ColumnSpan, RowSpan = saved.RowSpan };
+                    Require(NativeFixtureData.Serialize(draft) == NativeFixtureData.Serialize(saved), "Adding preserves every configured source value");
                     var persisted = AppInfo.LoadHomePageCards(logger)!.Single();
-                    Require(JsonSerializer.Serialize(saved) == JsonSerializer.Serialize(persisted), "Original YAML roundtrip preserves source kind, parameters and layout");
+                    Require(NativeFixtureData.Serialize(saved) == NativeFixtureData.Serialize(persisted), "Original YAML roundtrip preserves source kind, parameters and layout");
                     var control = page.FindControl<Grid>("HomeGrid")!.Children.OfType<HomePageCardControl>().Single();
                     await control.PreviewViewModel.LoadAsync();
                     await RenderAsync(window);
@@ -175,6 +173,7 @@ internal static class HomeSourcesValidation
                     using (var frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException("No home preview frame"))
                         frame.Save(Path.Combine(directory, key + "-preview.png"), new PngBitmapEncoderOptions());
                     await ActivateAsync(window, control.FindControl<Button>("OpenCardButton")!);
+                    await control.OpenCardPageCommand.ExecutionTask!;
                     host.CloseDestinationAndReturn();
                     Require(host.Navigations == 1 && control.PreviewViewModel.Items.Count == 1,
                         "Opening and immediately closing a destination preserves the home owner's shared preview");
@@ -236,10 +235,10 @@ internal static class HomeSourcesValidation
         foreach (var choice in model.ActiveParameterEditors.OfType<HomeCardChoiceParameterEditorViewModel>())
             choice.Value = choice.Kind switch
             {
-                HomeCardParameterKinds.WorkType => novel ? WorkType.Novel : WorkType.Manga,
-                HomeCardParameterKinds.SimpleWorkType => novel ? SimpleWorkType.Novel : SimpleWorkType.Illustration,
-                HomeCardParameterKinds.PrivacyPolicy => PrivacyPolicy.Private,
-                HomeCardParameterKinds.RankOption => RankOption.Day,
+                HomeCardParameterKinds.WorkKind => novel ? WorkKind.Novel : WorkKind.Manga,
+                HomeCardParameterKinds.SimpleWorkKind => novel ? SimpleWorkKind.Novel : SimpleWorkKind.Illustration,
+                HomeCardParameterKinds.PrivacyRestrict => PrivacyRestrict.Private,
+                HomeCardParameterKinds.RankMode => RankMode.Day,
                 _ => choice.Value
             };
         foreach (var text in model.ActiveParameterEditors.OfType<HomeCardTextParameterEditorViewModel>())
@@ -247,7 +246,7 @@ internal static class HomeSourcesValidation
             {
                 HomeCardParameterKinds.SearchText => "alpha 中文",
                 HomeCardParameterKinds.Tag => "标签 / fixed tag",
-                HomeCardParameterKinds.UserId when model.PendingTemplate!.HasParameter(HomeCardParameterKinds.PrivacyPolicy) => "900001",
+                HomeCardParameterKinds.UserId when model.PendingTemplate!.HasParameter(HomeCardParameterKinds.PrivacyRestrict) => "900001",
                 _ => SourceId.ToString()
             };
         if (model.ActiveParameterEditors.OfType<HomeCardRankingDateParameterEditorViewModel>().FirstOrDefault() is { } date)
@@ -259,8 +258,8 @@ internal static class HomeSourcesValidation
 
     private static (string Path, Dictionary<string, string> Parameters) ExpectedRequest(HomePageCardLayout card)
     {
-        var work = card.WorkType == WorkType.Novel ? "novel" : "illust";
-        var simple = card.SimpleWorkType == SimpleWorkType.Novel ? "novel" : "illust";
+        var work = card.WorkKind == WorkKind.Novel ? "novel" : "illust";
+        var simple = card.SimpleWorkKind == SimpleWorkKind.Novel ? "novel" : "illust";
         var id = SourceId.ToString();
         return card.SourceKind switch
         {
@@ -281,7 +280,7 @@ internal static class HomeSourcesValidation
             HomePageCardSourceKind.Spotlight => ("/v1/spotlight/articles", new()),
             HomePageCardSourceKind.SingleImage => ("/v1/illust/detail", new() { ["illust_id"] = id }),
             HomePageCardSourceKind.SingleNovel => ("/v2/novel/detail", new() { ["novel_id"] = id }),
-            HomePageCardSourceKind.SingleUser => ("/v1/user/detail", new() { ["user_id"] = id }),
+            HomePageCardSourceKind.SingleUser => ("/v2/user/detail", new() { ["user_id"] = id }),
             HomePageCardSourceKind.SingleSeries => ($"/{(simple == "illust" ? "v1" : "v2")}/{simple}/series", new() { [simple == "illust" ? "illust_series_id" : "series_id"] = id }),
             _ => throw new InvalidOperationException("Unlisted source")
         };
@@ -296,24 +295,24 @@ internal static class HomeSourcesValidation
             PageCount = 1,
             Width = 640,
             Height = 480,
-            User = UserInfo.CreateDefault() with { Id = 900007, Name = "Fixture author" },
-            ThumbnailUrls = new() { Medium = ImageUri, SquareMedium = ImageUri, Large = ImageUri },
+            User = User.CreateDefault() with { Id = 900007, Name = "Fixture author" },
+            ImageUrls = new() { Medium = ImageUri, SquareMedium = ImageUri, Large = ImageUri },
             MetaSinglePage = new() { OriginalImageUrl = ImageUri }
         };
-        var novel = Novel.CreateDefault() with { Id = SourceId, Title = Title, User = image.User, ThumbnailUrls = image.ThumbnailUrls };
-        var user = User.CreateDefault() with { UserInfo = image.User with { Id = SourceId, Name = Title, ProfileImageUrls = new() { Medium = ImageUri } }, Illustrations = [] };
+        var novel = Mako.Novel.CreateDefault() with { Id = SourceId, Title = Title, User = image.User, ImageUrls = image.ImageUrls };
+        var user = image.User with { Id = SourceId, Name = Title, ProfileImageUrls = new() { Medium = ImageUri } };
         return path switch
         {
-            "/v1/illust/detail" => JsonSerializer.Serialize(new { illust = image }),
-            "/v2/novel/detail" => JsonSerializer.Serialize(new { novel }),
-            "/v1/user/detail" => JsonSerializer.Serialize(SingleUserResponse.CreateDefault() with
-            { UserEntity = SingleUserInfo.CreateDefault() with { Id = SourceId, Name = Title, ProfileImageUrls = new() { Medium = ImageUri } } }),
-            "/v1/illust/series" => JsonSerializer.Serialize(new { illust_series_detail = MangaSeriesDetail.CreateDefault() with { Id = SourceId, Title = Title }, illust_series_first_illust = image, illusts = new[] { image }, next_url = (string?) null }),
-            "/v2/novel/series" => JsonSerializer.Serialize(new { novel_series_detail = NovelSeriesDetail.CreateDefault() with { Id = SourceId, Title = Title }, novel_series_first_novel = novel, novel_series_latest_novel = novel, novels = new[] { novel }, next_url = (string?) null }),
-            "/v1/user/recommended" or "/v1/search/user" or "/v1/user/following" or "/v1/user/follower" or "/v1/user/mypixiv" or "/v1/user/related" => JsonSerializer.Serialize(new { user_previews = new[] { user }, next_url = (string?) null }),
-            "/v1/spotlight/articles" => JsonSerializer.Serialize(new { spotlight_articles = new[] { new Spotlight { Id = SourceId, Title = Title, PureTitle = Title, Thumbnail = ImageUri, ArticleUrl = "https://www.pixivision.net/zh/a/992007", Category = SpotlightCategory.Spotlight, SubcategoryLabel = "Fixture", PublishDate = DateTimeOffset.UnixEpoch } }, next_url = (string?) null }),
-            _ when path.Contains("novel", StringComparison.Ordinal) => JsonSerializer.Serialize(new { novels = new[] { novel }, next_url = (string?) null }),
-            _ => JsonSerializer.Serialize(new { illusts = new[] { image }, next_url = (string?) null })
+            "/v1/illust/detail" => NativeFixtureData.Serialize(new { illust = image }),
+            "/v2/novel/detail" => NativeFixtureData.Serialize(new { novel }),
+            "/v2/user/detail" => NativeFixtureData.Serialize(SingleUserResponse.CreateDefault() with
+            { User = User.CreateDefault() with { Id = SourceId, Name = Title, ProfileImageUrls = new() { Medium = ImageUri } } }),
+            "/v1/illust/series" => NativeFixtureData.Serialize(new { illust_series_detail = Series.CreateDefault() with { Id = SourceId, Title = Title }, illust_series_first_illust = image, illusts = new[] { image }, next_url = (string?) null }),
+            "/v2/novel/series" => NativeFixtureData.Serialize(new { novel_series_detail = Series.CreateDefault() with { Id = SourceId, Title = Title }, novel_series_first_novel = novel, novel_series_latest_novel = novel, novels = new[] { novel }, next_url = (string?) null }),
+            "/v1/user/recommended" or "/v1/search/user" or "/v1/user/following" or "/v1/user/follower" or "/v1/user/mypixiv" or "/v1/user/related" => NativeFixtureData.Serialize(new { user_previews = new[] { new { user } }, next_url = (string?) null }),
+            "/v1/spotlight/articles" => NativeFixtureData.Serialize(new { spotlight_articles = new[] { new SpotlightArticle { Id = SourceId, Title = Title, PureTitle = Title, Thumbnail = ImageUri, ArticleUrl = "https://www.pixivision.net/zh/a/992007", Category = SpotlightCategory.Spotlight, SubcategoryLabel = "Fixture", PublishDate = DateTimeOffset.UnixEpoch.ToString("O") } }, next_url = (string?) null }),
+            _ when path.Contains("novel", StringComparison.Ordinal) => NativeFixtureData.Serialize(new { novels = new[] { novel }, next_url = (string?) null }),
+            _ => NativeFixtureData.Serialize(new { illusts = new[] { image }, next_url = (string?) null })
         };
     }
 

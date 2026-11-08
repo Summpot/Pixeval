@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Pixeval.Controls;
 using Pixeval.Localization;
 using Pixeval.Pixiv;
@@ -26,6 +27,32 @@ public partial class NovelViewerPage : IconContentPage
     private NovelViewerPageViewModel ViewModel => (NovelViewerPageViewModel) DataContext!;
 
     private readonly List<ExtensionsHostModel> _observedExtensionHosts = [];
+    private NovelViewerPageViewModel? _observedReader;
+    private ExtensionService? _observedExtensionService;
+    private (long Novel, int Page)? _readingPosition;
+
+    private void ReaderOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(NovelViewerPageViewModel.NovelId) or nameof(NovelViewerPageViewModel.CurrentPageIndex))
+            UpdateReadingPosition();
+    }
+
+    private void UpdateReadingPosition()
+    {
+        if (_observedReader is not { } model)
+            return;
+        var position = (model.NovelId, model.CurrentPageIndex);
+        if (_readingPosition == position)
+            return;
+        _readingPosition = position;
+        // Run after the Markdown binding has rebuilt the document. Theme changes,
+        // translation toggles and a temporary tab switch retain their scroll position.
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (ReferenceEquals(_observedReader, model) && _readingPosition == position)
+                ReaderMarkdown.ScrollValue = default;
+        });
+    }
 
     private ExtensionService ExtensionService => this.GetRequiredUiService<ExtensionService>();
 
@@ -39,6 +66,12 @@ public partial class NovelViewerPage : IconContentPage
         InitializeComponent();
     }
 
+    private void ReaderLayout_OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        InfoSplitView.DisplayMode = e.NewSize.Width < 720 ? SplitViewDisplayMode.Overlay : SplitViewDisplayMode.Inline;
+        InfoSplitView.OpenPaneLength = Math.Min(360, Math.Max(0, e.NewSize.Width));
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
@@ -49,9 +82,23 @@ public partial class NovelViewerPage : IconContentPage
             || KeyboardShortcut.TryExecute(e, Key.Down, ViewModel.NextWorkCommand);
     }
 
-    private void PrevButton_OnRightClick(object? sender, ContextRequestedEventArgs e) => ViewModel.PrevWorkCommand.Execute(null);
+    private void PrevButton_OnRightClick(object? sender, ContextRequestedEventArgs e)
+    {
+        if (ViewModel.PrevWorkCommand.CanExecute(null))
+        {
+            ViewModel.PrevWorkCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
 
-    private void NextButton_OnRightClick(object? sender, ContextRequestedEventArgs e) => ViewModel.NextWorkCommand.Execute(null);
+    private void NextButton_OnRightClick(object? sender, ContextRequestedEventArgs e)
+    {
+        if (ViewModel.NextWorkCommand.CanExecute(null))
+        {
+            ViewModel.NextWorkCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
 
     private void MarkdownBox_OnHyperlinkClicked(object? sender, MarkdownHyperlinkClickedEventArgs e)
     {
@@ -106,14 +153,23 @@ public partial class NovelViewerPage : IconContentPage
     {
         base.OnLoaded(e);
 
-        ExtensionService.HostModels.CollectionChanged += ExtensionHostsOnCollectionChanged;
+        _observedReader = ViewModel;
+        _observedReader.PropertyChanged += ReaderOnPropertyChanged;
+        UpdateReadingPosition();
+        _observedExtensionService = ExtensionService;
+        _observedExtensionService.HostModels.CollectionChanged += ExtensionHostsOnCollectionChanged;
         ObserveExtensionHosts();
         RaiseEvent(new ViewModelDisposalEventArgs(ViewModelDisposal.ViewModelDisposalEvent, ViewModel));
     }
 
     protected override void OnUnloaded(RoutedEventArgs e)
     {
-        ExtensionService.HostModels.CollectionChanged -= ExtensionHostsOnCollectionChanged;
+        if (_observedReader is { } model)
+            model.PropertyChanged -= ReaderOnPropertyChanged;
+        _observedReader = null;
+        if (_observedExtensionService is { } extensions)
+            extensions.HostModels.CollectionChanged -= ExtensionHostsOnCollectionChanged;
+        _observedExtensionService = null;
         foreach (var host in _observedExtensionHosts)
             host.PropertyChanged -= ExtensionHostOnPropertyChanged;
         _observedExtensionHosts.Clear();
@@ -127,7 +183,8 @@ public partial class NovelViewerPage : IconContentPage
         foreach (var host in _observedExtensionHosts)
             host.PropertyChanged -= ExtensionHostOnPropertyChanged;
         _observedExtensionHosts.Clear();
-        _observedExtensionHosts.AddRange(ExtensionService.HostModels);
+        if (_observedExtensionService is { } extensions)
+            _observedExtensionHosts.AddRange(extensions.HostModels);
         foreach (var host in _observedExtensionHosts)
             host.PropertyChanged += ExtensionHostOnPropertyChanged;
         ViewModel.RefreshTranslationAvailability();

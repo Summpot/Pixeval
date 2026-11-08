@@ -17,7 +17,7 @@ using Avalonia.VisualTree;
 using ColorTextBlock.Avalonia;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 
 namespace Pixeval.Tests;
@@ -26,11 +26,21 @@ namespace Pixeval.Tests;
 [DoNotParallelize]
 public sealed class MaterialMarkdownTest
 {
+    // Keep one dispatcher for this application's render loop across data rows.
+    private static readonly Lazy<HeadlessUnitTestSession> Session = new(() =>
+        HeadlessUnitTestSession.StartNew(typeof(MaterialThemeIntegrationTest.MaterialTestApplication), AvaloniaTestIsolationLevel.PerTest));
+
+    [ClassCleanup]
+    public static async Task Cleanup()
+    {
+        if (Session.IsValueCreated) await Session.Value.DisposeAsync();
+    }
+
     [ClassInitialize]
     public static void Initialize(TestContext _)
     {
-        I18NManager.CandidatePaths.Add(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval")));
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+
+        AppLocalization.Instance.SetLanguage("zh-Hans");
     }
 
     [TestMethod]
@@ -40,7 +50,7 @@ public sealed class MaterialMarkdownTest
     [DataRow(true, true)]
     public async Task CodeCopyPreservesTextKeyboardAndIndependentScroll(bool dark, bool indented)
     {
-        await using var session = HeadlessUnitTestSession.StartNew(typeof(MaterialThemeIntegrationTest.MaterialTestApplication));
+        var session = Session.Value;
         _ = await session.Dispatch<bool>(async () =>
         {
             const string code = "中文🌸 <tag> \"quoted\"\n\tsecond line " + "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
@@ -52,6 +62,7 @@ public sealed class MaterialMarkdownTest
             var window = new Window { Width = 360, Height = 520, RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light, Content = markdown };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 var copy = markdown.GetVisualDescendants().OfType<Button>().Single(button => button.Classes.Contains("CopyButton"));
@@ -116,13 +127,14 @@ public sealed class MaterialMarkdownTest
     [DataRow(true)]
     public async Task InlineCodeUsesTheApplicationFontFallbackAndResourceChanges(bool dark)
     {
-        await using var session = HeadlessUnitTestSession.StartNew(typeof(MaterialThemeIntegrationTest.MaterialTestApplication));
+        var session = Session.Value;
         _ = await session.Dispatch<bool>(() =>
         {
             var markdown = new MarkdownBox { Markdown = "Before `inline 中文 🌸` after." };
             var window = new Window { Width = 360, Height = 240, RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light, Content = markdown };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 var code = markdown.GetVisualDescendants().OfType<CTextBlock>().SelectMany(block => block.Content).OfType<CCode>().Single();

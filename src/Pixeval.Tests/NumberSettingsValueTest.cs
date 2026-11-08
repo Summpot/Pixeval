@@ -11,8 +11,8 @@ using Avalonia.Input;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.I18N;
-using Pixeval.Models.Settings;
+using Pixeval.Localization;
+using Pixeval.Config;
 using Pixeval.Utilities;
 
 namespace Pixeval.Tests;
@@ -24,8 +24,8 @@ public sealed class NumberSettingsValueTest
     [ClassInitialize]
     public static void Initialize(TestContext _)
     {
-        I18NManager.CandidatePaths.Add(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval")));
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+
+        AppLocalization.Instance.SetLanguage("zh-Hans");
         LocalSettingsEntryHelper.Initialize();
     }
 
@@ -51,6 +51,7 @@ public sealed class NumberSettingsValueTest
             };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 window.UpdateLayout();
                 var numeric = control.GetVisualDescendants().OfType<NumericUpDown>().Single();

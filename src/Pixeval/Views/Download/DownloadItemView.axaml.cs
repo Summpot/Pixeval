@@ -55,6 +55,7 @@ public partial class DownloadItemView : ContentPage, IDisposable
     private DownloadItemPageViewModel? _itemPage;
 
     private bool _restoringSelection;
+    private int _selectionVersion;
 
     private bool _isDisposed;
 
@@ -82,10 +83,8 @@ public partial class DownloadItemView : ContentPage, IDisposable
         set => SetAndRaise(DeleteLocalFilesProperty, ref field, value);
     }
 
-    public static FuncValueConverter<int, string> SelectionCountLabelConverter { get; } = new(count =>
-        count > 0
-            ? Strings.DownloadPageCancelSelectionButtonFormatted(count: count)
-            : Strings.DownloadPageCancelSelectionButtonDefaultLabel());
+    public static FuncValueConverter<int, string> SelectionCountLabelConverter { get; } =
+        new(count => Strings.DownloadPageSelectedCountFormatted(count));
 
     private readonly IDisposable _languageSubscription;
 
@@ -226,11 +225,28 @@ public partial class DownloadItemView : ContentPage, IDisposable
             Header = folder.Title;
     }
 
+    private void FilterGrid_OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        var compact = e.NewSize.Width < 760;
+        FilterGrid.ColumnDefinitions = new ColumnDefinitions(compact ? "*" : "180,*,Auto");
+        Grid.SetColumn(FilterTextBox, compact ? 0 : 1);
+        Grid.SetRow(FilterTextBox, compact ? 1 : 0);
+        Grid.SetColumn(DeleteLocalFilesCheckBox, compact ? 0 : 2);
+        Grid.SetRow(DeleteLocalFilesCheckBox, compact ? 2 : 0);
+    }
+
     private void UpdateItemsSourceSubscription()
     {
         DetachItemPage();
         if (DataContext is not DownloadItemPageViewModel vm)
+        {
+            ++_selectionVersion;
+            _restoringSelection = false;
+            _selectedKeys.Clear();
+            SetDownloadItemsSource(null);
+            SelectedCount = 0;
             return;
+        }
 
         _itemPage = vm;
         vm.ViewRefreshStarting += OnViewRefreshStarting;
@@ -244,6 +260,7 @@ public partial class DownloadItemView : ContentPage, IDisposable
 
     private void OnViewRefreshStarting()
     {
+        if (_restoringSelection) return;
         _restoringSelection = true;
         _selectedKeys.Clear();
         if (ListBox.SelectedItems is null)
@@ -255,20 +272,24 @@ public partial class DownloadItemView : ContentPage, IDisposable
 
     private void OnViewRefreshCompleted()
     {
+        var version = ++_selectionVersion;
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            if (!_isDisposed && version == _selectionVersion) RestoreSelection();
+        }, Avalonia.Threading.DispatcherPriority.Loaded);
+    }
+
+    private void RestoreSelection()
+    {
         try
         {
             var desired = ListBox.Items.OfType<DownloadItemSnapshot>()
                 .Where(item => _selectedKeys.Contains(item.Key))
                 .ToList();
-            var current = ListBox.SelectedItems?.OfType<DownloadItemSnapshot>().ToList() ?? [];
-            var alreadySelected = current.Count == desired.Count
-                && current.All(item => _selectedKeys.Contains(item.Key));
-            if (!alreadySelected)
-            {
-                ListBox.SelectedItems?.Clear();
-                foreach (var item in desired)
-                    ListBox.SelectedItems?.Add(item);
-            }
+            ListBox.Selection.Clear();
+            for (var index = 0; index < ListBox.Items.Count; index++)
+                if (ListBox.Items[index] is DownloadItemSnapshot item && _selectedKeys.Contains(item.Key))
+                    ListBox.Selection.Select(index);
 
             _selectedKeys.Clear();
             foreach (var item in desired)
@@ -281,8 +302,6 @@ public partial class DownloadItemView : ContentPage, IDisposable
         }
     }
 
-    private void UpdateItemsSourceSubscription() =>
-        SetDownloadItemsSource((DataContext as DownloadItemPageViewModel)?.View);
 
     private void ItemsSource_OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {

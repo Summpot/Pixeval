@@ -1,0 +1,7 @@
+SubscriptionType = Type d’abonnement
+
+WorkKind = Type d’œuvre
+
+AddFailed = Impossible d’ajouter cet abonnement. Vérifiez l’identifiant et réessayez.
+
+RemoveSubscriptionButton-Label = Supprimer l’abonnement

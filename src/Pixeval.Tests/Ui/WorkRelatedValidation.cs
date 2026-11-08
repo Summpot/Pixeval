@@ -14,13 +14,11 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
-using Pixeval.Collections;
+using Pixeval.Mako;
+using Pixeval.Common.Collections;
 using Pixeval.Controls;
 using Pixeval.ViewModels;
-using Pixeval.Views.Capability;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests.Ui;
 
@@ -40,17 +38,17 @@ internal static class WorkRelatedValidation
             // Deliberately finish obsolete HTTP responses after source cancellation.
             return await response.Response.Task;
         };
-        await client.SetTokenAsync("fixture-related");
-        await client.ValidateTokenAsync();
+        client.SetRefreshToken("fixture-related");
+        await FixtureAuthentication.IdentifyAsync(client);
         List<string> report = [];
         try
         {
-            foreach (var type in new[] { SimpleWorkType.Illustration, SimpleWorkType.Novel })
+            foreach (var type in new[] { SimpleWorkKind.Illustration, SimpleWorkKind.Novel })
                 foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                     foreach (var width in new[] { 360, 1000 })
                     {
                         var key = $"{type}-{theme.Key}-{width}";
-                        var page = new WorkRelatedPage(980007, type);
+                        var page = UiTestSession.Create<WorkRelatedPage>(980007L, type);
                         var works = page.FindControl<WorkContainer>("WorkContainer")!;
                         var view = works.FindControl<WorkView>("WorkView")!;
                         var list = view.FindControl<WorkListBox>("WorkListBox")!;
@@ -58,6 +56,7 @@ internal static class WorkRelatedValidation
                         var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = host.Shell };
                         try
                         {
+                            Pixeval.Common.MaterialAnimation.Initialize(window);
                             window.Show();
                             var first = await NextAsync();
                             Validate(first.Uri, type);
@@ -68,10 +67,10 @@ internal static class WorkRelatedValidation
                             next.Complete(Json(type, [980002, 980003]));
                             await UntilAsync(() => Model().Source.Count == 3 && !Loading());
                             await RenderAsync(window);
-                            Require(Model().RequireAdaptiveGrid == (type == SimpleWorkType.Novel)
-                                && Model().Source.Select(item => item.Entry.Id).SequenceEqual(new[] { "980001", "980002", "980003" }),
+                            Require(Model().RequireAdaptiveGrid == (type == SimpleWorkKind.Novel)
+                                && Model().Source.Select(item => ((IWorkEntry)item).Id.ToString()).SequenceEqual(new[] { "980001", "980002", "980003" }),
                                 "Related work types, pagination order and duplicate identity handling remain unchanged");
-                            Require(view.GetVisualDescendants().OfType<WorkItem>().All(card => (card is NovelItem) == (type == SimpleWorkType.Novel)),
+                            Require(view.GetVisualDescendants().OfType<WorkItem>().All(card => (card is NovelItem) == (type == SimpleWorkKind.Novel)),
                                 "The related page uses the migrated card for its original work type");
                             Save(window, directory, "related-ready-" + key);
                             page.IsCommandBarCollapsed = true;
@@ -92,7 +91,7 @@ internal static class WorkRelatedValidation
                             Validate(fresh.Uri, type);
                             fresh.Complete(Json(type, [980004]));
                             await UntilAsync(() => Model().Source.Count == 1 && !Loading());
-                            Require(obsoleteSource.Count == 0 && Model().Source.Single().Entry.Id == "980004" && !requests.Reader.TryPeek(out _),
+                            Require(obsoleteSource.Count == 0 && ((IWorkEntry)Model().Source.Single()).Id.ToString() == "980004" && !requests.Reader.TryPeek(out _),
                                 "Refresh replaces its source and rejects obsolete items and pagination");
 
                             await RefreshAsync(window, works);
@@ -123,17 +122,19 @@ internal static class WorkRelatedValidation
                             window.Close();
                         }
 
-                        var emptyPage = new WorkRelatedPage(0, type);
+                        var emptyPage = UiTestSession.Create<WorkRelatedPage>(0L, type);
                         var emptyWorks = emptyPage.FindControl<WorkContainer>("WorkContainer")!;
                         var emptyView = emptyWorks.FindControl<WorkView>("WorkView")!;
-                        window = new() { Width = width, Height = 720, RequestedThemeVariant = theme, Content = emptyPage };
+                        var emptyHost = new PageTestHost { Content = emptyPage };
+                        window = new() { Width = width, Height = 720, RequestedThemeVariant = theme, Content = emptyHost.Shell };
                         try
                         {
+                            Pixeval.Common.MaterialAnimation.Initialize(window);
                             window.Show();
                             await RenderAsync(window);
                             await RefreshAsync(window, emptyWorks);
                             var emptyModel = (IWorkViewViewModel) emptyView.DataContext!;
-                            Require(emptyModel.RequireAdaptiveGrid == (type == SimpleWorkType.Novel) && emptyModel.Source.Count == 0
+                            Require(emptyModel.RequireAdaptiveGrid == (type == SimpleWorkKind.Novel) && emptyModel.Source.Count == 0
                                 && !requests.Reader.TryPeek(out _), "An unset work ID preserves its typed empty layout and never contacts the service");
                             report.Add($"PASS empty-{key}: typed empty source and no request on refresh");
                         }
@@ -143,42 +144,42 @@ internal static class WorkRelatedValidation
                             window.Close();
                         }
 
-                        IWorkViewViewModel owner = type == SimpleWorkType.Novel ? new NovelViewViewModel() : new IllustrationViewViewModel();
-                        if (type == SimpleWorkType.Novel)
-                            owner.ResetEngine(client.Computed(new[] { Novel.CreateDefault() with { Id = 980008, Title = "Shared novel preview" } }.ToAsyncEnumerable()));
+                        IWorkViewViewModel owner = type == SimpleWorkKind.Novel ? UiTestSession.Create<NovelViewViewModel>() : UiTestSession.Create<IllustrationViewViewModel>();
+                        if (type == SimpleWorkKind.Novel)
+                            owner.ResetSource(new object[] { Mako.Novel.CreateDefault() with { Id = 980008, Title = "Shared novel preview" } }.ToAsyncEnumerable());
                         else
-                            owner.ResetEngine(client.Computed(new[] { Illustration.CreateDefault() with { Id = 980008, Title = "Shared illustration preview" } }.ToAsyncEnumerable()));
+                            owner.ResetSource(new object[] { Illustration.CreateDefault() with { Id = 980008, Title = "Shared illustration preview" } }.ToAsyncEnumerable());
                         await ((IIncrementalLoading) owner.Source).LoadMoreItemsAsync(20);
-                        var clone = owner switch
-                        {
-                            NovelViewViewModel novel => (IWorkViewViewModel) novel.CloneRef(),
-                            IllustrationViewViewModel illustration => illustration.CloneRef(),
-                            _ => throw new InvalidOperationException("Unexpected preview owner")
-                        };
+                        IWorkViewViewModel clone = type == SimpleWorkKind.Novel
+                            ? UiTestSession.Create<NovelViewViewModel>() : UiTestSession.Create<IllustrationViewViewModel>();
+                        clone.ResetSource(owner.Source.ToArray().ToAsyncEnumerable());
+                        await ((IIncrementalLoading)clone.Source).LoadMoreItemsAsync(20);
                         var sharedSource = owner.Source;
-                        var injected = new WorkRelatedPage(980007, type, clone);
+                        var injected = UiTestSession.Create<WorkRelatedPage>(980007L, type, clone);
                         var injectedWorks = injected.FindControl<WorkContainer>("WorkContainer")!;
                         var injectedView = injectedWorks.FindControl<WorkView>("WorkView")!;
-                        window = new() { Width = width, Height = 720, RequestedThemeVariant = theme, Content = injected };
+                        var injectedHost = new PageTestHost { Content = injected };
+                        window = new() { Width = width, Height = 720, RequestedThemeVariant = theme, Content = injectedHost.Shell };
                         try
                         {
+                            Pixeval.Common.MaterialAnimation.Initialize(window);
                             window.Show();
                             await RenderAsync(window);
-                            Require(ReferenceEquals(injectedView.DataContext, clone) && ReferenceEquals(clone.Source, sharedSource)
-                                && clone.Source.Single().Entry.Id == "980008" && !requests.Reader.TryPeek(out _),
-                                "Opening an existing preview adopts its clone without fetching the same data again");
+                            Require(ReferenceEquals(injectedView.DataContext, clone) && !ReferenceEquals(clone.Source, sharedSource)
+                                && ((IWorkEntry)clone.Source.Single()).Id.ToString() == "980008" && !requests.Reader.TryPeek(out _),
+                                "Opening an existing preview adopts its record snapshot without fetching the same data again");
                             await RefreshAsync(window, injectedWorks);
                             var refreshed = await NextAsync();
                             Validate(refreshed.Uri, type);
                             refreshed.Complete(Json(type, [980009]));
-                            await UntilAsync(() => clone.Source.Count == 1 && clone.Source.Single().Entry.Id == "980009");
+                            await UntilAsync(() => clone.Source.Count == 1 && ((IWorkEntry)clone.Source.Single()).Id.ToString() == "980009");
                             var detachedSource = clone.Source;
                             injectedView.Dispose();
-                            Require(detachedSource.Count == 0 && sharedSource.Single().Entry.Id == "980008",
+                            Require(detachedSource.Count == 0 && ((IWorkEntry)sharedSource.Single()).Id.ToString() == "980008",
                                 "Refreshing and closing the adopted clone leave the home preview owner intact");
                             owner.Dispose();
                             Require(sharedSource.Count == 0, "The final preview owner releases its shared source");
-                            report.Add($"PASS shared-{key}: preview adoption, refresh identity and independent shared-source disposal");
+                            report.Add($"PASS shared-{key}: preview adoption, refresh identity and independent snapshot disposal");
                         }
                         finally
                         {
@@ -203,18 +204,18 @@ internal static class WorkRelatedValidation
         Task<PendingRelated> NextAsync() => requests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
     }
 
-    private static void Validate(Uri uri, SimpleWorkType type)
+    private static void Validate(Uri uri, SimpleWorkKind type)
     {
-        var novel = type == SimpleWorkType.Novel;
+        var novel = type == SimpleWorkKind.Novel;
         var query = HttpUtility.ParseQueryString(uri.Query);
         Require(uri.AbsolutePath == (novel ? "/v1/novel/related" : "/v2/illust/related")
             && query[novel ? "novel_id" : "illust_id"] == "980007" && (novel || query["filter"] == "for_android"),
             "Related works preserve the original endpoint, work identity and target filter");
     }
 
-    private static string Json(SimpleWorkType type, long[] ids, string? next = null) => type == SimpleWorkType.Novel
-        ? JsonSerializer.Serialize(new { novels = ids.Select(id => Novel.CreateDefault() with { Id = id, Title = "相关小说 / Related novel", User = UserInfo.CreateDefault() with { Id = 900007, Name = "Fixture author" } }).ToArray(), next_url = next })
-        : JsonSerializer.Serialize(new { illusts = ids.Select(id => Illustration.CreateDefault() with { Id = id, Title = "相关作品 / Related artwork", User = UserInfo.CreateDefault() with { Id = 900007, Name = "Fixture author" }, Width = 640, Height = 480, PageCount = 1 }).ToArray(), next_url = next });
+    private static string Json(SimpleWorkKind type, long[] ids, string? next = null) => type == SimpleWorkKind.Novel
+        ? NativeFixtureData.Serialize(new { novels = ids.Select(id => Mako.Novel.CreateDefault() with { Id = id, Title = "相关小说 / Related novel", User = User.CreateDefault() with { Id = 900007, Name = "Fixture author" } }).ToArray(), next_url = next })
+        : NativeFixtureData.Serialize(new { illusts = ids.Select(id => Illustration.CreateDefault() with { Id = id, Title = "相关作品 / Related artwork", User = User.CreateDefault() with { Id = 900007, Name = "Fixture author" }, Width = 640, Height = 480, PageCount = 1 }).ToArray(), next_url = next });
 
     private static async Task RefreshAsync(Window window, WorkContainer works)
     {

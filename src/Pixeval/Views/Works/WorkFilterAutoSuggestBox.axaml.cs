@@ -26,7 +26,7 @@ public partial class WorkFilterAutoSuggestBox : UserControl
     private const string FilterTextBoxPart = "PART_TextBox";
     private const string FilterSelectingItemsControlPart = "PART_SelectingItemsControl";
 
-    private readonly IDisposable _languageSubscription;
+    private IDisposable? _languageSubscription;
     private TextBox? _filterTextBox;
     private SelectingItemsControl? _filterSuggestionItemsControl;
     private IReadOnlyList<FilterCompletionItem> _filterCompletionItems = [];
@@ -36,9 +36,22 @@ public partial class WorkFilterAutoSuggestBox : UserControl
     public WorkFilterAutoSuggestBox()
     {
         InitializeComponent();
-        _languageSubscription = AppLocalization.Instance.Subscribe(() => RefreshCompletions());
         FilterAutoSuggestBox.ItemSelector = (_, _) => FilterAutoSuggestBox.Text ?? "";
         FilterAutoSuggestBox.AddHandler(KeyDownEvent, FilterAutoSuggestBox_OnKeyDown, RoutingStrategies.Tunnel);
+    }
+
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+        _languageSubscription ??= AppLocalization.Instance.Subscribe(() => RefreshCompletions());
+        RefreshCompletions();
+    }
+
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        _languageSubscription?.Dispose();
+        _languageSubscription = null;
+        base.OnUnloaded(e);
     }
 
     public string? Text

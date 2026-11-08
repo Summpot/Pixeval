@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -62,6 +63,7 @@ public sealed class ImageViewerRenderingTest
             using var mako = new MakoClient(new AppSettings().ToMakoConfiguration());
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 foreach (var size in new Size[] { new(640, 320), new(2000, 1000), new(500, 1000) })
                 {
@@ -177,6 +179,7 @@ public sealed class ImageViewerRenderingTest
             var window = new Window { Width = 800, Height = 600, Content = scrollView };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Dispatcher.UIThread.RunJobs();
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick(1);
@@ -201,6 +204,7 @@ public sealed class ImageViewerRenderingTest
             var window = new Window { Width = 800, Height = 600 };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 foreach (var size in new Size[] { new(2000, 1000), new(500, 1000), new(1000, 500) })
                 {

@@ -17,7 +17,7 @@ namespace Pixeval.ViewModels.Home;
 
 public sealed partial class HomeCardPreviewViewModel(
     HomePageCardLayout card,
-    Func<HomePageCardLayout, Task<HomeCardPreviewSource>> previewSourceFactory) : ViewModelBase, IDisposable
+    Func<HomePageCardLayout, CancellationToken, Task<HomeCardPreviewSource>> previewSourceFactory) : ViewModelBase, IDisposable
 {
     private readonly CancellationTokenSource _loadingCts = new();
     private HomeCardPreviewSource? _source;
@@ -75,7 +75,7 @@ public sealed partial class HomeCardPreviewViewModel(
             for (var attempt = 0; attempt < 2; attempt++)
             {
                 var oldSource = _source;
-                var source = await previewSourceFactory(Card);
+                var source = await previewSourceFactory(Card, _loadingCts.Token);
                 if (_isDisposed)
                 {
                     source.Dispose();

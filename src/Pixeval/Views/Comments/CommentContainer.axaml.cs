@@ -1,3 +1,5 @@
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
@@ -19,32 +21,28 @@ public partial class CommentContainer : ContentPage
         InitializeComponent();
     }
 
-    private void ReplyBar_OnSendButtonClick(string replyContent) =>
-        this.RunInteraction(() => ReplyBar_OnSendButtonClickAsync(replyContent));
+    private Task<bool> ReplyBar_OnSendButtonClick(string content, CancellationToken token) =>
+        SubmitAsync((model, cancellation) => model.AddCommentAsync(content, cancellation), token);
 
-    private async Task ReplyBar_OnSendButtonClickAsync(string replyContent)
+    private Task<bool> ReplyBar_OnStickerClick(int stickerId, CancellationToken token) =>
+        SubmitAsync((model, cancellation) => model.AddStickerAsync(stickerId, cancellation), token);
+
+    private async Task<bool> SubmitAsync(Func<CommentsViewViewModel, CancellationToken, Task<CommentRecord>> submit, CancellationToken token)
     {
-        if (DataContext is not CommentsViewViewModel viewModel)
-            return;
-        AddComment(await viewModel.AddCommentAsync(replyContent), viewModel);
-    }
-
-    private void ReplyBar_OnStickerClick(int stickerId) =>
-        this.RunInteraction(() => ReplyBar_OnStickerClickAsync(stickerId));
-
-    private async Task ReplyBar_OnStickerClickAsync(int stickerId)
-    {
-        if (DataContext is not CommentsViewViewModel viewModel)
-            return;
-        AddComment(await viewModel.AddStickerAsync(stickerId), viewModel);
-    }
-
-    private void AddComment(CommentRecord comment, CommentsViewViewModel viewModel)
-    {
-        if (comment.Id is 0)
-            this.Notifications.ShowError("评论发送失败"); //TODO i18n
-        else
-            viewModel.AddComment(comment);
+        if (DataContext is not CommentsViewViewModel model)
+            return false;
+        var session = this.GetUiService<IUserSessionService>();
+        var accountId = session?.CurrentUserId;
+        var comment = await submit(model, token);
+        if (token.IsCancellationRequested || !ReferenceEquals(DataContext, model) || session?.CurrentUserId != accountId)
+            return false;
+        if (comment.Id == 0)
+        {
+            this.Notifications.ShowError(Strings.PixivReplyBarSendFailed());
+            return false;
+        }
+        model.AddComment(comment);
+        return true;
     }
 
     private void CommentView_OnOpenRepliesButtonClick(CommentRecord comment) =>

@@ -14,8 +14,8 @@ using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
-using Pixeval.I18N;
-using Pixeval.Models.Options;
+using Pixeval.Localization;
+using Pixeval.Config;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
@@ -34,19 +34,20 @@ internal static class IllustrationCopyValidation
         AvaloniaLocator.CurrentMutable.Bind<IStorageProviderFactory>().ToConstant(storage);
         var continuous = System.Globalization.CultureInfo.CurrentUICulture.Name is "en-US" or "ru-RU";
         App.AppViewModel.AppSettings.BrowsingExperienceSettings.BrowseMode = continuous ? BrowseMode.Continuous : BrowseMode.Swipe;
-        var model = new IllustrationViewerPageViewModel(new IllustrationItemViewModel(IllustrationReaderFixture.Sample(996420, 1)), false);
+        var model = UiTestSession.Create<IllustrationViewerPageViewModel>((IllustrationReaderFixture.Sample(996420, 1)), false);
         var page = new IllustrationViewerPage(model);
         var host = new PageTestHost { Content = page };
         var window = new Window { Width = 700, Height = 760, Content = host.Shell };
         List<string> report = [];
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             await UntilAsync(() => model.CurrentImage?.CurrentPage?.LoadSuccessfully == true);
             await RenderAsync(window);
             var image = model.CurrentImage!.CurrentPage!;
             var viewer = page.GetVisualDescendants().OfType<SingleImageViewer>().Single(control => ReferenceEquals(control.DataContext, image));
-            var copy = viewer.ContextMenu!.Items.OfType<MenuItem>().Single(item => item.Header?.ToString() == I18NManager.GetResource(EntryViewerPageResources.Copy));
+            var copy = viewer.ContextMenu!.Items.OfType<MenuItem>().Single(item => item.Header?.ToString() == Strings.EntryViewerPageCopy());
             var expected = Encode(image.DisplaySource.Frames[0]);
             await BeginAsync();
             clipboard.CompleteSet();
@@ -91,13 +92,13 @@ internal static class IllustrationCopyValidation
             Require(SameImage(clipboard.Bytes!, expected), "Keyboard copy uses the same displayed image snapshot");
             await IllustrationTransformValidation.DismissAsync(window);
 
-            var manager = App.AppViewModel.HistoryPersistHelper.DownloadManager;
-            await App.AppViewModel.HistoryPersistHelper.RestoreTask;
+            var manager = App.AppViewModel.DownloadManager;
+            await App.AppViewModel.RestoreTask;
             Require(scroller.Focus(NavigationMethod.Tab), "The download shortcut retains a viewport focus route");
-            var queued = manager.QueuedTasks.Count;
+            var queued = manager.OrdinaryItems.Count;
             sets = clipboard.Sets;
             Press(window, Key.S, PhysicalKey.S, RawInputModifiers.Control);
-            await UntilAsync(() => manager.QueuedTasks.Count == queued + 1);
+            await UntilAsync(() => manager.OrdinaryItems.Count == queued + 1);
             Require(clipboard.Sets == sets, "The save shortcut queues the image download without copying to the clipboard");
             report.Add("PASS dark/narrow actual Ctrl+C busy gate and Ctrl+S download route");
             await IllustrationTransformValidation.DismissAsync(window);
@@ -138,14 +139,14 @@ internal static class IllustrationCopyValidation
             catch (Exception) { disposed = true; }
             Require(disposed, "Releasing the clipboard transfer disposes its owned bitmap");
 
-            model = new IllustrationViewerPageViewModel(new IllustrationItemViewModel(IllustrationReaderFixture.Sample(996421, 1)), false);
+            model = UiTestSession.Create<IllustrationViewerPageViewModel>((IllustrationReaderFixture.Sample(996421, 1)), false);
             page = new IllustrationViewerPage(model);
             host.Shell.NavigateTo(page);
             await UntilAsync(() => model.CurrentImage?.CurrentPage?.LoadSuccessfully == true);
             await RenderAsync(window);
             image = model.CurrentImage!.CurrentPage!;
             viewer = page.GetVisualDescendants().OfType<SingleImageViewer>().Single(control => ReferenceEquals(control.DataContext, image));
-            copy = viewer.ContextMenu!.Items.OfType<MenuItem>().Single(item => item.Header?.ToString() == I18NManager.GetResource(EntryViewerPageResources.Copy));
+            copy = viewer.ContextMenu!.Items.OfType<MenuItem>().Single(item => item.Header?.ToString() == Strings.EntryViewerPageCopy());
             clipboard.HoldFlush = true;
             await BeginAsync();
             clipboard.CompleteSet();

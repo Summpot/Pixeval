@@ -1,5 +1,6 @@
 <ResourceDictionary
     xmlns="https://github.com/avaloniaui"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
@@ -10,8 +11,8 @@
         <Setter Property="MinWidth" Value="160" />
         <Setter Property="MinHeight" Value="48" />
         <Setter Property="Focusable" Value="True" />
-        <Setter Property="AutomationProperties.Name" Value="{I18N {x:Static pixeval:EntryViewerPageResources.PageSelector}}" />
-        <Setter Property="AutomationProperties.HelpText" Value="{I18N {x:Static pixeval:EntryViewerPageResources.PageSelectorHelp}}" />
+        <Setter Property="AutomationProperties.Name" Value="{CompiledBinding [EntryViewerPage-PageSelector], Source={x:Static loc:LocalizationManager.Instance}}" />
+        <Setter Property="AutomationProperties.HelpText" Value="{CompiledBinding [EntryViewerPage-PageSelectorHelp], Source={x:Static loc:LocalizationManager.Instance}}" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="Template">
             <ControlTemplate>

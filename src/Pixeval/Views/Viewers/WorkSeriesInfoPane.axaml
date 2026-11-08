@@ -2,7 +2,6 @@
     x:Class="Pixeval.Views.Viewers.WorkSeriesInfoPane"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:loc="using:Pixeval.Localization"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
@@ -15,7 +14,8 @@
     Design.DataContext="{x:Static utilities:DesignHelper.DesignWorkSeriesInfoViewModel}"
     mc:Ignorable="d"
     d:DesignHeight="180"
-    d:DesignWidth="360">
+    d:DesignWidth="360"
+    xmlns:loc="using:Pixeval.Localization">
     <Border
         Margin="8"
         Padding="8"
@@ -27,11 +27,11 @@
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Stretch"
                 AutomationProperties.HelpText="{Binding Title}"
-                AutomationProperties.Name="{I18N {x:Static pixeval:EntryItemResources.OpenSeries}}"
+                AutomationProperties.Name="{CompiledBinding [EntryItem-OpenSeries], Source={x:Static loc:LocalizationManager.Instance}}"
                 Background="Transparent"
                 Click="OpenSeriesButton_OnClick"
                 Theme="{StaticResource ContentCardTheme}"
-                ToolTip.Tip="{CompiledBinding [EntryItem-OpenSeries], Source={x:Static loc:LocalizationManager.Instance}}">
+                ToolTip.Tip="{Binding Title}">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                     <fluent:SymbolIcon VerticalAlignment="Center" Symbol="SquareMultiple" />
                     <StackPanel Grid.Column="1">
@@ -61,13 +61,13 @@
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch"
                     AutomationProperties.HelpText="{Binding Previous.Title}"
-                    AutomationProperties.Name="{I18N {x:Static pixeval:EntryViewerPageResources.PreviousSeriesWork}}"
+                    AutomationProperties.Name="{CompiledBinding [EntryViewerPage-PreviousSeriesWork], Source={x:Static loc:LocalizationManager.Instance}}"
                     Background="Transparent"
                     Click="NavigationButton_OnClick"
                     IsVisible="{Binding Previous, Converter={x:Static ObjectConverters.IsNotNull}}"
                     Tag="{Binding Previous}"
                     Theme="{StaticResource ContentCardTheme}"
-                    ToolTip.Tip="{CompiledBinding [EntryViewerPage-PreviousSeriesWork], Source={x:Static loc:LocalizationManager.Instance}}">
+                    ToolTip.Tip="{Binding Previous.Title}">
                     <DockPanel HorizontalSpacing="6" LastChildFill="True">
                         <fluent:SymbolIcon
                             VerticalAlignment="Center"
@@ -87,13 +87,13 @@
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch"
                     AutomationProperties.HelpText="{Binding Next.Title}"
-                    AutomationProperties.Name="{I18N {x:Static pixeval:EntryViewerPageResources.NextSeriesWork}}"
+                    AutomationProperties.Name="{CompiledBinding [EntryViewerPage-NextSeriesWork], Source={x:Static loc:LocalizationManager.Instance}}"
                     Background="Transparent"
                     Click="NavigationButton_OnClick"
                     IsVisible="{Binding Next, Converter={x:Static ObjectConverters.IsNotNull}}"
                     Tag="{Binding Next}"
                     Theme="{StaticResource ContentCardTheme}"
-                    ToolTip.Tip="{CompiledBinding [EntryViewerPage-NextSeriesWork], Source={x:Static loc:LocalizationManager.Instance}}">
+                    ToolTip.Tip="{Binding Next.Title}">
                     <DockPanel HorizontalSpacing="6" LastChildFill="True">
                         <fluent:SymbolIcon
                             VerticalAlignment="Center"

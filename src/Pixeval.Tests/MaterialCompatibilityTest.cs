@@ -34,6 +34,7 @@ public sealed class MaterialCompatibilityTest
             var window = new Window { Width = 480, Height = 320, Content = new StackPanel { Children = { fallback, tabs } } };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                 {

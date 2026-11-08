@@ -25,21 +25,6 @@ public partial class SpotlightView : UserControl
             RegisterViewModelDisposal(viewModel);
     }
 
-    private void SpotlightItem_OnTapped(object? sender, TappedEventArgs e) =>
-        this.RunInteraction(() => SpotlightItem_OnTappedAsync(sender, e));
-
-    private async Task SpotlightItem_OnTappedAsync(object? sender, TappedEventArgs e)
-    {
-        if (sender is Control { DataContext: SpotlightArticle vm } control)
-            _ = control.LauncherService.LaunchUriAsync(new Uri(vm.ArticleUrl));
-    }
-
-    private void ListBox_OnContainerPrepared(object? sender, ContainerPreparedEventArgs e)
-    {
-        if (e.Container is ListBoxItem lbi)
-            lbi.Tapped += SpotlightItem_OnTapped;
-    }
-
     #region Disposal
 
     /// <inheritdoc />

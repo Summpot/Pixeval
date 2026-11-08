@@ -15,8 +15,8 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Pixeval.I18N;
-using Pixeval.Models.Database;
+using Pixeval.Localization;
+using Pixeval.Storage;
 using Pixeval.ViewModels;
 using Pixeval.Views.Login;
 
@@ -30,13 +30,14 @@ internal static class LoginLayoutValidation
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
             foreach (var width in new[] { 1000, 360 })
             {
-                var page = new LoginPage();
+                var page = UiTestSession.Create<LoginPage>();
                 var model = (LoginPageViewModel) page.DataContext!;
                 var navigation = new NavigationPage();
                 await navigation.PushAsync(page);
                 var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = navigation };
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     await model.LoadUsersAsync();
                     await Task.Delay(400); // Preserve the real navigation transition before inspecting its final layout.
@@ -45,9 +46,9 @@ internal static class LoginLayoutValidation
                     await RenderAsync(window);
                     var input = page.GetVisualDescendants().OfType<AutoCompleteBox>().Single();
                     var tokenButton = page.GetVisualDescendants().OfType<Button>().Single(control =>
-                        Equals(control.Content, I18NManager.GetResource(LoginPageResources.RefreshTokenButton.Content)));
+                        Equals(control.Content, Strings.LoginPageRefreshTokenButtonContent()));
                     var webButton = page.GetVisualDescendants().OfType<Button>().Single(control =>
-                        Equals(control.Content, I18NManager.GetResource(LoginPageResources.WebViewButton.Content)));
+                        Equals(control.Content, Strings.LoginPageWebViewButtonContent()));
                     InWindow(window, input);
                     InWindow(window, tokenButton);
                     InWindow(window, webButton);
@@ -56,8 +57,8 @@ internal static class LoginLayoutValidation
                             && label.TextLayout.TextLines.All(line => !line.HasCollapsed), "Localized login actions remain fully readable");
                     Save(window, directory, $"login-empty-{theme.Key}-{width}");
 
-                    var first = new LoginUserEntry { UserId = 990001, Name = "保存账号 中文 with a deliberately long display name", Account = "a_long_saved_account_name", RefreshToken = "fixture-saved-first" };
-                    var second = new LoginUserEntry { UserId = 990002, Name = "", Account = "", RefreshToken = "fixture-saved-second" };
+                    var first = new LoginUserRecord { UserId = 990001, Name = "保存账号 中文 with a deliberately long display name", Account = "a_long_saved_account_name", RefreshToken = "fixture-saved-first" };
+                    var second = new LoginUserRecord { UserId = 990002, Name = "", Account = "", RefreshToken = "fixture-saved-second" };
                     model.Users.Add(first);
                     model.Users.Add(second);
                     var editor = input.GetVisualDescendants().OfType<TextBox>().Single();
@@ -92,7 +93,7 @@ internal static class LoginLayoutValidation
                     await RenderAsync(window);
                     Press(window, Key.Enter, PhysicalKey.Enter);
                     await RenderAsync(window);
-                    Require(model.SelectedUser is not null && model.RefreshToken == model.SelectedUser.RefreshToken,
+                    Require(model.SelectedUser is not null && model.RefreshToken == model.SelectedUser.Value.RefreshToken,
                         "Keyboard account selection restores exactly the selected account token");
                     Require(!model.IsLoginInProgress, "Choosing an account does not implicitly authenticate");
                     expandProvider.Collapse();
@@ -102,7 +103,7 @@ internal static class LoginLayoutValidation
                     Require(!string.IsNullOrWhiteSpace(AutomationProperties.GetName(input)), "Account/token input has a localized accessible name");
                     model.SelectedUser = first;
                     await RenderAsync(window);
-                    Require(editor.Text == first.RefreshToken && ReferenceEquals(input.SelectedItem, first), "Model account restoration also restores the real editor and its selection");
+                    Require(editor.Text == first.RefreshToken && Equals(input.SelectedItem, first), "Model account restoration also restores the real editor and its selection");
                     AssertProtectedAutomation();
                     InWindow(window, input);
                     Save(window, directory, $"login-selected-{theme.Key}-{width}");
@@ -122,7 +123,7 @@ internal static class LoginLayoutValidation
                     editor.SelectAll();
                     window.KeyTextInput(second.RefreshToken);
                     await RenderAsync(window);
-                    Require(ReferenceEquals(model.SelectedUser, second), "Typing an exact saved token restores its account preview");
+                    Require(Equals(model.SelectedUser, second), "Typing an exact saved token restores its account preview");
                     AssertProtectedAutomation();
                     editor.SelectAll();
                     Press(window, Key.Back, PhysicalKey.Backspace);

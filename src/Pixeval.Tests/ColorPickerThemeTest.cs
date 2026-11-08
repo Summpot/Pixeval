@@ -29,6 +29,7 @@ public sealed class ColorPickerThemeTest
             var window = new Window { Width = 480, Height = 480, Content = view };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 window.UpdateLayout();
                 Control root = view;
@@ -82,6 +83,7 @@ public sealed class ColorPickerThemeTest
             var window = new Window { Width = 480, Height = 320, Content = picker };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                 {

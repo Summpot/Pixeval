@@ -1,21 +1,22 @@
 <views:IconContentPage
     x:Class="Pixeval.Views.Works.WorkRankingPage"
     xmlns="https://github.com/avaloniaui"
-    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:di="using:Pixeval.Common.Markup"
-    xmlns:settings="using:Pixeval.Config"
     xmlns:capability="using:Pixeval.Views.Works"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:enum="using:Pixeval.Pixiv"
     xmlns:markup1="using:Pixeval.Common.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:pixeval="using:Pixeval"
     xmlns:views="using:Pixeval.Views.Shell"
     xmlns:work="using:Pixeval.Views.Works"
     mc:Ignorable="d"
     d:DesignHeight="450"
-    d:DesignWidth="800">
+    d:DesignWidth="800"
+    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
+    xmlns:settings="using:Pixeval.Config">
     <work:WorkContainer x:Name="WorkContainer" RefreshRequested="WorkContainer_OnRefreshRequested">
         <work:WorkContainer.CommandBarElements>
             <CalendarDatePicker
@@ -23,7 +24,7 @@
                 Width="240"
                 MinWidth="0"
                 MaxWidth="{Binding $parent[WrapPanel].Bounds.Width}"
-                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+Source+RankingDateTextBlock.Text}}"
+                AutomationProperties.Name="{CompiledBinding [HomePage-Source-RankingDateTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                 DateValidationError="RankDateTimeCalendarDatePicker_OnDateValidationError"
                 DisplayDateEnd="{x:Static capability:WorkRankingPage.MaxDate}"
                 SelectedDate="{x:Static capability:WorkRankingPage.MaxDate}"
@@ -35,7 +36,7 @@
                 Width="240"
                 MinWidth="0"
                 MaxWidth="{Binding $parent[WrapPanel].Bounds.Width}"
-                AutomationProperties.Name="{I18N {x:Static pixeval:HomePageResources+Source+RankOptionTextBlock.Text}}"
+                AutomationProperties.Name="{CompiledBinding [HomePage-Source-RankOptionTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                 IconMode="False"
                 SelectionChanged="RankOptionComboBox_OnSelectionChanged">
                 <controls:SymbolComboBox.TextItemTemplate>
@@ -46,8 +47,9 @@
             </controls:SymbolComboBox>
             <controls:SymbolComboBox
                 x:Name="SimpleWorkTypeComboBox"
+                AutomationProperties.Name="{CompiledBinding [HomePage-Source-SimpleWorkTypeTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                 ItemsSource="{markup1:EnumResources x:TypeArguments=nativeMako:SimpleWorkKind}"
-                SelectedValue="{Binding SearchSettings.DefaultSimpleWorkType, Source={di:Service Type={x:Type settings:AppSettings}}, DataType={x:Type settings:AppSettings}, Mode=OneTime}"
+
                 SelectionChanged="SimpleWorkTypeComboBox_OnSelectionChanged" />
         </work:WorkContainer.CommandBarElements>
     </work:WorkContainer>

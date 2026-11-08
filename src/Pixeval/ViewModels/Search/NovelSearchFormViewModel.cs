@@ -63,7 +63,7 @@ public partial class NovelSearchFormViewModel : SearchArgumentsFormViewModelBase
             return false;
         }
 
-        if (!(PixevalSettings.Me?.IsPremium ?? false))
+        if (!(App.AppViewModel?.MakoClient.GetUser()?.IsPremium ?? false))
         {
             var range = (ContentLengthMinOption.NullableInt, ContentLengthMaxOption.NullableInt);
             // Mako otherwise clears unsupported free-account ranges during engine construction.
@@ -78,10 +78,10 @@ public partial class NovelSearchFormViewModel : SearchArgumentsFormViewModelBase
             };
             if (!isAllowed)
             {
-                title = I18NManager.GetResource(SearchResources.Validation.PremiumLength.Title);
-                content = I18NManager.GetResource(ContentLengthOption is SearchNovelContentLengthOption.ReadingTime
-                    ? SearchResources.Validation.PremiumLength.ReadingTimeContent
-                    : SearchResources.Validation.PremiumLength.TextContent);
+                title = Strings.SearchValidationPremiumLengthTitle();
+                content = ContentLengthOption is SearchNovelContentLengthOption.ReadingTime
+                    ? Strings.SearchValidationPremiumLengthReadingTimeContent()
+                    : Strings.SearchValidationPremiumLengthTextContent();
                 return false;
             }
         }

@@ -17,13 +17,13 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Material3Expressive.Components;
-using Mako.Global.Enum;
+using Pixeval.Mako;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.ViewModels.Search;
 using Pixeval.ViewModels;
 using Pixeval.Views.Search;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests.Ui;
 
@@ -54,6 +54,7 @@ internal static class SauceNaoValidation
                 var scenario = $"{theme.Key}-{width}";
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     await RenderAsync(window);
                     var picker = page.FindControl<Card>("ImagePicker")!;
@@ -62,7 +63,7 @@ internal static class SauceNaoValidation
                     Require(!picker.IsEffectivelyEnabled && !paste.IsEffectivelyEnabled && !search.IsEffectivelyEnabled,
                         "No API key keeps all image-search actions disabled");
                     Require(page.GetVisualDescendants().OfType<InfoBar>().Any(bar => bar.IsVisible
-                        && bar.Text == I18NManager.GetResource(SearchResources.SauceNAO.ProvideApiKey) && bar.IsEffectivelyEnabled),
+                        && bar.Text == Strings.SearchSauceNAOProvideApiKey() && bar.IsEffectivelyEnabled),
                         "The missing-key explanation remains readable instead of inheriting disabled styling");
                     Save(window, directory, "saucenao-no-key-" + scenario);
 
@@ -73,7 +74,7 @@ internal static class SauceNaoValidation
                     await RenderAsync(window);
                     Require(picker.IsEffectivelyEnabled && paste.IsEffectivelyEnabled && !search.IsEffectivelyEnabled,
                         "Returning after API-key settings change enables image input but not an empty search");
-                    Require(AutomationProperties.GetName(picker) == I18NManager.GetResource(SearchResources.SauceNAO.ProvideImage),
+                    Require(AutomationProperties.GetName(picker) == Strings.SearchSauceNAOProvideImage(),
                         "The clickable preview exposes a localized image-selection name");
                     Bounds(window, picker);
                     await ActivateAsync(window, picker);
@@ -89,7 +90,7 @@ internal static class SauceNaoValidation
                     await window.Clipboard!.ClearAsync();
                     await ActivateAsync(window, paste);
                     await UntilAsync(() => !model.IsLoading);
-                    Require(model.ErrorMessage == I18NManager.GetResource(SearchResources.SauceNAO.ClipboardHasNoImage)
+                    Require(model.ErrorMessage == Strings.SearchSauceNAOClipboardHasNoImage()
                         && !model.FileSelected, "An empty clipboard reports a recoverable localized error");
 
                     var selected = new ImageFile(bytes);
@@ -172,15 +173,17 @@ internal static class SauceNaoValidation
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
             App.AppViewModel.AppSettings.SearchSettings.SauceNaoApiKey = "fixture-sauce-key";
-            var searchPage = new SearchPage();
+            var searchPage = UiTestSession.Create<SearchPage>();
             var tabs = searchPage.FindControl<TabbedPage>("AdvancedOptionsTabControl")!;
             var expander = searchPage.FindControl<Expander>("AdvancedExpander")!;
             expander.IsExpanded = true;
             tabs.SelectedIndex = 2;
-            var window = new Window { Width = 360, Height = 520, RequestedThemeVariant = theme, Content = searchPage };
+            var host = new PageTestHost { Content = searchPage };
+            var window = new Window { Width = 360, Height = 520, RequestedThemeVariant = theme, Content = host.Shell };
             SauceNaoSearchPageViewModel? model = null;
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 await RenderAsync(window);
                 Require(tabs.CurrentPage is SauceNaoSearchPage, "The real advanced-options tab selects SauceNao");
@@ -217,7 +220,7 @@ internal static class SauceNaoValidation
                 window.Content = null;
                 window.Close();
                 model?.Dispose();
-                SearchPageViewModel.Instance.SelectedAdvancedOptionsType = SimpleWorkType.Illustration;
+                App.AppViewModel.AppServiceProvider.GetRequiredService<SearchPageViewModel>().SelectedAdvancedOptionsType = SimpleWorkKind.Illustration;
             }
         }
         Require(fixture.UnexpectedRequests.IsEmpty, "No SauceNao scenario escaped the fixed HTTP fixture");

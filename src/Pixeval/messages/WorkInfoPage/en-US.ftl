@@ -1,3 +1,5 @@
 CopyOriginalTagMenuItem-Text = Copy Original Text
 
 CopyTranslatedTagMenuItem-Text = Copy Translation
+
+CopyId = Copy ID

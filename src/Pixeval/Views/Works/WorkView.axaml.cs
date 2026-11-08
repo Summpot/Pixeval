@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.VisualTree;
 using Avalonia.Controls;
 using Avalonia.Controls.Selection;
 using Avalonia.Data.Converters;
@@ -72,9 +73,11 @@ public sealed partial class WorkView : UserControl, IDisposable
         PseudoClasses.Set(":masonry", !isNovel && LayoutType is ThumbnailLayoutType.Masonry);
     }
 
-    private void WorkItem_OnTapped(object? sender, TappedEventArgs tappedEventArgs)
+    private void WorkItem_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not ListBoxItem { DataContext: { } vm } lbi)
+        if (sender is not WorkItem { DataContext: { } vm } card
+            || !ReferenceEquals(e.Source, card)
+            || card.FindAncestorOfType<ListBoxItem>() is not { } lbi)
             return;
 
         e.Handled = true;
@@ -116,6 +119,22 @@ public sealed partial class WorkView : UserControl, IDisposable
             return;
 
         CreateWorkViewerPage(vm);
+    }
+
+    private void WorkItem_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        // Arrow navigation focuses the ListBoxItem itself, rather than its card.
+        // Child buttons keep their own keyboard handling and must not navigate twice.
+        if (sender is not ListBoxItem { DataContext: { } vm } item
+            || !ReferenceEquals(e.Source, item) || e.Key is not Key.Enter
+            || e.KeyModifiers is not (KeyModifiers.None or KeyModifiers.Shift))
+            return;
+
+        e.Handled = true;
+        if (WorkListBox.SelectionMode.HasFlag(SelectionMode.Multiple))
+            UpdateSelection(item, e.KeyModifiers);
+        else
+            CreateWorkViewerPage(vm);
     }
 
     private void CreateWorkViewerPage(object vm)
@@ -212,7 +231,7 @@ public sealed partial class WorkView : UserControl, IDisposable
     {
         if (e.Container is not ListBoxItem lbi)
             return;
-        lbi.AddHandler(KeyDownEvent, WorkItem_OnKeyDown, RoutingStrategies.Tunnel);
+        lbi.AddHandler(InputElement.KeyDownEvent, WorkItem_OnKeyDown, RoutingStrategies.Tunnel);
         lbi.DoubleTapped += WorkItem_OnDoubleTapped;
     }
 
@@ -221,7 +240,7 @@ public sealed partial class WorkView : UserControl, IDisposable
         if (e.Container is not ListBoxItem lbi)
             return;
 
-        lbi.RemoveHandler(KeyDownEvent, WorkItem_OnKeyDown);
+        lbi.RemoveHandler(InputElement.KeyDownEvent, WorkItem_OnKeyDown);
         lbi.DoubleTapped -= WorkItem_OnDoubleTapped;
     }
 
@@ -231,6 +250,8 @@ public sealed partial class WorkView : UserControl, IDisposable
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
+        if (!_isDisposed && _pendingSource is { } source)
+            ResetSource(source, _pendingWorkType);
 
         RaiseEvent(new ViewModelDisposalEventArgs(ViewModelDisposal.ViewModelDisposalEvent, this));
     }

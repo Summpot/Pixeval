@@ -6,10 +6,13 @@
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<UseAppHost>false</UseAppHost>
+		<!-- Storage picker fixtures implement Avalonia platform interfaces; product does not opt in. -->
+		<AvaloniaAccessUnstablePrivateApis>true</AvaloniaAccessUnstablePrivateApis>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Avalonia.Headless" Version="$(AvaloniaVersion)" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
 		<ProjectReference Include="..\Pixeval\Pixeval.csproj" />
 	</ItemGroup>
 

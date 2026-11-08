@@ -17,13 +17,11 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
+using Pixeval.Mako;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.ViewModels;
-using Pixeval.Views.Capability;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests.Ui;
 
@@ -49,19 +47,19 @@ internal static class WorkFeedsValidation
             await asset.CopyToAsync(buffer);
             fixture.ImageResponses[imageUri] = buffer.ToArray();
         }
-        await client.SetTokenAsync("fixture-work-feeds");
-        await client.ValidateTokenAsync();
+        client.SetRefreshToken("fixture-work-feeds");
+        await FixtureAuthentication.IdentifyAsync(client);
         List<string> report = [];
         try
         {
             foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
                 foreach (var width in new[] { 360, 1000 })
-                    foreach (var type in new[] { SimpleWorkType.Illustration, SimpleWorkType.Novel })
+                    foreach (var type in new[] { SimpleWorkKind.Illustration, SimpleWorkKind.Novel })
                         foreach (var kind in new[] { "following-public", "following-private", "mypixiv" })
                         {
                             var isFollowing = kind != "mypixiv";
-                            var privacy = kind == "following-private" ? PrivacyPolicy.Private : PrivacyPolicy.Public;
-                            ContentPage page = isFollowing ? new WorkFollowingPage(type, privacy) : new WorkMyPixivPage(type);
+                            var privacy = kind == "following-private" ? PrivacyRestrict.Private : PrivacyRestrict.Public;
+                            ContentPage page = isFollowing ? UiTestSession.Create<WorkFollowingPage>(type, privacy) : UiTestSession.Create<WorkMyPixivPage>(type);
                             var works = page.FindControl<WorkContainer>("WorkContainer")!;
                             var view = works.FindControl<WorkView>("WorkView")!;
                             var list = view.FindControl<WorkListBox>("WorkListBox")!;
@@ -70,18 +68,19 @@ internal static class WorkFeedsValidation
                             var key = $"{kind}-{type}-{theme.Key}-{width}";
                             try
                             {
+                                Pixeval.Common.MaterialAnimation.Initialize(window);
                                 window.Show();
                                 var first = await NextAsync();
                                 Validate(first.Uri, type, privacy);
                                 first.Complete(Json(type, [950001, 950002]));
                                 await UntilAsync(() => Model().Source.Count == 2 && !Loading());
                                 await RenderAsync(window);
-                                Require(Model().RequireAdaptiveGrid == (type == SimpleWorkType.Novel), "Each feed keeps the existing illustration/novel list model and layout policy");
+                                Require(Model().RequireAdaptiveGrid == (type == SimpleWorkKind.Novel), "Each feed keeps the existing illustration/novel list model and layout policy");
                                 var picker = page.FindControl<SymbolComboBox>("SimpleWorkTypeComboBox")!;
                                 var selector = picker.GetVisualDescendants().OfType<ComboBox>().Single();
-                                CheckPicker(picker, HomePageResources.Source.SimpleWorkTypeTextBlock.Text);
+                                CheckPicker(picker, "HomePage-Source-SimpleWorkTypeTextBlock-Text");
                                 if (isFollowing)
-                                    CheckPicker(page.FindControl<SymbolComboBox>("PrivacyPolicyComboBox")!, HomePageResources.Source.PrivacyPolicyTextBlock.Text);
+                                    CheckPicker(page.FindControl<SymbolComboBox>("PrivacyPolicyComboBox")!, "HomePage-Source-PrivacyPolicyTextBlock-Text");
                                 Save(window, directory, "feeds-ready-" + key);
 
                                 await RefreshAsync();
@@ -92,36 +91,36 @@ internal static class WorkFeedsValidation
                                 Require(next.Uri.AbsolutePath == "/m3e/feed-next" && HttpUtility.ParseQueryString(next.Uri.Query)["offset"] == "1", "Feed pagination follows the exact service URL");
                                 next.Complete(Json(type, [950003, 950004]));
                                 await UntilAsync(() => Model().Source.Count == 2 && !Loading());
-                                Require(Model().Source.Select(item => item.Entry.Id).SequenceEqual(new[] { "950003", "950004" }), "Feed pagination preserves order and de-duplicates work identity");
+                                Require(Model().Source.Select(item => ((IWorkEntry)item).Id.ToString()).SequenceEqual(new[] { "950003", "950004" }), "Feed pagination preserves order and de-duplicates work identity");
 
                                 if (isFollowing)
                                 {
                                     var privacyPicker = page.FindControl<SymbolComboBox>("PrivacyPolicyComboBox")!;
                                     var privacySelector = privacyPicker.GetVisualDescendants().OfType<ComboBox>().Single();
-                                    await ActivateAsync(window, privacySelector, privacy == PrivacyPolicy.Public ? Key.Down : Key.Up,
-                                        privacy == PrivacyPolicy.Public ? PhysicalKey.ArrowDown : PhysicalKey.ArrowUp);
+                                    await ActivateAsync(window, privacySelector, privacy == PrivacyRestrict.Public ? Key.Down : Key.Up,
+                                        privacy == PrivacyRestrict.Public ? PhysicalKey.ArrowDown : PhysicalKey.ArrowUp);
                                     var switchedPrivacy = await NextAsync();
-                                    Validate(switchedPrivacy.Uri, type, privacy == PrivacyPolicy.Public ? PrivacyPolicy.Private : PrivacyPolicy.Public);
+                                    Validate(switchedPrivacy.Uri, type, privacy == PrivacyRestrict.Public ? PrivacyRestrict.Private : PrivacyRestrict.Public);
                                     privacyPicker.SelectedValue = privacy;
                                     switchedPrivacy.Complete(Json(type, [959999], "https://app-api.pixiv.net/m3e/obsolete-feed-next"));
                                     var restored = await NextAsync();
                                     Validate(restored.Uri, type, privacy);
                                     restored.Complete(Json(type, [950005]));
                                     await UntilAsync(() => Model().Source.Count == 1 && !Loading());
-                                    Require(Model().Source.Single().Entry.Id == "950005", "A late private/public source cannot replace the restored feed");
+                                    Require(((IWorkEntry)Model().Source.Single()).Id.ToString() == "950005", "A late private/public source cannot replace the restored feed");
                                 }
 
                                 var previous = Model();
                                 var oldSource = previous.Source;
-                                await ActivateAsync(window, selector, type == SimpleWorkType.Illustration ? Key.Down : Key.Up,
-                                    type == SimpleWorkType.Illustration ? PhysicalKey.ArrowDown : PhysicalKey.ArrowUp);
+                                await ActivateAsync(window, selector, type == SimpleWorkKind.Illustration ? Key.Down : Key.Up,
+                                    type == SimpleWorkKind.Illustration ? PhysicalKey.ArrowDown : PhysicalKey.ArrowUp);
                                 var switched = await NextAsync();
-                                var otherType = type == SimpleWorkType.Illustration ? SimpleWorkType.Novel : SimpleWorkType.Illustration;
+                                var otherType = type == SimpleWorkKind.Illustration ? SimpleWorkKind.Novel : SimpleWorkKind.Illustration;
                                 Validate(switched.Uri, otherType, privacy);
                                 Require(!ReferenceEquals(Model(), previous) && oldSource.Count == 0, "Changing work kind replaces and disposes the previous typed model");
                                 switched.Complete(Json(otherType, [950006]));
                                 await UntilAsync(() => Model().Source.Count == 1 && !Loading());
-                                Require(Model().RequireAdaptiveGrid == (otherType == SimpleWorkType.Novel), "The switched feed uses the new work layout");
+                                Require(Model().RequireAdaptiveGrid == (otherType == SimpleWorkKind.Novel), "The switched feed uses the new work layout");
 
                                 await RefreshAsync();
                                 var failing = await NextAsync();
@@ -145,22 +144,22 @@ internal static class WorkFeedsValidation
                                 Require(closedSource.Count == 0 && !requests.Reader.TryPeek(out _), "Closing a feed rejects its late response and does not follow obsolete pagination");
                                 report.Add($"PASS {key}: initial parameters, readable named fields, refresh/pagination, privacy/type switching, failure/retry/empty and disposal");
 
-                                void Validate(Uri uri, SimpleWorkType currentType, PrivacyPolicy currentPrivacy)
+                                void Validate(Uri uri, SimpleWorkKind currentType, PrivacyRestrict currentPrivacy)
                                 {
                                     var path = (isFollowing, currentType) switch
                                     {
-                                        (true, SimpleWorkType.Illustration) => "/v2/illust/follow",
+                                        (true, SimpleWorkKind.Illustration) => "/v2/illust/follow",
                                         (true, _) => "/v1/novel/follow",
-                                        (false, SimpleWorkType.Illustration) => "/v2/illust/mypixiv",
+                                        (false, SimpleWorkKind.Illustration) => "/v2/illust/mypixiv",
                                         _ => "/v2/novel/mypixiv"
                                     };
-                                    Require(uri.AbsolutePath == path && (!isFollowing || HttpUtility.ParseQueryString(uri.Query)["restrict"] == (currentPrivacy == PrivacyPolicy.Private ? "private" : "public")),
+                                    Require(uri.AbsolutePath == path && (!isFollowing || HttpUtility.ParseQueryString(uri.Query)["restrict"] == (currentPrivacy == PrivacyRestrict.Private ? "private" : "public")),
                                         "The work feed preserves its exact endpoint, kind and privacy value");
                                 }
                                 void CheckPicker(SymbolComboBox field, string resource)
                                 {
                                     var combo = field.GetVisualDescendants().OfType<ComboBox>().Single();
-                                    Require(AutomationProperties.GetName(combo) == I18NManager.GetResource(resource), "Feed selectors have explicit purpose labels rather than only the selected icon");
+                                    Require(AutomationProperties.GetName(combo) == FixtureLocalization.GetResource(resource), "Feed selectors have explicit purpose labels rather than only the selected icon");
                                     Require(!field.IconMode, "Feed choices remain visible as text");
                                     var origin = field.TranslatePoint(default, window)!.Value;
                                     Require(origin.X >= -1 && origin.X + field.Bounds.Width <= window.ClientSize.Width + 1, "The feed header fits within the horizontal viewport");
@@ -194,9 +193,9 @@ internal static class WorkFeedsValidation
         }
 
         Task<PendingFeed> NextAsync() => requests.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
-        string Json(SimpleWorkType type, long[] ids, string? next = null) => type == SimpleWorkType.Novel
-            ? JsonSerializer.Serialize(new { novels = ids.Select(id => Novel.CreateDefault() with { Id = id, Title = "固定小说 / Fixture novel", User = UserInfo.CreateDefault() with { Id = 900007, Name = "Fixture author" }, ThumbnailUrls = new() { Medium = imageUri, SquareMedium = imageUri, Large = imageUri } }).ToArray(), next_url = next })
-            : JsonSerializer.Serialize(new { illusts = ids.Select(id => Illustration.CreateDefault() with { Id = id, Title = "固定插画 / Fixture illustration", User = UserInfo.CreateDefault() with { Id = 900007, Name = "Fixture author" }, Width = 640, Height = 480, PageCount = 1, ThumbnailUrls = new() { Medium = imageUri, SquareMedium = imageUri, Large = imageUri } }).ToArray(), next_url = next });
+        string Json(SimpleWorkKind type, long[] ids, string? next = null) => type == SimpleWorkKind.Novel
+            ? NativeFixtureData.Serialize(new { novels = ids.Select(id => Mako.Novel.CreateDefault() with { Id = id, Title = "固定小说 / Fixture novel", User = User.CreateDefault() with { Id = 900007, Name = "Fixture author" }, ImageUrls = new() { Medium = imageUri, SquareMedium = imageUri, Large = imageUri } }).ToArray(), next_url = next })
+            : NativeFixtureData.Serialize(new { illusts = ids.Select(id => Illustration.CreateDefault() with { Id = id, Title = "固定插画 / Fixture illustration", User = User.CreateDefault() with { Id = 900007, Name = "Fixture author" }, Width = 640, Height = 480, PageCount = 1, ImageUrls = new() { Medium = imageUri, SquareMedium = imageUri, Large = imageUri } }).ToArray(), next_url = next });
     }
 
     private static async Task ActivateAsync(Window window, Control control, Key key, PhysicalKey physical)

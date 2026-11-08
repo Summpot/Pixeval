@@ -1,0 +1,3 @@
+SendFailed = Impossible d’envoyer le commentaire. Réessayez.
+
+OpenEmoji = Émojis et autocollants

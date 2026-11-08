@@ -5,9 +5,9 @@ using System;
 using System.Globalization;
 using Avalonia.Data;
 using Avalonia.Data.Converters;
-using Pixeval.I18N;
+using Pixeval.Localization;
 
-namespace Pixeval.Views.Converters;
+namespace Pixeval.Common.Converters;
 
 public sealed class DateTimeOffsetTextConverter : IValueConverter
 {
@@ -23,5 +23,5 @@ public sealed class DateTimeOffsetTextConverter : IValueConverter
             CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
             ? date
             : new BindingNotification(new DataValidationException(
-                I18NManager.GetResource(SettingsMainViewResources.InvalidDateTimeOffset)), BindingErrorType.DataValidationError);
+                Strings.SettingsMainViewInvalidDateTimeOffset()), BindingErrorType.DataValidationError);
 }

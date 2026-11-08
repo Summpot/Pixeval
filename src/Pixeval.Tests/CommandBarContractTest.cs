@@ -19,7 +19,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Material3Expressive.Components;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 
 namespace Pixeval.Tests;
@@ -32,8 +32,8 @@ public sealed class CommandBarContractTest
     public static void Initialize(TestContext _)
     {
         var project = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval"));
-        I18NManager.CandidatePaths.Add(project);
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+
+        AppLocalization.Instance.SetLanguage("zh-Hans");
     }
 
     [TestMethod]
@@ -80,6 +80,7 @@ public sealed class CommandBarContractTest
             };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 Render(window);
                 Assert.IsTrue(action.GetVisualDescendants().OfType<MaterialSurface>().Any());
@@ -98,8 +99,8 @@ public sealed class CommandBarContractTest
                 Assert.IsTrue(bar.IsOverflowButtonVisible);
                 Assert.IsTrue(toggle.IsInOverflow, "The trailing toggle must move into the narrow bar's overflow.");
                 var more = bar.GetVisualDescendants().OfType<Button>().Single(button => button.Name is "PART_OverflowButton");
-                Assert.AreEqual(I18NManager.GetResource(MiscResources.MoreCommands), AutomationProperties.GetName(more));
-                Assert.AreEqual(I18NManager.GetResource(MiscResources.MoreCommands), ToolTip.GetTip(more));
+                Assert.AreEqual(Strings.MiscMoreCommands(), AutomationProperties.GetName(more));
+                Assert.AreEqual(Strings.MiscMoreCommands(), ToolTip.GetTip(more));
                 Assert.IsTrue(more.Focus());
                 Press(window, Key.Enter);
                 Render(window);

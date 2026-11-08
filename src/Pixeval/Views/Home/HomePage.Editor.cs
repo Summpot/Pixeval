@@ -8,7 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 using Pixeval.Config;
 using Pixeval.Localization;
 using Pixeval.Utilities;
-using Pixeval.Views.Capability;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Views.Home;
 
@@ -26,8 +26,8 @@ public sealed partial class HomePage
 
     private void RankingDate_OnDateValidationError(object? sender, CalendarDatePickerDateValidationErrorEventArgs e) =>
         TopLevel.GetTopLevel(this)?.ViewContainer?.ShowWarning(
-            I18NManager.GetResource(WorkRankingPageResources.InvalidDate.Title),
-            I18NManager.GetResource(WorkRankingPageResources.InvalidDate.Content, WorkRankingPage.MaxDate.ToString("d")));
+            Strings.WorkRankingPageInvalidDateTitle(),
+            Strings.WorkRankingPageInvalidDateContent(WorkRankingPage.MaxDate.ToString("d")));
 
     [RelayCommand]
     private void AddConfiguredCard()

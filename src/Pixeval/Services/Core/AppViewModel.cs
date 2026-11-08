@@ -114,6 +114,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         SearchHistory = new SearchHistorySession(StorageEngine, _searchHistoryEntries);
         HomePageCardsSession = new HomePageCardSession(_homePageCards);
         var images = new ImageProviderService(AppSettings, logger);
+        App.ConfigureTransport?.Invoke(MakoClient, MahoClient, images, DownloadManager);
         var github = new GitHubService(AppSettings.NetworkSettings);
         var networkRuntime = new NetworkRuntime(AppSettings, MakoClient, MahoClient, CreateMahoClientOptions, images, github);
         NetworkRuntime = networkRuntime;
@@ -128,7 +129,7 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             logger.LogError(nameof(CreateServiceProvider), ex);
         }
 
-        return new ServiceCollection()
+        var services = new ServiceCollection()
             .AddSingleton(_ => logger)
             .AddSingleton(AppSettings)
             .AddSingleton(LoginContext)
@@ -172,12 +173,15 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             .AddSingleton<IPixevalMcpService>(t =>
                 new PixevalMcpService(this, t.GetRequiredService<FileLogger>()))
 #endif
-            .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+            ;
+        App.ConfigureServices?.Invoke(services);
+        return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }
 
     private void InitializePersistence()
     {
         ArtworkUiStateStore.Initialize(StorageEngine);
+        UserUiStateStore.Clear();
         StorageEngine.InitializeObserver();
         RestoreTask = RestoreHistoryAsync();
     }
@@ -230,6 +234,9 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
         _isDisposed = true;
         try
         {
+            await RestoreTask;
+            ArtworkUiStateStore.Shutdown(StorageEngine);
+            UserUiStateStore.Clear();
             DownloadManager?.MarkDisposed();
             DownloadManager?.Dispose();
             MahoClient?.Dispose();

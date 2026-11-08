@@ -92,7 +92,7 @@ public sealed class MakoClientTest
 
         using var engine = client.NovelRecommended(includeRanking: true, includePrivacy: true);
 
-        // Verify that NovelFeed implements IAsyncEnumerable<Novel>
+        // Verify that NovelFeed implements IAsyncEnumerable<Mako.Novel>
         Assert.IsInstanceOfType<IAsyncEnumerable<Mako.Novel>>(engine);
 
         Assert.AreEqual(0u, engine.RequestedPages());

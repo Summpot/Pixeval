@@ -15,6 +15,53 @@ use crate::models::{
 const BASE_URL: &str = "https://saucenao.com/search.php";
 const DEFAULT_BOUNDARY: &str = "----PixevalSauceNaoBoundary7MA4YWxkTrZu0gW";
 
+#[cfg(test)]
+mod interactive_tests {
+    use super::*;
+    use std::collections::HashMap;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use pixeval_maho::{MahoError, MahoResponseData, MahoTransport};
+
+    struct ResponseTransport {
+        count: Arc<AtomicUsize>,
+        status: u16,
+        body: Vec<u8>,
+    }
+
+    #[async_trait::async_trait]
+    impl MahoTransport for ResponseTransport {
+        async fn send(&self, _: u64, method: String, _: String,
+            _: HashMap<String, String>, body: Vec<u8>) -> Result<MahoResponseData, MahoError> {
+            assert_eq!(method, "POST");
+            assert!(body.windows(13).any(|bytes| bytes == b"fixture-image"));
+            self.count.fetch_add(1, Ordering::SeqCst);
+            Ok(MahoResponseData { status: self.status, headers: HashMap::new(), body: self.body.clone() })
+        }
+        fn cancel(&self, _: u64) {}
+    }
+
+    #[tokio::test]
+    async fn interactive_search_returns_rate_limit_without_implicit_retry() {
+        let count = Arc::new(AtomicUsize::new(0));
+        let client = SauceNaoClient::new("fixture".into(), None);
+        client.set_transport(Some(Box::new(ResponseTransport { count: count.clone(), status: 429, body: vec![] })));
+        let result = tokio::time::timeout(Duration::from_secs(1), client.search_once(b"fixture-image".to_vec())).await.unwrap();
+        assert!(matches!(result, Err(SauceNaoError::RateLimited { .. })));
+        assert_eq!(count.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn interactive_search_preserves_service_error_message() {
+        let client = SauceNaoClient::new("fixture".into(), None);
+        client.set_transport(Some(Box::new(ResponseTransport {
+            count: Arc::new(AtomicUsize::new(0)), status: 200,
+            body: br#"{"header":{"status":-1,"message":"Please try later"},"results":[]}"#.to_vec(),
+        })));
+        assert!(matches!(client.search_once(b"fixture-image".to_vec()).await,
+            Err(SauceNaoError::ApiError { status: -1, message }) if message == "Please try later"));
+    }
+}
+
 #[derive(uniffi::Object)]
 pub struct SauceNaoClient {
     api_key: String,
@@ -24,6 +71,10 @@ pub struct SauceNaoClient {
 
 #[uniffi::export(async_runtime = "tokio")]
 impl SauceNaoClient {
+    pub fn set_transport(&self, transport: Option<Box<dyn pixeval_maho::MahoTransport>>) {
+        self.http_client.set_transport(transport.map(Arc::from));
+    }
+
     #[uniffi::constructor]
     pub fn new(api_key: String, proxy_url: Option<String>) -> Arc<Self> {
         let maho_config = Arc::new(MahoConfig {
@@ -43,6 +94,14 @@ impl SauceNaoClient {
             http_client,
             num_results: 16,
         })
+    }
+
+    /// One request for interactive callers that expose an explicit retry action.
+    pub async fn search_once(&self, file_bytes: Vec<u8>) -> Result<Vec<SauceNaoItem>, SauceNaoError> {
+        if self.api_key.is_empty() {
+            return Err(SauceNaoError::InvalidApiKey);
+        }
+        Ok(self.execute_search(&file_bytes).await?.results)
     }
 
     pub async fn search(&self, file_bytes: Vec<u8>) -> Result<Vec<SauceNaoItem>, SauceNaoError> {

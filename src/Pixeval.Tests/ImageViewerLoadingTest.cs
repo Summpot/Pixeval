@@ -70,6 +70,7 @@ public sealed class ImageViewerLoadingTest
                     Pages = new Avalonia.Collections.AvaloniaList<Page> { new ContentPage() }
                 };
                 window.Content = tabs;
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 ((IList<Page>) tabs.Pages).Add(page);
                 tabs.SelectedIndex = 1;

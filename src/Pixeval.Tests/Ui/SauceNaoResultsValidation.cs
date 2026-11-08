@@ -18,12 +18,12 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Model;
-using Pixeval.Collections;
+using Pixeval.Mako;
+using Pixeval.Common.Collections;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.ViewModels;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests.Ui;
 
@@ -51,22 +51,22 @@ internal static class SauceNaoResultsValidation
             return Artwork(id);
         };
 
-        string Artwork(long id) => JsonSerializer.Serialize(new
+        string Artwork(long id) => NativeFixtureData.Serialize(new
             {
                 illust = Illustration.CreateDefault() with
                 {
                     Id = id, Title = "SauceNao fixed artwork / 长标题", Width = 128, Height = 128,
-                    ThumbnailUrls = new() { Medium = imageUri, Large = imageUri, SquareMedium = imageUri }
+                    ImageUrls = new() { Medium = imageUri, Large = imageUri, SquareMedium = imageUri }
                 }
             });
-        await client.SetTokenAsync("fixture-saucenao-results");
-        await client.ValidateTokenAsync();
+        client.SetRefreshToken("fixture-saucenao-results");
+        await FixtureAuthentication.IdentifyAsync(client);
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
             foreach (var width in new[] { 360, 1000 })
             {
                 using var handler = new ResponseHandler(image);
                 using var http = new HttpClient(handler);
-                using var page = new ArtworkSauceNaoSearchResultPage("fixture-sauce-key", image, http);
+                using var page = new ArtworkSauceNaoSearchResultPage("fixture-sauce-key", image, new OfflineHttpTransport { Respond = http.SendAsync });
                 var navigation = new NavigationPage();
                 await navigation.PushAsync(page);
                 var container = new PageTestHost { Content = navigation };
@@ -78,12 +78,13 @@ internal static class SauceNaoResultsValidation
                 var scenario = $"{theme.Key}-{width}";
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     var limited = await handler.NextAsync();
                     Require(Source().IsLoading && !failure.IsVisible, "The real result collection stays loading until the HTTP request completes");
                     limited.Complete(HttpStatusCode.TooManyRequests, "{\"message\":\"fixed rate limit\"}");
                     await UntilAsync(() => failure.IsVisible && !Source().IsLoading);
-                    Require(error.Text == I18NManager.GetResource(SearchResources.SauceNAO.RequestFailed),
+                    Require(error.Text == Strings.SearchSauceNAORequestFailed(),
                         "HTTP rate limits are recoverable errors rather than a successful empty result");
                     Require(!works.IsVisible, "A failed search does not simultaneously display the successful empty-list state");
                     Require(limited.Content!.Disposed, "The failed HTTP response content is disposed");
@@ -93,7 +94,7 @@ internal static class SauceNaoResultsValidation
                     await RetryAsync();
                     var rejected = await handler.NextAsync();
                     const string serviceMessage = "Fixed SauceNao quota exhausted. 长服务消息用于验证换行。 Please wait before retrying this search; the original image must stay available and no API credentials may appear in this page.";
-                    rejected.Complete(HttpStatusCode.OK, JsonSerializer.Serialize(new { header = new { user_id = 1, status = -1, message = serviceMessage }, results = Array.Empty<object>() }));
+                    rejected.Complete(HttpStatusCode.OK, NativeFixtureData.Serialize(new { header = new { user_id = 1, status = -1, message = serviceMessage }, results = Array.Empty<object>() }));
                     await UntilAsync(() => failure.IsVisible && !Source().IsLoading);
                     Require(error.Text == serviceMessage, "Service-status errors retain their supplied explanation");
                     await RenderAsync(window);
@@ -112,7 +113,7 @@ internal static class SauceNaoResultsValidation
                     detailRequests.Clear();
                     success.Complete(HttpStatusCode.OK, Success(910001, 910002));
                     await UntilAsync(() => Source().Count == 2 && !Source().IsLoading);
-                    Require(!failure.IsVisible && Source().Select(entry => entry.Entry.Id).SequenceEqual(new[] { "910001", "910002" }),
+                    Require(!failure.IsVisible && Source().Select(entry => ((Illustration)entry).Id.ToString()).SequenceEqual(new[] { "910001", "910002" }),
                         "Successful retry populates the existing work list with supported artwork identities in response order");
                     Require(detailRequests.SequenceEqual(new long[] { 910001, 910002 }), "An unsupported SauceNao result is skipped without an artwork request");
                     Require(success.Content!.Disposed, "The successful HTTP response is disposed after deserialization");
@@ -122,6 +123,7 @@ internal static class SauceNaoResultsValidation
                     await page.PostAsync("fixture-sauce-key", image);
                     var obsolete = await handler.NextAsync();
                     await page.PostAsync("fixture-sauce-key", image);
+                    await UntilAsync(() => obsolete.Token.IsCancellationRequested);
                     Require(obsolete.Token.IsCancellationRequested, "Replacing a result source propagates cancellation into its HTTP request");
                     // IncrementalLoadingBehavior serializes load calls even across source changes.
                     // Release this deliberately cancellation-ignoring transport before the next load.
@@ -131,12 +133,13 @@ internal static class SauceNaoResultsValidation
                     current.Complete(HttpStatusCode.OK, Success(910003));
                     await UntilAsync(() => Source().Count == 1 && !Source().IsLoading);
                     await RenderAsync(window);
-                    Require(!failure.IsVisible && Source().Single().Entry.Id == "910003", "An obsolete request failure cannot replace current results or show an error");
+                    Require(!failure.IsVisible && ((Illustration)Source().Single()).Id == 910003, "An obsolete request failure cannot replace current results or show an error");
 
                     await page.PostAsync("fixture-sauce-key", image);
                     var detached = await handler.NextAsync();
                     container.Content = null;
                     await RenderAsync(window);
+                    await UntilAsync(() => detached.Token.IsCancellationRequested);
                     Require(detached.Token.IsCancellationRequested, "Leaving a loading result page cancels its HTTP operation");
                     var detailsBefore = detailRequests.Count;
                     detached.Complete(HttpStatusCode.OK, Success(910004));
@@ -170,6 +173,7 @@ internal static class SauceNaoResultsValidation
                     var delayedDetail = await delayedDetails.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
                     container.Content = null;
                     await RenderAsync(window);
+                    await UntilAsync(() => delayedDetail.Token.IsCancellationRequested);
                     Require(delayedDetail.Token.IsCancellationRequested, "Leaving the page also cancels the platform artwork-resolution request");
                     detailsBefore = detailRequests.Count;
                     delayedDetail.Response.SetResult(Artwork(910006));
@@ -180,15 +184,15 @@ internal static class SauceNaoResultsValidation
                     var partial = await handler.NextAsync();
                     partial.Complete(HttpStatusCode.OK, Success(910008, 910009));
                     await UntilAsync(() => Source().Count == 1 && !Source().IsLoading);
-                    Require(Source().Single().Entry.Id == "910009" && !failure.IsVisible,
+                    Require(((Illustration)Source().Single()).Id == 910009 && !failure.IsVisible,
                         "An unavailable artwork keeps the existing skip-and-continue behavior for later matches");
 
                     await page.PostAsync("fixture-sauce-key", image);
                     var closed = await handler.NextAsync();
                     detailsBefore = detailRequests.Count;
-                    page.Dispose();
-                    works.FindControl<WorkView>("WorkView")!.Dispose();
-                    Require(closed.Token.IsCancellationRequested, "Disposing the page and work list cancels the outstanding request");
+                    container.Shell.CloseAllPages();
+                    await UntilAsync(() => closed.Token.IsCancellationRequested);
+                    Require(closed.Token.IsCancellationRequested, "Closing the page through the production shell cancels the outstanding request");
                     closed.Complete(HttpStatusCode.OK, Success(910005));
                     await RenderAsync(window);
                     Require(detailRequests.Count == detailsBefore && !failure.IsVisible, "A closed result page cannot resolve late artwork or report an error");
@@ -197,13 +201,12 @@ internal static class SauceNaoResultsValidation
                 }
                 finally
                 {
-                    container.Content = null;
-                    works.FindControl<WorkView>("WorkView")!.Dispose();
+                    container.Shell.CloseAllPages();
                     window.Close();
                 }
 
-                IncrementalLoadingCollection<IllustrationItemViewModel> Source() =>
-                    (IncrementalLoadingCollection<IllustrationItemViewModel>) ((IllustrationViewViewModel) works.DataContext!).Source;
+                IncrementalLoadingCollection<object> Source() =>
+                    (IncrementalLoadingCollection<object>) ((IllustrationViewViewModel) works.DataContext!).Source;
 
                 async Task RetryAsync()
                 {
@@ -230,7 +233,7 @@ internal static class SauceNaoResultsValidation
             new { header = new { similarity = "99.0", index_id = 0 }, data = (object?) null }
         ];
         results.AddRange(ids.Select(id => new { header = new { similarity = "97.5", index_id = 5 }, data = new { pixiv_id = id } }));
-        return JsonSerializer.Serialize(new { header = new { user_id = 1, status = 0 }, results });
+        return NativeFixtureData.Serialize(new { header = new { user_id = 1, status = 0 }, results });
     }
 
     private static async Task RenderAsync(Window window)
@@ -279,11 +282,10 @@ internal static class SauceNaoResultsValidation
             var query = HttpUtility.ParseQueryString(request.RequestUri!.Query);
             Require(query["api_key"] == "fixture-sauce-key" && query["output_type"] == "2" && query["db"] == "999",
                 "The original key, JSON format and all-index request values are preserved");
-            var form = request.Content as MultipartFormDataContent ?? throw new InvalidOperationException("No multipart image");
-            var file = form.Single();
-            Require(file.Headers.ContentDisposition is { Name: "file", FileName: "img" }
-                && file.Headers.ContentType?.MediaType == "application/octet-stream"
-                && (await file.ReadAsByteArrayAsync(cancellationToken)).SequenceEqual(image), "The complete original image bytes and upload metadata reach the request");
+            var body = await request.Content!.ReadAsByteArrayAsync(cancellationToken);
+            Require(request.Content.Headers.ContentType?.MediaType == "multipart/form-data"
+                && System.Text.Encoding.UTF8.GetString(body).Contains("name=\"file\"; filename=\"image.jpg\"")
+                && body.AsSpan().IndexOf(image) >= 0, "The Rust multipart upload retains complete image bytes and file metadata");
             var pending = new PendingResponse(cancellationToken);
             _pending.Add(pending);
             Calls++;

@@ -42,7 +42,7 @@ public sealed partial class DownloadItemPageViewModel : ViewModelBase, IDisposab
 
     partial void OnCurrentOptionChanged(DownloadListOption value) => RefreshView();
 
-    partial void OnFilterTextChanged(string? value) => ResetFilter();
+    partial void OnFilterTextChanged(string? value) => UpdateFilteredTasks(value);
 
     public DownloadItemPageViewModel(DownloadPageViewModel pageViewModel, long? subscriptionId = null)
     {
@@ -76,9 +76,9 @@ public sealed partial class DownloadItemPageViewModel : ViewModelBase, IDisposab
         _filteredKeys.Clear();
     }
 
-    private void OnSourceChanged(object? sender, NotifyCollectionChangedEventArgs e) => RefreshView();
+    private void OnSourceChanged(object? sender, NotifyCollectionChangedEventArgs e) => UpdateFilteredTasks(FilterText);
 
-    private void OnFoldersChanged(object? sender, NotifyCollectionChangedEventArgs e) => RefreshView();
+    private void OnFoldersChanged(object? sender, NotifyCollectionChangedEventArgs e) => UpdateFilteredTasks(FilterText);
 
     private IReadOnlyList<DownloadItemSnapshot> Source =>
         SubscriptionId is null

@@ -1,7 +1,9 @@
+using Avalonia.LogicalTree;
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
 using System.Collections.Generic;
+using System;
 using System.ComponentModel;
 using System.Linq;
 using Avalonia.Controls;
@@ -15,6 +17,8 @@ namespace Pixeval.Views.Viewers;
 
 public partial class SeriesViewerPage : IconContentPage, IDisposable
 {
+    private SeriesViewerPageViewModel? _viewModel;
+    private bool _isDisposed;
     private readonly MakoClient _client;
     private readonly IWorkSubscriptionService _subscriptions;
     private readonly StorageEngine _storage;
@@ -33,7 +37,7 @@ public partial class SeriesViewerPage : IconContentPage, IDisposable
         _client = client;
         _subscriptions = subscriptions;
         _storage = storage;
-        DataContext = viewModel;
+        DataContext = _viewModel = viewModel;
         InitializeComponent();
         if (viewModel is null)
             return;

@@ -96,7 +96,12 @@ public static class UserStateBehavior
             }
 
             state.PropertyChanged += OnStateChanged;
-            control.SetValue(FollowTrackerProperty, new ActionDisposable(() => state.PropertyChanged -= OnStateChanged));
+            var localization = AppLocalization.Instance.Subscribe(() => UpdateFollowIcon(menuItem, state.FollowState));
+            control.SetValue(FollowTrackerProperty, new ActionDisposable(() =>
+            {
+                state.PropertyChanged -= OnStateChanged;
+                localization.Dispose();
+            }));
         }
         else if (control is PixevalBadge badge)
         {
@@ -129,6 +134,8 @@ public static class UserStateBehavior
 
     private static void UpdateFollowIcon(MenuItem menuItem, HeartButtonState state)
     {
+        menuItem.SetCurrentValue(MenuItem.HeaderProperty, (state & HeartButtonState.Checked) is not 0
+            ? Strings.UserViewerPageUnfollow() : Strings.UserViewerPageFollow());
         if (menuItem.Icon is SymbolIcon icon)
         {
             icon.IconVariant = (state & HeartButtonState.Checked) is not 0

@@ -14,9 +14,9 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using CommunityToolkit.Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
-using Pixeval.AppManagement;
+using Pixeval.Services.Core;
 using Pixeval.Extensions.Common;
-using Pixeval.Models.Extensions;
+using Pixeval.Services.Background;
 using Pixeval.Utilities;
 using Pixeval.Views;
 
@@ -45,10 +45,12 @@ internal static class ExtensionManagementValidation
             foreach (var width in new[] { 360, 1000 })
             {
                 var scenario = $"{theme.Key}-{width}";
-                var page = new ExtensionsPage();
-                var window = new Window { Width = width, Height = 800, RequestedThemeVariant = theme, Content = page };
+                var page = UiTestSession.Create<ExtensionsPage>();
+                var host = new PageTestHost { Content = page };
+                var window = new Window { Width = width, Height = 800, RequestedThemeVariant = theme, Content = host.Shell };
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     await RenderAsync(window);
                     var management = page.FindControl<CommandBar>("ManagementCommandBar")!;
@@ -86,7 +88,7 @@ internal static class ExtensionManagementValidation
                     var logger = App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>();
                     AppInfo.SaveAppSettings(App.AppViewModel.AppSettings);
                     var disabledSettings = AppInfo.LoadAppSettings(logger)!;
-                    Require(Equals(disabledSettings.ExtensionSettings[first.Name][nameof(ExtensionsHostModel.IsActive)], false),
+                    Require(disabledSettings.ExtensionSettings[first.Name][nameof(ExtensionsHostModel.IsActive)] is System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.False },
                         "Disabled activation survives settings disk reload");
                     first.IsActive = true;
                     await RenderAsync(window);
@@ -132,7 +134,7 @@ internal static class ExtensionManagementValidation
                     Require(!first.IsPendingUninstall && uninstall.Label == originalLabel, "Cancel restores uninstall without replacing the command");
                     var restored = AppInfo.LoadAppSettings(logger)!;
                     Require(!restored.PendingExtensionUninstallTargets.Contains(first.UninstallTargetRelativePath), "Cancellation survives settings disk reload");
-                    Require(models.All(model => Convert.ToInt32(restored.ExtensionSettings[model.Name][nameof(ExtensionsHostModel.Priority)]) == model.Priority),
+                    Require(models.All(model => ((System.Text.Json.JsonElement)restored.ExtensionSettings[model.Name][nameof(ExtensionsHostModel.Priority)]).GetInt32() == model.Priority),
                         "All priority values survive settings disk reload");
                     foreach (var withoutHelp in models.Skip(1))
                     {

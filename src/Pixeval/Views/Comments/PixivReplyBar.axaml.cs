@@ -2,6 +2,8 @@
 // Licensed under the GPL-3.0 License.
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
@@ -14,12 +16,7 @@ namespace Pixeval.Views.Comments;
 public partial class PixivReplyBar : UserControl
 {
     public static readonly StyledProperty<string> ReplyTextProperty =
-        AvaloniaProperty.Register<PixivReplyBar, string>(
-            nameof(ReplyText),
-            "",
-            defaultBindingMode: BindingMode.TwoWay);
-
-    public PixivReplyBar() => InitializeComponent();
+        AvaloniaProperty.Register<PixivReplyBar, string>(nameof(ReplyText), "", defaultBindingMode: BindingMode.TwoWay);
 
     public string ReplyText
     {
@@ -27,7 +24,21 @@ public partial class PixivReplyBar : UserControl
         set => SetValue(ReplyTextProperty, value);
     }
 
-    public event Action<string>? SendButtonClick;
+    public static readonly DirectProperty<PixivReplyBar, bool> IsSubmittingProperty =
+        AvaloniaProperty.RegisterDirect<PixivReplyBar, bool>(nameof(IsSubmitting), bar => bar.IsSubmitting);
+
+    private bool _isSubmitting;
+    private CancellationTokenSource? _submission;
+
+    public bool IsSubmitting
+    {
+        get => _isSubmitting;
+        private set => SetAndRaise(IsSubmittingProperty, ref _isSubmitting, value);
+    }
+
+    public PixivReplyBar() => InitializeComponent();
+
+    public event Func<string, CancellationToken, Task<bool>>? SendButtonClick;
 
     public event Func<int, CancellationToken, Task<bool>>? StickerClick;
 
@@ -104,7 +115,7 @@ public partial class PixivReplyBar : UserControl
         catch (Exception)
         {
             if (!submission.IsCancellationRequested && ReferenceEquals(_submission, submission))
-                TopLevel.GetTopLevel(this)?.ViewContainer?.ShowError(I18NManager.GetResource(PixivReplyBarResources.SendFailed));
+                TopLevel.GetTopLevel(this)?.ViewContainer?.ShowError(Strings.PixivReplyBarSendFailed());
         }
         finally
         {

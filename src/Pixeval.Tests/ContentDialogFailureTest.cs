@@ -138,6 +138,7 @@ public sealed class ContentDialogFailureTest
             var window = new Window { Width = 640, Height = 480, Content = new Border() };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 window.UpdateLayout();
                 Dispatcher.UIThread.RunJobs();

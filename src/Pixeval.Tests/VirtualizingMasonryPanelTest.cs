@@ -63,6 +63,7 @@ public sealed class VirtualizingMasonryPanelTest
             var window = new Window { Width = 420, Height = 360, Content = list };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 window.UpdateLayout();
 
@@ -114,6 +115,7 @@ public sealed class VirtualizingMasonryPanelTest
             var window = new Window { Width = 420, Height = 240, Content = list };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 window.UpdateLayout();
 

@@ -1,13 +1,15 @@
 <UserControl
     x:Class="Pixeval.Views.Comments.CommentView"
     xmlns="https://github.com/avaloniaui"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:comment="using:Pixeval.Views.Comment"
+    xmlns:comment="using:Pixeval.Views.Comments"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:entry="using:Pixeval.Views.Works"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:mako="using:Pixeval.Mako"
+    xmlns:pixeval="using:Pixeval"
     xmlns:viewers="using:Pixeval.ViewModels.Comments"
     xmlns:views="using:Pixeval.Views.Comments"
     x:DataType="{x:Type viewers:CommentsViewViewModel}"
@@ -15,23 +17,57 @@
     DataContextChanged="CommentView_OnDataContextChanged"
     mc:Ignorable="d"
     d:DesignHeight="400"
-    d:DesignWidth="350">
-    <entry:EntryView HasNoItem="{Binding !View.Count}" IsLoadingMore="{Binding #ListBox.(controls:IncrementalLoadingBehavior.IsLoadingMore)}">
-        <ListBox
-            x:Name="ListBox"
-            controls:IncrementalLoadingBehavior.IsEnabled="True"
-            controls:IncrementalLoadingBehavior.Threshold="200"
-            ItemsSource="{Binding View}">
-            <ListBox.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <StackPanel Spacing="5" />
-                </ItemsPanelTemplate>
-            </ListBox.ItemsPanel>
-            <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="{x:Type mako:CommentRecord}">
-                    <views:CommentItem DeleteButtonClick="CommentItem_OnDeleteButtonClick" OpenRepliesButtonClick="CommentItem_OnOpenRepliesButtonClick" />
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
-    </entry:EntryView>
+    d:DesignWidth="350"
+    xmlns:mako="using:Pixeval.Mako">
+    <DockPanel>
+        <DockPanel
+            Margin="8,0"
+            DockPanel.Dock="Top"
+            LastChildFill="True">
+            <m3:IconButton
+                x:Name="RefreshButton"
+                AutomationProperties.Name="{CompiledBinding [WorkContainer-RefreshButton-Label], Source={x:Static loc:LocalizationManager.Instance}}"
+                Click="RefreshButton_OnClick"
+                DockPanel.Dock="Right"
+                Symbol="Refresh"
+                ToolTip.Tip="{CompiledBinding [WorkContainer-RefreshButton-Label], Source={x:Static loc:LocalizationManager.Instance}}" />
+            <TextBlock
+                x:Name="LoadErrorText"
+                VerticalAlignment="Center"
+                IsVisible="{Binding #Root.IsLoadInterrupted}"
+                Text="{CompiledBinding [CommentItem-LoadFailed], Source={x:Static loc:LocalizationManager.Instance}}"
+                TextWrapping="Wrap" />
+        </DockPanel>
+        <entry:EntryView IsLoadingMore="{Binding #ListBox.(controls:IncrementalLoadingBehavior.IsLoadingMore)}">
+            <entry:EntryView.HasNoItem>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                    <Binding Path="!View.Count" />
+                    <Binding ElementName="Root" Path="!IsLoadInterrupted" />
+                </MultiBinding>
+            </entry:EntryView.HasNoItem>
+            <ListBox
+                x:Name="ListBox"
+                controls:IncrementalLoadingBehavior.IsEnabled="True"
+                controls:IncrementalLoadingBehavior.Threshold="200"
+                ItemsSource="{Binding View}"
+                KeyboardNavigation.TabNavigation="Continue">
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="KeyboardNavigation.TabNavigation" Value="Continue" />
+                    </Style>
+                </ListBox.Styles>
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Spacing="5" />
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="{x:Type mako:CommentRecord}">
+                        <views:CommentItem DeleteButtonClick="CommentItem_OnDeleteButtonClick" OpenRepliesButtonClick="CommentItem_OnOpenRepliesButtonClick" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </entry:EntryView>
+    </DockPanel>
 </UserControl>

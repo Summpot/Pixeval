@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using FluentIcons.Common;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Extensions.Common.Settings;
-using Pixeval.Models.Extensions;
+using Pixeval.Services.Background;
 
 namespace Pixeval.Tests;
 

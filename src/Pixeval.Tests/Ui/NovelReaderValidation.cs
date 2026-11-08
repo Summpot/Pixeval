@@ -25,20 +25,21 @@ internal static class NovelReaderValidation
     internal static async Task RunAsync(string directory)
     {
         using var fixture = new NovelReaderFixture();
-        await App.AppViewModel.MakoClient.SetTokenAsync("fixture-novel-reader");
-        await App.AppViewModel.MakoClient.ValidateTokenAsync();
+        App.AppViewModel.MakoClient.SetRefreshToken("fixture-novel-reader");
+        await FixtureAuthentication.IdentifyAsync(App.AppViewModel.MakoClient);
         List<string> report = [];
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
             var firstId = theme == ThemeVariant.Light ? 997001 : 997101;
-            using var source = new SimpleOperableSourceView<NovelItemViewModel>([
+            using var source = new FixtureEntries<Mako.Novel>([
                 NovelReaderFixture.Sample(firstId), NovelReaderFixture.Sample(firstId + 1), NovelReaderFixture.Sample(firstId + 2)]);
-            var model = new NovelViewerPageViewModel(source.CloneSourceView(), 0, false);
+            var model = UiTestSession.Create<NovelViewerPageViewModel>(source.CloneSourceView(), 0, false);
             var page = new NovelViewerPage(model);
             var host = new PageTestHost { Content = page };
             var window = new Window { Width = 1000, Height = 760, Content = host.Shell, RequestedThemeVariant = theme };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 var first = await fixture.NextAsync();
                 Require(first.Id == firstId && model.IsLoading, "The selected novel loads through the real content endpoint");
@@ -119,13 +120,14 @@ internal static class NovelReaderValidation
 
     private static async Task FailuresAsync(NovelReaderFixture fixture, string directory, List<string> report)
     {
-        var item = new NovelItemViewModel(NovelReaderFixture.Sample(997010));
-        var model = new NovelViewerPageViewModel(item, false);
+        var item = (NovelReaderFixture.Sample(997010));
+        var model = UiTestSession.Create<NovelViewerPageViewModel>(item, false);
         var page = new NovelViewerPage(model);
         var host = new PageTestHost { Content = page };
         var window = new Window { Width = 360, Height = 760, Content = host.Shell };
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             var failed = await fixture.NextAsync();
             failed.Fail();
@@ -138,7 +140,8 @@ internal static class NovelReaderValidation
             await ActivateAsync(window, retry);
             var repeated = await fixture.NextAsync();
             Require(repeated.Id == 997010 && model.IsLoading && !model.RetryCommand.CanExecute(null), "Refresh starts one new request for the same novel");
-            Require(ReferenceEquals(item.ContentAsync, item.ContentAsync), "An in-flight retry is shared with other consumers");
+            await model.RetryCommand.ExecuteAsync(null);
+            Require(!fixture.ContentRequests.Reader.TryPeek(out _), "The busy retry command cannot start a duplicate request");
             repeated.Complete("Recovered first[newpage]Recovered second");
             await UntilAsync(() => !model.IsLoading);
             Require(model.LoadErrorMessage is null && model.PageCount == 2 && model.CurrentMarkdown.Contains("Recovered first"), "The failed content cache recovers through the real refresh button");
@@ -156,7 +159,7 @@ internal static class NovelReaderValidation
             Require(model.CurrentWorkIndex == 0 && model.CurrentPageIndex == 0, "Right click without a next work cannot move outside the single-novel source");
             report.Add("PASS content failure: visible error, UI retry, shared in-flight/success cache and bounded navigation");
 
-            var closedModel = new NovelViewerPageViewModel(new NovelItemViewModel(NovelReaderFixture.Sample(997011)), false);
+            var closedModel = UiTestSession.Create<NovelViewerPageViewModel>((NovelReaderFixture.Sample(997011)), false);
             var closedPage = new NovelViewerPage(closedModel);
             host.Shell.NavigateTo(closedPage);
             await RenderAsync(window);
@@ -174,9 +177,9 @@ internal static class NovelReaderValidation
             fixture.Http.ArtworkDetailResponseFactory = (_, _) =>
             {
                 if (++attempts == 1) throw new HttpRequestException("Fixed unavailable novel detail");
-                return Task.FromResult(System.Text.Json.JsonSerializer.Serialize(new { novel = NovelReaderFixture.Sample(997012) }));
+                return Task.FromResult(NativeFixtureData.Serialize(new { novel = NovelReaderFixture.Sample(997012) }));
             };
-            var detailModel = new NovelViewerPageViewModel(997012);
+            var detailModel = UiTestSession.Create<NovelViewerPageViewModel>(997012L);
             var detailPage = new NovelViewerPage(detailModel);
             host.Shell.NavigateTo(detailPage);
             await UntilAsync(() => !detailModel.IsLoading);

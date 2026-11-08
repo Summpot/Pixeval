@@ -10,7 +10,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
 using Material3Expressive.Components;
-using Pixeval.Views.Converters;
+using Pixeval.Common.Converters;
 
 namespace Pixeval.Views.Settings;
 

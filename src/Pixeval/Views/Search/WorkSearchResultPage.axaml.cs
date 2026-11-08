@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Threading;
+using Avalonia.Interactivity;
 using Avalonia.Controls;
 using Pixeval.Controls;
 using Pixeval.Localization;
@@ -18,6 +20,10 @@ namespace Pixeval.Views.Search;
 
 public partial class WorkSearchResultPage : IconContentPage
 {
+    private MakoClient? _client;
+    private bool _sourcePending;
+    private bool _initialized;
+    private CancellationTokenSource? _previewCancellation;
     public WorkSearchResultPage() : this("")
     {
     }
@@ -47,21 +53,35 @@ public partial class WorkSearchResultPage : IconContentPage
         SimpleWorkKind preferredType = default,
         IWorkViewViewModel? viewModel = null)
     {
-        InitializeComponent();
         _searchText = searchText;
+        _illustrationParams = illustrationSearchParams;
+        _novelParams = novelSearchParams;
+        InitializeComponent();
         Header = Strings.MainPageSearchResultFormatted(searchText: searchText);
         var languageSubscription = AppLocalization.Instance.Subscribe(() => Header = Strings.MainPageSearchResultFormatted(searchText: searchText));
         Pixeval.ViewModels.ViewModelDisposal.Register(this, languageSubscription);
         SimpleWorkTypeComboBox.SelectedValue = preferredType;
-        _illustrationParams = illustrationSearchParams;
-        _novelParams = novelSearchParams;
+        _initialized = true;
         SetIsSwitchEnabled();
         if (viewModel is not null)
             WorkContainer.SetViewModel(viewModel);
         else
             ChangeSource();
 
-        _ = LoadPopularPreviewAsync(searchText, preferredType);
+    }
+
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+        _client = this.GetRequiredUiService<MakoClient>();
+        if (_sourcePending) ChangeSource();
+        _ = LoadPopularPreviewAsync(_searchText, SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkKind>());
+    }
+
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        _previewCancellation?.Cancel();
+        base.OnUnloaded(e);
     }
 
     private void WorkTypeComboBox_OnSelectionChanged(SymbolComboBox sender, EventArgs e)
@@ -72,17 +92,23 @@ public partial class WorkSearchResultPage : IconContentPage
 
     private async Task LoadPopularPreviewAsync(string word, SimpleWorkKind type)
     {
+        if (_client is null || !IsLoaded) return;
+        _previewCancellation?.Cancel();
+        _previewCancellation = null;
         if (string.IsNullOrWhiteSpace(word))
         {
             PopularPreviewContainer.IsVisible = false;
             return;
         }
 
+        using var request = new CancellationTokenSource();
+        _previewCancellation = request;
         try
         {
             if (type is SimpleWorkKind.Novel)
             {
-                var novels = await this.GetRequiredUiService<MakoClient>().PopularPreviewNovelAsync(word, null, null, null, null);
+                var novels = await _client.PopularPreviewNovelAsync(word, null, null, null, null, request.Token);
+                if (request.IsCancellationRequested) return;
                 if (novels.Count > 0)
                 {
                     PopularPreviewItemsControl.ItemsSource = novels;
@@ -92,7 +118,8 @@ public partial class WorkSearchResultPage : IconContentPage
             }
             else
             {
-                var illusts = await this.GetRequiredUiService<MakoClient>().PopularPreviewIllustAsync(word, null, null, null, null);
+                var illusts = await _client.PopularPreviewIllustAsync(word, null, null, null, null, request.Token);
+                if (request.IsCancellationRequested) return;
                 if (illusts.Count > 0)
                 {
                     PopularPreviewItemsControl.ItemsSource = illusts;
@@ -101,12 +128,17 @@ public partial class WorkSearchResultPage : IconContentPage
                 }
             }
         }
+        catch (OperationCanceledException) when (request.IsCancellationRequested) { return; }
         catch
         {
             // Ignore preview failure silently
         }
 
-        PopularPreviewContainer.IsVisible = false;
+        finally
+        {
+            if (ReferenceEquals(_previewCancellation, request)) _previewCancellation = null;
+        }
+        if (!request.IsCancellationRequested) PopularPreviewContainer.IsVisible = false;
     }
 
     private void PopularPreviewItem_OnClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -124,6 +156,9 @@ public partial class WorkSearchResultPage : IconContentPage
 
     private void ChangeSource()
     {
+        if (!_initialized) return;
+        if (_client is null) { _sourcePending = true; return; }
+        _sourcePending = false;
         var workType = (_illustrationParams, _novelParams) switch
         {
             (_, null) => SimpleWorkKind.Illustration,
@@ -133,10 +168,10 @@ public partial class WorkSearchResultPage : IconContentPage
         IAsyncEnumerable<object> engine = workType is SimpleWorkKind.Novel
             ? _novelParams is null
                 ? AsyncEnumerable.Empty<object>()
-                : this.GetRequiredUiService<MakoClient>().NovelSearchAdvanced(_novelParams.Value).AsObjects()
+                : _client.NovelSearchAdvanced(_novelParams.Value).AsObjects()
             : _illustrationParams is null
                 ? AsyncEnumerable.Empty<object>()
-                : this.GetRequiredUiService<MakoClient>().IllustrationSearchAdvanced(_illustrationParams.Value).AsObjects();
+                : _client.IllustrationSearchAdvanced(_illustrationParams.Value).AsObjects();
 
         WorkContainer.ResetSource(engine, workType);
     }

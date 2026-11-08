@@ -11,12 +11,20 @@ using Pixeval.Views.Viewers;
 
 namespace Pixeval.Views.Works;
 
-public partial class SeriesItem : EntryItem
+public partial class SeriesItem : Material3Expressive.Components.Card
 {
     public SeriesItem() => InitializeComponent();
 
+    private void AuthorButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (DataContext is Series { User: { } user })
+            this.AppNavigation?.NavigateToUser(user.Id, this);
+    }
+
     private void LatestContentButton_OnClick(object? sender, RoutedEventArgs e)
     {
+        e.Handled = true;
         if (sender is not Control { DataContext: Series viewModel }
             || this.AppNavigation is not { } navigator)
             return;

@@ -9,3 +9,11 @@ ExitConfirmation-Content = Exiting now will discard results of this unsubmitted 
 TargetIdTextBox-PlaceholderText = User or Series ID
 
 InvalidTargetId = Please enter a valid user or series ID
+
+SubscriptionType = Subscription type
+
+WorkKind = Work type
+
+AddFailed = Could not add the subscription. Check the target ID and try again.
+
+RemoveSubscriptionButton-Label = Remove subscription

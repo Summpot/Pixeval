@@ -150,7 +150,7 @@ public class NavigationService : INavigationService
         if (pageType == typeof(UserSearchResultPage) && parameter is string keyword)
             return CreateServicePage<UserSearchResultPage>(keyword);
 
-        if (pageType == typeof(ArtworkSauceNaoSearchResultPage) && parameter is ValueTuple<string, byte[]> sauceParam)
+        if (pageType == typeof(ArtworkSauceNaoSearchResultPage) && parameter is ValueTuple<string, ReadOnlyMemory<byte>> sauceParam)
             return new ArtworkSauceNaoSearchResultPage(sauceParam.Item1, sauceParam.Item2);
 
         if (pageType == typeof(WorkRecommendedPage) && parameter is WorkKind recType)
@@ -185,6 +185,10 @@ public class NavigationService : INavigationService
 
         if (pageType == typeof(BookmarkUsersPage) && parameter is ValueTuple<long, bool, string> bmUsersParam)
             return CreateServicePage<BookmarkUsersPage>(bmUsersParam.Item1, bmUsersParam.Item2, bmUsersParam.Item3);
+
+        if (parameter is System.Runtime.CompilerServices.ITuple tuple)
+            return CreateServicePage(pageType, Enumerable.Range(0, tuple.Length)
+                .Select(index => tuple[index] ?? string.Empty).ToArray());
 
         return CreateServicePage(pageType, parameter);
     }

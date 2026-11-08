@@ -21,7 +21,7 @@ using FluentIcons.Avalonia;
 using Material3Expressive.Components;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
 
 namespace Pixeval.Tests;
@@ -33,8 +33,8 @@ public sealed class MaterialNotificationTest
     [ClassInitialize]
     public static void Initialize(TestContext _)
     {
-        I18NManager.CandidatePaths.Add(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval")));
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+
+        AppLocalization.Instance.SetLanguage("zh-Hans");
     }
 
     [TestMethod]
@@ -58,6 +58,7 @@ public sealed class MaterialNotificationTest
             var window = new Window { Width = width, Height = 900, RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light, Content = panel };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 await SettleAsync(window);
                 var symbols = cards.Select(card => card.GetVisualDescendants().OfType<SymbolIcon>().Single(icon => icon.Name is "PART_Icon").Symbol).ToArray();
@@ -101,6 +102,7 @@ public sealed class MaterialNotificationTest
             var window = new Window { Width = 640, Height = 720, RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 var manager = new WindowNotificationManager(window) { Position = NotificationPosition.BottomRight, MaxItems = 2 };
                 Render(window);
@@ -172,6 +174,7 @@ public sealed class MaterialNotificationTest
             var window = new Window { Width = 500, Height = 300, Content = card };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 await SettleAsync(window);
                 Click(window, button);

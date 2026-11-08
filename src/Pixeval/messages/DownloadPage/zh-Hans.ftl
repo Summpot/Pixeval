@@ -31,3 +31,7 @@ StopButton-Label = 取消
 DeleteButton-Label = 删除
 
 DeleteLocalFiles-Content = 同时删除本地文件
+
+StatusFilter = 下载状态
+
+SelectedCountFormatted = 已选择：{ $arg0 }

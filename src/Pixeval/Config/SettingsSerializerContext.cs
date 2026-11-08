@@ -13,4 +13,5 @@ namespace Pixeval.Config;
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(AppSettings))]
 [JsonSerializable(typeof(LoginContext))]
+[JsonSerializable(typeof(System.DateTimeOffset))]
 public partial class SettingsSerializerContext : JsonSerializerContext;

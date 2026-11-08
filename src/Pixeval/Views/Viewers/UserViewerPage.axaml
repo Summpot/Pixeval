@@ -1,12 +1,11 @@
-﻿<ContentPage
+<ContentPage
     x:Class="Pixeval.Views.Viewers.UserViewerPage"
     xmlns="https://github.com/avaloniaui"
+    xmlns:settings="using:Pixeval.Config"
+    xmlns:appCommon="using:Pixeval.Common"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:loc="using:Pixeval.Localization"
-    xmlns:capability="using:Pixeval.Views.Works"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:di="using:Pixeval.Common.Markup"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
@@ -18,7 +17,10 @@
     Header="{Binding Header}"
     mc:Ignorable="d"
     d:DesignHeight="600"
-    d:DesignWidth="1200">
+    d:DesignWidth="1200"
+    xmlns:loc="using:Pixeval.Localization"
+    xmlns:capability="using:Pixeval.Views.Works"
+    xmlns:di="using:Pixeval.Common.Markup">
     <ContentPage.Icon>
         <Image
             Width="16"
@@ -34,8 +36,7 @@
                 controls:Source.BackgroundCache="{Binding BackgroundUrl}"
                 DockPanel.Dock="Top"
                 ExpandDirection="Up"
-                IsExpanded="{Binding OpenUserInfo, Source={di:Service Type={x:Type views:PixevalSettings}}, DataType={x:Type views:PixevalSettings}, Mode=TwoWay}"
-                PropertyChanged="UserInfoExpander_OnPropertyChanged"
+                IsExpanded="{Binding OpenUserInfo, Source={di:Service Type={x:Type settings:PixevalSettings}}, DataType={x:Type settings:PixevalSettings}, Mode=TwoWay}"
                 Theme="{StaticResource UserInfoExpanderTheme}">
                 <Expander.Header>
                     <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
@@ -61,17 +62,17 @@
                                 Label="{CompiledBinding [UserViewerPage-Unfollow], Source={x:Static loc:LocalizationManager.Instance}}" />
                             <CommandBarSeparator />
                             <CommandBarButton
-                                Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                                Click="{x:Static appCommon:AvaloniaHelper.CopyTagToClipboard}"
                                 Icon="{markup:SymbolIcon Link}"
                                 Label="{CompiledBinding [EntryItem-GenerateLink], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Tag="{Binding UserDetail.Value.UserEntity.AppUri, FallbackValue={x:Null}}" />
                             <CommandBarButton
-                                Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                                Click="{x:Static appCommon:AvaloniaHelper.CopyTagToClipboard}"
                                 Icon="{markup:SymbolIcon LinkMultiple}"
                                 Label="{CompiledBinding [EntryItem-GenerateWebLink], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Tag="{Binding UserDetail.Value.UserEntity.WebsiteUri, FallbackValue={x:Null}}" />
                             <CommandBarButton
-                                Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                                Click="{x:Static appCommon:AvaloniaHelper.LaunchUriTagInWebBrowser}"
                                 Icon="{markup:SymbolIcon GlobeArrowUp}"
                                 Label="{CompiledBinding [EntryItem-OpenInWebBrowser], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Tag="{Binding UserDetail.Value.UserEntity.WebsiteUri, FallbackValue={x:Null}}" />
@@ -107,7 +108,7 @@
                                     Text="{Binding UserDetail.Value.UserEntity.Name, FallbackValue={x:Null}}"
                                     TextTrimming="CharacterEllipsis"
                                     Theme="{StaticResource CaptionStrongTextBlockStyle}"
-                                    ToolTip.Tip="{Binding UserDetail.UserEntity.Name, FallbackValue={x:Null}}" />
+                                    ToolTip.Tip="{Binding UserDetail.Value.UserEntity.Name, FallbackValue={x:Null}}" />
                                 <SelectableTextBlock
                                     x:Name="CollapsedProfileIdText"
                                     FontSize="13"
@@ -134,8 +135,14 @@
                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 Symbol="BookOpen"
                                 Text="{Binding UserDetail.Value.UserProfile.TotalNovelSeries, FallbackValue={x:Null}}" />
-                        </StackPanel>
-                    </DockPanel>
+                        </WrapPanel>
+                        <ProgressBar
+                            Grid.Row="2"
+                            Height="4"
+                            AutomationProperties.Name="{CompiledBinding [EntryViewerPage-LoadingTextBlock-Text], Source={x:Static loc:LocalizationManager.Instance}}"
+                            IsIndeterminate="True"
+                            IsVisible="{Binding IsChangingFollow}" />
+                    </Grid>
                 </Expander.Header>
                 <Border MinHeight="210" Background="{DynamicResource PixevalTranslucentBackground}">
                     <ScrollViewer
@@ -157,44 +164,44 @@
                                 VerticalAlignment="Top"
                                 controls:Source.Cache="{Binding AvatarUrl}" />
 
-                        <!--  用户名、ID、简介  -->
-                        <StackPanel
-                            Grid.Column="1"
-                            MaxWidth="400"
-                            HorizontalAlignment="Left"
-                            VerticalAlignment="Center"
-                            Spacing="6">
-                            <DockPanel HorizontalSpacing="8">
-                                <controls:PixevalBadge
-                                    DockPanel.Dock="Right"
-                                    IsVisible="{Binding UserDetail.Value.UserProfile.IsPremium, FallbackValue={x:Null}}"
-                                    Mode="Premium" />
-                                <TextBlock
-                                    Text="{Binding UserDetail.Value.UserEntity.Name, FallbackValue={x:Null}}"
-                                    TextTrimming="CharacterEllipsis"
-                                    Theme="{StaticResource TitleTextBlockStyle}" />
-                            </DockPanel>
-                            <TextBlock
-                                FontSize="13"
-                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                Text="{Binding Id}" />
-                            <TextBlock
-                                MaxHeight="60"
-                                controls:TranslatableTextBlockBehavior.IsEnabled="True"
-                                controls:TranslatableTextBlockBehavior.TextType="UserComment"
-                                Text="{Binding UserDetail.Value.UserEntity.Description, FallbackValue={x:Null}}"
-                                TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Grid>
+                            <!--  用户名、ID、简介  -->
+                            <Border
+                                Grid.Column="1"
+                                MaxWidth="650"
+                                Padding="12"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Center"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                CornerRadius="16">
+                                <StackPanel Spacing="6">
+                                    <DockPanel HorizontalSpacing="8">
+                                        <controls:PixevalBadge
+                                            DockPanel.Dock="Right"
+                                            IsVisible="{Binding UserDetail.Value.UserProfile.IsPremium, FallbackValue={x:Null}}"
+                                            Mode="Premium" />
+                                        <TextBlock
+                                            x:Name="ProfileName"
+                                            Text="{Binding UserDetail.Value.UserEntity.Name, FallbackValue={x:Null}}"
+                                            TextWrapping="Wrap"
+                                            Theme="{StaticResource TitleTextBlockStyle}" />
+                                    </DockPanel>
+                                    <SelectableTextBlock
+                                        x:Name="ProfileIdText"
+                                        FontSize="13"
+                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                        Text="{Binding Id}" />
+                                    <SelectableTextBlock
+                                        controls:TranslatableTextBlockBehavior.IsEnabled="True"
+                                        controls:TranslatableTextBlockBehavior.TextType="UserComment"
+                                        Text="{Binding UserDetail.Value.UserEntity.Description, FallbackValue={x:Null}}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </ScrollViewer>
                 </Border>
             </Expander>
-            <TabbedPage>
-                <capability:WorkPostsPage User="{Binding UserDetail.Value.User}" />
-                <capability:WorkBookmarksPage User="{Binding UserDetail.Value.User}" />
-                <capability:UserFollowingPage UserId="{Binding Id}" />
-                <capability:UserMyPixivPage UserId="{Binding Id}" />
-                <capability:RelatedUsersPage UserId="{Binding Id}" />
-            </TabbedPage>
+            <TabbedPage Pages="{Binding TabPages}" />
         </DockPanel>
         <controls:ViewerStateOverlay ErrorMessage="{Binding LoadErrorMessage}" IsLoading="{Binding IsLoading}" />
     </Grid>

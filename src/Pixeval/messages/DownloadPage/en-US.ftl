@@ -29,3 +29,7 @@ StopButton-Label = Cancel
 DeleteButton-Label = Delete
 
 DeleteLocalFiles-Content = Also delete local files
+
+StatusFilter = Download status
+
+SelectedCountFormatted = Selected: { $arg0 }

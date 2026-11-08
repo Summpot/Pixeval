@@ -55,7 +55,7 @@ public sealed partial class NovelViewerPageViewModel
             ? Strings.NovelViewerPageShowTranslation()
             : Strings.NovelViewerPageTranslateFullText();
 
-    private bool CanTranslate => !_disposed && !IsLoading && LoadErrorMessage is null && PageCount > 0 && HasTranslator
+    private bool CanTranslate => !_disposed && !IsLoading && LoadErrorMessage is null && PageCount > 0 && IsTranslationAvailable
         && CurrentNovel is { } novel && !BlockedContentHelper.IsBlockedPlaceholder(novel);
 
     private static bool IsTranslatorActive(ITextTransformerCommandExtension translator) =>

@@ -33,3 +33,5 @@ GoToPageItem-Label = 查看页面
 OpenDownloadLocationItem-Label = 打开下载位置
 
 ResetItem-Label = 重新下载
+
+GroupProgressFormatted = 进行中：{ $arg0 } · 完成：{ $arg1 } · 失败：{ $arg2 }

@@ -12,8 +12,8 @@ using FluentIcons.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.Commands.Transformers;
-using Pixeval.I18N;
-using Pixeval.Models.Extensions;
+using Pixeval.Localization;
+using Pixeval.Services.Background;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
@@ -26,21 +26,22 @@ internal static class NovelTranslationValidation
     internal static async Task RunAsync(string directory)
     {
         using var fixture = new NovelReaderFixture();
-        await App.AppViewModel.MakoClient.SetTokenAsync("fixture-translation");
-        await App.AppViewModel.MakoClient.ValidateTokenAsync();
+        App.AppViewModel.MakoClient.SetRefreshToken("fixture-translation");
+        await FixtureAuthentication.IdentifyAsync(App.AppViewModel.MakoClient);
         var extensions = App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>();
         var first = new Translator("First translator");
         var second = new Translator("Second translator · 翻译扩展的长名称");
         using var extensionHost = new ExtensionsHostModel(new FixtureHost(first, second), []);
-        using var source = new SimpleOperableSourceView<NovelItemViewModel>([
+        using var source = new FixtureEntries<Mako.Novel>([
             NovelReaderFixture.Sample(995001), NovelReaderFixture.Sample(995002), NovelReaderFixture.Sample(995003)]);
-        var model = new NovelViewerPageViewModel(source.CloneSourceView(), 0, false);
+        var model = UiTestSession.Create<NovelViewerPageViewModel>(source.CloneSourceView(), 0, false);
         var page = new NovelViewerPage(model);
         var host = new PageTestHost { Content = page };
         var window = new Window { Width = 1100, Height = 800, Content = host.Shell };
         List<string> report = [];
         try
         {
+            Pixeval.Common.MaterialAnimation.Initialize(window);
             window.Show();
             (await fixture.NextAsync()).Complete("First original[newpage]Second original");
             await UntilAsync(() => !model.IsLoading);
@@ -51,7 +52,7 @@ internal static class NovelTranslationValidation
             extensions.HostModels.Add(extensionHost);
             await RenderAsync(window);
             Require(translate.IsVisible && translate.IsEnabled, "Installing an active translator makes the existing reader action available");
-            Require(translate.Label == I18NManager.GetResource(NovelViewerPageResources.TranslateFullText), "The initial translation label is localized");
+            Require(translate.Label == Strings.NovelViewerPageTranslateFullText(), "The initial translation label is localized");
             await ActivateAsync(window, translate);
             await UntilAsync(() => !model.ToggleTranslationCommand.IsRunning);
             Require(first.Inputs.Count == 2 && second.Inputs.Count == 0 && model.IsTranslationShown, "The main button translates all pages with the first active translator");
@@ -81,7 +82,7 @@ internal static class NovelTranslationValidation
                 Require(model.ToggleTranslationCommand.IsRunning && model.CurrentMarkdown.StartsWith(second.Label), "An unfinished replacement leaves the successful translation readable");
                 var cancel = page.FindControl<CommandBarButton>("CancelTranslationButton") ?? throw new InvalidOperationException("No cancel button");
                 Require(cancel.IsVisible && cancel.IsEnabled, "A running translation exposes a reachable cancel action");
-                Require(cancel.Label == I18NManager.GetResource(NovelViewerPageResources.CancelTranslation), "The cancellation label is localized");
+                Require(cancel.Label == Strings.NovelViewerPageCancelTranslation(), "The cancellation label is localized");
                 if (cancel.IsInOverflow)
                     await OpenOverflowAsync(window, bar);
                 Save(window, directory, "translation-pending-" + theme.Key);

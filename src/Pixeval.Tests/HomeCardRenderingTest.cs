@@ -59,7 +59,7 @@ public sealed class HomeCardRenderingTest
             {
                 model.ResetSource(Many(item));
                 var factories = 0;
-                Task<HomeCardPreviewSource> CreateSourceAsync(HomePageCardLayout _)
+                Task<HomeCardPreviewSource> CreateSourceAsync(HomePageCardLayout _, CancellationToken token)
                 {
                     if (failInitialPages && ++factories <= 2)
                     {
@@ -74,6 +74,7 @@ public sealed class HomeCardRenderingTest
                         CreateSourceAsync, (_, _) => { }), true);
                 var preview = card.PreviewViewModel;
                 window.Content = card;
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 var items = card.GetVisualDescendants().OfType<ItemsControl>().Single();
                 await preview.LoadAsync();

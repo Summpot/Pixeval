@@ -18,12 +18,10 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Global.Enum;
-using Mako.Model;
+using Pixeval.Mako;
 using Pixeval.Controls;
 using Pixeval.Utilities;
-using Pixeval.Views.Capability;
-using Pixeval.Views.Work;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests.Ui;
 
@@ -51,14 +49,14 @@ internal static class BookmarksPageValidation
             return Task.FromResult(request.RequestUri!.AbsolutePath.EndsWith("novel", StringComparison.Ordinal)
                 ? "{\"novels\":[],\"next_url\":null}" : "{\"illusts\":[],\"next_url\":null}");
         };
-        await client.SetTokenAsync("fixture-bookmarks-page");
-        await client.ValidateTokenAsync();
+        client.SetRefreshToken("fixture-bookmarks-page");
+        await FixtureAuthentication.IdentifyAsync(client);
         List<string> report = [];
         foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
             foreach (var width in new[] { 360, 1000 })
             {
                 workRequests.Clear();
-                var page = new WorkBookmarksPage(client.Me!, SimpleWorkType.Illustration, PrivacyPolicy.Public, InitialTag);
+                var page = UiTestSession.Create<WorkBookmarksPage>(User.CreateDefault() with { Id = long.Parse(client.GetUser()!.Value.Id), Name = client.GetUser()!.Value.Name }, SimpleWorkKind.Illustration, PrivacyRestrict.Public, InitialTag);
                 var navigation = new NavigationPage();
                 await navigation.PushAsync(page);
                 var container = new PageTestHost { Content = navigation };
@@ -68,6 +66,7 @@ internal static class BookmarksPageValidation
                 var picker = page.FindControl<ComboBox>("TagComboBox")!;
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     await RenderAsync(window);
                     var initial = await NextAsync();
@@ -77,7 +76,7 @@ internal static class BookmarksPageValidation
                     initial.Complete([InitialTag, "another tag"]);
                     await UntilAsync(() => picker.ItemsSource!.Cast<BookmarkTag>().Any(tag => tag.Name == InitialTag));
                     await RenderAsync(window);
-                    Require((picker.SelectedItem as BookmarkTag)?.Name == InitialTag, "Loaded tags preserve the explicit initial selection");
+                    Require((picker.SelectedItem as BookmarkTag?)?.Name == InitialTag, "Loaded tags preserve the explicit initial selection");
                     HorizontalBounds(window, picker);
                     foreach (var text in picker.GetVisualDescendants().OfType<TextBlock>())
                     {
@@ -105,7 +104,7 @@ internal static class BookmarksPageValidation
                     Save(window, directory, "bookmarks-dropdown-" + scenario);
                     Press(window, Key.Escape, PhysicalKey.Escape);
                     await RenderAsync(window);
-                    Require(!picker.IsDropDownOpen && (picker.SelectedItem as BookmarkTag)?.Name == InitialTag, "Escape closes the tag dropdown without changing its filter");
+                    Require(!picker.IsDropDownOpen && (picker.SelectedItem as BookmarkTag?)?.Name == InitialTag, "Escape closes the tag dropdown without changing its filter");
 
                     var type = page.FindControl<SymbolComboBox>("SimpleWorkTypeComboBox")!;
                     var privacy = page.FindControl<SymbolComboBox>("PrivacyPolicyComboBox")!;
@@ -126,7 +125,7 @@ internal static class BookmarksPageValidation
                     await RenderAsync(window);
                     Require(picker.ItemsSource!.Cast<BookmarkTag>().Any(tag => tag.Name == "current tag")
                         && picker.ItemsSource!.Cast<BookmarkTag>().All(tag => tag.Name != "stale tag"), "Late tag results cannot replace the current type/privacy list");
-                    Require((picker.SelectedItem as BookmarkTag)?.Name == InitialTag, "Changing type or privacy keeps the explicit active tag");
+                    Require((picker.SelectedItem as BookmarkTag?)?.Name == InitialTag, "Changing type or privacy keeps the explicit active tag");
                     Require(((BookmarkTag) picker.SelectedItem!).Count == 0, "A retained tag absent from the new source does not display the old source's count");
                     Require(container.Notifications.All(notification => notification.Type != NotificationType.Error), "An obsolete tag failure cannot show a current-page error");
                     var count = workRequests.Count;
@@ -141,7 +140,7 @@ internal static class BookmarksPageValidation
                     var failure = await NextAsync();
                     failure.Response.SetException(new HttpRequestException("Fixed bookmark tag failure"));
                     await UntilAsync(() => container.Notifications.Any(notification => notification.Type == NotificationType.Error));
-                    Require((picker.SelectedItem as BookmarkTag)?.Name == "current tag", "Current tag failure leaves the user's chosen filter intact");
+                    Require((picker.SelectedItem as BookmarkTag?)?.Name == "current tag", "Current tag failure leaves the user's chosen filter intact");
                     Save(window, directory, "bookmarks-error-" + scenario);
                     await RefreshAsync();
                     var retry = await NextAsync();
@@ -153,11 +152,11 @@ internal static class BookmarksPageValidation
                     Require(HttpUtility.ParseQueryString(workRequests.Last().Query)["tag"] is null, "All bookmarks omits the tag filter");
                     retry.Complete(["current tag", "retry tag"]);
                     await UntilAsync(() => picker.ItemsSource!.Cast<BookmarkTag>().Any(tag => tag.Name == "retry tag"));
-                    Require(picker.SelectedItem is AllBookmarkTag, "Retry preserves a filter chosen while the request was pending");
+                    Require(picker.SelectedItem is BookmarkTag { Name: null }, "Retry preserves a filter chosen while the request was pending");
                     count = workRequests.Count;
                     Press(window, Key.Down, PhysicalKey.ArrowDown);
                     await UntilAsync(() => workRequests.Count > count);
-                    Require(picker.SelectedItem is UncategorizedBookmarkTag && HttpUtility.ParseQueryString(workRequests.Last().Query)["tag"] == "未分類",
+                    Require(picker.SelectedItem is BookmarkTag { Name: "未分類" } && HttpUtility.ParseQueryString(workRequests.Last().Query)["tag"] == "未分類",
                         "Uncategorized keeps the API sentinel independently of the UI language");
                     await RefreshAsync();
                     var unloaded = await NextAsync();
@@ -173,7 +172,7 @@ internal static class BookmarksPageValidation
                     var reloaded = await NextAsync();
                     reloaded.Complete(["reloaded tag"]);
                     await UntilAsync(() => picker.ItemsSource!.Cast<BookmarkTag>().Any(tag => tag.Name == "reloaded tag"));
-                    Require(picker.SelectedItem is UncategorizedBookmarkTag, "Reload starts a new tag request and keeps the current filter");
+                    Require(picker.SelectedItem is BookmarkTag { Name: "未分類" }, "Reload starts a new tag request and keeps the current filter");
                     window.Width = width == 360 ? 1000 : 360;
                     await RenderAsync(window);
                     HorizontalBounds(window, picker);
@@ -255,7 +254,7 @@ internal static class BookmarksPageValidation
     {
         internal Uri Uri { get; } = uri;
         internal TaskCompletionSource<string> Response { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        internal void Complete(string[] names, string? next = null) => Response.SetResult(JsonSerializer.Serialize(new
+        internal void Complete(string[] names, string? next = null) => Response.SetResult(NativeFixtureData.Serialize(new
         {
             bookmark_tags = names.Select(name => new { name, count = 3 }).ToArray(),
             next_url = next

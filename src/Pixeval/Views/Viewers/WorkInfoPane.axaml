@@ -1,20 +1,22 @@
-﻿<ResourceDictionary
+<ResourceDictionary
     xmlns="https://github.com/avaloniaui"
+    xmlns:appCommon="using:Pixeval.Common"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Common.Converters"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
+    xmlns:misaki="using:Misaki"
     xmlns:pixeval="using:Pixeval"
     xmlns:utilities="using:Pixeval.Common"
-    xmlns:viewers="using:Pixeval.Views.Viewers">
+    xmlns:viewers="using:Pixeval.Views.Viewers"
+    xmlns:loc="using:Pixeval.Localization">
 
     <Design.PreviewWith>
         <viewers:WorkInfoPane />
     </Design.PreviewWith>
 
-    <DataTemplate x:DataType="viewers:WorkInfoUser" x:Key="UserCardDataTemplate">
+    <DataTemplate x:DataType="{x:Type viewers:WorkInfoUser}" x:Key="UserCardDataTemplate">
         <Button
             Padding="8"
             HorizontalAlignment="Stretch"
@@ -27,9 +29,9 @@
             <Grid ColumnDefinitions="50,*" ColumnSpacing="12">
                 <controls:AvatarImage
                     Width="50"
-                    controls:Source.Cache="{Binding AvatarUrl}"
-                    DockPanel.Dock="Left" />
-                <StackPanel DockPanel.Dock="Top" Spacing="2">
+                    VerticalAlignment="Top"
+                    controls:Source.Cache="{Binding AvatarUrl}" />
+                <StackPanel Grid.Column="1" Spacing="2">
                     <TextBlock
                         Text="{Binding Name}"
                         TextWrapping="Wrap"
@@ -44,13 +46,13 @@
                             MinHeight="40"
                             Padding="2"
                             VerticalAlignment="Center"
-                            AutomationProperties.Name="{I18N {x:Static pixeval:WorkInfoPageResources.CopyId}}"
+                            AutomationProperties.Name="{CompiledBinding [WorkInfoPage-CopyId], Source={x:Static loc:LocalizationManager.Instance}}"
                             Background="Transparent"
                             BorderThickness="0"
-                            Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                            Click="{x:Static appCommon:AvaloniaHelper.CopyTagToClipboard}"
                             Tag="{Binding Id}"
                             Theme="{StaticResource TransparentButtonStyle}"
-                            ToolTip.Tip="{I18N {x:Static pixeval:WorkInfoPageResources.CopyId}}">
+                            ToolTip.Tip="{CompiledBinding [WorkInfoPage-CopyId], Source={x:Static loc:LocalizationManager.Instance}}">
                             <markup:SymbolIcon FontSize="12" Symbol="Copy" />
                         </Button>
                     </StackPanel>
@@ -68,7 +70,7 @@
         </Button>
     </DataTemplate>
 
-    <DataTemplate x:DataType="viewers:WorkInfoUser" x:Key="LiteUserCardDataTemplate">
+    <DataTemplate x:DataType="{x:Type viewers:WorkInfoUser}" x:Key="LiteUserCardDataTemplate">
         <Button
             Padding="8"
             HorizontalAlignment="Stretch"
@@ -81,9 +83,9 @@
             <Grid ColumnDefinitions="28,*" ColumnSpacing="12">
                 <controls:AvatarImage
                     Width="28"
-                    controls:Source.Cache="{Binding AvatarUrl}"
-                    DockPanel.Dock="Left" />
-                <StackPanel Spacing="2">
+                    VerticalAlignment="Top"
+                    controls:Source.Cache="{Binding AvatarUrl}" />
+                <StackPanel Grid.Column="1" Spacing="2">
                     <TextBlock
                         Text="{Binding Name}"
                         TextWrapping="Wrap"
@@ -108,23 +110,25 @@
 
     <ControlTheme x:Key="{x:Type viewers:WorkInfoPane}" TargetType="{x:Type viewers:WorkInfoPane}">
         <Setter Property="Template">
-            <ControlTemplate TargetType="{x:Type viewers:WorkInfoPane}">
+            <ControlTemplate>
                 <ScrollViewer
                     Name="WIPHostScroller"
-                    AutomationProperties.Name="{Binding ArtworkInfo.Title, RelativeSource={RelativeSource TemplatedParent}}"
+                    AutomationProperties.Name="{Binding WorkTitle, RelativeSource={RelativeSource TemplatedParent}}"
                     Focusable="True"
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto">
                     <StackPanel
+                        x:DataType="{x:Type viewers:WorkInfoPane}"
                         Margin="16,12"
+                        DataContext="{Binding RelativeSource={RelativeSource TemplatedParent}}"
                         Spacing="5">
                         <Grid ColumnDefinitions="*,Auto">
                             <SelectableTextBlock
                                 HorizontalAlignment="Left"
                                 controls:TranslatableTextBlockBehavior.IsEnabled="True"
                                 controls:TranslatableTextBlockBehavior.TextType="WorkTitle"
-                                IsVisible="{Binding WorkTitle, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                Text="{TemplateBinding WorkTitle}"
+                                IsVisible="{Binding WorkTitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                Text="{Binding WorkTitle}"
                                 TextWrapping="Wrap"
                                 Theme="{StaticResource TitleTextBlockStyle}" />
                             <ContentPresenter
@@ -136,68 +140,61 @@
                         <ScrollViewer
                             MaxHeight="{Binding #WIPHostScroller.Bounds, Converter={x:Static viewers:WorkInfoPane.HalfVerticalSpaceConverter}}"
                             Margin="0,5,0,0"
-                            AutomationProperties.Name="{Binding Title}"
+                            AutomationProperties.Name="{Binding WorkTitle}"
                             Focusable="True"
                             HorizontalScrollBarVisibility="Disabled"
-                            IsVisible="{Binding WorkDescription, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            IsVisible="{Binding WorkDescription, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                             <SelectableTextBlock
                                 controls:TranslatableTextBlockBehavior.IsEnabled="True"
                                 controls:TranslatableTextBlockBehavior.TextType="WorkCaption"
-                                Text="{Binding WorkDescription, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.HtmlToPlainText}}"
+                                Text="{Binding WorkDescription, Converter={x:Static converters:PixevalConverters.HtmlToPlainText}}"
                                 TextWrapping="Wrap" />
                         </ScrollViewer>
 
                         <StackPanel Orientation="Horizontal" Spacing="5">
                             <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
                                 <Run Text="ID " />
-                                <Run Text="{Binding WorkId, RelativeSource={RelativeSource TemplatedParent}}" />
+                                <Run Text="{Binding WorkId}" />
                             </TextBlock>
                             <Button
                                 MinWidth="40"
                                 MinHeight="40"
                                 Padding="2"
                                 VerticalAlignment="Center"
-                                AutomationProperties.Name="{I18N {x:Static pixeval:WorkInfoPageResources.CopyId}}"
+                                AutomationProperties.Name="{CompiledBinding [WorkInfoPage-CopyId], Source={x:Static loc:LocalizationManager.Instance}}"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                                Click="{x:Static appCommon:AvaloniaHelper.CopyTagToClipboard}"
                                 Content="{markup:SymbolIcon Copy,
                                                             FontSize=12}"
-                                Tag="{Binding WorkId, RelativeSource={RelativeSource TemplatedParent}}"
-                                Theme="{StaticResource TransparentButtonStyle}" />
+                                Tag="{Binding WorkId}"
+                                Theme="{StaticResource TransparentButtonStyle}"
+                                ToolTip.Tip="{CompiledBinding [WorkInfoPage-CopyId], Source={x:Static loc:LocalizationManager.Instance}}" />
                         </StackPanel>
 
-                        <StackPanel Orientation="Horizontal" Spacing="20">
-                            <controls:IconText Symbol="Eye" Text="{Binding TotalView, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.IntToString}}" />
-                            <Button
-                                Padding="0"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Command="{Binding $parent[viewers:WorkInfoPane].ViewLikedUsersCommand}"
-                                Cursor="Hand"
-                                ToolTip.Tip="查看收藏用户 / Liked Users">
-                                <controls:IconText Symbol="Heart" Text="{Binding TotalFavorite, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.IntToString}}" />
-                            </Button>
-                            <controls:IconText Symbol="Clock" Text="{Binding CreateDate, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}" />
-                        </StackPanel>
+                        <WrapPanel ItemSpacing="20" LineSpacing="8">
+                            <controls:IconText Symbol="Eye" Text="{Binding TotalView, Converter={x:Static converters:PixevalConverters.IntToString}}" />
+                            <controls:IconText Symbol="Heart" Text="{Binding TotalFavorite, Converter={x:Static converters:PixevalConverters.IntToString}}" />
+                            <controls:IconText Symbol="Clock" Text="{Binding CreateDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}" />
+                        </WrapPanel>
 
                         <ItemsControl
-                            IsVisible="{Binding !!Authors.Count, RelativeSource={RelativeSource TemplatedParent}}"
+                            IsVisible="{Binding !!Authors.Count}"
                             ItemTemplate="{StaticResource UserCardDataTemplate}"
                             ItemsPanel="{StaticResource StackLayout}"
-                            ItemsSource="{Binding Authors, RelativeSource={RelativeSource TemplatedParent}}" />
+                            ItemsSource="{Binding Authors}" />
                         <ItemsControl
-                            IsVisible="{Binding !!Uploaders.Count, RelativeSource={RelativeSource TemplatedParent}}"
+                            IsVisible="{Binding !!Uploaders.Count}"
                             ItemTemplate="{StaticResource UserCardDataTemplate}"
                             ItemsPanel="{StaticResource StackLayout}"
-                            ItemsSource="{Binding Uploaders, RelativeSource={RelativeSource TemplatedParent}}" />
+                            ItemsSource="{Binding Uploaders}" />
 
                         <StackPanel Orientation="Horizontal" Spacing="5">
-                            <controls:PixevalBadge IsVisible="{Binding IsAiGenerated, RelativeSource={RelativeSource TemplatedParent}}" Mode="Ai" />
-                            <controls:PixevalBadge Mode="{Binding SafeRating, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.SafeBadgeModeConverter}}" />
+                            <controls:PixevalBadge IsVisible="{Binding IsAiGenerated}" Mode="Ai" />
+                            <controls:PixevalBadge Mode="{Binding SafeRating, Converter={x:Static converters:PixevalConverters.SafeBadgeModeConverter}}" />
                         </StackPanel>
 
-                        <ItemsControl ItemsPanel="{StaticResource StackLayout}" ItemsSource="{Binding TagGroups, RelativeSource={RelativeSource TemplatedParent}}">
+                        <ItemsControl ItemsPanel="{StaticResource StackLayout}" ItemsSource="{Binding TagGroups}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="viewers:WorkInfoTagGroup">
                                     <StackPanel>
@@ -205,6 +202,7 @@
                                             Margin="10"
                                             HorizontalAlignment="Left"
                                             controls:TranslatableTextBlockBehavior.IsEnabled="True"
+                                            controls:TranslatableTextBlockBehavior.PretranslatedText="{Binding Key}"
                                             controls:TranslatableTextBlockBehavior.TextType="WorkTag"
                                             IsVisible="{Binding Key, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                             Text="{Binding Key}"
@@ -216,8 +214,11 @@
                                                 </ItemsPanelTemplate>
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="viewers:WorkInfoTag">
-                                                    <m3:SuggestionChip Command="{Binding $parent[viewers:WorkInfoPane].OpenTagCommand}" CommandParameter="{Binding}">
+                                                <DataTemplate x:DataType="{x:Type viewers:WorkInfoTag}">
+                                                    <m3:SuggestionChip
+                                                        MaxWidth="{Binding $parent[ItemsControl].Bounds.Width}"
+                                                        Command="{Binding $parent[viewers:WorkInfoPane].OpenTagCommand}"
+                                                        CommandParameter="{Binding}">
                                                         <TextBlock
                                                             controls:TranslatableTextBlockBehavior.IsEnabled="True"
                                                             controls:TranslatableTextBlockBehavior.PretranslatedText="{Binding TranslatedName}"
@@ -227,12 +228,12 @@
                                                         <m3:SuggestionChip.ContextMenu>
                                                             <ContextMenu>
                                                                 <MenuItem
-                                                                    Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                                                                    Click="{x:Static appCommon:AvaloniaHelper.CopyTagToClipboard}"
                                                                     Header="{CompiledBinding [WorkInfoPage-CopyOriginalTagMenuItem-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                                                     Icon="{markup:SymbolIcon Copy}"
                                                                     Tag="{Binding Name}" />
                                                                 <MenuItem
-                                                                    Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                                                                    Click="{x:Static appCommon:AvaloniaHelper.CopyTagToClipboard}"
                                                                     Header="{CompiledBinding [WorkInfoPage-CopyTranslatedTagMenuItem-Text], Source={x:Static loc:LocalizationManager.Instance}}"
                                                                     Icon="{markup:SymbolIcon CopyAdd}"
                                                                     IsVisible="{Binding TranslatedName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
@@ -260,21 +261,27 @@
 
     <ControlTheme x:Key="LiteWorkInfoPaneStyle" TargetType="{x:Type viewers:WorkInfoPane}">
         <Setter Property="Template">
-            <ControlTemplate TargetType="{x:Type viewers:WorkInfoPane}">
-                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <ControlTemplate>
+                <ScrollViewer
+                    AutomationProperties.Name="{Binding WorkTitle, RelativeSource={RelativeSource TemplatedParent}}"
+                    Focusable="True"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
                     <StackPanel
+                        x:DataType="{x:Type viewers:WorkInfoPane}"
                         Margin="16,12"
+                        DataContext="{Binding RelativeSource={RelativeSource TemplatedParent}}"
                         Spacing="5">
                         <Grid ColumnDefinitions="* Auto">
                             <TextBlock
                                 HorizontalAlignment="Left"
-                                IsVisible="{Binding WorkTitle, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                IsVisible="{Binding WorkTitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                 MaxLines="2"
-                                Text="{TemplateBinding WorkTitle}"
+                                Text="{Binding WorkTitle}"
                                 TextTrimming="CharacterEllipsis"
                                 TextWrapping="Wrap"
                                 Theme="{StaticResource TitleTextBlockStyle}"
-                                ToolTip.Tip="{Binding Title}" />
+                                ToolTip.Tip="{Binding WorkTitle}" />
                             <ContentPresenter
                                 Grid.Column="1"
                                 Content="{TemplateBinding ActionZone}"
@@ -284,41 +291,33 @@
                         <ScrollViewer
                             MaxHeight="100"
                             Margin="0,5,0,0"
-                            AutomationProperties.Name="{Binding Title}"
+                            AutomationProperties.Name="{Binding WorkTitle}"
                             Focusable="True"
                             HorizontalScrollBarVisibility="Disabled"
-                            IsVisible="{Binding WorkDescription, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                            <TextBlock Text="{Binding WorkDescription, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.HtmlToPlainText}}" TextWrapping="Wrap" />
+                            IsVisible="{Binding WorkDescription, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="{Binding WorkDescription, Converter={x:Static converters:PixevalConverters.HtmlToPlainText}}" TextWrapping="Wrap" />
                         </ScrollViewer>
 
-                        <StackPanel Orientation="Horizontal" Spacing="20">
-                            <controls:IconText Symbol="Eye" Text="{Binding TotalView, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.IntToString}}" />
-                            <Button
-                                Padding="0"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Command="{Binding $parent[viewers:WorkInfoPane].ViewLikedUsersCommand}"
-                                Cursor="Hand"
-                                ToolTip.Tip="查看收藏用户 / Liked Users">
-                                <controls:IconText Symbol="Heart" Text="{Binding TotalFavorite, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.IntToString}}" />
-                            </Button>
-                            <controls:IconText Symbol="Clock" Text="{Binding CreateDate, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}" />
-                        </StackPanel>
+                        <WrapPanel ItemSpacing="20" LineSpacing="8">
+                            <controls:IconText Symbol="Eye" Text="{Binding TotalView, Converter={x:Static converters:PixevalConverters.IntToString}}" />
+                            <controls:IconText Symbol="Heart" Text="{Binding TotalFavorite, Converter={x:Static converters:PixevalConverters.IntToString}}" />
+                            <controls:IconText Symbol="Clock" Text="{Binding CreateDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}" />
+                        </WrapPanel>
 
                         <ItemsControl
-                            IsVisible="{Binding !!Authors.Count, RelativeSource={RelativeSource TemplatedParent}}"
+                            IsVisible="{Binding !!Authors.Count}"
                             ItemTemplate="{StaticResource LiteUserCardDataTemplate}"
                             ItemsPanel="{StaticResource StackLayout}"
-                            ItemsSource="{Binding Authors, RelativeSource={RelativeSource TemplatedParent}}" />
+                            ItemsSource="{Binding Authors}" />
                         <ItemsControl
-                            IsVisible="{Binding !!Uploaders.Count, RelativeSource={RelativeSource TemplatedParent}}"
+                            IsVisible="{Binding !!Uploaders.Count}"
                             ItemTemplate="{StaticResource LiteUserCardDataTemplate}"
                             ItemsPanel="{StaticResource StackLayout}"
-                            ItemsSource="{Binding Uploaders, RelativeSource={RelativeSource TemplatedParent}}" />
+                            ItemsSource="{Binding Uploaders}" />
 
                         <StackPanel Orientation="Horizontal" Spacing="5">
-                            <controls:PixevalBadge IsVisible="{Binding IsAiGenerated, RelativeSource={RelativeSource TemplatedParent}}" Mode="Ai" />
-                            <controls:PixevalBadge Mode="{Binding SafeRating, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static converters:PixevalConverters.SafeBadgeModeConverter}}" />
+                            <controls:PixevalBadge IsVisible="{Binding IsAiGenerated}" Mode="Ai" />
+                            <controls:PixevalBadge Mode="{Binding SafeRating, Converter={x:Static converters:PixevalConverters.SafeBadgeModeConverter}}" />
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>

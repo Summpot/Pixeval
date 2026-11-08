@@ -11,3 +11,9 @@ ExitConfirmation-Content = 现在退出会丢弃本次尚未提交的订阅获�
 TargetIdTextBox-PlaceholderText = 用户或系列 ID
 
 InvalidTargetId = 请输入有效的用户或系列 ID
+
+SubscriptionType = 订阅类型
+
+WorkKind = 作品类型
+
+AddFailed = 未能添加订阅，请确认目标 ID 后重试。

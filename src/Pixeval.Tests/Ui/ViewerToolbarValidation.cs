@@ -13,10 +13,10 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Mako.Model;
+using Pixeval.Mako;
 using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Models.Options;
+using Pixeval.Localization;
+using Pixeval.Config;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
@@ -39,14 +39,14 @@ internal static class ViewerToolbarValidation
         {
             Id = 900101,
             Title = "离线查看器命令栏 / Offline viewer toolbar",
-            Type = IllustrationType.Illustration,
+            IllustType = IllustContentType.Illustration,
             Width = 16,
             Height = 16,
             PageCount = 1,
             Visible = true,
             SanityLevel = 2,
             Series = null,
-            ThumbnailUrls = new() { SquareMedium = imageUri, Medium = imageUri, Large = imageUri },
+            ImageUrls = new() { SquareMedium = imageUri, Medium = imageUri, Large = imageUri },
             MetaSinglePage = new() { OriginalImageUrl = imageUri }
         };
         List<string> report = [];
@@ -54,8 +54,8 @@ internal static class ViewerToolbarValidation
             foreach (var mode in new[] { BrowseMode.Swipe, BrowseMode.Continuous })
             {
                 App.AppViewModel.AppSettings.BrowsingExperienceSettings.BrowseMode = mode;
-                var item = new IllustrationItemViewModel(entry);
-                using var model = new IllustrationViewerPageViewModel(item, false);
+                var item = (entry);
+                using var model = UiTestSession.Create<IllustrationViewerPageViewModel>(item, false);
                 var image = model.CurrentImage?.CurrentPage
                     ?? throw new InvalidOperationException("The fixed illustration did not create an image model.");
                 await image.LoadOriginalImageAsync();
@@ -64,6 +64,7 @@ internal static class ViewerToolbarValidation
                 var window = new Window { Width = 1000, Height = 720, RequestedThemeVariant = theme, Content = page };
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     await RenderAsync(window);
                     var bar = page.FindControl<CommandBar>("ZoomPane")!;
@@ -85,9 +86,9 @@ internal static class ViewerToolbarValidation
 
                     if (mode is BrowseMode.Swipe)
                     {
-                        var rotate = FindButton(bar, EntryViewerPageResources.RotateClockwise);
+                        var rotate = FindButton(bar, "EntryViewerPage-RotateClockwise");
                         var mirror = bar.PrimaryCommands.OfType<CommandBarToggleButton>()
-                            .Single(button => button.Label == I18NManager.GetResource(EntryViewerPageResources.Mirror));
+                            .Single(button => button.Label == Strings.EntryViewerPageMirror());
                         await ActivateAsync(window, bar, rotate);
                         Require(image.RotationDegree is 90, "Rotate must execute exactly once.");
                         await ActivateAsync(window, bar, mirror);
@@ -108,10 +109,10 @@ internal static class ViewerToolbarValidation
                         await RenderAsync(window);
                         var more = bar.GetVisualDescendants().OfType<CommandBarButton>()
                             .Single(button => button.Name is "PART_OverflowButton");
-                        Require(AutomationProperties.GetName(more) == I18NManager.GetResource(MiscResources.MoreCommands),
+                        Require(AutomationProperties.GetName(more) == Strings.MiscMoreCommands(),
                             "The overflow button must have a localized accessible name.");
                         Save(window, $"viewer-{mode}-{theme.Key}-overflow.png", directory);
-                        var reset = FindButton(bar, EntryViewerPageResources.ZoomToOriginal);
+                        var reset = FindButton(bar, "EntryViewerPage-ZoomToOriginal");
                         await ActivateAsync(window, bar, reset);
                         var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(3);
                         while (Math.Abs(image.ZoomFactor - 1) >= 0.0001 && DateTime.UtcNow < deadline)
@@ -131,7 +132,7 @@ internal static class ViewerToolbarValidation
                     await RenderAsync(window);
                     Require(!bar.IsOpen, "Resizing must not reopen a dismissed menu.");
                     var autoPlay = bar.PrimaryCommands.OfType<CommandBarToggleButton>()
-                        .Single(button => button.Label == I18NManager.GetResource(EntryViewerPageResources.AutoPlay));
+                        .Single(button => button.Label == Strings.EntryViewerPageAutoPlay());
                     await ShowCommandAsync(window, bar, autoPlay);
                     var autoPlayPoint = autoPlay.TranslatePoint(new Rect(autoPlay.Bounds.Size).Center, window)!.Value;
                     window.MouseMove(autoPlayPoint);
@@ -166,7 +167,7 @@ internal static class ViewerToolbarValidation
     }
 
     private static CommandBarButton FindButton(CommandBar bar, string resource) =>
-        bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => button.IsVisible && button.Label == I18NManager.GetResource(resource));
+        bar.PrimaryCommands.OfType<CommandBarButton>().Single(button => button.IsVisible && button.Label == FixtureLocalization.GetResource(resource));
 
     private static async Task ActivateAsync(Window window, CommandBar bar, Control button)
     {

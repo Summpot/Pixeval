@@ -1,5 +1,6 @@
-﻿<ResourceDictionary
+<ResourceDictionary
     xmlns="https://github.com/avaloniaui"
+    xmlns:loc="using:Pixeval.Localization"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:fluent="using:FluentIcons.Avalonia"
     xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
@@ -68,8 +69,8 @@
         <Setter Property="Margin" Value="4" />
         <Setter Property="VerticalAlignment" Value="Top" />
         <Setter Property="Symbol" Value="Close" />
-        <Setter Property="AutomationProperties.Name" Value="{I18N {x:Static pixeval:MiscResources.CloseNotification}}" />
-        <Setter Property="ToolTip.Tip" Value="{I18N {x:Static pixeval:MiscResources.CloseNotification}}" />
+        <Setter Property="AutomationProperties.Name" Value="{CompiledBinding [Misc-CloseNotification], Source={x:Static loc:LocalizationManager.Instance}}" />
+        <Setter Property="ToolTip.Tip" Value="{CompiledBinding [Misc-CloseNotification], Source={x:Static loc:LocalizationManager.Instance}}" />
     </ControlTheme>
 
     <ControlTheme x:Key="{x:Type NotificationCard}" TargetType="{x:Type NotificationCard}">

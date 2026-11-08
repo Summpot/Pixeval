@@ -316,6 +316,15 @@ mod upstream_formatting_tests {
     use super::*;
 
     #[test]
+    fn empty_novel_is_one_blank_page() {
+        assert_eq!(render_pages_markdown(String::new(), vec![], vec![]), vec![String::new()]);
+        let pages = render_pages_markdown("[newpage]".into(), vec![], vec![]);
+        assert_eq!(pages.len(), 2);
+        assert!(pages[0].contains("page0"));
+        assert!(pages[1].contains("page1"));
+    }
+
+    #[test]
     fn renders_formatting_and_grapheme_emphasis() {
         let text = "[b:bold][i:italic][[emphasismark:か\u{3099}👩‍💻 > ・]]";
         let pages = render_pages_markdown(text.into(), vec![], vec![]);

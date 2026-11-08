@@ -1,12 +1,11 @@
 <ContentPage
     x:Class="Pixeval.Views.Search.NovelSearchOptionsPage"
     xmlns="https://github.com/avaloniaui"
-    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:loc="using:Pixeval.Localization"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:enum="using:Pixeval.Pixiv"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:Pixeval.Common.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
@@ -16,133 +15,259 @@
     Header="{CompiledBinding [Search-AdvancedOptions-NovelTab], Source={x:Static loc:LocalizationManager.Instance}}"
     mc:Ignorable="d"
     d:DesignHeight="450"
-    d:DesignWidth="800">
-    <StackPanel Margin="12" Spacing="12">
-        <TextBlock FontWeight="SemiBold" Text="{CompiledBinding [Search-Sections-Common], Source={x:Static loc:LocalizationManager.Instance}}" />
-        <Grid ColumnDefinitions="180,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Common-SortOption], Source={x:Static loc:LocalizationManager.Instance}}" />
-            <controls:SymbolComboBox
-                Grid.Column="1"
-                IconMode="False"
-                ItemsSource="{markup:EnumResources x:TypeArguments=nativeMako:SortOrder}"
-                SelectedValue="{Binding SortOption, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Common-StartDate], Source={x:Static loc:LocalizationManager.Instance}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding StartDateOption.IsEnabled, Mode=TwoWay}" />
-            <CalendarDatePicker
-                Grid.Column="2"
-                IsEnabled="{Binding StartDateOption.IsEnabled}"
-                SelectedDate="{Binding StartDateOption.Value, Mode=TwoWay}"
-                SelectedDateFormat="Short" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Common-EndDate], Source={x:Static loc:LocalizationManager.Instance}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding EndDateOption.IsEnabled, Mode=TwoWay}" />
-            <CalendarDatePicker
-                Grid.Column="2"
-                IsEnabled="{Binding EndDateOption.IsEnabled}"
-                SelectedDate="{Binding EndDateOption.Value, Mode=TwoWay}"
-                SelectedDateFormat="Short" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Common-ShowAiWorks], Source={x:Static loc:LocalizationManager.Instance}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding AiType, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Common-MergePlainKeywordResults], Source={x:Static loc:LocalizationManager.Instance}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding MergePlainKeywordResults, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Common-IncludeTranslatedTagResults], Source={x:Static loc:LocalizationManager.Instance}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding IncludeTranslatedTagResults, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Common-IncludePotentialViolationWorks], Source={x:Static loc:LocalizationManager.Instance}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding IncludePotentialViolationWorks, Mode=TwoWay}" />
-        </Grid>
+    d:DesignWidth="800"
+    xmlns:nativeMako="clr-namespace:Pixeval.Mako"
+    xmlns:loc="using:Pixeval.Localization">
+    <ContentPage.Styles>
+        <Style Selector="CalendarDatePicker">
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+    </ContentPage.Styles>
+    <m3:MaterialSurface
+        MaxWidth="760"
+        Margin="12"
+        Padding="16"
+        HorizontalAlignment="Stretch"
+        Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerLow}}"
+        CornerRadius="16">
+        <StackPanel Spacing="16">
+            <TextBlock
+                m3:MaterialText.Style="{m3:Typography TitleMedium}"
+                Text="{CompiledBinding [Search-Sections-Common], Source={x:Static loc:LocalizationManager.Instance}}"
+                TextWrapping="Wrap" />
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{CompiledBinding [Search-Common-SortOption], Source={x:Static loc:LocalizationManager.Instance}}"
+                    TextWrapping="Wrap" />
+                <controls:SymbolComboBox
+                    Grid.Row="1"
+                    AutomationProperties.Name="{CompiledBinding [Search-Common-SortOption], Source={x:Static loc:LocalizationManager.Instance}}"
+                    IconMode="False"
+                    ItemsSource="{markup:EnumResources x:TypeArguments=nativeMako:SortOrder}"
+                    SelectedValue="{Binding SortOption, Mode=TwoWay}" />
+            </Grid>
+            <Grid
+                ColumnDefinitions="Auto,*"
+                ColumnSpacing="12"
+                RowDefinitions="Auto,Auto"
+                RowSpacing="8">
+                <TextBlock
+                    Grid.ColumnSpan="2"
+                    VerticalAlignment="Center"
+                    Text="{CompiledBinding [Search-Common-StartDate], Source={x:Static loc:LocalizationManager.Instance}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Row="1"
+                    AutomationProperties.Name="{CompiledBinding [Search-Common-StartDate], Source={x:Static loc:LocalizationManager.Instance}}"
+                    IsChecked="{Binding StartDateOption.IsEnabled, Mode=TwoWay}" />
+                <CalendarDatePicker
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    AutomationProperties.Name="{CompiledBinding [Search-Common-StartDate], Source={x:Static loc:LocalizationManager.Instance}}"
+                    IsEnabled="{Binding StartDateOption.IsEnabled}"
+                    SelectedDate="{Binding StartDateOption.Value, Mode=TwoWay}"
+                    SelectedDateFormat="Short" />
+            </Grid>
+            <Grid
+                ColumnDefinitions="Auto,*"
+                ColumnSpacing="12"
+                RowDefinitions="Auto,Auto"
+                RowSpacing="8">
+                <TextBlock
+                    Grid.ColumnSpan="2"
+                    VerticalAlignment="Center"
+                    Text="{CompiledBinding [Search-Common-EndDate], Source={x:Static loc:LocalizationManager.Instance}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Row="1"
+                    AutomationProperties.Name="{CompiledBinding [Search-Common-EndDate], Source={x:Static loc:LocalizationManager.Instance}}"
+                    IsChecked="{Binding EndDateOption.IsEnabled, Mode=TwoWay}" />
+                <CalendarDatePicker
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    AutomationProperties.Name="{CompiledBinding [Search-Common-EndDate], Source={x:Static loc:LocalizationManager.Instance}}"
+                    IsEnabled="{Binding EndDateOption.IsEnabled}"
+                    SelectedDate="{Binding EndDateOption.Value, Mode=TwoWay}"
+                    SelectedDateFormat="Short" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{CompiledBinding [Search-Common-ShowAiWorks], Source={x:Static loc:LocalizationManager.Instance}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Column="1"
+                    AutomationProperties.Name="{CompiledBinding [Search-Common-ShowAiWorks], Source={x:Static loc:LocalizationManager.Instance}}"
+                    IsChecked="{Binding AiType, Mode=TwoWay}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{CompiledBinding [Search-Common-MergePlainKeywordResults], Source={x:Static loc:LocalizationManager.Instance}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Column="1"
+                    AutomationProperties.Name="{CompiledBinding [Search-Common-MergePlainKeywordResults], Source={x:Static loc:LocalizationManager.Instance}}"
+                    IsChecked="{Binding MergePlainKeywordResults, Mode=TwoWay}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{CompiledBinding [Search-Common-IncludeTranslatedTagResults], Source={x:Static loc:LocalizationManager.Instance}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Column="1"
+                    AutomationProperties.Name="{CompiledBinding [Search-Common-IncludeTranslatedTagResults], Source={x:Static loc:LocalizationManager.Instance}}"
+                    IsChecked="{Binding IncludeTranslatedTagResults, Mode=TwoWay}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{CompiledBinding [Search-Common-IncludePotentialViolationWorks], Source={x:Static loc:LocalizationManager.Instance}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Column="1"
+                    AutomationProperties.Name="{CompiledBinding [Search-Common-IncludePotentialViolationWorks], Source={x:Static loc:LocalizationManager.Instance}}"
+                    IsChecked="{Binding IncludePotentialViolationWorks, Mode=TwoWay}" />
+            </Grid>
 
             <Separator />
 
-        <TextBlock FontWeight="SemiBold" Text="{CompiledBinding [Search-Sections-Novel], Source={x:Static loc:LocalizationManager.Instance}}" />
-        <Grid ColumnDefinitions="180,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Novel-MatchOption], Source={x:Static loc:LocalizationManager.Instance}}" />
-            <controls:SymbolComboBox
-                Grid.Column="1"
-                IconMode="False"
-                ItemsSource="{markup:EnumResources x:TypeArguments=nativeMako:NovelSearchTarget}"
-                SelectedValue="{Binding MatchOption, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Novel-Language], Source={x:Static loc:LocalizationManager.Instance}}" />
-            <ComboBox
-                Grid.Column="1"
-                HorizontalAlignment="Stretch"
-                DisplayMemberBinding="{Binding Name}"
-                ItemsSource="{Binding LanguageItems}"
-                SelectedIndex="0"
-                SelectedValue="{Binding Language, Mode=TwoWay, TargetNullValue=''}"
-                SelectedValueBinding="{Binding Code}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Novel-ContentLengthOption], Source={x:Static loc:LocalizationManager.Instance}}" />
-            <controls:SymbolComboBox
-                Grid.Column="1"
-                IconMode="False"
-                ItemsSource="{markup:EnumResources x:TypeArguments=enum:SearchNovelContentLengthOption}"
-                SelectedValue="{Binding ContentLengthOption, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Novel-ContentLengthMin], Source={x:Static loc:LocalizationManager.Instance}}" />
-            <ToggleSwitch
-                Grid.Column="1"
-                IsChecked="{Binding ContentLengthMinOption.IsEnabled, Mode=TwoWay}"
-                IsEnabled="{Binding IsContentLengthEnabled}" />
-            <NumericUpDown
-                Grid.Column="2"
-                AllowSpin="True"
-                ClipValueToMinMax="True"
-                FormatString="F0"
-                Increment="1"
-                IsEnabled="{Binding IsContentLengthEnabled}"
-                Minimum="0"
-                Value="{Binding ContentLengthMinOption.Value, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Novel-ContentLengthMax], Source={x:Static loc:LocalizationManager.Instance}}" />
-            <ToggleSwitch
-                Grid.Column="1"
-                IsChecked="{Binding ContentLengthMaxOption.IsEnabled, Mode=TwoWay}"
-                IsEnabled="{Binding IsContentLengthEnabled}" />
-            <NumericUpDown
-                Grid.Column="2"
-                AllowSpin="True"
-                ClipValueToMinMax="True"
-                FormatString="F0"
-                Increment="1"
-                IsEnabled="{Binding IsContentLengthEnabled}"
-                Minimum="0"
-                Value="{Binding ContentLengthMaxOption.Value, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Novel-IsOriginalOnly], Source={x:Static loc:LocalizationManager.Instance}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsOriginalOnly, Mode=TwoWay}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,*" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Novel-Genre], Source={x:Static loc:LocalizationManager.Instance}}" />
-            <ComboBox
-                Grid.Column="1"
-                HorizontalAlignment="Stretch"
-                DisplayMemberBinding="{Binding Label}"
-                IsEnabled="{Binding IsOriginalOnly}"
-                ItemsSource="{Binding GenreItems}"
-                SelectedIndex="0"
-                SelectedValue="{Binding GenreId, Mode=TwoWay}"
-                SelectedValueBinding="{Binding Id}" />
-        </Grid>
-        <Grid ColumnDefinitions="180,Auto" ColumnSpacing="12">
-            <TextBlock VerticalAlignment="Center" Text="{CompiledBinding [Search-Novel-IsReplaceableOnly], Source={x:Static loc:LocalizationManager.Instance}}" />
-            <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsReplaceableOnly, Mode=TwoWay}" />
-        </Grid>
-    </StackPanel>
+            <TextBlock
+                m3:MaterialText.Style="{m3:Typography TitleMedium}"
+                Text="{CompiledBinding [Search-Sections-Novel], Source={x:Static loc:LocalizationManager.Instance}}"
+                TextWrapping="Wrap" />
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{CompiledBinding [Search-Novel-MatchOption], Source={x:Static loc:LocalizationManager.Instance}}"
+                    TextWrapping="Wrap" />
+                <controls:SymbolComboBox
+                    Grid.Row="1"
+                    AutomationProperties.Name="{CompiledBinding [Search-Novel-MatchOption], Source={x:Static loc:LocalizationManager.Instance}}"
+                    IconMode="False"
+                    ItemsSource="{markup:EnumResources x:TypeArguments=nativeMako:NovelSearchTarget}"
+                    SelectedValue="{Binding MatchOption, Mode=TwoWay}" />
+            </Grid>
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{CompiledBinding [Search-Novel-Language], Source={x:Static loc:LocalizationManager.Instance}}"
+                    TextWrapping="Wrap" />
+                <ComboBox
+                    Grid.Row="1"
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="{CompiledBinding [Search-Novel-Language], Source={x:Static loc:LocalizationManager.Instance}}"
+                    DisplayMemberBinding="{Binding Name}"
+                    ItemsSource="{Binding LanguageItems}"
+                    SelectedIndex="0"
+                    SelectedValue="{Binding Language, Mode=TwoWay, TargetNullValue=''}"
+                    SelectedValueBinding="{Binding Code}" />
+            </Grid>
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{CompiledBinding [Search-Novel-ContentLengthOption], Source={x:Static loc:LocalizationManager.Instance}}"
+                    TextWrapping="Wrap" />
+                <controls:SymbolComboBox
+                    Grid.Row="1"
+                    AutomationProperties.Name="{CompiledBinding [Search-Novel-ContentLengthOption], Source={x:Static loc:LocalizationManager.Instance}}"
+                    IconMode="False"
+                    ItemsSource="{markup:EnumResources x:TypeArguments=enum:SearchNovelContentLengthOption}"
+                    SelectedValue="{Binding ContentLengthOption, Mode=TwoWay}" />
+            </Grid>
+            <Grid
+                ColumnDefinitions="Auto,*"
+                ColumnSpacing="12"
+                RowDefinitions="Auto,Auto"
+                RowSpacing="8">
+                <TextBlock
+                    Grid.ColumnSpan="2"
+                    VerticalAlignment="Center"
+                    Text="{CompiledBinding [Search-Novel-ContentLengthMin], Source={x:Static loc:LocalizationManager.Instance}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Row="1"
+                    AutomationProperties.Name="{CompiledBinding [Search-Novel-ContentLengthMin], Source={x:Static loc:LocalizationManager.Instance}}"
+                    IsChecked="{Binding ContentLengthMinOption.IsEnabled, Mode=TwoWay}"
+                    IsEnabled="{Binding IsContentLengthEnabled}" />
+                <NumericUpDown
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    AllowSpin="True"
+                    AutomationProperties.Name="{CompiledBinding [Search-Novel-ContentLengthMin], Source={x:Static loc:LocalizationManager.Instance}}"
+                    ClipValueToMinMax="True"
+                    FormatString="F0"
+                    Increment="1"
+                    IsEnabled="{Binding IsContentLengthEnabled}"
+                    Minimum="0"
+                    Value="{Binding ContentLengthMinOption.Value, Mode=TwoWay}" />
+            </Grid>
+            <Grid
+                ColumnDefinitions="Auto,*"
+                ColumnSpacing="12"
+                RowDefinitions="Auto,Auto"
+                RowSpacing="8">
+                <TextBlock
+                    Grid.ColumnSpan="2"
+                    VerticalAlignment="Center"
+                    Text="{CompiledBinding [Search-Novel-ContentLengthMax], Source={x:Static loc:LocalizationManager.Instance}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Row="1"
+                    AutomationProperties.Name="{CompiledBinding [Search-Novel-ContentLengthMax], Source={x:Static loc:LocalizationManager.Instance}}"
+                    IsChecked="{Binding ContentLengthMaxOption.IsEnabled, Mode=TwoWay}"
+                    IsEnabled="{Binding IsContentLengthEnabled}" />
+                <NumericUpDown
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    AllowSpin="True"
+                    AutomationProperties.Name="{CompiledBinding [Search-Novel-ContentLengthMax], Source={x:Static loc:LocalizationManager.Instance}}"
+                    ClipValueToMinMax="True"
+                    FormatString="F0"
+                    Increment="1"
+                    IsEnabled="{Binding IsContentLengthEnabled}"
+                    Minimum="0"
+                    Value="{Binding ContentLengthMaxOption.Value, Mode=TwoWay}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{CompiledBinding [Search-Novel-IsOriginalOnly], Source={x:Static loc:LocalizationManager.Instance}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Column="1"
+                    AutomationProperties.Name="{CompiledBinding [Search-Novel-IsOriginalOnly], Source={x:Static loc:LocalizationManager.Instance}}"
+                    IsChecked="{Binding IsOriginalOnly, Mode=TwoWay}" />
+            </Grid>
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{CompiledBinding [Search-Novel-Genre], Source={x:Static loc:LocalizationManager.Instance}}"
+                    TextWrapping="Wrap" />
+                <ComboBox
+                    Grid.Row="1"
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="{CompiledBinding [Search-Novel-Genre], Source={x:Static loc:LocalizationManager.Instance}}"
+                    DisplayMemberBinding="{Binding Label}"
+                    IsEnabled="{Binding IsOriginalOnly}"
+                    ItemsSource="{Binding GenreItems}"
+                    SelectedIndex="0"
+                    SelectedValue="{Binding GenreId, Mode=TwoWay}"
+                    SelectedValueBinding="{Binding Id}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="{CompiledBinding [Search-Novel-IsReplaceableOnly], Source={x:Static loc:LocalizationManager.Instance}}"
+                    TextWrapping="Wrap" />
+                <ToggleSwitch
+                    Grid.Column="1"
+                    AutomationProperties.Name="{CompiledBinding [Search-Novel-IsReplaceableOnly], Source={x:Static loc:LocalizationManager.Instance}}"
+                    IsChecked="{Binding IsReplaceableOnly, Mode=TwoWay}" />
+            </Grid>
+        </StackPanel>
+    </m3:MaterialSurface>
 </ContentPage>

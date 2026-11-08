@@ -9,3 +9,5 @@ TranslateFullText = 翻译全文
 ShowOriginal = 显示原文
 
 ShowTranslation = 显示译文
+
+CancelTranslation = 取消翻译

@@ -2,6 +2,7 @@
 // Licensed under the GPL-3.0 License.
 
 using System.Collections.Generic;
+using System;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 
@@ -13,8 +14,12 @@ public sealed class StoragePickerService : IStoragePickerService
 
     public StoragePickerService(IUiHost host) => _host = host;
 
-    public Task<IStorageFile?> SaveFileAsync(FilePickerSaveOptions options) =>
-        _host.TopLevel?.StorageProvider?.SaveFilePickerAsync(options) ?? Task.FromResult<IStorageFile?>(null);
+    public Task<IStorageFile?> SaveFileAsync(FilePickerSaveOptions options)
+    {
+        if (_host.TopLevel?.StorageProvider is not { CanSave: true } provider)
+            throw new NotSupportedException("Saving files is not supported by this window.");
+        return provider.SaveFilePickerAsync(options);
+    }
 
     public async Task<IReadOnlyList<IStorageFile>> OpenFilesAsync(FilePickerOpenOptions options)
     {

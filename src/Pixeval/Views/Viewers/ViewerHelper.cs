@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Pixeval.Pixiv;
 using Pixeval.Booru;
@@ -123,20 +124,24 @@ public static class ViewerHelper
         string id,
         MakoClient makoClient,
         BooruClient? booruClient,
-        FileLogger? logger = null)
+        FileLogger? logger = null, CancellationToken token = default)
     {
         try
         {
             if (string.Equals(platform, PlatformConstants.Pixiv, StringComparison.OrdinalIgnoreCase))
             {
                 if (long.TryParse(id, out var illustId))
-                    return await makoClient.GetIllustrationAsync(illustId);
+                    return await makoClient.GetIllustrationAsync(illustId, token);
             }
             else if (booruClient is not null)
             {
                 var booruPlatform = BooruPlatformExtensions.FromPlatformString(platform);
-                return await booruClient.GetPostAsync(booruPlatform, id);
+                return await booruClient.GetPostAsync(booruPlatform, id, token);
             }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception e)
         {

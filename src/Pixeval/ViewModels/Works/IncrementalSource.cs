@@ -59,22 +59,27 @@ public class IncrementalSource<T, TViewModel> : IIncrementalSource<TViewModel>, 
     public virtual async Task<IReadOnlyCollection<TViewModel>> GetPagedItemsAsync(int pageIndex, int pageSize, CancellationToken token = default)
     {
         BeginRequest();
-        List<TViewModel>? result = null;
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, _lifetimeCts.Token);
+        var result = new List<TViewModel>(pageSize);
         try
         {
             IsInterrupted = false;
             HasMoreItems = true;
-            var result = new List<TViewModel>(pageSize);
             if (_pageFeed is { } feed)
-                await FillFromFeedAsync(feed, result, pageSize, token).ConfigureAwait(false);
+                await FillFromFeedAsync(feed, result, pageSize, linked.Token).ConfigureAwait(false);
             else
-                await FillFromEnumeratorAsync(result, pageSize, token).ConfigureAwait(false);
+                await FillFromEnumeratorAsync(result, pageSize, linked.Token).ConfigureAwait(false);
+            linked.Token.ThrowIfCancellationRequested();
             return result;
         }
         catch (Exception ex)
         {
-            if (_pageFeed is null)
-                HasMoreItems = false;
+            if (ex is not OperationCanceledException)
+            {
+                IsInterrupted = true;
+                HasMoreItems = _pageFeed is not null;
+            }
+            IncrementalPageLifetime.DisposeItems(result, ex);
             throw;
         }
         finally
@@ -111,6 +116,7 @@ public class IncrementalSource<T, TViewModel> : IIncrementalSource<TViewModel>, 
             try
             {
                 (items, exhausted) = await feed.FetchPageAsync(token).ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

@@ -97,3 +97,13 @@ SauceNAO-Or = или
 SauceNAO-PasteFromClipboard = Вставить изображение из буфера обмена
 
 SauceNAO-ProvideApiKey = Пожалуйста, сначала укажите SauceNAO API Key в настройках
+
+AdvancedOptions-Header = Расширенный поиск
+
+SauceNAO-Retry = Повторить поиск
+
+SauceNAO-RequestFailed = Не удалось выполнить поиск или сервис временно недоступен. Повторите попытку позже.
+
+SauceNAO-ImageLoadFailed = Не удалось прочитать изображение. Предыдущий выбор сохранён. Выберите корректное изображение и повторите попытку.
+
+SauceNAO-ClipboardHasNoImage = В буфере обмена нет изображения.

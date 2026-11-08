@@ -11,6 +11,10 @@ public partial record struct WorkSubscriptionRecord
 
     public WorkSubscriptionWorkKind Kind => (WorkSubscriptionWorkKind)WorkKind;
 
+    public string SubscriptionTypeText => Pixeval.Controls.SymbolComboBoxItem.GetResource(Type);
+
+    public string WorkKindText => Pixeval.Controls.SymbolComboBoxItem.GetResource(Kind);
+
     public string Name => Title;
 
     public string DisplayName => string.IsNullOrWhiteSpace(Title) ? Id.ToString() : Title;

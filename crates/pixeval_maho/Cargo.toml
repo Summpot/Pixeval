@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 boltffi.workspace = true
+async-trait = "0.1"
 tokio = { workspace = true, features = ["full"] }
 bytes.workspace = true
 thiserror.workspace = true

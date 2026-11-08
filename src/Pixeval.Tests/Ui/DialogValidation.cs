@@ -12,7 +12,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 
 namespace Pixeval.Tests.Ui;
 
@@ -30,6 +30,7 @@ internal static class DialogValidation
                 var window = new Window { Width = width, Height = 720, RequestedThemeVariant = theme, Content = container.Shell };
                 try
                 {
+                    Pixeval.Common.MaterialAnimation.Initialize(window);
                     window.Show();
                     await RenderAsync(window);
                     Require(origin.Focus(), "The confirmation entry must receive focus.");
@@ -38,8 +39,8 @@ internal static class DialogValidation
                         var result = container.Shell.CreateOkCancelAsync("确认操作 / Confirmation", "保留原有确认与取消结果，关闭后返回调用入口。");
                         await RenderAsync(window);
                         var dialog = window.GetVisualDescendants().OfType<ContentDialog>().Single();
-                        Require(dialog.PrimaryButtonText == I18NManager.GetResource(ContentDialogResources.OkButtonContent), "Localized confirmation label changed.");
-                        Require(dialog.CloseButtonText == I18NManager.GetResource(ContentDialogResources.CancelButtonContent), "Localized cancellation label changed.");
+                        Require(dialog.PrimaryButtonText == Strings.ContentDialogOkButtonContent(), "Localized confirmation label changed.");
+                        Require(dialog.CloseButtonText == Strings.ContentDialogCancelButtonContent(), "Localized cancellation label changed.");
                         if (confirm)
                         {
                             Save(window, directory, $"confirmation-{theme.Key}-{width}");

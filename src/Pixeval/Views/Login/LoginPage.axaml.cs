@@ -28,7 +28,7 @@ public partial class LoginPage : IconContentPage
     private static LoginPage? _ActiveLoginPage;
     private CancellationTokenSource? _loadUsersCancellationTokenSource;
     private LoginAttempt? _loginAttempt;
-    private readonly FileLogger _logger = App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>();
+    private FileLogger _logger => this.GetRequiredUiService<FileLogger>();
 
     internal Task LoginCompletion { get; private set; } = Task.CompletedTask;
 
@@ -52,15 +52,13 @@ public partial class LoginPage : IconContentPage
         var cancellationToken = attempt.Cancellation.Token;
         try
         {
-            if (DataContext is not LoginPageViewModel viewModel)
-                return;
-
-            var token = viewModel.RefreshToken;
+            var token = attempt.ViewModel.RefreshToken;
             if (string.IsNullOrWhiteSpace(token))
                 return;
 
             this.GetRequiredUiService<MakoClient>().SetRefreshToken(token);
-            var result = await this.GetRequiredUiService<MakoClient>().IdentifyTokenAsync();
+            var result = await this.GetRequiredUiService<MakoClient>().IdentifyTokenAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             if (result.Success)
             {
                 var tokenResponse = this.GetRequiredUiService<MakoClient>().GetTokenResponse()
@@ -78,7 +76,7 @@ public partial class LoginPage : IconContentPage
         }
         catch (Exception exception)
         {
-            ShowLoginError(exception);
+            ShowAttemptError(attempt, exception);
         }
         finally
         {
@@ -142,12 +140,14 @@ public partial class LoginPage : IconContentPage
                     }
                 });
 
+            cancellationToken.ThrowIfCancellationRequested();
             if (result.CallbackUri is not { } callbackUri)
                 return;
             var code = HttpUtility.ParseQueryString(callbackUri.Query)["code"];
             if (string.IsNullOrWhiteSpace(code))
                 return;
-            var tokenResponse = await this.GetRequiredUiService<MakoClient>().ExchangeCodeAsync(code, verifier);
+            var tokenResponse = await this.GetRequiredUiService<MakoClient>().ExchangeCodeAsync(code, verifier, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             this.GetRequiredUiService<IUserSessionService>().OnTokenRefreshed(tokenResponse);
             LoginNavigate();
         }
@@ -157,7 +157,7 @@ public partial class LoginPage : IconContentPage
         }
         catch (Exception exception)
         {
-            ShowLoginError(exception);
+            ShowAttemptError(attempt, exception);
         }
         finally
         {
@@ -208,6 +208,7 @@ public partial class LoginPage : IconContentPage
             ShowLoginError(exception);
         }
     }
+
 
     protected override void OnUnloaded(RoutedEventArgs e)
     {

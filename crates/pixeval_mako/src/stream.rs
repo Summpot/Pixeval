@@ -42,6 +42,17 @@ impl<T: Send + Sync + 'static> MakoFeed<T> {
         }
     }
 
+    pub fn with_initial_page(fetcher: Arc<dyn PageFetcher<T>>, items: Vec<T>, next_url: Option<String>) -> Self {
+        let exhausted = next_url.is_none();
+        Self {
+            buffer: Mutex::new(items.into()),
+            first_fetch_done: AtomicBool::new(true),
+            is_exhausted: AtomicBool::new(exhausted),
+            requested_pages: AtomicU32::new(1),
+            ..Self::new(fetcher, next_url)
+        }
+    }
+
     pub fn cancel(&self) {
         self.is_cancelled.store(true, Ordering::SeqCst);
     }
@@ -63,6 +74,14 @@ impl<T: Send + Sync + 'static> MakoFeed<T> {
     }
 
     pub async fn next_page(&self) -> Result<(Vec<T>, bool), String> {
+        self.next_page_with_attempts(3).await
+    }
+
+    pub async fn next_page_once(&self) -> Result<(Vec<T>, bool), String> {
+        self.next_page_with_attempts(1).await
+    }
+
+    async fn next_page_with_attempts(&self, max_attempts: u32) -> Result<(Vec<T>, bool), String> {
         if self.is_cancelled() {
             return Err("cancelled".to_string());
         }
@@ -95,7 +114,7 @@ impl<T: Send + Sync + 'static> MakoFeed<T> {
         let fetch_res = loop {
             attempts += 1;
             let res = self.fetcher.fetch_page(current_url.as_deref()).await;
-            if res.is_ok() || attempts >= 3 || self.is_cancelled() {
+            if res.is_ok() || attempts >= max_attempts || self.is_cancelled() {
                 break res;
             }
             tokio::time::sleep(std::time::Duration::from_millis(500 * (1 << (attempts - 1)))).await;
@@ -233,6 +252,12 @@ macro_rules! export_feed {
                 self.inner
                     .next_page()
                     .await
+                    .map(|(items, exhausted)| $page { items, exhausted })
+                    .map_err(map_page_error)
+            }
+
+            pub async fn next_page_once(&self) -> Result<$page, MakoError> {
+                self.inner.next_page_once().await
                     .map(|(items, exhausted)| $page { items, exhausted })
                     .map_err(map_page_error)
             }
@@ -382,6 +407,16 @@ mod tests {
 
     fn engine(pages: Vec<PageFetchResult<i32>>) -> MakoFeed<i32> {
         MakoFeed::new(ScriptedFetcher::new(pages), Some("https://example.test/first".into()))
+    }
+
+    #[tokio::test]
+    async fn interactive_page_failure_waits_for_explicit_retry() {
+        let engine = engine(vec![Err("retry explicitly".into()), Ok((vec![7], None))]);
+        assert_eq!(engine.next_page_once().await.unwrap_err(), "retry explicitly");
+        assert_eq!(engine.requested_pages(), 0);
+        assert!(!engine.is_completed());
+        assert_eq!(engine.next_page_once().await.unwrap(), (vec![7], true));
+        assert!(engine.last_error().is_none());
     }
 
     #[tokio::test]

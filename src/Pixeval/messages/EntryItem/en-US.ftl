@@ -25,3 +25,5 @@ DownloadTaskCreated = Created download task
 TheIllustrationIsAMangaFormatted = { "This work contains " }{ $count }{ " pictures" }
 
 TheIllustrationIsAnUgoira = This is an ugoira
+
+DownloadTaskCreationFailed = Could not create download task

@@ -117,6 +117,32 @@ public sealed class WorkViewOwnershipTest
         });
     }
 
+    [TestMethod]
+    public async Task SharedPreviewSourceSurvivesEitherOwnerClosing()
+    {
+        await RunAsync(() =>
+        {
+            foreach (var closePreviewFirst in new[] { false, true })
+            {
+                var preview = new IllustrationViewViewModel(new AppSettings());
+                preview.ResetSource(AsyncEnumerable.Empty<object>());
+                preview.Source.Add(Illustration.CreateDefault() with { Id = 42 });
+                var destination = new IllustrationViewViewModel(new AppSettings());
+                destination.ShareSourceFrom(preview);
+                var records = preview.Source;
+                Assert.AreSame(records, destination.Source);
+                Assert.AreNotSame(preview.View, destination.View);
+                var first = closePreviewFirst ? preview : destination;
+                var last = closePreviewFirst ? destination : preview;
+                first.Dispose();
+                first.Dispose();
+                Assert.HasCount(1, last.Source);
+                last.Dispose();
+                Assert.HasCount(0, records);
+            }
+        });
+    }
+
     private static async Task RunAsync(Action test)
     {
         await using var session = HeadlessUnitTestSession.StartNew(typeof(ImageViewerLoadingTest.ViewerApplication));

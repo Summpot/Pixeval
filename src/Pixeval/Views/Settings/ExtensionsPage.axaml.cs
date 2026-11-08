@@ -5,6 +5,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -20,7 +21,14 @@ public partial class ExtensionsPage : IconContentPage
 
     private bool _firstTime = true;
 
-    public ObservableCollection<ExtensionsHostModel> Models => ExtensionService.HostModels;
+    public static readonly DirectProperty<ExtensionsPage, ObservableCollection<ExtensionsHostModel>> ModelsProperty =
+        AvaloniaProperty.RegisterDirect<ExtensionsPage, ObservableCollection<ExtensionsHostModel>>(nameof(Models), page => page.Models);
+
+    public ObservableCollection<ExtensionsHostModel> Models
+    {
+        get;
+        private set => SetAndRaise(ModelsProperty, ref field, value);
+    } = [];
 
     public ExtensionsPage() => InitializeComponent();
 
@@ -28,6 +36,7 @@ public partial class ExtensionsPage : IconContentPage
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
+        Models = ExtensionService.HostModels;
         if (_firstTime && ExtensionService.OutDateExtensionHostsCount is var count and not 0)
         {
             _firstTime = false;

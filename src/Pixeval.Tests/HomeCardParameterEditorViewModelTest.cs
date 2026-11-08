@@ -17,7 +17,7 @@ public sealed class HomeCardParameterEditorViewModelTest
         IReadOnlyList<SymbolComboBoxItem> items =
         [
             new(SimpleWorkKind.Illustration, "Illustration", default),
-            new(SimpleWorkKind.Novel, "Novel", default)
+            new(SimpleWorkKind.Novel, "Mako.Novel", default)
         ];
         var editor = new HomeCardChoiceParameterEditorViewModel(
             HomeCardParameterKinds.SimpleWorkKind,

@@ -1465,11 +1465,22 @@ fn write_novel(
             return Err(format!("No encoder for .{extension}"));
         };
         let paths = job.children.iter().map(|(path, _)| path.clone()).collect();
-        let message = encoder.encode_novel(job.novel.text.clone(), paths, output.novel_file.clone(), extension.clone());
+        let temp = format!("{}.pixevaldownloading-file", output.novel_file);
+        remove_path(&temp);
+        let message = encoder.encode_novel(job.novel.text.clone(), paths, temp.clone(), extension.clone());
         if output.delete_images_after {
             cleanup_frames(job, &output.image_folder);
         }
-        return if message.is_empty() { Ok(()) } else { Err(message) };
+        if !message.is_empty() {
+            remove_path(&temp);
+            return Err(message);
+        }
+        if !Path::new(&temp).is_file() {
+            return Err(format!("Novel encoder did not create output: {}", output.novel_file));
+        }
+        let result = commit_file(&temp, &output.novel_file, overwrite);
+        if result.is_err() { remove_path(&temp); }
+        return result;
     }
 
     let built_in = output.built_in.unwrap_or(NovelBuiltIn::Txt);
@@ -1621,6 +1632,38 @@ fn delete_local_work(work: &WorkItem) {
 mod tests {
     use super::*;
     use crate::plan::DownloadPolicy;
+
+    struct NovelEncoder { fail: bool, write: bool }
+    impl DownloadFormatEncoder for NovelEncoder {
+        fn encode_static_image(&self, _: String, _: String, _: String) -> String { unreachable!() }
+        fn encode_animated(&self, _: Vec<String>, _: Vec<u32>, _: String, _: String) -> String { unreachable!() }
+        fn encode_novel(&self, text: String, _: Vec<String>, destination: String, _: String) -> String {
+            if self.write { std::fs::write(destination, text).unwrap(); }
+            if self.fail { "fixture failure".into() } else { String::new() }
+        }
+    }
+
+    #[test]
+    fn extension_novel_export_commits_only_complete_successful_output() {
+        let dir = tempfile::tempdir().unwrap();
+        let output = super::super::kinds::novel_output_paths(
+            &dir.path().join("novel.@{ext}").to_string_lossy(), "extension:fixture");
+        let job = AfterJob {
+            after: AfterDownload::None, token: CancellationToken::new(), children: vec![],
+            delays_ms: vec![], novel_id: 1,
+            novel: NovelAssets { text: "complete".into(), content: Some(Default::default()), ..Default::default() },
+        };
+        let temp = format!("{}.pixevaldownloading-file", output.novel_file);
+        std::fs::write(&output.novel_file, "original").unwrap();
+        assert!(write_novel(&job, &output, true, Some(&NovelEncoder { fail: true, write: true })).is_err());
+        assert_eq!(std::fs::read_to_string(&output.novel_file).unwrap(), "original");
+        assert!(!Path::new(&temp).exists());
+        assert!(write_novel(&job, &output, true, Some(&NovelEncoder { fail: false, write: false })).unwrap_err().contains("did not create output"));
+        assert_eq!(std::fs::read_to_string(&output.novel_file).unwrap(), "original");
+        write_novel(&job, &output, true, Some(&NovelEncoder { fail: false, write: true })).unwrap();
+        assert_eq!(std::fs::read_to_string(&output.novel_file).unwrap(), "complete");
+        assert!(!Path::new(&temp).exists());
+    }
 
     fn request(path: &str, title: &str, artwork_id: &str, subscription_id: i64) -> ExternalImageRequest {
         let (serialize_key, payload_json) = serialize(&ArtworkPayload::Booru { post: pixeval_booru::BooruPost {

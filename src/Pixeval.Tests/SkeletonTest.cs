@@ -19,9 +19,9 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
-using Pixeval.I18N;
+using Pixeval.Localization;
 using Pixeval.Utilities;
-using Pixeval.Views.Entry;
+using Pixeval.Views.Works;
 
 namespace Pixeval.Tests;
 
@@ -32,8 +32,8 @@ public sealed class SkeletonTest
     [ClassInitialize]
     public static void Initialize(TestContext _)
     {
-        I18NManager.CandidatePaths.Add(Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Pixeval")));
-        I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
+
+        AppLocalization.Instance.SetLanguage("zh-Hans");
     }
 
     [TestMethod]
@@ -47,6 +47,7 @@ public sealed class SkeletonTest
             var window = new Window { Width = 500, Height = 400, Content = parent };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 await RenderAsync(window);
                 var shimmer = Shimmer(skeleton);
@@ -116,6 +117,7 @@ public sealed class SkeletonTest
             var window = new Window { Width = 500, Height = 500, RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light, Content = root };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 await RenderAsync(window);
                 var avatarSkeleton = avatar.GetVisualDescendants().OfType<Skeleton>().Single();
@@ -133,7 +135,7 @@ public sealed class SkeletonTest
                 await RenderAsync(window);
                 Assert.IsFalse(avatarSkeleton.IsEffectivelyVisible || entrySkeleton.IsEffectivelyVisible);
                 Assert.IsFalse(progress.IsIndeterminate || progress.IsEffectivelyVisible);
-                var empty = entry.GetVisualDescendants().OfType<TextBlock>().Single(text => text.Text == I18NManager.GetResource(EntryViewResources.ResultIsEmptyTextBlock));
+                var empty = entry.GetVisualDescendants().OfType<TextBlock>().Single(text => text.Text == Strings.EntryViewResultIsEmptyTextBlock());
                 Assert.IsTrue(empty.IsEffectivelyVisible);
                 entry.HasNoItem = false;
                 var content = new Button { Content = "Existing entry action" };
@@ -171,6 +173,7 @@ public sealed class SkeletonTest
             var window = new Window { Width = 500, Height = 400, Content = parent };
             try
             {
+                Pixeval.Common.MaterialAnimation.Initialize(window);
                 window.Show();
                 var detached = MountAndDetach(window, parent);
                 await RenderAsync(window);
