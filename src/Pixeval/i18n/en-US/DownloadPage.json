@@ -36,5 +36,7 @@
   },
   "DeleteLocalFiles": {
     "Content": "Also delete local files"
-  }
+  },
+  "StatusFilter": "Download status",
+  "SelectedCountFormatted": "Selected: {0}"
 }

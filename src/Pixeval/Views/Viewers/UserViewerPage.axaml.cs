@@ -1,7 +1,6 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Pixeval.Utilities;
@@ -35,10 +34,4 @@ public partial class UserViewerPage : ContentPage
 
     #endregion
 
-    private void UserInfoExpander_OnPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
-    {
-        if(e.Property != Expander.IsExpandedProperty)
-            return;
-
-    }
 }

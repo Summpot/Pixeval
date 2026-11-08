@@ -6,5 +6,7 @@
   },
   "SendButton": {
     "ToolTip": "Submit"
-  }
+  },
+  "SendFailed": "Could not send the comment. Try again.",
+  "OpenEmoji": "Emoji and stickers"
 }

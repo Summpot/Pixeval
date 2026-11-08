@@ -59,7 +59,7 @@ jobs:
         run: |
           $evidenceRoot = 'artifacts/m3e/offline-pages'
           New-Item -ItemType Directory -Path $evidenceRoot -ErrorAction Stop | Out-Null
-          foreach ($mode in @('navigation', 'search', 'search-options', 'search-page', 'saucenao', 'user-pages', 'series-page', 'work-feeds', 'work-sources', 'work-related', 'history-pages', 'home-cards', 'home-parameters', 'home-sources', 'spotlight', 'login', 'work-cards', 'work-selection', 'extension-management', 'bookmark-tags', 'bookmark-page', 'ranking-page', 'viewer-toolbar', 'documentation', 'dialogs')) {
+          foreach ($mode in @('navigation', 'search', 'search-options', 'search-page', 'saucenao', 'user-pages', 'user-details', 'series-page', 'series-details', 'work-info', 'work-series', 'comment-send', 'comment-list', 'download-pages', 'subscription-editor', 'download-folders', 'work-feeds', 'work-sources', 'work-related', 'history-pages', 'home-cards', 'home-parameters', 'home-sources', 'spotlight', 'login', 'work-cards', 'work-selection', 'extension-management', 'bookmark-tags', 'bookmark-page', 'ranking-page', 'viewer-toolbar', 'documentation', 'dialogs')) {
             $modeDirectory = Join-Path $evidenceRoot $mode
             dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll $mode $modeDirectory *> "$modeDirectory.log"
             $result = $LASTEXITCODE

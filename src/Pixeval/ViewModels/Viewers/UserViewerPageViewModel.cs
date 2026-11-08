@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Mako.Global.Enum;
 using Mako.Net.Responses;
+using Pixeval.I18N;
 using Pixeval.Models.Blocking;
 using Pixeval.Views;
 using Pixeval.Views.Capability;
@@ -25,6 +26,9 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     public partial bool IsLoading { get; private set; }
+
+    [ObservableProperty]
+    public partial bool IsChangingFollow { get; private set; }
 
     [ObservableProperty]
     public partial string? LoadErrorMessage { get; private set; }
@@ -73,6 +77,15 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         if (value is not null)
             IsFollowed = value.UserEntity.IsFollowed;
 
+        NotifyActionCommands();
+    }
+
+    partial void OnIsLoadingChanged(bool value) => NotifyActionCommands();
+
+    partial void OnIsChangingFollowChanged(bool value) => NotifyActionCommands();
+
+    private void NotifyActionCommands()
+    {
         FollowCommand.NotifyCanExecuteChanged();
         FollowPrivatelyCommand.NotifyCanExecuteChanged();
         UnfollowCommand.NotifyCanExecuteChanged();
@@ -89,8 +102,14 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         {
             var userDetail = BlockedContentHelper.Replace(
                 await App.AppViewModel.MakoClient.GetUserFromIdAsync(userId, token));
-            if (_disposed)
+            if (_disposed || token.IsCancellationRequested)
                 return;
+
+            if (userDetail.UserEntity.Id != userId)
+            {
+                LoadErrorMessage = I18NManager.GetResource(EntryViewerPageResources.LoadFailed);
+                return;
+            }
 
             UserDetail = userDetail;
         }
@@ -109,9 +128,10 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private bool CanFollow => Id != PixevalSettings.MyId;
+    private bool CanFollow => !_disposed && !IsLoading && !IsChangingFollow && UserDetail is not null && Id > 0
+                             && App.AppViewModel.MakoClient.Me is { Id: var accountId } && Id != accountId;
 
-    private bool CanBlockUser => UserDetail is { UserEntity: var user }
+    private bool CanBlockUser => !_disposed && !IsLoading && !IsChangingFollow && UserDetail is { UserEntity: var user }
                                  && !BlockedContentHelper.IsBlocked(user);
 
     [RelayCommand(CanExecute = nameof(CanBlockUser))]
@@ -125,35 +145,42 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand(CanExecute = nameof(CanFollow))]
-    private async Task FollowAsync()
-    {
-        var result = await App.AppViewModel.MakoClient.PostFollowUserAsync(Id, PrivacyPolicy.Public);
-        if (result)
-        {
-            UserDetail?.UserEntity.IsFollowed = true;
-            IsFollowed = true;
-        }
-    }
+    private Task FollowAsync() => SetFollowAsync(PrivacyPolicy.Public);
 
     [RelayCommand(CanExecute = nameof(CanFollow))]
-    private async Task FollowPrivatelyAsync()
-    {
-        var result = await App.AppViewModel.MakoClient.PostFollowUserAsync(Id, PrivacyPolicy.Private);
-        if (result)
-        {
-            UserDetail?.UserEntity.IsFollowed = true;
-            IsFollowed = true;
-        }
-    }
+    private Task FollowPrivatelyAsync() => SetFollowAsync(PrivacyPolicy.Private);
 
     [RelayCommand(CanExecute = nameof(CanFollow))]
-    private async Task UnfollowAsync()
+    private Task UnfollowAsync() => SetFollowAsync(null);
+
+    private async Task SetFollowAsync(PrivacyPolicy? privacy)
     {
-        var result = await App.AppViewModel.MakoClient.RemoveFollowUserAsync(Id);
-        if (result)
+        if (!CanFollow || UserDetail is not { } detail)
+            return;
+
+        var client = App.AppViewModel.MakoClient;
+        var accountId = client.Me?.Id;
+        var token = _loadingCts.Token;
+        IsChangingFollow = true;
+        try
         {
-            UserDetail?.UserEntity.IsFollowed = false;
-            IsFollowed = false;
+            var result = privacy is { } policy
+                ? await client.PostFollowUserAsync(Id, policy, token)
+                : await client.RemoveFollowUserAsync(Id, token);
+            if (result && !_disposed && !token.IsCancellationRequested && client.Me?.Id == accountId
+                && ReferenceEquals(UserDetail, detail))
+            {
+                detail.UserEntity.IsFollowed = privacy is not null;
+                IsFollowed = privacy is not null;
+            }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (!_disposed)
+                IsChangingFollow = false;
         }
     }
 
@@ -168,6 +195,8 @@ public sealed partial class UserViewerPageViewModel : ViewModelBase, IDisposable
 
         _disposed = true;
         IsLoading = false;
+        IsChangingFollow = false;
+        NotifyActionCommands();
         _loadingCts.Cancel();
         _loadingCts.Dispose();
     }

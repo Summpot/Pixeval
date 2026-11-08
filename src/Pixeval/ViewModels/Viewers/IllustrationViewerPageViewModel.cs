@@ -261,9 +261,9 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
         try
         {
-            var response = await App.AppViewModel.MakoClient.GetMangaSeriesContextAsync(illustration.Id);
+            var response = await App.AppViewModel.MakoClient.GetMangaSeriesContextAsync(illustration.Id, token);
             token.ThrowIfCancellationRequested();
-            if (index == CurrentWorkIndex && !_disposed)
+            if (response.Detail.Id > 0 && index == CurrentWorkIndex && !_disposed)
                 SeriesInfo = WorkSeriesInfoViewModel.Create(response);
         }
         catch (OperationCanceledException)

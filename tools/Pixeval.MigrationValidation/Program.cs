@@ -19,11 +19,11 @@ internal static class Program
     public static int Main(string[] args)
     {
         if (args.Length is < 2 or > 3
-            || args[0] is not ("inventory" or "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "search-page" or "saucenao" or "user-pages" or "series-page" or "work-feeds" or "work-sources" or "work-related" or "history-pages" or "home-cards" or "home-parameters" or "home-sources" or "spotlight" or "login" or "work-cards" or "work-selection" or "extension-management" or "bookmark-tags" or "bookmark-page" or "ranking-page" or "viewer-toolbar" or "documentation" or "dialogs" or "ui")
+            || args[0] is not ("inventory" or "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "search-page" or "saucenao" or "user-pages" or "user-details" or "series-page" or "series-details" or "work-info" or "work-series" or "comment-send" or "comment-list" or "download-pages" or "subscription-editor" or "download-folders" or "work-feeds" or "work-sources" or "work-related" or "history-pages" or "home-cards" or "home-parameters" or "home-sources" or "spotlight" or "login" or "work-cards" or "work-selection" or "extension-management" or "bookmark-tags" or "bookmark-page" or "ranking-page" or "viewer-toolbar" or "documentation" or "dialogs" or "ui")
             || args[0] is "extensions" && args.Length is not 3
             || args.Length is 3 && args[0] is not ("extensions" or "ui"))
         {
-            Console.Error.WriteLine("Usage: Pixeval.MigrationValidation <inventory|capture|benchmark|navigation|extensions|search|search-options|search-page|saucenao|user-pages|series-page|work-feeds|work-sources|work-related|history-pages|home-cards|home-parameters|home-sources|spotlight|login|work-cards|work-selection|extension-management|bookmark-tags|bookmark-page|ranking-page|viewer-toolbar|documentation|dialogs|ui> <new evidence directory> [native fixture library: required for extensions, optional for ui]");
+            Console.Error.WriteLine("Usage: Pixeval.MigrationValidation <inventory|capture|benchmark|navigation|extensions|search|search-options|search-page|saucenao|user-pages|user-details|series-page|series-details|work-info|work-series|comment-send|comment-list|download-pages|subscription-editor|download-folders|work-feeds|work-sources|work-related|history-pages|home-cards|home-parameters|home-sources|spotlight|login|work-cards|work-selection|extension-management|bookmark-tags|bookmark-page|ranking-page|viewer-toolbar|documentation|dialogs|ui> <new evidence directory> [native fixture library: required for extensions, optional for ui]");
             return 1;
         }
 
@@ -63,7 +63,7 @@ internal static class Program
                 .StartWithClassicDesktopLifetime([]);
         }
 
-        if (args[0] is "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "search-page" or "saucenao" or "user-pages" or "series-page" or "work-feeds" or "work-sources" or "work-related" or "history-pages" or "home-cards" or "home-parameters" or "home-sources" or "spotlight" or "login" or "work-cards" or "work-selection" or "extension-management" or "bookmark-tags" or "bookmark-page" or "ranking-page" or "viewer-toolbar" or "documentation" or "dialogs")
+        if (args[0] is "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "search-page" or "saucenao" or "user-pages" or "user-details" or "series-page" or "series-details" or "work-info" or "work-series" or "comment-send" or "comment-list" or "download-pages" or "subscription-editor" or "download-folders" or "work-feeds" or "work-sources" or "work-related" or "history-pages" or "home-cards" or "home-parameters" or "home-sources" or "spotlight" or "login" or "work-cards" or "work-selection" or "extension-management" or "bookmark-tags" or "bookmark-page" or "ranking-page" or "viewer-toolbar" or "documentation" or "dialogs")
         {
             RunHeadlessAsync(args[0], outputDirectory).GetAwaiter().GetResult();
             return 0;
@@ -126,8 +126,35 @@ internal static class Program
                     case "user-pages":
                         await UserPagesValidation.RunAsync(directory);
                         break;
+                    case "user-details":
+                        await UserDetailsValidation.RunAsync(directory);
+                        break;
                     case "series-page":
                         await SeriesPageValidation.RunAsync(directory);
+                        break;
+                    case "series-details":
+                        await SeriesDetailsValidation.RunAsync(directory);
+                        break;
+                    case "work-series":
+                        await WorkSeriesValidation.RunAsync(directory);
+                        break;
+                    case "work-info":
+                        await WorkInfoValidation.RunAsync(directory);
+                        break;
+                    case "download-folders":
+                        await DownloadFoldersValidation.RunAsync(directory);
+                        break;
+                    case "subscription-editor":
+                        await SubscriptionEditorValidation.RunAsync(directory);
+                        break;
+                    case "download-pages":
+                        await DownloadPagesValidation.RunAsync(directory);
+                        break;
+                    case "comment-list":
+                        await CommentListValidation.RunAsync(directory);
+                        break;
+                    case "comment-send":
+                        await CommentSendValidation.RunAsync(directory);
                         break;
                     case "work-feeds":
                         await WorkFeedsValidation.RunAsync(directory);

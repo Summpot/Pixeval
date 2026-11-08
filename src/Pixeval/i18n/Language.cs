@@ -392,6 +392,13 @@ namespace Pixeval
             public const string PlaceholderText = "BlockedUsersSettingsExpander.TargetIdTextBox.PlaceholderText";
         }
     }
+    public static class CommentItemResources
+    {
+        public const string Delete = "CommentItem.Delete";
+        public const string DeleteFailed = "CommentItem.DeleteFailed";
+        public const string LoadFailed = "CommentItem.LoadFailed";
+        public const string Replies = "CommentItem.Replies";
+    }
     public static class CommentRepliesBlockResources
     {
         public static class EmojiButtonFlyoutEmojiSectionNavigationViewItem
@@ -423,6 +430,7 @@ namespace Pixeval
         public const string DownloadQueued = "DownloadItem.DownloadQueued";
         public const string DownloadRunningFormatted = "DownloadItem.DownloadRunningFormatted";
         public const string ErrorMessageDialogTitle = "DownloadItem.ErrorMessageDialogTitle";
+        public const string GroupProgressFormatted = "DownloadItem.GroupProgressFormatted";
         public static class CancelDownloadItem
         {
             public const string Label = "DownloadItem.CancelDownloadItem.Label";
@@ -452,6 +460,8 @@ namespace Pixeval
         public const string FetchingFolderSubtitleFormatted = "DownloadPage.FetchingFolderSubtitleFormatted";
         public const string FolderSubtitleFormatted = "DownloadPage.FolderSubtitleFormatted";
         public const string RateLimitedFolderSubtitleFormatted = "DownloadPage.RateLimitedFolderSubtitleFormatted";
+        public const string SelectedCountFormatted = "DownloadPage.SelectedCountFormatted";
+        public const string StatusFilter = "DownloadPage.StatusFilter";
         public static class DeleteButton
         {
             public const string Label = "DownloadPage.DeleteButton.Label";
@@ -1472,6 +1482,8 @@ namespace Pixeval
     {
         public const string CommentIsTooShortOrTooLongToastContentFormatted = "PixivReplyBar.CommentIsTooShortOrTooLongToastContentFormatted";
         public const string CommentIsTooShortOrTooLongToastTitle = "PixivReplyBar.CommentIsTooShortOrTooLongToastTitle";
+        public const string OpenEmoji = "PixivReplyBar.OpenEmoji";
+        public const string SendFailed = "PixivReplyBar.SendFailed";
         public static class ReplyContentRichEditBox
         {
             public const string PlaceholderText = "PixivReplyBar.ReplyContentRichEditBox.PlaceholderText";
@@ -1817,6 +1829,7 @@ namespace Pixeval
     }
     public static class WorkInfoPageResources
     {
+        public const string CopyId = "WorkInfoPage.CopyId";
         public static class CopyOriginalTagMenuItem
         {
             public const string Text = "WorkInfoPage.CopyOriginalTagMenuItem.Text";
@@ -1836,7 +1849,10 @@ namespace Pixeval
     }
     public static class WorkSubscriptionsSettingsExpanderResources
     {
+        public const string AddFailed = "WorkSubscriptionsSettingsExpander.AddFailed";
         public const string InvalidTargetId = "WorkSubscriptionsSettingsExpander.InvalidTargetId";
+        public const string SubscriptionType = "WorkSubscriptionsSettingsExpander.SubscriptionType";
+        public const string WorkKind = "WorkSubscriptionsSettingsExpander.WorkKind";
         public static class AddSubscriptionButton
         {
             public const string Label = "WorkSubscriptionsSettingsExpander.AddSubscriptionButton.Label";

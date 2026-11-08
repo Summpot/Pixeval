@@ -40,6 +40,7 @@ internal sealed class OfflineSearchFixture : IDisposable
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? WorkCardResponseFactory { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? RelatedResponseFactory { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? SearchResponseFactory { get; set; }
+    internal Func<HttpRequestMessage, CancellationToken, Task<string>>? CommentResponseFactory { get; set; }
 
     internal OfflineSearchFixture(MakoClient client)
     {
@@ -82,6 +83,11 @@ internal sealed class OfflineSearchFixture : IDisposable
         string json;
         switch (uri.AbsolutePath)
         {
+            case "/v1/illust/comment/add" or "/v1/novel/comment/add" or "/v3/illust/comments" or "/v3/novel/comments"
+                or "/v2/illust/comment/replies" or "/v2/novel/comment/replies"
+                or "/v1/illust/comment/delete" or "/v1/novel/comment/delete" or "/m3e/comments-next" when CommentResponseFactory is { } comment:
+                json = await comment(request, token).ConfigureAwait(false);
+                break;
             case "/v1/search/illust" or "/v1/search/novel" when SearchResponseFactory is { } search:
                 SearchRequests.Enqueue(uri);
                 json = await search(request, token).ConfigureAwait(false);
@@ -102,8 +108,9 @@ internal sealed class OfflineSearchFixture : IDisposable
                 json = await feed(request, token).ConfigureAwait(false);
                 break;
             case "/v1/watchlist/manga" or "/v1/watchlist/novel" or "/m3e/series-next"
+                or "/v1/watchlist/manga/add" or "/v1/watchlist/manga/delete" or "/v1/watchlist/novel/add" or "/v1/watchlist/novel/delete"
                 or "/v1/illust/series" or "/v2/novel/series" or "/v1/illust/detail" or "/v2/novel/detail"
-                or "/v1/user/detail" when SeriesResponseFactory is { } series:
+                or "/v1/user/detail" or "/v1/illust-series/illust" when SeriesResponseFactory is { } series:
                 json = await series(request, token).ConfigureAwait(false);
                 break;
             case "/v1/user/recommended" or "/v1/search/user" or "/v1/user/following" or "/v1/user/follower"

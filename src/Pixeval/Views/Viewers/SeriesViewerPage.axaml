@@ -1,4 +1,4 @@
-<views:IconContentPage
+﻿<views:IconContentPage
     x:Class="Pixeval.Views.Viewers.SeriesViewerPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -11,6 +11,7 @@
     xmlns:viewModels="using:Pixeval.ViewModels.Viewers"
     xmlns:views="using:Pixeval.Views"
     x:DataType="{x:Type viewModels:SeriesViewerPageViewModel}"
+    x:Name="SeriesPage"
     Header="{Binding Header}"
     mc:Ignorable="d"
     d:DesignHeight="600"
@@ -25,26 +26,28 @@
                 ExpandDirection="Up"
                 IsExpanded="True">
                 <Expander.Header>
-                    <DockPanel>
+                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
                         <CommandBar
                             DefaultLabelPosition="Right"
-                            DockPanel.Dock="Right"
-                            IsDynamicOverflowEnabled="True">
+                            IsDynamicOverflowEnabled="True"
+                            ItemWidthRight="280">
                             <CommandBarButton
                                 Command="{Binding AddToWatchlistCommand}"
+                                DataContext="{Binding #SeriesPage.DataContext}"
                                 Icon="{markup:SymbolIcon Alert}"
                                 IsVisible="{Binding !IsWatchlistAdded}"
                                 Label="{I18N {x:Static pixeval:SeriesViewerPageResources.AddToWatchlist}}" />
                             <CommandBarButton
                                 Command="{Binding RemoveFromWatchlistCommand}"
+                                DataContext="{Binding #SeriesPage.DataContext}"
                                 Icon="{markup:SymbolIcon AlertOff}"
                                 IsVisible="{Binding IsWatchlistAdded}"
                                 Label="{I18N {x:Static pixeval:SeriesViewerPageResources.RemoveFromWatchlist}}" />
                         </CommandBar>
                         <StackPanel
+                            Grid.Row="1"
                             VerticalAlignment="Center"
-                            Orientation="Horizontal"
-                            Spacing="16">
+                            Spacing="8">
                             <StackPanel
                                 MaxWidth="320"
                                 VerticalAlignment="Center"
@@ -54,7 +57,8 @@
                                     MaxLines="1"
                                     Text="{Binding SeriesDetail?.Title}"
                                     TextTrimming="CharacterEllipsis"
-                                    Theme="{StaticResource CaptionStrongTextBlockStyle}" />
+                                    Theme="{StaticResource CaptionStrongTextBlockStyle}"
+                                    ToolTip.Tip="{Binding SeriesDetail?.Title}" />
                                 <TextBlock
                                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                     Text="{Binding AuthorName}"
@@ -65,35 +69,51 @@
                                 Symbol="SquareMultiple"
                                 Text="{Binding ContentCountText}" />
                         </StackPanel>
-                    </DockPanel>
-                </Expander.Header>
-                <Border MinHeight="190" Background="{DynamicResource PixevalTranslucentBackground}">
-                    <Grid
-                        Margin="40,20"
-                        ColumnDefinitions="Auto,*"
-                        ColumnSpacing="30">
-                        <Image
-                            Height="180"
-                            VerticalAlignment="Stretch"
-                            controls:Source.Cache="{Binding CoverUrl}"
-                            Stretch="UniformToFill" />
-                        <StackPanel
-                            Grid.Column="1"
-                            MaxWidth="650"
-                            HorizontalAlignment="Left"
-                            VerticalAlignment="Center"
-                            Spacing="8">
-                            <TextBlock
-                                Text="{Binding SeriesDetail?.Title}"
-                                TextWrapping="Wrap"
-                                Theme="{StaticResource TitleTextBlockStyle}" />
-                            <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding AuthorName}" />
-                            <TextBlock
-                                MaxHeight="72"
-                                Text="{Binding Caption, Converter={x:Static converters:PixevalConverters.HtmlToPlainText}}"
-                                TextWrapping="Wrap" />
-                        </StackPanel>
+                        <ProgressBar
+                            Grid.Row="2"
+                            Height="4"
+                            AutomationProperties.Name="{I18N {x:Static pixeval:EntryViewerPageResources+LoadingTextBlock.Text}}"
+                            IsIndeterminate="True"
+                            IsVisible="{Binding IsChangingWatchlist}" />
                     </Grid>
+                </Expander.Header>
+                <Border
+                    Margin="8"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    CornerRadius="16">
+                    <ScrollViewer
+                        MaxHeight="280"
+                        AutomationProperties.Name="{Binding Header}"
+                        Focusable="True"
+                        HorizontalScrollBarVisibility="Disabled">
+                        <Grid
+                            Margin="16"
+                            ColumnDefinitions="72,*"
+                            ColumnSpacing="16">
+                            <Image
+                                Width="72"
+                                Height="96"
+                                VerticalAlignment="Top"
+                                controls:Source.Cache="{Binding CoverUrl}"
+                                Stretch="Uniform" />
+                            <StackPanel
+                                Grid.Column="1"
+                                MaxWidth="650"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                                <TextBlock
+                                    Text="{Binding SeriesDetail?.Title}"
+                                    TextWrapping="Wrap"
+                                    Theme="{StaticResource TitleTextBlockStyle}" />
+                                <TextBlock
+                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                    Text="{Binding AuthorName}"
+                                    TextWrapping="Wrap" />
+                                <SelectableTextBlock Text="{Binding Caption, Converter={x:Static converters:PixevalConverters.HtmlToPlainText}}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
                 </Border>
             </Expander>
             <ContentControl x:Name="SeriesContainerHost" />

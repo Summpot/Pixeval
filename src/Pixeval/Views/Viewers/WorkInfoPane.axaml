@@ -1,4 +1,4 @@
-<ResourceDictionary
+﻿<ResourceDictionary
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Pixeval.Controls"
@@ -24,12 +24,12 @@
             Command="{Binding $parent[viewers:WorkInfoPane].OpenAuthorCommand}"
             CommandParameter="{Binding}"
             Theme="{StaticResource TransparentButtonStyle}">
-            <DockPanel HorizontalSpacing="12" LastChildFill="False">
+            <Grid ColumnDefinitions="50,*" ColumnSpacing="12">
                 <controls:AvatarImage
                     Width="50"
-                    controls:Source.Cache="{Binding Avatar, Converter={x:Static converters:PixevalConverters.ImagePickClosestConverter}}"
-                    DockPanel.Dock="Left" />
-                <StackPanel DockPanel.Dock="Top" Spacing="2">
+                    VerticalAlignment="Top"
+                    controls:Source.Cache="{Binding Avatar, Converter={x:Static converters:PixevalConverters.ImagePickClosestConverter}}" />
+                <StackPanel Grid.Column="1" Spacing="2">
                     <TextBlock
                         Text="{Binding Name}"
                         TextWrapping="Wrap"
@@ -40,18 +40,22 @@
                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             Text="{Binding Id}" />
                         <Button
+                            MinWidth="40"
+                            MinHeight="40"
                             Padding="2"
                             VerticalAlignment="Center"
+                            AutomationProperties.Name="{I18N {x:Static pixeval:WorkInfoPageResources.CopyId}}"
                             Background="Transparent"
                             BorderThickness="0"
                             Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
                             Tag="{Binding Id}"
-                            Theme="{StaticResource TransparentButtonStyle}">
+                            Theme="{StaticResource TransparentButtonStyle}"
+                            ToolTip.Tip="{I18N {x:Static pixeval:WorkInfoPageResources.CopyId}}">
                             <markup:SymbolIcon FontSize="12" Symbol="Copy" />
                         </Button>
                     </StackPanel>
                 </StackPanel>
-            </DockPanel>
+            </Grid>
             <Button.ContextMenu>
                 <ContextMenu>
                     <MenuItem
@@ -74,18 +78,18 @@
             Command="{Binding $parent[viewers:WorkInfoPane].OpenAuthorCommand}"
             CommandParameter="{Binding}"
             Theme="{StaticResource TransparentButtonStyle}">
-            <StackPanel Orientation="Horizontal" Spacing="12">
+            <Grid ColumnDefinitions="28,*" ColumnSpacing="12">
                 <controls:AvatarImage
                     Width="28"
-                    controls:Source.Cache="{Binding Avatar, Converter={x:Static converters:PixevalConverters.ImagePickClosestConverter}}"
-                    DockPanel.Dock="Left" />
-                <StackPanel DockPanel.Dock="Top" Spacing="2">
+                    VerticalAlignment="Top"
+                    controls:Source.Cache="{Binding Avatar, Converter={x:Static converters:PixevalConverters.ImagePickClosestConverter}}" />
+                <StackPanel Grid.Column="1" Spacing="2">
                     <TextBlock
                         Text="{Binding Name}"
                         TextWrapping="Wrap"
                         Theme="{StaticResource SubtitleTextBlockStyle}" />
                 </StackPanel>
-            </StackPanel>
+            </Grid>
             <Button.ContextMenu>
                 <ContextMenu>
                     <MenuItem
@@ -107,6 +111,8 @@
             <ControlTemplate>
                 <ScrollViewer
                     Name="WIPHostScroller"
+                    AutomationProperties.Name="{Binding ArtworkInfo.Title, RelativeSource={RelativeSource TemplatedParent}}"
+                    Focusable="True"
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto">
                     <StackPanel
@@ -132,6 +138,8 @@
                         <ScrollViewer
                             MaxHeight="{Binding #WIPHostScroller.Bounds, Converter={x:Static viewers:WorkInfoPane.HalfVerticalSpaceConverter}}"
                             Margin="0,5,0,0"
+                            AutomationProperties.Name="{Binding Title}"
+                            Focusable="True"
                             HorizontalScrollBarVisibility="Disabled"
                             IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                             <SelectableTextBlock
@@ -147,22 +155,26 @@
                                 <Run Text="{Binding Id}" />
                             </TextBlock>
                             <Button
+                                MinWidth="40"
+                                MinHeight="40"
                                 Padding="2"
                                 VerticalAlignment="Center"
+                                AutomationProperties.Name="{I18N {x:Static pixeval:WorkInfoPageResources.CopyId}}"
                                 Background="Transparent"
                                 BorderThickness="0"
                                 Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
                                 Content="{markup:SymbolIcon Copy,
                                                             FontSize=12}"
                                 Tag="{Binding Id}"
-                                Theme="{StaticResource TransparentButtonStyle}" />
+                                Theme="{StaticResource TransparentButtonStyle}"
+                                ToolTip.Tip="{I18N {x:Static pixeval:WorkInfoPageResources.CopyId}}" />
                         </StackPanel>
 
-                        <StackPanel Orientation="Horizontal" Spacing="20">
+                        <WrapPanel ItemSpacing="20" LineSpacing="8">
                             <controls:IconText Symbol="Eye" Text="{Binding TotalView, Converter={x:Static converters:PixevalConverters.IntToString}}" />
                             <controls:IconText Symbol="Heart" Text="{Binding TotalFavorite, Converter={x:Static converters:PixevalConverters.IntToString}}" />
                             <controls:IconText Symbol="Clock" Text="{Binding CreateDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}" />
-                        </StackPanel>
+                        </WrapPanel>
 
                         <ItemsControl
                             IsVisible="{Binding !!Authors.Count}"
@@ -201,13 +213,16 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="{x:Type misaki:ITag}">
-                                                    <m3:SuggestionChip Command="{Binding $parent[viewers:WorkInfoPane].OpenTagCommand}" CommandParameter="{Binding}">
+                                                    <m3:SuggestionChip
+                                                        MaxWidth="{Binding $parent[ItemsControl].Bounds.Width}"
+                                                        Command="{Binding $parent[viewers:WorkInfoPane].OpenTagCommand}"
+                                                        CommandParameter="{Binding}">
                                                         <TextBlock
                                                             controls:TranslatableTextBlockBehavior.IsEnabled="True"
                                                             controls:TranslatableTextBlockBehavior.PretranslatedText="{Binding TranslatedName}"
                                                             controls:TranslatableTextBlockBehavior.TextType="WorkTag"
                                                             Text="{Binding Name}"
-                                                            TextWrapping="NoWrap" />
+                                                            TextWrapping="Wrap" />
                                                         <m3:SuggestionChip.ContextMenu>
                                                             <ContextMenu>
                                                                 <MenuItem
@@ -245,7 +260,11 @@
     <ControlTheme x:Key="LiteWorkInfoPaneStyle" TargetType="{x:Type viewers:WorkInfoPane}">
         <Setter Property="Template">
             <ControlTemplate>
-                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer
+                    AutomationProperties.Name="{Binding ArtworkInfo.Title, RelativeSource={RelativeSource TemplatedParent}}"
+                    Focusable="True"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
                     <StackPanel
                         x:DataType="{x:Type misaki:IArtworkInfo}"
                         Margin="16,12"
@@ -259,7 +278,8 @@
                                 Text="{Binding Title}"
                                 TextTrimming="CharacterEllipsis"
                                 TextWrapping="Wrap"
-                                Theme="{StaticResource TitleTextBlockStyle}" />
+                                Theme="{StaticResource TitleTextBlockStyle}"
+                                ToolTip.Tip="{Binding Title}" />
                             <ContentPresenter
                                 Grid.Column="1"
                                 Content="{TemplateBinding ActionZone}"
@@ -269,16 +289,18 @@
                         <ScrollViewer
                             MaxHeight="100"
                             Margin="0,5,0,0"
+                            AutomationProperties.Name="{Binding Title}"
+                            Focusable="True"
                             HorizontalScrollBarVisibility="Disabled"
                             IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                             <TextBlock Text="{Binding Description, Converter={x:Static converters:PixevalConverters.HtmlToPlainText}}" TextWrapping="Wrap" />
                         </ScrollViewer>
 
-                        <StackPanel Orientation="Horizontal" Spacing="20">
+                        <WrapPanel ItemSpacing="20" LineSpacing="8">
                             <controls:IconText Symbol="Eye" Text="{Binding TotalView, Converter={x:Static converters:PixevalConverters.IntToString}}" />
                             <controls:IconText Symbol="Heart" Text="{Binding TotalFavorite, Converter={x:Static converters:PixevalConverters.IntToString}}" />
                             <controls:IconText Symbol="Clock" Text="{Binding CreateDate, Converter={x:Static converters:PixevalConverters.DateTimeShortDate}}" />
-                        </StackPanel>
+                        </WrapPanel>
 
                         <ItemsControl
                             IsVisible="{Binding !!Authors.Count}"

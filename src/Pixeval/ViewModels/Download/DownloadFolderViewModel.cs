@@ -12,6 +12,7 @@ using Pixeval.Controls;
 using Pixeval.Download;
 using Pixeval.I18N;
 using Pixeval.Models.Database;
+using Pixeval.Models.Download.Tasks;
 using Pixeval.Models.Options;
 using Pixeval.Models.Subscriptions;
 
@@ -68,6 +69,9 @@ public sealed partial class DownloadFolderViewModel(WorkSubscriptionEntry subscr
             };
         }
     }
+
+    public string GroupProgressMessage => I18NManager.GetResource(DownloadItemResources.GroupProgressFormatted,
+        ActiveCount, CompletedCount, ErrorCount);
 
     public int ActiveCount => Items.Sum(t => t.DownloadTask.ActiveCount);
 
@@ -171,6 +175,14 @@ public sealed partial class DownloadFolderViewModel(WorkSubscriptionEntry subscr
         {
             OnPropertyChanged(nameof(CurrentState));
             OnPropertyChanged(nameof(StateBrushKey));
+        }
+
+        if (e.PropertyName is nameof(IDownloadTaskBase.CurrentState)
+            or nameof(IDownloadTaskGroup.ActiveCount)
+            or nameof(IDownloadTaskGroup.CompletedCount)
+            or nameof(IDownloadTaskGroup.ErrorCount))
+        {
+            OnPropertyChanged(nameof(GroupProgressMessage));
             OnPropertyChanged(nameof(ActiveCount));
             OnPropertyChanged(nameof(CompletedCount));
             OnPropertyChanged(nameof(ErrorCount));
@@ -183,6 +195,7 @@ public sealed partial class DownloadFolderViewModel(WorkSubscriptionEntry subscr
 
     private void OnItemsChanged()
     {
+        OnPropertyChanged(nameof(GroupProgressMessage));
         OnPropertyChanged(nameof(DownloadItems));
         OnPropertyChanged(nameof(Subtitle));
         OnPropertyChanged(nameof(HasItems));

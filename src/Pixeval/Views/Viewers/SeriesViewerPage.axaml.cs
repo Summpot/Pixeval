@@ -1,25 +1,33 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System;
 using System.ComponentModel;
+using System.Linq;
+using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using Mako.Engine;
 using Mako.Model;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Entry;
+using Pixeval.Views.Work;
 
 namespace Pixeval.Views.Viewers;
 
-public partial class SeriesViewerPage : IconContentPage
+public partial class SeriesViewerPage : IconContentPage, IDisposable
 {
+    private SeriesViewerPageViewModel? _viewModel;
+    private bool _isDisposed;
+
     public SeriesViewerPage() : this(null)
     {
     }
 
     public SeriesViewerPage(SeriesViewerPageViewModel? viewModel)
     {
-        DataContext = viewModel;
+        DataContext = _viewModel = viewModel;
         InitializeComponent();
         if (viewModel is null)
             return;
@@ -52,6 +60,7 @@ public partial class SeriesViewerPage : IconContentPage
         SeriesViewerPageViewModel viewModel,
         IFetchEngine<IWorkEntry>? engine)
     {
+        DisposeWorksContent();
         SeriesContainerHost.Content = engine is not null
                                       && viewModel is { SeriesDetail: { } seriesDetail, FirstWork: { } firstWork }
             ? new SeriesContainer(viewModel.WorkType, viewModel.Id, engine, seriesDetail, firstWork)
@@ -62,7 +71,30 @@ public partial class SeriesViewerPage : IconContentPage
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
-        if (DataContext is SeriesViewerPageViewModel viewModel)
-            RaiseEvent(new ViewModelDisposalEventArgs(ViewModelDisposal.ViewModelDisposalEvent, viewModel));
+        RaiseEvent(new ViewModelDisposalEventArgs(ViewModelDisposal.ViewModelDisposalEvent, this));
+    }
+
+    private void DisposeWorksContent()
+    {
+        if (SeriesContainerHost.Content is Control content)
+            foreach (var view in content.GetLogicalDescendants().OfType<WorkView>())
+                view.Dispose();
+        SeriesContainerHost.Content = null;
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+            return;
+
+        _isDisposed = true;
+        if (_viewModel is { } model)
+        {
+            model.PropertyChanged -= ViewModel_OnPropertyChanged;
+            model.Dispose();
+        }
+        _viewModel = null;
+        DisposeWorksContent();
+        DataContext = null;
     }
 }

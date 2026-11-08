@@ -852,3 +852,61 @@ CI：构建固定官方 demo 后把清单中的库传给验证脚本，上传提
 改动 XAML 已经 XamlStyler，相关 C# 做 whitespace 格式化；工作流 YAML、四段 PowerShell、文档本地链接和 `git diff --check` 通过。`verified-source-hashes.json` 固定 24 个源码/宿主/CI 文件；`static-validation.json`、`workflow-powershell-validation.json` 和 `final-state.json` 记录收尾结果。验证进程正常退出，常规构建服务器可驻留。批次文档另作一次收尾提交，不补写自身哈希。
 
 未覆盖与下一步：原生 IME、系统焦点/读屏/剪贴板/浏览器、Windows Shift+F10、触摸/DPI/GPU、Linux/macOS/移动端/Browser 和远程 CI 仍待验收。Mako 的取消限制枚举、后续分页和响应归属，不中断已发出的 HTTP，串行加载需等待旧传输；不外推固定非空页至空页内部 next_url 的所有行为。历史清空确认弹窗、批量收藏/保存/浏览器业务、完整卡片性能仍待验收；来源参数的有效结果只验证草稿，全部 19 类有效添加后的请求、完整账号切换、原生拖动/缩放/碰撞和应用重启仍待验收。下一批优先延伸 P10.02/P10.04 的有效添加与来源生命周期，再补账号切换；沿用后台验证，不自动恢复 computer use。
+
+
+## 2026-11-08 无人值守迁移批次（08:06 启动）
+
+时间：08:06–09:37（Asia/Shanghai），约 91 分钟；基线 `3b65a513`，分支 `feat/material3expressive-migration`，开始时工作区干净。依 §10.3 自选五个功能单元，逐个验证后本地提交，结束统一记账一次。全部使用后台脚本、隔离数据、固定 HTTP 与 headless 输入/渲染，没有使用或恢复 computer use，没有全局输入、系统剪贴板操作、真实账号写入、推送或发布，也没有启动桌面/AOT 产物。`compose/`、依赖 gitlink、数据格式、导航键、扩展 ABI 和虚拟化算法未改动。
+
+| 功能单元 / 步骤 | 本地提交 | 本轮完成范围 |
+| --- | --- | --- |
+| 首页有效来源与详情寿命，P10.02b/P10.04b | `4d67d02a` | 全部 19 类来源×两种作品选项实际添加、首请求参数、非空预览、原目标/共享源、YAML 重读和删除；四种单详情传递取消令牌，用户/系列默认错误记录不伪装成功 |
+| 用户详情，P11.01a | `507a55d7` | Material 资料表面、完整长名/介绍键盘滚动、ID/链接复制、关注/私密/取消/屏蔽及五个列表；共享忙状态、失败重试、关闭请求取消和旧账号隔离 |
+| 系列详情，P11.03a | `039659c7` | 漫画/小说标题/介绍与键盘滚动、追更/取消原载荷、溢出后的命令上下文、互斥/失败重试/旧账号隔离；注册的页面关闭路由释放列表并取消请求，不创建下载订阅 |
+| 作品信息，P11.02a | `b763b2d2` | 完整/精简面板长作者/标题/统计/标签；内外滚动区键盘可达、具名 ID 复制、长译文的原文搜索/复制/屏蔽和作者导航；插画面板固定/展开/收起、原页面与命令实例保持 |
+| 评论发送，P11.05a | `1fde2321` | 插画/小说评论和回复的原文本/贴图载荷、共同忙状态、失败保留与重试、成功不清除新编辑；卸载/上下文/窗口取消、旧账号隔离；表情光标插入、分类方向键/标题与 2:1 贴图渲染 |
+
+主计划仅增加以上局部完成项、调整已被本轮证据覆盖的缺口及 P11「实施中」状态，父步骤继续未勾选。验收文档增加 F13.5、F14.3–5、F15.3，宿主文档记录五个新模式的真实输入/服务契约与证明边界。复制 ID、发送失败和表情入口新增字符串覆盖四语言 JSON，并通过 Language.tt 生成；法语既有缺译继续按原规则回退，没有宣称完整翻译覆盖。
+
+证据根目录：`artifacts/m3e/2026-11-08-batch-0806/`。系统 SDK `11.0.100-rc.3.26522.148`、runtime `10.0.14`，Avalonia `12.1.5`，M3E `859a69e563b2a01fc87a26255ee11c1d89959677`。`./scripts/verify-m3e.ps1 -OutputDirectory artifacts/m3e/2026-11-08-batch-0806/windows-final -ExtensionFixture <固定 C++ demo DLL>` 完成桌面 Debug、测试 Release 构建及完整测试 **466/466，零失败、零跳过**。TRX、SDK/依赖、提交与工作区快照在 `windows-final/`；原生扩展样本 SHA256 为 `14A85A17F7B0D3002B66EC5DE5D073038237214FDC00D2F278DD4E3523DE85D6`。与上一批最终构建的规范化唯一警告比较为 **75→75，无增减**，见 `warning-delta.json`；不包含 AOT 裁剪警告。
+
+`dotnet publish src/Pixeval.Desktop/Pixeval.Desktop.csproj -c Release -r win-x64 --self-contained true -o artifacts/m3e/2026-11-08-batch-0806/native-aot-final` 本地构建成功，日志为 `native-aot-final.log`。PE 检查确认 x64 PE32+、CLR 头 RVA/size 均为零，八个本地化 JSON 发布副本与源码逐字节一致；路径/SHA256 在 `native-aot-header.json`，未启动 EXE。既有 IL2026/IL3050/IL2104/IL3053 等警告保留，构建不等于原生启动或完整裁剪运行时验收。仅比较 IL 裁剪/AOT 警告为 46→46、无增减，见 `aot-trim-warning-delta.json`；增量发布少重发普通编译警告不记作警告消除。
+
+最终离线证据共 **275 组**：首页有效来源中文 46 组；用户详情四语言各 8 组；系列详情各 11 组；作品信息各 20 组；评论发送中文 19 组、其他三语言各 18 组。语言为 `zh-Hans/en-US/fr-FR/ru-RU`。17 个最终目录、契约文件、文化/runtime 与截图数见 `locale-validation-summary.json`；中文最终目录依次为 `series-adjacent-home-sources/`、`user-keyboard-zh-Hans/`、`series-lifetime-zh-Hans/`、`work-info-comment-regression/`、`comment-window-close/`。额外的窗口关闭用例只增加宿主断言，完整测试及 AOT 对应相同产品源码，无需重复产品构建/完整回归。
+
+相邻回归 `home-cards-regression/` 23 组、`user-pages-regression/` 29 组、`series-adjacent-series-page/` 8 组及 `viewer-toolbar-final/` 4 组均通过；首页共享系列目标关闭及评论签名变更后的作品面板已纳入上述最终目录，不再重复累加。新模式均加入现有 Windows/Ubuntu 工作流，本轮只执行本地 Windows。所有关注、追更、评论及屏蔽只作用于固定 HTTP/隔离数据；复制只使用 headless 内存剪贴板。
+
+关键证据：`home-sources-cancellation-before.log` 的单详情缺取消、`home-detail-failure-before.log` 的默认用户记录；`user-details-before.log` 的窄窗布局、`user-details-layout.log` 的竞争关注；`series-details-before.log` 的标题空间和 `series-details-diagnostic.log` 中可见取消追更按钮失去 Command/DataContext；`work-info-before.log` 的介绍滚动区不能聚焦。评论发送的旧提前清空行为由源码审查定位；`comment-send-initial/`、`comment-send-complete/` 验证修复后业务，`comment-picker-zh-Hans/` 截图又发现分类标题零尺寸，最终以有限宽度的本地 TabControl 和可见尺寸断言修复。非正方形贴图用固定 160×80 色图及截图色块边界验证实际比例。早期夹具对当前账号私密收藏、弹出菜单开闭和已有预译文的假设已按实际产品契约纠正，没有删除动作或弱化最终断言。
+
+修改的 XAML 经 XamlStyler，相关 C# 经 whitespace 格式化；工作流 YAML/PowerShell、结构化资源、文档链接和 `git diff --check` 通过。最终源码哈希见 `verified-source-hashes.json`，静态检查见 `static-validation.json`/`workflow-powershell-validation.json`，收尾状态见 `final-state.json`。运行时导航、页面、设置与首页来源清单和基线完全一致，见 `inventory-comparison.json`；宿主无效模式返回 1 且不创建数据，帮助文本包含全部新增模式与原 work-feeds。功能提交与一次批次文档提交分开，不补写文档自身哈希。
+
+未覆盖与下一轮起点：原生 IME、系统焦点/读屏/剪贴板/浏览器、触摸/DPI/GPU、Linux/macOS/移动端/Browser 和远程 CI 仍待验收。普通 Mako 引擎的取消限制枚举/后续分页及响应归属，不等于中断在途 HTTP；本轮直接详情/关注/追更/发送请求传递的令牌另有断言。首页单小说导航后的正文使用独立共享缓存，其关闭取消未完成；YAML/数据库重读不等同完整应用重启，账号 A→B 的迟到隔离不代表完整刷新/切换矩阵。UserBasicInfoPresenter、WorkSeriesInfoPane 导航、面板收藏/下载业务、完整评论分页/权限/删除与真实服务仍待验收。下一批优先 P11.04 评论列表、回复导航与删除权限，或补 WorkSeriesInfoPane 的完整系列导航；保持后台验证，不自动启用桌面控制。下一步只读入口与需复现的删除回调重绑定风险记录在 `next-step-review.json`，不作为本轮已验证故障。
+
+
+## 2026-11-08 无人值守迁移批次（10:04 启动）
+
+时间：10:04 启动（Asia/Shanghai），本轮约 90 分钟；精确起止时间见证据根目录的 `final-state.json`。基线 `262736b0`，分支 `feat/material3expressive-migration`，开始时工作区干净。按 §10.3 自选五个完整功能单元，逐个验证、审查后本地提交，结束统一记账一次。全程后台脚本、隔离数据和 headless 输入/渲染，没有调用或恢复 computer use，没有全局输入、系统剪贴板操作、真实账号写入、推送或远程发布，也未启动桌面/AOT 产物。依赖、子模块、`compose/`、导航键、持久化格式和扩展 ABI 未改动。
+
+| 功能单元 / 步骤 | 本地提交 | 本轮完成范围 |
+| --- | --- | --- |
+| 评论列表，P11.04a | `3bba1f75` | Material 评论行、本人删除权限/互斥/失败重试、原文本与贴图、分页边界去重、两级回复/返回保留；重绑定、换源、换账号和关闭隔离迟到删除/加载，错误与空页区分 |
+| 系列信息条，P11.03b | `6698d3bf` | 漫画/小说系列及前后作品入口、原类型/ID、缓存与 ID 回退、完整标题提示；切换/释放取消插画上下文，失败保持已知系列；真实信息面板布局 |
+| 下载任务页，P12.01a/P12.02a | `ff69b8f3` | 响应式筛选、实时搜索/状态变化、选择与批量动作、七种状态、溢出命令绑定/关闭、错误和隔离文件删除；真实下载跨完整页面重建不重启 |
+| 订阅编辑器，P12.03a | `70ddfe45` | 七种类别/工作类型组合、原参数及持久化身份、重复添加、初次/单个/全部空源同步；无效目标不落库，添加互斥、保留新草稿、取消与旧账号隔离；排队同步跨编辑器关闭，删除拒绝迟到回写 |
+| 下载文件夹，P12.01b | `d10cb8be` | Material 卡片、完整名称提示、文字统计及部分子计数更新、空状态/动态来源、进入/返回和文件夹菜单归属；补齐文件夹及任务列表内部 Tab 入口 |
+
+主计划新增上述局部完成项，将 P12 改为实施中；父步骤继续未勾选。验收文档补 F14.6、F15.1、F16.1–4、F17.1–3 的实际证明范围，宿主文档新增五个模式。新增文案覆盖四语言 JSON，经 Language.tt 生成；既有法语缺译仍沿用回退，未声明翻译全覆盖。
+
+证据根目录：`artifacts/m3e/2026-11-08-batch-1004/`。系统 SDK `11.0.100-rc.3.26522.148`、runtime `10.0.14`，Avalonia `12.1.5`、M3E `859a69e563b2a01fc87a26255ee11c1d89959677`。最终 `./scripts/verify-m3e.ps1 -OutputDirectory artifacts/m3e/2026-11-08-batch-1004/windows-final -ExtensionFixture <固定 C++ demo DLL>` 完成桌面 Debug、测试 Release 构建及完整测试 **466/466，零失败、零跳过**。TRX、SDK/依赖和工作区快照在 `windows-final/`，原生扩展样本 SHA256 为 `14A85A17F7B0D3002B66EC5DE5D073038237214FDC00D2F278DD4E3523DE85D6`。
+
+最终 `dotnet publish src/Pixeval.Desktop/Pixeval.Desktop.csproj -c Release -r win-x64 --self-contained true -o artifacts/m3e/2026-11-08-batch-1004/native-aot-final` 本地构建成功。`native-aot-header.json` 保存 EXE 的 SHA256、x64 PE32+、CLR 头 RVA/size 均为零及 16 个资源发布副本逐字节一致的证据；没有启动 EXE。普通构建唯一警告 **75→76**，新增旧 `DownloadPage.CancelSelectionButtonFormatted` 未使用提示：选择计数已移至独立文本，旧资源保留。IL 裁剪/AOT 唯一警告 **46→46，无增减**；对照分别见 `warning-delta.json`、`aot-trim-warning-delta.json`，不把构建成功当作原生运行时通过。
+
+最终离线矩阵 **240 组**、296 张过程截图，20 个目录的映射与实际 culture/runtime 在 `locale-validation-summary.json`。评论列表四语言各 27 组，系列信息条中文 18/其他各 14 组，下载任务各 9 组，订阅编辑器各 5 组，文件夹各 4 组。语言为 `zh-Hans/en-US/fr-FR/ru-RU`；中文最终目录为 `comments-closed-zh-Hans/`、`series-integrated/`、`downloads-keyboard-regression/`、`subscription-final-zh-Hans/`、`folders-closed-zh-Hans/`。文件夹单元新增 Tab 契约后，下载任务模式补齐四语言键盘回归，其他三语言最终目录为 `downloads-keyboard-en-US/fr-FR/ru-RU/`，均保留长标签溢出及内部动作断言。相邻 `comment-send-regression/` 19 组、`series-viewer-regression/` 4 组通过，未重复计入矩阵。五个模式接入 Windows/Ubuntu 工作流，远程 CI 未运行。
+
+真实 SingleImageDownloadTaskGroup 在受控 HTTP 等待期间经历三次完整 DownloadPage 创建/关闭，最终保持一次请求、未取消令牌和精确文件字节；任务状态矩阵仍使用可计数假任务。订阅测试使用真实服务与独立 SQLite，但同步 feed 固定为空；不外推为非空分页、整批 403/404 或限流重试已验收。截图抽查覆盖长译文窄窗、错误/空页、下载行、订阅编辑器及实际插画信息面板；行为由输入、请求、数据库和生命周期断言证明。
+
+关键失败证据保留：`comments-before.log` 的旧删除回调命中新行；`series-before.log` 的上下文令牌未取消；`download-before2.log` 的窄窗字段越界、`download-matrix3.log` 的溢出命令失去上下文，以及英/俄长标签溢出；`subscription-before.log` 的卸载未取消添加；`folders-final-zh-Hans.log` 的 ListBox 默认 Once 跳过内部动作。最终专项覆盖修复。早期夹具中选择索引与前插队列、小说元数据必需字段、设置页容器命中，以及模型订阅计数的假设均按实际契约纠正，未弱化动作/取消断言；早期失败目录不作最终通过证据。
+
+XAML 已经 XamlStyler，相关 C# 经 whitespace 格式化；结构化资源、工作流 YAML/PowerShell、文档本地链接及 `git diff --check` 通过。`verified-source-hashes.json` 固定 44 个源码/宿主/CI 文件；`static-validation.json`、`workflow-powershell-validation.json`、`inventory-comparison.json`、`cli-validation.json` 和 `final-state.json` 保存收尾结果。导航/页面/设置/首页来源清单不变，帮助文本包含全部新模式，无效模式返回 1 且不创建数据。功能提交与一次批次文档提交分开，不补写文档自身哈希。
+
+未覆盖与下一轮起点：原生 IME、系统焦点/读屏/文件启动、触摸/DPI/GPU、Linux/macOS/移动端/Browser 和远程 CI 仍待验收。普通 Mako 引擎取消限制枚举/后续分页及响应归属，不等于中断在途 HTTP；本轮直接详情/添加/删除令牌另有断言。数据库重读不等同完整应用重启，退出确认与恢复、真实服务权限和完整账号切换仍待验收。下一批优先 P12.04：非空分页、去重阈值、403/404 单项后继续、限流状态、取消/删除与批量提交边界；具体只读入口、现有单测覆盖和隔离下载传输要求见 `next-step-review.json`。继续后台验证，不自动启用 computer use。

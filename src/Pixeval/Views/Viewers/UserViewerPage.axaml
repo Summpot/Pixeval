@@ -1,4 +1,4 @@
-<ContentPage
+﻿<ContentPage
     x:Class="Pixeval.Views.Viewers.UserViewerPage"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -32,14 +32,14 @@
                 DockPanel.Dock="Top"
                 ExpandDirection="Up"
                 IsExpanded="{Binding OpenUserInfo, Source={x:Static views:PixevalSettings.Instance}, Mode=TwoWay}"
-                PropertyChanged="UserInfoExpander_OnPropertyChanged"
                 Theme="{StaticResource UserInfoExpanderTheme}">
                 <Expander.Header>
-                    <DockPanel>
+                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
                         <CommandBar
+                            x:Name="ProfileCommands"
                             DefaultLabelPosition="Right"
-                            DockPanel.Dock="Right"
-                            IsDynamicOverflowEnabled="True">
+                            IsDynamicOverflowEnabled="True"
+                            ItemWidthRight="240">
                             <CommandBarButton
                                 Command="{Binding FollowCommand}"
                                 Icon="{markup:SymbolIcon PersonAdd}"
@@ -79,10 +79,11 @@
                             </CommandBar.SecondaryCommands>
                         </CommandBar>
 
-                        <StackPanel
+                        <WrapPanel
+                            Grid.Row="1"
                             VerticalAlignment="Center"
-                            Orientation="Horizontal"
-                            Spacing="16">
+                            ItemSpacing="16"
+                            LineSpacing="8">
                             <!--  头像  -->
                             <controls:AvatarImage
                                 Width="40"
@@ -101,8 +102,10 @@
                                     MaxLines="1"
                                     Text="{Binding UserDetail.UserEntity.Name, FallbackValue={x:Null}}"
                                     TextTrimming="CharacterEllipsis"
-                                    Theme="{StaticResource CaptionStrongTextBlockStyle}" />
-                                <TextBlock
+                                    Theme="{StaticResource CaptionStrongTextBlockStyle}"
+                                    ToolTip.Tip="{Binding UserDetail.UserEntity.Name, FallbackValue={x:Null}}" />
+                                <SelectableTextBlock
+                                    x:Name="CollapsedProfileIdText"
                                     FontSize="13"
                                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                     Text="{Binding Id}" />
@@ -127,52 +130,70 @@
                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 Symbol="BookOpen"
                                 Text="{Binding UserDetail.UserProfile.TotalNovelSeries, FallbackValue={x:Null}}" />
-                        </StackPanel>
-                    </DockPanel>
+                        </WrapPanel>
+                        <ProgressBar
+                            Grid.Row="2"
+                            Height="4"
+                            AutomationProperties.Name="{I18N {x:Static pixeval:EntryViewerPageResources+LoadingTextBlock.Text}}"
+                            IsIndeterminate="True"
+                            IsVisible="{Binding IsChangingFollow}" />
+                    </Grid>
                 </Expander.Header>
                 <Border MinHeight="210" Background="{DynamicResource PixevalTranslucentBackground}">
-                    <!--  用户信息  -->
-                    <Grid
-                        Margin="40,20"
-                        VerticalAlignment="Stretch"
-                        ColumnDefinitions="80,*"
-                        ColumnSpacing="30">
-                        <!--  头像  -->
-                        <controls:AvatarImage
-                            Width="80"
-                            Height="80"
-                            VerticalAlignment="Center"
-                            controls:Source.Cache="{Binding AvatarUrl}" />
+                    <ScrollViewer
+                        x:Name="ProfileDetailsScroller"
+                        MaxHeight="280"
+                        AutomationProperties.Name="{Binding Header}"
+                        Focusable="True"
+                        HorizontalScrollBarVisibility="Disabled">
+                        <!--  用户信息  -->
+                        <Grid
+                            Margin="16"
+                            VerticalAlignment="Stretch"
+                            ColumnDefinitions="64,*"
+                            ColumnSpacing="16">
+                            <!--  头像  -->
+                            <controls:AvatarImage
+                                Width="64"
+                                Height="64"
+                                VerticalAlignment="Top"
+                                controls:Source.Cache="{Binding AvatarUrl}" />
 
-                        <!--  用户名、ID、简介  -->
-                        <StackPanel
-                            Grid.Column="1"
-                            MaxWidth="400"
-                            HorizontalAlignment="Left"
-                            VerticalAlignment="Center"
-                            Spacing="6">
-                            <DockPanel HorizontalSpacing="8">
-                                <controls:PixevalBadge
-                                    DockPanel.Dock="Right"
-                                    IsVisible="{Binding UserDetail.UserProfile.IsPremium, FallbackValue={x:Null}}"
-                                    Mode="Premium" />
-                                <TextBlock
-                                    Text="{Binding UserDetail.UserEntity.Name, FallbackValue={x:Null}}"
-                                    TextTrimming="CharacterEllipsis"
-                                    Theme="{StaticResource TitleTextBlockStyle}" />
-                            </DockPanel>
-                            <TextBlock
-                                FontSize="13"
-                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                Text="{Binding Id}" />
-                            <TextBlock
-                                MaxHeight="60"
-                                controls:TranslatableTextBlockBehavior.IsEnabled="True"
-                                controls:TranslatableTextBlockBehavior.TextType="UserComment"
-                                Text="{Binding UserDetail.UserEntity.Description, FallbackValue={x:Null}}"
-                                TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Grid>
+                            <!--  用户名、ID、简介  -->
+                            <Border
+                                Grid.Column="1"
+                                MaxWidth="650"
+                                Padding="12"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Center"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                CornerRadius="16">
+                                <StackPanel Spacing="6">
+                                    <DockPanel HorizontalSpacing="8">
+                                        <controls:PixevalBadge
+                                            DockPanel.Dock="Right"
+                                            IsVisible="{Binding UserDetail.UserProfile.IsPremium, FallbackValue={x:Null}}"
+                                            Mode="Premium" />
+                                        <TextBlock
+                                            x:Name="ProfileName"
+                                            Text="{Binding UserDetail.UserEntity.Name, FallbackValue={x:Null}}"
+                                            TextWrapping="Wrap"
+                                            Theme="{StaticResource TitleTextBlockStyle}" />
+                                    </DockPanel>
+                                    <SelectableTextBlock
+                                        x:Name="ProfileIdText"
+                                        FontSize="13"
+                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                        Text="{Binding Id}" />
+                                    <SelectableTextBlock
+                                        controls:TranslatableTextBlockBehavior.IsEnabled="True"
+                                        controls:TranslatableTextBlockBehavior.TextType="UserComment"
+                                        Text="{Binding UserDetail.UserEntity.Description, FallbackValue={x:Null}}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </ScrollViewer>
                 </Border>
             </Expander>
             <TabbedPage Pages="{Binding TabPages}" />

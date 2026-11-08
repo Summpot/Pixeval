@@ -26,5 +26,6 @@
   },
   "ResetItem": {
     "Label": "重新下载"
-  }
+  },
+  "GroupProgressFormatted": "进行中：{0} · 完成：{1} · 失败：{2}"
 }

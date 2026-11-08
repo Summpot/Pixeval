@@ -110,11 +110,11 @@ public partial class DownloadFolderListView : ContentPage, IDisposable
     private void UpdateItemsSourceSubscription()
     {
         UnsubscribeFromItemsSource();
-        if (DataContext is not DownloadFolderPageViewModel vm)
-            return;
-
-        _subscribedItemsSource = vm.View;
-        _subscribedItemsSource.PropertyChanged += ItemsSource_OnPropertyChanged;
+        if (DataContext is DownloadFolderPageViewModel vm)
+        {
+            _subscribedItemsSource = vm.View;
+            _subscribedItemsSource.PropertyChanged += ItemsSource_OnPropertyChanged;
+        }
         UpdateHasNoFolder();
     }
 
@@ -125,7 +125,7 @@ public partial class DownloadFolderListView : ContentPage, IDisposable
     }
 
     private void UpdateHasNoFolder() =>
-        HasNoFolder = DataContext is DownloadFolderPageViewModel { View: { Count: 0 } };
+        HasNoFolder = DataContext is not DownloadFolderPageViewModel { View: { Count: > 0 } };
 
     private void UnsubscribeFromItemsSource()
     {

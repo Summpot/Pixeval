@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System.Threading;
 using System.Threading.Tasks;
 using Mako.Global.Enum;
 using Mako.Model;
@@ -15,14 +16,14 @@ public class CommentsViewViewModel(SimpleWorkType parentType, long parentId) : E
 
     public override SimpleViewDataProvider<Comment, CommentItemViewModel> DataProvider { get; } = new();
 
-    public virtual async Task<Comment> AddCommentAsync(string content)
+    public virtual async Task<Comment> AddCommentAsync(string content, CancellationToken token = default)
     {
-        return await App.AppViewModel.MakoClient.AddWorkCommentAsync(ParentType, ParentId, content);
+        return await App.AppViewModel.MakoClient.AddWorkCommentAsync(ParentType, ParentId, content, token);
     }
 
-    public virtual async Task<Comment> AddStickerAsync(int stampId)
+    public virtual async Task<Comment> AddStickerAsync(int stampId, CancellationToken token = default)
     {
-        return await App.AppViewModel.MakoClient.AddWorkCommentAsync(ParentType, ParentId, stampId);
+        return await App.AppViewModel.MakoClient.AddWorkCommentAsync(ParentType, ParentId, stampId, token);
     }
 
     public virtual void AddComment(Comment comment) => Source.Insert(0, new CommentItemViewModel(comment, ParentType, ParentId, true));

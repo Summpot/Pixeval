@@ -75,10 +75,8 @@ public partial class DownloadItemView : ContentPage, IDisposable
         set => SetAndRaise(DeleteLocalFilesProperty, ref field, value);
     }
 
-    public static FuncValueConverter<int, string> SelectionCountLabelConverter { get; } = new(count =>
-        count > 0
-            ? I18NManager.GetResource(DownloadPageResources.CancelSelectionButtonFormatted, count)
-            : I18NManager.GetResource(DownloadPageResources.CancelSelectionButtonDefaultLabel));
+    public static FuncValueConverter<int, string> SelectionCountLabelConverter { get; } =
+        new(count => I18NManager.GetResource(DownloadPageResources.SelectedCountFormatted, count));
 
     public DownloadItemView() => InitializeComponent();
 
@@ -173,6 +171,7 @@ public partial class DownloadItemView : ContentPage, IDisposable
             }
 
             UnselectAll();
+            BulkCommands.IsOpen = false;
             TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
                 I18NManager.GetResource(DownloadPageResources.DeleteDownloadHistoryRecordsFormatted, count));
         }
@@ -203,14 +202,18 @@ public partial class DownloadItemView : ContentPage, IDisposable
 
     private void CancelSelectButton_OnClicked(object? sender, RoutedEventArgs e) => UnselectAll();
 
-    private void UpdateItemsSourceSubscription()
+    private void FilterGrid_OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
-        UnsubscribeFromItemsSource();
-        if (DataContext is not DownloadItemPageViewModel vm)
-            return;
-
-        SetDownloadItemsSource(vm.View);
+        var compact = e.NewSize.Width < 760;
+        FilterGrid.ColumnDefinitions = new ColumnDefinitions(compact ? "*" : "180,*,Auto");
+        Grid.SetColumn(FilterTextBox, compact ? 0 : 1);
+        Grid.SetRow(FilterTextBox, compact ? 1 : 0);
+        Grid.SetColumn(DeleteLocalFilesCheckBox, compact ? 0 : 2);
+        Grid.SetRow(DeleteLocalFilesCheckBox, compact ? 2 : 0);
     }
+
+    private void UpdateItemsSourceSubscription() =>
+        SetDownloadItemsSource((DataContext as DownloadItemPageViewModel)?.View);
 
     private void ItemsSource_OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -221,7 +224,7 @@ public partial class DownloadItemView : ContentPage, IDisposable
     private void UpdateHasNoDownloadItem() =>
         HasNoDownloadItem = DownloadItemsSource is not ICollection collection || collection.Count is 0;
 
-    private void SetDownloadItemsSource(object source)
+    private void SetDownloadItemsSource(object? source)
     {
         if (ReferenceEquals(DownloadItemsSource, source))
         {
@@ -249,8 +252,8 @@ public partial class DownloadItemView : ContentPage, IDisposable
     private void ExecuteForSelectedDownloadTasks(Action<DownloadItemViewModel> action)
     {
         foreach (var item in GetSelectedEntries())
-        foreach (var downloadItem in item.DownloadItems)
-            action(downloadItem);
+            foreach (var downloadItem in item.DownloadItems)
+                action(downloadItem);
     }
 
     private void ListBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e) =>

@@ -4,8 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:entry="using:Pixeval.Views.Entry"
-    xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:local="using:Pixeval.Views.Download"
+    xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pixeval="using:Pixeval"
     xmlns:viewModels="using:Pixeval.ViewModels"
@@ -15,10 +15,15 @@
     mc:Ignorable="d">
     <DockPanel>
         <entry:EntryView HasNoItem="{Binding #Root.HasNoFolder}">
-            <ListBox ItemsSource="{Binding View}">
+            <ListBox
+                x:Name="FolderListBox"
+                ItemsSource="{Binding View}"
+                KeyboardNavigation.TabNavigation="Continue">
                 <ListBox.Styles>
                     <Style Selector="ListBoxItem">
                         <Setter Property="Padding" Value="0" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="KeyboardNavigation.TabNavigation" Value="Continue" />
                     </Style>
                 </ListBox.Styles>
                 <ListBox.DataTemplates>
@@ -27,36 +32,36 @@
                             <local:DownloadFolder.ContextMenu>
                                 <ContextMenu DataContext="{Binding}">
                                     <MenuItem
+                                        Click="ResumeAll_OnClicked"
                                         Header="{I18N {x:Static pixeval:DownloadPageResources+ResumeButton.Label}}"
                                         Icon="{markup:SymbolIcon Play}"
-                                        Tag="{Binding}"
-                                        Click="ResumeAll_OnClicked" />
+                                        Tag="{Binding}" />
                                     <MenuItem
+                                        Click="PauseAll_OnClicked"
                                         Header="{I18N {x:Static pixeval:DownloadPageResources+PauseButton.Label}}"
                                         Icon="{markup:SymbolIcon Pause}"
-                                        Tag="{Binding}"
-                                        Click="PauseAll_OnClicked" />
+                                        Tag="{Binding}" />
                                     <MenuItem
+                                        Click="CancelAll_OnClicked"
                                         Header="{I18N {x:Static pixeval:DownloadPageResources+StopButton.Label}}"
                                         Icon="{markup:SymbolIcon Stop}"
-                                        Tag="{Binding}"
-                                        Click="CancelAll_OnClicked" />
+                                        Tag="{Binding}" />
                                     <MenuItem
+                                        Click="ResetAll_OnClicked"
                                         Header="{I18N {x:Static pixeval:DownloadPageResources+ResetButton.Label}}"
                                         Icon="{markup:SymbolIcon ArrowRepeatAll}"
-                                        Tag="{Binding}"
-                                        Click="ResetAll_OnClicked" />
+                                        Tag="{Binding}" />
                                     <Separator />
                                     <MenuItem
+                                        Click="SyncSubscription_OnClicked"
                                         Header="{I18N {x:Static pixeval:DownloadPageResources+SyncSubscriptionButton.Label}}"
                                         Icon="{markup:SymbolIcon ArrowSync}"
-                                        Tag="{Binding}"
-                                        Click="SyncSubscription_OnClicked" />
+                                        Tag="{Binding}" />
                                     <MenuItem
+                                        Click="RemoveSubscription_OnClicked"
                                         Header="{I18N {x:Static pixeval:WorkSubscriptionsSettingsExpanderResources+RemoveSubscriptionButton.Label}}"
                                         Icon="{markup:SymbolIcon AlertOff}"
-                                        Tag="{Binding}"
-                                        Click="RemoveSubscription_OnClicked" />
+                                        Tag="{Binding}" />
                                 </ContextMenu>
                             </local:DownloadFolder.ContextMenu>
                         </local:DownloadFolder>

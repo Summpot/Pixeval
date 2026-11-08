@@ -33,6 +33,9 @@ public sealed class DownloadItemViewModel : ThumbnailEntryViewModel<IArtworkInfo
 
     public override Uri WebsiteUri => Entry.WebsiteUri;
 
+    public string GroupProgressMessage => I18NManager.GetResource(DownloadItemResources.GroupProgressFormatted,
+        DownloadTask.ActiveCount, DownloadTask.CompletedCount, DownloadTask.ErrorCount);
+
     public bool ShowGroupStats => DownloadTask.Count > 1;
 
     public DownloadState CurrentState => DownloadTask.CurrentState;
@@ -134,6 +137,12 @@ public sealed class DownloadItemViewModel : ThumbnailEntryViewModel<IArtworkInfo
     {
         if (_isDisposed)
             return;
+
+        if (e.PropertyName is nameof(IDownloadTaskBase.CurrentState)
+            or nameof(IDownloadTaskGroup.ActiveCount)
+            or nameof(IDownloadTaskGroup.CompletedCount)
+            or nameof(IDownloadTaskGroup.ErrorCount))
+            OnPropertyChanged(nameof(GroupProgressMessage));
 
         if (e.PropertyName is nameof(IDownloadTaskBase.CurrentState))
         {

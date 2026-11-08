@@ -24,6 +24,7 @@ public partial class DownloadItem : UserControl
 
     private async void ActionButton_OnClicked(object? sender, RoutedEventArgs e)
     {
+        ItemCommands.IsOpen = false;
         if (ViewModel is not { } vm)
             return;
 
@@ -35,16 +36,19 @@ public partial class DownloadItem : UserControl
 
     private void ResetItem_OnClicked(object? sender, RoutedEventArgs e)
     {
+        ItemCommands.IsOpen = false;
         ViewModel?.DownloadTask.Reset();
     }
 
     private void CancelDownloadItem_OnClicked(object? sender, RoutedEventArgs e)
     {
+        ItemCommands.IsOpen = false;
         ViewModel?.DownloadTask.Cancel();
     }
 
     private async void OpenDownloadLocationItem_OnClicked(object? sender, RoutedEventArgs e)
     {
+        ItemCommands.IsOpen = false;
         if (ViewModel is not { } vm)
             return;
 
@@ -55,6 +59,7 @@ public partial class DownloadItem : UserControl
 
     private void GoToPageItem_OnClicked(object? sender, RoutedEventArgs e)
     {
+        ItemCommands.IsOpen = false;
         if (ViewModel is not { } vm)
             return;
 
@@ -63,6 +68,7 @@ public partial class DownloadItem : UserControl
 
     private async void CheckErrorMessageInDetail_OnClicked(object? sender, RoutedEventArgs e)
     {
+        ItemCommands.IsOpen = false;
         if (ViewModel is not { } vm)
             return;
 

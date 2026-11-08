@@ -3,7 +3,9 @@
 
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
 using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Mako.Global.Enum;
 using Mako.Model;
 using Pixeval.Models.Blocking;
@@ -12,8 +14,11 @@ using Pixeval.Views;
 
 namespace Pixeval.ViewModels.Viewers;
 
-public sealed class CommentItemViewModel : CommentsViewViewModel
+public sealed partial class CommentItemViewModel : CommentsViewViewModel
 {
+    [ObservableProperty]
+    public partial bool IsDeleting { get; private set; }
+
     public CommentItemViewModel(Comment comment, SimpleWorkType parentType, long parentId, bool isTopComment)
         : base(parentType, parentId)
     {
@@ -45,27 +50,39 @@ public sealed class CommentItemViewModel : CommentsViewViewModel
 
     public string CommentContent => CommentImageHelper.GetContents(Comment.Content);
 
-    public bool IsMe => UserId == PixevalSettings.MyId;
+    public bool IsMe => App.AppViewModel.MakoClient.Me?.Id == UserId;
 
     public long Id => Comment.Id;
 
-    public override async Task<Comment> AddCommentAsync(string content)
+    public override async Task<Comment> AddCommentAsync(string content, CancellationToken token = default)
     {
         if (!IsTopComment)
             return Comment.CreateDefault();
-        return await App.AppViewModel.MakoClient.AddWorkCommentAsync(ParentType, ParentId, Id, content);
+        return await App.AppViewModel.MakoClient.AddWorkCommentAsync(ParentType, ParentId, Id, content, token);
     }
 
-    public override async Task<Comment> AddStickerAsync(int stampId)
+    public override async Task<Comment> AddStickerAsync(int stampId, CancellationToken token = default)
     {
         if (!IsTopComment)
             return Comment.CreateDefault();
-        return await App.AppViewModel.MakoClient.AddWorkCommentAsync(ParentType, ParentId, Id, stampId);
+        return await App.AppViewModel.MakoClient.AddWorkCommentAsync(ParentType, ParentId, Id, stampId, token);
     }
 
-    public Task<bool> DeleteAsync()
+    public async Task<bool> DeleteAsync(CancellationToken token = default)
     {
-        return IsMe ? App.AppViewModel.MakoClient.DeleteWorkCommentAsync(ParentType, Id) : Task.FromResult(false);
+        if (!IsMe || IsDeleting || token.IsCancellationRequested)
+            return false;
+        var accountId = App.AppViewModel.MakoClient.Me?.Id;
+        IsDeleting = true;
+        try
+        {
+            return await App.AppViewModel.MakoClient.DeleteWorkCommentAsync(ParentType, Id, token)
+                && !token.IsCancellationRequested && App.AppViewModel.MakoClient.Me?.Id == accountId;
+        }
+        finally
+        {
+            IsDeleting = false;
+        }
     }
 
     public override void AddComment(Comment comment) => Source.Insert(0, new CommentItemViewModel(comment, ParentType, ParentId, false));

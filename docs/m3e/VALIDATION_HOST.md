@@ -15,13 +15,23 @@ dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationVa
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll search-page artifacts/m3e/my-run/search-page
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll saucenao artifacts/m3e/my-run/saucenao
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll user-pages artifacts/m3e/my-run/user-pages
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll user-details artifacts/m3e/my-run/user-details
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll series-page artifacts/m3e/my-run/series-page
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll series-details artifacts/m3e/my-run/series-details
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-info artifacts/m3e/my-run/work-info
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll comment-send artifacts/m3e/my-run/comment-send
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll comment-list artifacts/m3e/my-run/comment-list
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-series artifacts/m3e/my-run/work-series
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll download-pages artifacts/m3e/my-run/download-pages
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll subscription-editor artifacts/m3e/my-run/subscription-editor
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll download-folders artifacts/m3e/my-run/download-folders
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-feeds artifacts/m3e/my-run/work-feeds
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-sources artifacts/m3e/my-run/work-sources
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-related artifacts/m3e/my-run/work-related
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll history-pages artifacts/m3e/my-run/history-pages
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll home-cards artifacts/m3e/my-run/home-cards
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll home-parameters artifacts/m3e/my-run/home-parameters
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll home-sources artifacts/m3e/my-run/home-sources
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll spotlight artifacts/m3e/my-run/spotlight
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll login artifacts/m3e/my-run/login
 dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-cards artifacts/m3e/my-run/work-cards
@@ -124,11 +134,35 @@ dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationVa
 
 卡片通过 Enter/Space/指针单次打开原用户 ID；实际 Tab/Shift+Tab 进入/离开头像菜单。菜单执行公开关注/取消并核对请求次数/载荷与标签，复制使用内存剪贴板，屏蔽写入隔离数据库后清理固定记录。资料目标只观察类型/ID 并立即释放，验证其待完成请求取消。输出 `user-page-contracts.txt`、`user-page-requests.txt` 和 PNG。未验证系统浏览器/剪贴板、原生读屏、关注失败及完整账号切换。
 
+## user-details
+
+使用真实用户详情页和受控 HTTP 验证宽窄窗口/浅深主题：完整长名称、PageDown 到介绍末行、实际选择 ID 与内存剪贴板复制、原应用/网页链接、五个列表目的地和隔离数据库屏蔽。公开/私密关注与取消共用待完成状态，核对原载荷、失败保留/重试；故意迟到的详情/关注响应不得更新已关闭页面或切换后的账号。
+
+输出 `user-detail-contracts.txt`、`user-detail-requests.txt` 和 PNG。不验证系统浏览器/剪贴板、原生焦点/读屏、UserBasicInfoPresenter 或完整账号自动刷新；固定失败响应可产生预期应用日志。
+
 ## series-page
 
 从真实 SeriesPage 打开漫画和小说监视列表，验证默认类型、键盘切类型、刷新、next_url/顺序/去重、空结果和旧源响应归属。卡片、作者、最新内容分别通过键盘/指针进入原详情页面，检查目标类型、ID、工作类型和详情请求取消；不把目标挂载为在线页面。
 
 实际 Tab/Shift+Tab 遍历内部按钮，使用 headless 平台配置的菜单键（Apps）和右键打开上下文菜单，验证复制、作者/最新内容及 Escape。完整标题通过名称/提示保留，窄窗动作不得被裁掉。输出 `series-contracts.txt`、`series-requests.txt` 和 PNG。平台默认键不代表 Windows Shift+F10 已通过；实际外链、完整详情、系列监视管理与订阅另行验收。
+
+## series-details
+
+使用真实漫画/小说系列详情页，验证原详情端点/ID、完整长标题/介绍、键盘滚动到末行、追更及取消的实际键盘入口和精确载荷。命令切入溢出后仍须保有数据上下文；失败允许重试，直接竞争命令不能绕过共同待完成状态。页面通过既有寿命事件注册，调用注册的关闭路由后已加载作品源清空、内容解除且 HTTP 取消；故意迟到及旧账号响应不能回写。
+
+输出 `series-detail-contracts.txt`、`series-detail-requests.txt` 和 PNG。另断言追更没有创建本地下载订阅；不将其作为完整订阅、WorkSeriesInfoPane 导航或真实服务权限验收。
+
+## work-info
+
+实际构建完整版/精简版 WorkInfoPane，覆盖插画/小说、浅深主题和宽窄尺寸。验证完整作者/标题边界、统计换行、介绍和最后标签的键盘可达性、具名 ID 复制不触发外层作者按钮、长译文标签的原文搜索/原文与译文复制/屏蔽；作者导航保留 ID，立即关闭目标后详情请求取消。复制使用内存剪贴板，屏蔽只写本次隔离设置并清理固定标签。
+
+另挂载真实 IllustrationViewerInfoPane，验证固定、键盘展开/收起、同一作品、原信息/评论/相关作品三个页面与保留区域，检查原收藏/下载/稍后看命令实例。输出 `work-info-contracts.txt`、`work-info-requests.txt` 和 PNG。不执行该面板的收藏/下载业务、完整翻译服务或 OS 外链。
+
+## comment-send
+
+真实 CommentContainer/PixivReplyBar 覆盖插画/小说的顶层评论和回复、浅深主题及 360/1000 DIP。固定服务核对工作 ID、父评论 ID、文本和贴图 ID；真实输入验证原 140 字限制、Enter 不发送、光标处表情占位、方向键分类及非零尺寸的完整标题。贴图使用本地生成的 160×80 固定色图，检查截图中色块的实际 2:1 比例，而非只检查 Stretch 属性。
+
+发送过程中输入仍可编辑，文本与贴图共用忙状态；失败不丢草稿，重试成功只清除仍相同的已发送文本，贴图成功不清除文本。卸载/替换上下文及直接 Window.Close 均取消传给请求的令牌；旧响应不能解锁、插入或清除新编辑器，旧账号成功响应也被隔离。输出 `comment-send-contracts.txt`、`comment-send-requests.txt` 和 PNG。所有发布请求均为固定 HTTP，不发送真实评论；headless Enter 不代表原生 IME 已通过，完整评论分页、删除权限和真实服务仍待验收。
 
 ## work-feeds
 
@@ -171,6 +205,12 @@ dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationVa
 在真实首页卡片库中用键盘逐项选择全部来源，独立核对参数字段集合、默认当前账号、类型/隐私/ID/搜索/标签/日期的精确草稿映射。具名字段与长译文须在宽窄窗口可读；无效 ID/空搜索通过真实添加按钮拒绝且不发请求、不保存。排行榜未来日期输入保留上一有效值并显示原本地化警告，草稿模型也必须拒绝；自动日期保留但不应用禁用的手工日期。离开编辑不隐式添加。
 
 输出 `home-parameter-contracts.txt`、`home-parameter-requests.txt` 和 PNG。有效参数只验证草稿，未点击全部有效来源的添加按钮；因此实际添加后的来源 HTTP、完整账号切换、跨时区、原生日历/IME 仍待验收。日期边界沿用产品的当前排行榜可用日期，不改变序列化格式。
+
+## home-sources
+
+在真实首页卡片库中逐项键盘添加全部 19 类有效来源，分别选择两种作品选项；检查原首请求的端点及来源参数、一个实际预览、原 YAML 重读、原目标类型/ID、共享预览与单次请求、键盘删除和资源释放。普通来源与系列详情均走真实工厂，不用并行的模拟映射替换产品实现。单图/单小说/单用户/单系列另测失败默认记录、关闭时 HTTP 取消和迟到成功隔离。
+
+输出 `home-source-contracts.txt`、`home-source-requests.txt` 和 PNG。这是首请求/非空预览和保存重读的验证，不是完整分页、服务权限、账号切换、原生网格操作或应用重启。单小说打开后的正文仍使用独立共享缓存，其取消不由首页详情令牌证明；普通 Mako 引擎在途 HTTP 的边界保持前述说明。
 
 ## spotlight
 
@@ -258,3 +298,34 @@ Avalonia headless 使用内存剪贴板和空 URI launcher；操作不会改系�
 在真实 App 主题和既有离线 ViewContainerBase 容器中，分别验证浅深主题、1000/360 DIP 的确认/取消、持久错误确认及异步内容更新。保留本地化按钮、Enter/Escape、禁用默认动作和返回值；真实 headless 指针命中遮罩上的按钮，关闭后恢复调用入口的托管焦点。复用离线容器以避免 TabViewContainer 加载时的在线更新检查，不调用真实账号或业务写操作。
 
 输出 `dialog-contracts.txt` 和 PNG。`MaterialDialogTest` 另覆盖长标题/正文/按钮、正文滚动、Tab/Shift+Tab 循环、嵌套关闭和移除下层对话框、外点关闭否决、deferral 期间重复点击、打开时缩放/换主题和入口已卸载。原生 IME、系统焦点、触摸、多屏 DPI 与辅助技术保持待验收。
+
+
+## comment-list
+
+通过真实插画/小说评论容器与固定分页/删除响应，验证本人权限、主列表及回复删除、重试、刷新/换源、分页边界去重、键盘到末尾、两级回复导航和返回保留列表。行重绑定、卸载/关窗、换账号及旧 finally 不得改变新行；原评论文本、翻译行为和非正方形贴图保持。错误状态不同时显示成功空页。
+
+输出 `comment-list-contracts.txt`、`comment-list-requests.txt` 和浅深/宽窄截图。固定删除只作用于隔离账号；普通分页引擎取消约束枚举/响应归属，不代表在途 HTTP 已中断。真实服务权限、原生 IME/焦点/读屏仍待验收。
+
+## work-series
+
+真实 WorkSeriesInfoPane 覆盖漫画/小说的系列、前后作品、位置、完整名称、缓存邻项及 ID 回退，使用键盘和指针确认单次路由与原类型/ID。插画上下文请求手动乱序完成，校验切换/释放取消及失败保留已知系列；另在真实 IllustrationViewerInfoPane 中检查自然高度和剩余信息空间。
+
+输出 `work-series-contracts.txt`、`work-series-requests.txt` 和 300/360/1000 DIP 截图；只使用固定详情，不验证真实服务内容、原生焦点、窗口外导航或完整阅读器。
+
+## download-pages
+
+真实 DownloadItemView/DownloadItem 配合固定任务对象，覆盖状态/标题/ID 筛选、新任务与状态自动进出、空状态、选择及批量动作、七种状态的主/溢出动作、处理中的禁用、错误对话框和缺失文件反馈。工具栏保留完整提示及独立选择数量，Tab 可进入列表内任务动作；记录删除与可选文件删除仅操作本次产物目录。
+
+另用真实 SingleImageDownloadTaskGroup 和受控 HttpClient，在请求等待期间反复创建、关闭完整 DownloadPage，断言原请求未取消/重启，最终文件字节一致。输出 `download-contracts.txt`、`offline-requests.txt`、PNG 和固定文件。任务状态矩阵使用假任务；受控下载只证明 UI/后台寿命边界，不代表真实网络、系统文件/目录启动、应用退出或重启恢复。
+
+## subscription-editor
+
+把真实 WorkSubscriptionsSettingsExpander 放入设置页同类的滚动堆叠容器，连接原订阅持久化管理器及 WorkSubscriptionDownloadService。覆盖投稿/收藏/系列的七种工作类型组合、原端点/ID/公开收藏参数、无效/不可用目标、共享忙状态、重复添加、草稿保留、换上下文/账号与取消。固定详情响应可延迟；已排队同步跨编辑器关闭继续，删除订阅会取消关联详情并拒绝迟到回写。
+
+初次、单个、全部同步均使用固定空来源；不把其通过外推到真实分页、403/404 整批、限流重试或退出确认。输出 `subscription-contracts.txt`、`offline-requests.txt` 和浅深/宽窄截图。仅本轮独立 SQLite 落库；数据库重读不等于应用重启，未使用真实账号。
+
+## download-folders
+
+真实 DownloadFolderView 导航容器连接原下载页/文件夹模型，展示固定空/非空订阅。验证完整名称、分组文字统计和部分子计数变化、Tab/Shift+Tab、进入/返回的任务身份、新任务即时出现/移除、平台菜单键及批量动作、同步元数据与移除订阅；清空/恢复上下文继续正确显示空状态。
+
+输出 `folder-contracts.txt`、`offline-requests.txt` 和浅深/宽窄截图。任务对象不执行真实下载，菜单同步返回固定空小说来源；真实下载跨页面寿命由 `download-pages` 单独覆盖。原生菜单键、系统焦点/辅助技术和真实服务批次仍待验收。

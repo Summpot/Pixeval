@@ -1,8 +1,12 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Mako.Model;
+using Pixeval.I18N;
 using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 
@@ -18,26 +22,26 @@ public partial class CommentContainer : ContentPage
         InitializeComponent();
     }
 
-    private async void ReplyBar_OnSendButtonClick(string replyContent)
-    {
-        if (DataContext is not CommentsViewViewModel viewModel)
-            return;
-        AddComment(await viewModel.AddCommentAsync(replyContent), viewModel);
-    }
+    private Task<bool> ReplyBar_OnSendButtonClick(string replyContent, CancellationToken token) =>
+        SubmitAsync((model, cancellation) => model.AddCommentAsync(replyContent, cancellation), token);
 
-    private async void ReplyBar_OnStickerClick(int stickerId)
-    {
-        if (DataContext is not CommentsViewViewModel viewModel)
-            return;
-        AddComment(await viewModel.AddStickerAsync(stickerId), viewModel);
-    }
+    private Task<bool> ReplyBar_OnStickerClick(int stickerId, CancellationToken token) =>
+        SubmitAsync((model, cancellation) => model.AddStickerAsync(stickerId, cancellation), token);
 
-    private void AddComment(Comment comment, CommentsViewViewModel viewModel)
+    private async Task<bool> SubmitAsync(Func<CommentsViewViewModel, CancellationToken, Task<Comment>> submit, CancellationToken token)
     {
+        if (DataContext is not CommentsViewViewModel viewModel || App.AppViewModel.MakoClient.Me?.Id is not { } accountId)
+            return false;
+        var comment = await submit(viewModel, token);
+        if (token.IsCancellationRequested || !ReferenceEquals(DataContext, viewModel) || App.AppViewModel.MakoClient.Me?.Id != accountId)
+            return false;
         if (comment.Id is 0)
-            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowError("评论发送失败"); //TODO i18n
-        else
-            viewModel.AddComment(comment);
+        {
+            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowError(I18NManager.GetResource(PixivReplyBarResources.SendFailed));
+            return false;
+        }
+        viewModel.AddComment(comment);
+        return true;
     }
 
     private async void CommentView_OnOpenRepliesButtonClick(CommentItemViewModel viewModel)

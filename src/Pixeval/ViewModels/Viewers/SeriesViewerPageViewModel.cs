@@ -22,6 +22,9 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
     public partial bool IsLoading { get; private set; }
 
     [ObservableProperty]
+    public partial bool IsChangingWatchlist { get; private set; }
+
+    [ObservableProperty]
     public partial string? LoadErrorMessage { get; private set; }
 
     [ObservableProperty]
@@ -101,6 +104,15 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
     partial void OnSeriesDetailChanged(SeriesDetailBase? value)
     {
         IsWatchlistAdded = value?.WatchlistAdded is true;
+        NotifyWatchlistCommands();
+    }
+
+    partial void OnIsLoadingChanged(bool value) => NotifyWatchlistCommands();
+
+    partial void OnIsChangingWatchlistChanged(bool value) => NotifyWatchlistCommands();
+
+    private void NotifyWatchlistCommands()
+    {
         AddToWatchlistCommand.NotifyCanExecuteChanged();
         RemoveFromWatchlistCommand.NotifyCanExecuteChanged();
     }
@@ -114,9 +126,11 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
         {
             var (detail, first, engine) = await App.AppViewModel.MakoClient.GetWorkSeriesAsync(WorkType, Id, token);
 
-            if (_disposed)
+            if (_disposed || token.IsCancellationRequested || detail.Id != Id)
             {
                 engine.EngineHandle.Cancel();
+                if (!_disposed && !token.IsCancellationRequested)
+                    LoadErrorMessage = I18NManager.GetResource(EntryViewerPageResources.LoadFailed);
                 return;
             }
 
@@ -139,26 +153,44 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
         }
     }
 
-    private bool CanChangeWatchlist => SeriesDetail is not null;
+    private bool CanChangeWatchlist => !_disposed && !IsLoading && !IsChangingWatchlist && SeriesDetail is { Id: > 0 }
+                                      && App.AppViewModel.MakoClient.Me is not null;
 
     [RelayCommand(CanExecute = nameof(CanChangeWatchlist))]
-    private async Task AddToWatchlistAsync()
-    {
-        if (!await App.AppViewModel.MakoClient.PostWorkSeriesWatchlistAsync(WorkType, Id))
-            return;
-
-        SeriesDetail!.WatchlistAdded = true;
-        IsWatchlistAdded = true;
-    }
+    private Task AddToWatchlistAsync() => SetWatchlistAsync(true);
 
     [RelayCommand(CanExecute = nameof(CanChangeWatchlist))]
-    private async Task RemoveFromWatchlistAsync()
+    private Task RemoveFromWatchlistAsync() => SetWatchlistAsync(false);
+
+    private async Task SetWatchlistAsync(bool added)
     {
-        if (!await App.AppViewModel.MakoClient.RemoveWorkSeriesWatchlistAsync(WorkType, Id))
+        if (!CanChangeWatchlist || SeriesDetail is not { } detail)
             return;
 
-        SeriesDetail!.WatchlistAdded = false;
-        IsWatchlistAdded = false;
+        var client = App.AppViewModel.MakoClient;
+        var accountId = client.Me?.Id;
+        var token = _loadingCts.Token;
+        IsChangingWatchlist = true;
+        try
+        {
+            var result = added
+                ? await client.PostWorkSeriesWatchlistAsync(WorkType, Id, token)
+                : await client.RemoveWorkSeriesWatchlistAsync(WorkType, Id, token);
+            if (result && !_disposed && !token.IsCancellationRequested && client.Me?.Id == accountId
+                && ReferenceEquals(SeriesDetail, detail))
+            {
+                detail.WatchlistAdded = added;
+                IsWatchlistAdded = added;
+            }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (!_disposed)
+                IsChangingWatchlist = false;
+        }
     }
 
     #region Dispose
@@ -172,6 +204,8 @@ public sealed partial class SeriesViewerPageViewModel : ViewModelBase, IDisposab
 
         _disposed = true;
         IsLoading = false;
+        IsChangingWatchlist = false;
+        NotifyWatchlistCommands();
         _loadingCts.Cancel();
         _loadingCts.Dispose();
         var worksEngine = WorksEngine;

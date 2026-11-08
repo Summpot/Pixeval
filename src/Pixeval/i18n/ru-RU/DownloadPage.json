@@ -35,5 +35,7 @@
   },
   "DeleteLocalFiles": {
     "Content": "Также удалить локальные файлы"
-  }
+  },
+  "StatusFilter": "Состояние загрузки",
+  "SelectedCountFormatted": "Выбрано: {0}"
 }
