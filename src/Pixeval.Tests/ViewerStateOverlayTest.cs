@@ -13,6 +13,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using CommunityToolkit.Mvvm.Input;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pixeval.Controls;
 using Pixeval.I18N;
@@ -100,7 +101,27 @@ public sealed class ViewerStateOverlayTest
                     Assert.IsNotNull(frame);
                     frame.Save(Path.Combine(directory, $"viewer-error-{dark}-{width}.png"), new PngBitmapEncoderOptions());
                 }
-                overlay.ErrorMessage = null;
+                var retry = overlay.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "PART_RetryButton");
+                Assert.IsFalse(retry.IsVisible, "Callers without a retry action retain the original error-only overlay.");
+                var retries = 0;
+                overlay.RetryCommand = new RelayCommand(() =>
+                {
+                    retries++;
+                    overlay.ErrorMessage = null;
+                });
+                await RenderAsync(window);
+                Assert.IsTrue(retry.IsEffectivelyVisible && retry.Bounds.Height >= 48);
+                var retryPosition = retry.TranslatePoint(default, window)!.Value;
+                Assert.IsTrue(retryPosition.Y + retry.Bounds.Height <= window.Height - 24 + 1,
+                    "Retry stays reachable below long error text in a narrow viewport.");
+                Assert.IsTrue(scroll.Focus());
+                window.KeyPress(Key.Tab, RawInputModifiers.None, PhysicalKey.Tab, "\t");
+                window.KeyRelease(Key.Tab, RawInputModifiers.None, PhysicalKey.Tab, "\t");
+                Assert.AreSame(retry, window.FocusManager.GetFocusedElement());
+                window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, "\r");
+                window.KeyRelease(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, "\r");
+                Assert.AreEqual(1, retries);
+                Assert.IsNull(overlay.ErrorMessage);
                 await RenderAsync(window);
                 Click(window);
                 Assert.AreEqual(2, clicks, "Clearing the state must restore viewer input.");

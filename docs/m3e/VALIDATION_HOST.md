@@ -1,6 +1,8 @@
 # 正式 UI 测试与导出工具
 
-页面验收现属于 `src/Pixeval.Tests/Ui`，由 MSTest 发现并执行，分类为 `UI`。它们使用真实 `App.Initialize`、主题、服务注册及 `TabViewContainer`，不再覆盖应用初始化来绕过正式流程。测试只替换 HTTP 传输和外部更新检查，并为每个用例初始化独立数据目录。应用搜索模型、设置视图模型、文件缓存和链接文字装饰随应用实例隔离。当前应用仍有静态入口，因此这些集成测试明确串行运行；本次没有声称支持同进程并行的多个 Pixeval 应用。
+页面验收现属于 `src/Pixeval.Tests/Ui`，由 MSTest 发现并执行，分类为 `UI`。它们使用真实 `App.Initialize`、主题、服务注册及 `TabViewContainer`，不再覆盖应用初始化来绕过正式流程。测试只在 HTTP、存储和更新检查等外部能力边界使用替身，并为每个用例初始化独立数据目录。应用搜索模型、设置视图模型、文件缓存和链接文字装饰随应用实例隔离。当前应用仍有静态入口，因此这些集成测试明确串行运行；本次没有声称支持同进程并行的多个 Pixeval 应用。
+
+`UiTestSession` 在测试程序集内复用一个 headless 工作线程，以适配 AvaloniaEdit 的进程级、线程绑定的快捷键缓存；`PerTest` 仍为每次派发创建新的 App 和服务作用域，测试结束等待 App 释放，程序集清理再关闭会话。不要通过复用 App 或取消数据隔离来处理跨线程问题。`UiSessionIsolationTests` 验证连续应用的文化、服务/目录隔离、编辑/撤销/保存和真实关闭。
 
 `PageTestHost` 是普通测试驱动器，持有 `App.CreateViewContainer()` 返回的正式 `Shell`；窗口直接承载该外壳。`TabViewContainer` 为 sealed，驱动器没有 UI 继承、导航 override 或隐式转换；`UiArchitectureTests` 禁止测试程序集定义另一种 `ViewContainerBase`。产品的 `PageOpened` 在加入/选中页面、完成替换后发布，驱动器只记录导航信息，目标页面保持真实的选中、加载和存活状态。该事件表示导航已提交，不替代 Loaded 或请求完成；场景按契约等待布局与异步结果。
 
@@ -69,6 +71,10 @@ dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationVa
 | `BookmarksPage` | `BookmarksPageValidation.cs` |
 | `RankingPage` | `RankingPageValidation.cs` |
 | `ViewerToolbar` | `ViewerToolbarValidation.cs` |
+| `IllustrationReader`（四语言 DataRow） | `IllustrationReaderValidation.cs` |
+| `IllustrationNavigation`（四语言 DataRow） | `IllustrationNavigationValidation.cs` |
+| `IllustrationAutoPlay`（四语言 DataRow） | `IllustrationAutoPlayValidation.cs` |
+| `IllustrationSave`（四语言 DataRow） | `IllustrationSaveValidation.cs` |
 | `NovelReader` | `NovelReaderValidation.cs` |
 | `NovelReadingSettings` | `NovelReadingSettingsValidation.cs` |
 | `NovelMarkdown` | `NovelMarkdownValidation.cs` |
@@ -80,6 +86,10 @@ dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationVa
 | `NavigationInRussian` | `NavigationEditorValidation.cs` |
 
 ## 场景契约与证明边界
+
+图像场景通过 `IllustrationReaderFixture` 提供固定图片和可控详情 HTTP，保留正式页面、图像管线及标签生命周期。`IllustrationReader` / `IllustrationNavigation` 覆盖 Swipe/Continuous、浅深主题、宽窄窗、详情重试、身份检查、页码/作品输入和溢出命令绑定；独立 `PagePreviewSliderInputTest` 证明拖动、事件订阅与 UIA 范围，不能单独替代页面导航证据。图片下载/解码失败、内层页签完整视觉及原生手势另行验收。
+
+`IllustrationAutoPlay` 在 Swipe 正式页面通过右键菜单、键盘和真实 DispatcherTimer 验证模式/范围、间隔、暂停/恢复、单作品循环、临时导航及待完成详情/关闭；使用隔离设置文件核对原字段，不以手动调用计时回调代替播放。`IllustrationSave` 通过真实图像菜单触发 PNG 另存，只在存储边界使用内存提供器；验证可解码输出、取消、能力不足和选择器/打开/写入错误，以及关闭后迟到文件/流的释放。它不证明系统保存对话框、磁盘权限、剪贴板、转换扩展或动画控制已通过。
 
 小说场景通过 `NovelReaderFixture` 提供固定正文、封面/插图与可控迟到响应；阅读页面、设置生成器、翻译菜单、下载队列和实际格式转换仍使用产品实现。托管扩展仅替换外部 SDK 边界。`NovelNativeExport` 使用与 `NativeExtension` 相同的固定 C++ 样本：该示例格式提供器完成调用但不写文件，因此验收的是消费者明确报告失败，不是成功原生格式导出。原生保存对话框、系统剪贴板/浏览器、扩展执行中取消和完整重启另行验收。
 

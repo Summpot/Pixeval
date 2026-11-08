@@ -3,7 +3,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,15 +31,20 @@ namespace Pixeval.ViewModels.Viewers;
 
 public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
 {
-    public static ObservableCollection<IImageTransformerCommandExtension> TransformerExtensions { get; } = [.. ExtensionService.ActiveImageTransformerCommands];
+    public bool HasTransformerExtensions => TransformerExtensionItems.Count is not 0;
 
-    public static bool HasTransformerExtensions => TransformerExtensions.Count is not 0;
+    private readonly List<ExtensionsHostModel> _observedExtensionHosts = [];
+    private bool _observingExtensionHosts;
+    private IImageTransformerCommandExtension? _activeTransformer;
+    private CancellationTokenSource? _transformCancellation;
 
     // Multiple viewer interactions can request the same page concurrently; share one load task to keep progress stable.
     private readonly Lock _loadOriginalImageTaskGate = new();
     private readonly CancellationTokenSource _lifetimeCancellationTokenSource = new();
     private Task? _loadOriginalImageTask;
     private int _previewConsumers;
+    private bool _retryImageLoad;
+    private bool _retryOriginalImage;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLoadingIndeterminate))]
@@ -45,19 +52,36 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
 
     public bool IsLoadingIndeterminate => LoadingProgress is null;
 
-    public bool IsLoading => !LoadSuccessfully || IsProcessingImage;
+    public bool IsLoading => IsLoadingImage || IsProcessingImage;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLoading))]
+    [NotifyCanExecuteChangedFor(nameof(RetryImageCommand))]
+    public partial bool IsLoadingImage { get; private set; }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RetryImageCommand))]
+    public partial string? LoadErrorMessage { get; private set; }
+
+    private bool CanRetryImage => !_disposed && !IsLoadingImage && LoadErrorMessage is not null;
+
+    [RelayCommand(CanExecute = nameof(CanRetryImage))]
+    private Task RetryImageAsync() => LoadOriginalImageAsync();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLoading))]
     [NotifyCanExecuteChangedFor(nameof(TransformExtensionCommand))]
     [NotifyCanExecuteChangedFor(nameof(ViewOriginalCommand))]
     [NotifyCanExecuteChangedFor(nameof(PlayPauseCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveAsCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyCommand))]
     public partial bool LoadSuccessfully { get; private set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLoading))]
     [NotifyCanExecuteChangedFor(nameof(TransformExtensionCommand))]
     [NotifyCanExecuteChangedFor(nameof(ViewOriginalCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveAsCommand))]
     public partial bool IsProcessingImage { get; private set; }
 
     /// <summary>
@@ -77,6 +101,8 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         ZoomInCommand.NotifyCanExecuteChanged();
         ZoomOutCommand.NotifyCanExecuteChanged();
         ZoomToOriginalCommand.NotifyCanExecuteChanged();
+        SaveAsCommand.NotifyCanExecuteChanged();
+        CopyCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnCachedPreviewSourceChanged(IAnimatedBitmap? value) => DisplaySource.SetFallback(value);
@@ -117,6 +143,9 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     {
         if (Interlocked.Increment(ref _previewConsumers) is not 1)
             return;
+        if (_disposed)
+            return;
+        StartObservingExtensionHosts();
         if (!LoadSuccessfully)
             _ = LoadCachedPreviewAsync();
     }
@@ -148,18 +177,26 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     {
         if (Interlocked.Decrement(ref _previewConsumers) is not 0)
             return;
+        if (_activeTransformer is null)
+            StopObservingExtensionHosts();
         ReleaseLoadingPreview();
     }
 
     public bool IsPicGif => _entry.ImageType is ImageType.SingleAnimatedImage;
 
-    private bool IsGifLoadSuccessfully => LoadSuccessfully && IsPicGif;
+    private bool IsGifLoadSuccessfully => !_disposed && LoadSuccessfully && IsPicGif;
 
-    public bool CanViewOriginal => !IsProcessingImage && LoadSuccessfully;
+    public bool CanViewOriginal => !_disposed && !IsProcessingImage && LoadSuccessfully;
 
     public bool CanTransformExtension => !IsPicGif && CanViewOriginal && OriginalSource is not null;
 
-    public IReadOnlyList<ImageTransformerExtensionCommandItem> TransformerExtensionItems { get; }
+    public bool CanSaveDisplayedImage => !_disposed && CanViewOriginal && DisplaySource.Frames is [_];
+
+    private bool CanCopyDisplayedImage => !_disposed && LoadSuccessfully && DisplaySource.Frames is [_];
+
+    private bool CanSaveImage => !_disposed;
+
+    public IReadOnlyList<ImageTransformerExtensionCommandItem> TransformerExtensionItems { get; private set; } = [];
 
     public ImageTransformerExtensionCommandItem? PrimaryTransformerExtensionItem =>
         TransformerExtensionItems is [{ } first, ..] ? first : null;
@@ -203,7 +240,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         _saveImageAsync = saveImageAsync;
         Index = index;
         DisplaySource.Changed += DisplaySourceOnChanged;
-        TransformerExtensionItems = [.. TransformerExtensions.Select(extension => new ImageTransformerExtensionCommandItem(this, extension))];
+        RefreshTransformerExtensions();
         _ = LoadThumbnailImageAsync();
     }
 
@@ -213,6 +250,16 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         if (_disposed)
             return;
         _disposed = true;
+        RetryImageCommand.NotifyCanExecuteChanged();
+        CopyCommand.NotifyCanExecuteChanged();
+        SaveImageCommand.NotifyCanExecuteChanged();
+        PlayPauseCommand.NotifyCanExecuteChanged();
+        StopObservingExtensionHosts();
+        TransformExtensionCommand.NotifyCanExecuteChanged();
+        ViewOriginalCommand.NotifyCanExecuteChanged();
+        SaveAsCommand.NotifyCanExecuteChanged();
+        foreach (var item in TransformerExtensionItems)
+            item.Dispose();
         _lifetimeCancellationTokenSource.Cancel();
         _lifetimeCancellationTokenSource.Dispose();
         DisplaySource.Changed -= DisplaySourceOnChanged;
@@ -271,35 +318,43 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         if (LoadSuccessfully || _disposed)
             return;
 
+        var token = _lifetimeCancellationTokenSource.Token;
+        IsLoadingImage = true;
+        LoadErrorMessage = null;
         LoadingProgress = null;
-
-        IAnimatedBitmap? source;
         try
         {
-            source = await DisplaySource.UpdateAsync(
-                token => LoadWithPreviewAsync(false, token), _lifetimeCancellationTokenSource.Token);
-            if (source is null && !_disposed)
-                source = await DisplaySource.UpdateAsync(
-                    _ => Task.FromResult<IAnimatedBitmap?>(CacheHelper.AnimatedImageNotAvailable.Value),
-                    _lifetimeCancellationTokenSource.Token);
+            var source = await DisplaySource.UpdateAsync(
+                updateToken => LoadWithPreviewAsync(false, updateToken), token);
+            if (_disposed)
+            {
+                source?.Dispose();
+                return;
+            }
+            if (source is null)
+                throw new InvalidDataException("The image could not be loaded or decoded.");
+            OriginalSource?.Dispose();
+            OriginalSource = source;
+            ReleaseLoadingPreview();
+            LoadSuccessfully = source.IsInitialized;
+            _retryImageLoad = false;
         }
-        catch (OperationCanceledException) when (_lifetimeCancellationTokenSource.IsCancellationRequested)
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
-            return;
         }
-
-        if (source is null)
-            return;
-        if (_disposed)
+        catch
         {
-            source.Dispose();
-            return;
+            if (!token.IsCancellationRequested)
+            {
+                _retryImageLoad = true;
+                LoadErrorMessage = I18NManager.GetResource(EntryViewerPageResources.LoadFailed);
+            }
         }
-
-        OriginalSource?.Dispose();
-        OriginalSource = source;
-        ReleaseLoadingPreview();
-        LoadSuccessfully = source.IsInitialized;
+        finally
+        {
+            if (!_disposed)
+                IsLoadingImage = false;
+        }
     }
 
     // The single-frame source owns its bitmap; dispose the source rather than the frame separately.
@@ -318,7 +373,10 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     {
         using var preview = new ProgressiveImagePreview(bitmap => PublishLoadingPreviewAsync(bitmap, token),
             () => Volatile.Read(ref _previewConsumers) > 0);
-        return await LoadImageAsync(original, preview, token);
+        var source = await LoadImageAsync(original, preview, token);
+        // The shared cache API uses a placeholder for transport failures. A viewer
+        // must retain its current image and expose retry, never publish it as success.
+        return ReferenceEquals(source, CacheHelper.AnimatedImageNotAvailable.Value) ? null : source;
     }
 
     private async Task PublishLoadingPreviewAsync(Bitmap bitmap, CancellationToken token)
@@ -401,6 +459,8 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
                 var f = isOriginal ? singleImage : singleImage.Thumbnails.PickMax();
                 if (f is null)
                     return null;
+                if (isOriginal ? _retryOriginalImage : _retryImageLoad)
+                    CacheHelper.InvalidateImage(f.ImageUri.OriginalString);
                 return await CacheHelper.GetSingleImageAsync(
                     _platform,
                     f,
@@ -416,6 +476,17 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
                 token.ThrowIfCancellationRequested();
                 if (f is null)
                     return null;
+                if (isOriginal ? _retryOriginalImage : _retryImageLoad)
+                {
+                    if (f.SingleImageUri is { } singleUri)
+                        CacheHelper.InvalidateImage(singleUri.OriginalString);
+                    if (f.MultiImageUris is { } frames)
+                    {
+                        await frames.TryPreloadListAsync(_entry, token: token);
+                        foreach (var (uri, _) in frames)
+                            CacheHelper.InvalidateImage(uri.OriginalString);
+                    }
+                }
                 switch (f.PreferredAnimatedImageType)
                 {
                     case SingleAnimatedImageType.MultiFiles:
@@ -453,6 +524,9 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanViewOriginal))]
     private async Task ViewOriginalAsync(Control? control)
     {
+        if (!CanViewOriginal)
+            return;
+        var token = _lifetimeCancellationTokenSource.Token;
         var viewContainer = control is null ? null : TopLevel.GetTopLevel(control)?.ViewContainer;
         IsProcessingImage = true;
         try
@@ -460,57 +534,80 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
             viewContainer?.ShowInformation(I18NManager.GetResource(ImageViewerPageResources.LoadingOriginalImage));
             LoadingProgress = null;
             var source = await DisplaySource.UpdateAsync(
-                token => LoadWithPreviewAsync(true, token), _lifetimeCancellationTokenSource.Token);
-            if (source is null)
-            {
-                viewContainer?.ShowError(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadFailed));
-                return;
-            }
-
+                updateToken => LoadWithPreviewAsync(true, updateToken), token);
             if (_disposed)
             {
-                source.Dispose();
+                source?.Dispose();
                 return;
             }
-
+            if (source is null)
+                throw new InvalidDataException("The original image could not be loaded or decoded.");
             TransformedSource = source;
+            _retryOriginalImage = false;
             viewContainer?.ShowSuccess(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadedSuccessfully));
         }
-        catch (OperationCanceledException) when (_lifetimeCancellationTokenSource.IsCancellationRequested)
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
         }
         catch
         {
-            viewContainer?.ShowError(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadFailed));
+            if (!token.IsCancellationRequested)
+            {
+                _retryOriginalImage = true;
+                viewContainer?.ShowError(I18NManager.GetResource(ImageViewerPageResources.OriginalImageLoadFailed));
+            }
         }
         finally
         {
-            ReleaseLoadingPreview();
-            IsProcessingImage = false;
+            if (!_disposed)
+            {
+                ReleaseLoadingPreview();
+                IsProcessingImage = false;
+            }
         }
     }
 
     internal async Task ExecuteTransformerExtensionAsync(IImageTransformerCommandExtension extension, Control? control)
     {
+        if (!CanExecuteTransformer(extension))
+            return;
+        var token = _lifetimeCancellationTokenSource.Token;
         var viewContainer = control is null ? null : TopLevel.GetTopLevel(control)?.ViewContainer;
         try
         {
             viewContainer?.ShowInformation(I18NManager.GetResource(ImageViewerPageResources.ApplyingTransformerExtensions));
             await TransformExtensionCommand.ExecuteAsync(extension);
-            viewContainer?.ShowSuccess(I18NManager.GetResource(ImageViewerPageResources.TransformerExtensionFinishedSuccessfully));
+            if (!token.IsCancellationRequested && IsTransformerActive(extension))
+                viewContainer?.ShowSuccess(I18NManager.GetResource(ImageViewerPageResources.TransformerExtensionFinishedSuccessfully));
+        }
+        catch (OperationCanceledException e) when (e.CancellationToken.IsCancellationRequested || !IsTransformerActive(extension))
+        {
+            // Closing the viewer or disabling the extension discards its result.
         }
         catch
         {
-            viewContainer?.ShowError(I18NManager.GetResource(ImageViewerPageResources.TransformerExtensionFailed));
+            if (!token.IsCancellationRequested && IsTransformerActive(extension))
+                viewContainer?.ShowError(I18NManager.GetResource(ImageViewerPageResources.TransformerExtensionFailed));
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanTransformExtension))]
+    private bool CanExecuteTransformer(IImageTransformerCommandExtension? extension) =>
+        CanTransformExtension && extension is not null && IsTransformerActive(extension);
+
+    private static bool IsTransformerActive(IImageTransformerCommandExtension extension) =>
+        ExtensionService.ActiveImageTransformerCommands.Contains(extension);
+
+    [RelayCommand(CanExecute = nameof(CanExecuteTransformer))]
     private async Task TransformExtensionAsync(IImageTransformerCommandExtension? extension)
     {
-        if (extension is null || OriginalSource is not { } originalSource)
+        if (extension is null || !CanExecuteTransformer(extension) || OriginalSource is not { } originalSource)
             return;
 
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellationTokenSource.Token);
+        var token = cancellation.Token;
+        _activeTransformer = extension;
+        _transformCancellation = cancellation;
+        StartObservingExtensionHosts();
         IsProcessingImage = true;
         try
         {
@@ -522,29 +619,88 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
             frame.Save(source, new PngBitmapEncoderOptions());
             source.Position = 0;
 
-            var destination = Streams.RentStream();
-            try
+            // The extension ABI cannot cancel work. Keep both streams valid until
+            // it actually finishes, even when the viewer has already closed.
+            await using var destination = Streams.RentStream();
+            await extension.TransformAsync(source, destination);
+            token.ThrowIfCancellationRequested();
+            if (!IsTransformerActive(extension))
+                throw new OperationCanceledException();
+            destination.Position = 0;
+            var updatedSource = await DisplaySource.UpdateAsync(
+                _ => Task.FromResult<IAnimatedBitmap?>(IAnimatedBitmap.Load(destination, false)), token);
+            if (_disposed)
             {
-                await extension.TransformAsync(source, destination);
-                destination.Position = 0;
-                var transformedSource = IAnimatedBitmap.Load(destination, true);
-                var updatedSource = await DisplaySource.UpdateAsync(
-                    _ => Task.FromResult<IAnimatedBitmap?>(transformedSource), _lifetimeCancellationTokenSource.Token);
-                if (_disposed)
-                    updatedSource?.Dispose();
-                else if (updatedSource is not null)
-                    TransformedSource = updatedSource;
+                updatedSource?.Dispose();
+                token.ThrowIfCancellationRequested();
             }
-            catch
-            {
-                await destination.DisposeAsync();
-                throw;
-            }
+            if (updatedSource is null)
+                throw new InvalidDataException("The image transformer did not produce a decodable image.");
+            TransformedSource = updatedSource;
         }
         finally
         {
-            IsProcessingImage = false;
+            _activeTransformer = null;
+            _transformCancellation = null;
+            if (_previewConsumers is 0)
+                StopObservingExtensionHosts();
+            if (!_disposed)
+                IsProcessingImage = false;
         }
+    }
+
+    private void ExtensionHostsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => ObserveExtensionHosts();
+
+    private void StartObservingExtensionHosts()
+    {
+        if (_observingExtensionHosts)
+            return;
+        _observingExtensionHosts = true;
+        ExtensionService.HostModels.CollectionChanged += ExtensionHostsOnCollectionChanged;
+        ObserveExtensionHosts();
+    }
+
+    private void ObserveExtensionHosts()
+    {
+        foreach (var host in _observedExtensionHosts)
+            host.PropertyChanged -= ExtensionHostOnPropertyChanged;
+        _observedExtensionHosts.Clear();
+        _observedExtensionHosts.AddRange(ExtensionService.HostModels);
+        foreach (var host in _observedExtensionHosts)
+            host.PropertyChanged += ExtensionHostOnPropertyChanged;
+        RefreshTransformerExtensions();
+    }
+
+    private void StopObservingExtensionHosts()
+    {
+        _observingExtensionHosts = false;
+        ExtensionService.HostModels.CollectionChanged -= ExtensionHostsOnCollectionChanged;
+        foreach (var host in _observedExtensionHosts)
+            host.PropertyChanged -= ExtensionHostOnPropertyChanged;
+        _observedExtensionHosts.Clear();
+    }
+
+    private void ExtensionHostOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ExtensionsHostModel.IsActive))
+            RefreshTransformerExtensions();
+    }
+
+    private void RefreshTransformerExtensions()
+    {
+        if (_disposed)
+            return;
+        if (_activeTransformer is { } active && !IsTransformerActive(active))
+            _transformCancellation?.Cancel();
+        var previous = TransformerExtensionItems;
+        TransformerExtensionItems = [.. ExtensionService.ActiveImageTransformerCommands.Select(extension =>
+            previous.FirstOrDefault(item => ReferenceEquals(item.Extension, extension)) ?? new ImageTransformerExtensionCommandItem(this, extension))];
+        foreach (var item in previous.Except(TransformerExtensionItems))
+            item.Dispose();
+        OnPropertyChanged(nameof(TransformerExtensionItems));
+        OnPropertyChanged(nameof(PrimaryTransformerExtensionItem));
+        OnPropertyChanged(nameof(HasTransformerExtensions));
+        TransformExtensionCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand(CanExecute = nameof(HasDisplayImage))]
@@ -574,59 +730,110 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         // 仅做IsEnabled绑定，实际逻辑修改IsPlaying属性
     }
 
-    [RelayCommand(CanExecute = nameof(LoadSuccessfully))]
+    [RelayCommand(CanExecute = nameof(CanCopyDisplayedImage))]
     private async Task CopyAsync(Control control)
     {
-        if (DisplaySource.Frames is not [var singleFrame])
+        if (!CanCopyDisplayedImage || DisplaySource.Frames is not [var singleFrame])
             return;
         if (TopLevel.GetTopLevel(control) is not
             { ViewContainer: { } viewContainer, Clipboard: { } clipboard })
             return;
-        await clipboard.SetBitmapAsync(singleFrame);
-        await clipboard.FlushAsync();
-        viewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+        var token = _lifetimeCancellationTokenSource.Token;
+        try
+        {
+            // Clipboard providers can read lazily, including after the viewer closes.
+            // Ownership passes to the provider, which disposes the independent snapshot.
+            var snapshot = new BitmapDataTransfer(singleFrame);
+            try { await clipboard.SetDataAsync(snapshot); }
+            catch { snapshot.Dispose(); throw; }
+            if (token.IsCancellationRequested)
+                return;
+            await clipboard.FlushAsync();
+            if (!token.IsCancellationRequested)
+                viewContainer.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
+        }
+        catch
+        {
+            if (!token.IsCancellationRequested)
+                viewContainer.ShowError(I18NManager.GetResource(ImageViewerPageResources.CopyImageFailed));
+        }
     }
 
-    [RelayCommand]
-    private Task SaveImageAsync(Control? control) => _saveImageAsync(control, Index);
+    [RelayCommand(CanExecute = nameof(CanSaveImage))]
+    private Task SaveImageAsync(Control? control) => CanSaveImage ? _saveImageAsync(control, Index) : Task.CompletedTask;
 
-    [RelayCommand(CanExecute = nameof(LoadSuccessfully))]
+    [RelayCommand(CanExecute = nameof(CanSaveDisplayedImage))]
     private async Task SaveAsAsync(Control control)
     {
-        if (DisplaySource.Frames is not [var singleFrame])
+        if (!CanSaveDisplayedImage || DisplaySource.Frames is not [var singleFrame])
             return;
         if (TopLevel.GetTopLevel(control) is not
             { ViewContainer: { } viewContainer, StorageProvider: { } storageProvider })
             return;
-        var file = await storageProvider.SaveFilePickerAsync(new()
+        var token = _lifetimeCancellationTokenSource.Token;
+        try
         {
-            FileTypeChoices =
-            [
-                new("PNG")
+            if (!storageProvider.CanSave)
+            {
+                viewContainer.ShowError(I18NManager.GetResource(ImageViewerPageResources.SaveImageFailed));
+                return;
+            }
+
+            // Keep the displayed frame alive as encoded bytes across the picker.
+            // The viewer can replace or dispose its bitmap while the dialog is open.
+            await using var snapshot = Streams.RentStream();
+            singleFrame.Save(snapshot, new PngBitmapEncoderOptions());
+            snapshot.Position = 0;
+            using var file = await storageProvider.SaveFilePickerAsync(new()
+            {
+                FileTypeChoices =
+                [
+                    new("PNG")
+                    {
+                        Patterns = ["*.png"],
+                        MimeTypes = ["image/png"]
+                    }
+                ],
+                DefaultExtension = "png",
+                SuggestedFileName = _entry.Id
+            });
+
+            if (file is null || token.IsCancellationRequested)
+                return;
+
+            await using (var stream = await file.OpenWriteAsync())
+            {
+                token.ThrowIfCancellationRequested();
+                if (stream.CanSeek)
                 {
-                    Patterns = ["*.png"],
-                    MimeTypes = ["image/png"]
+                    stream.Position = 0;
+                    stream.SetLength(0);
                 }
-            ],
-            DefaultExtension = "png",
-            SuggestedFileName = _entry.Id
-        });
-
-        if (file is null)
-            return;
-
-        var stream = await file.OpenWriteAsync();
-        singleFrame.Save(stream, new PngBitmapEncoderOptions());
-        viewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.Saved), file.Path.OriginalString);
+                await snapshot.CopyToAsync(stream, token);
+                await stream.FlushAsync(token);
+            }
+            if (!token.IsCancellationRequested)
+                viewContainer.ShowSuccess(I18NManager.GetResource(MiscResources.Saved), file.Path.OriginalString);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+        }
+        catch
+        {
+            if (!token.IsCancellationRequested)
+                viewContainer.ShowError(I18NManager.GetResource(ImageViewerPageResources.SaveImageFailed));
+        }
     }
 
     private static ExtensionService ExtensionService => App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>();
 }
 
-public sealed class ImageTransformerExtensionCommandItem
+public sealed class ImageTransformerExtensionCommandItem : IDisposable
 {
+    private readonly SingleViewerViewModel _viewModel;
     public ImageTransformerExtensionCommandItem(SingleViewerViewModel viewModel, IImageTransformerCommandExtension extension)
     {
+        _viewModel = viewModel;
         Extension = extension;
         Label = extension.Label;
         Description = extension.Description;
@@ -634,8 +841,12 @@ public sealed class ImageTransformerExtensionCommandItem
         Command = new AsyncRelayCommand<Control?>(
             control => viewModel.ExecuteTransformerExtensionAsync(extension, control),
             _ => viewModel.TransformExtensionCommand.CanExecute(extension));
-        viewModel.TransformExtensionCommand.CanExecuteChanged += (_, _) => Command.NotifyCanExecuteChanged();
+        viewModel.TransformExtensionCommand.CanExecuteChanged += CanExecuteChanged;
     }
+
+    private void CanExecuteChanged(object? sender, EventArgs e) => Command.NotifyCanExecuteChanged();
+
+    public void Dispose() => _viewModel.TransformExtensionCommand.CanExecuteChanged -= CanExecuteChanged;
 
     public IImageTransformerCommandExtension Extension { get; }
 

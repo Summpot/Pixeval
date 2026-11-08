@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -12,6 +13,7 @@ namespace Pixeval.Views.Viewers;
 
 public partial class IllustrationViewerPage : ContentPage
 {
+    private IllustrationViewerPageViewModel? _playbackModel;
     private IllustrationViewerPageViewModel ViewModel => (IllustrationViewerPageViewModel) DataContext!;
 
     public IllustrationViewerPage() : this(null)
@@ -34,9 +36,23 @@ public partial class IllustrationViewerPage : ContentPage
             || KeyboardShortcut.TryExecute(e, Key.Down, ViewModel.NextWorkCommand);
     }
 
-    private void PrevButton_OnRightClick(object? sender, ContextRequestedEventArgs e) => ViewModel.PrevWorkCommand.Execute(null);
+    private void PrevButton_OnRightClick(object? sender, ContextRequestedEventArgs e)
+    {
+        if (ViewModel.PrevWorkCommand.CanExecute(null))
+        {
+            ViewModel.PrevWorkCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
 
-    private void NextButton_OnRightClick(object? sender, ContextRequestedEventArgs e) => ViewModel.NextWorkCommand.Execute(null);
+    private void NextButton_OnRightClick(object? sender, ContextRequestedEventArgs e)
+    {
+        if (ViewModel.NextWorkCommand.CanExecute(null))
+        {
+            ViewModel.NextWorkCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
 
     private void AutoPlayMenuFlyout_OnOpened(object? sender, RoutedEventArgs e)
     {
@@ -76,10 +92,27 @@ public partial class IllustrationViewerPage : ContentPage
 
     #region Disposal
 
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        _playbackModel?.SetPlaybackActive(false);
+        _playbackModel = DataContext as IllustrationViewerPageViewModel;
+        if (_playbackModel is { } model)
+            ViewModelDisposal.Register(this, model);
+        _playbackModel?.SetPlaybackActive(IsLoaded);
+        base.OnDataContextChanged(e);
+    }
+
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        _playbackModel?.SetPlaybackActive(false);
+        base.OnUnloaded(e);
+    }
+
     /// <inheritdoc />
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
+        _playbackModel?.SetPlaybackActive(true);
 
         RaiseEvent(new ViewModelDisposalEventArgs(ViewModelDisposal.ViewModelDisposalEvent, ViewModel));
     }

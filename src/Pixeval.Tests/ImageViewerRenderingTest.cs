@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -43,7 +44,7 @@ public sealed class ImageViewerRenderingTest
         bool sourceReadyBeforeAttachment, bool replaceDuringFit, bool detachDuringReplacement)
     {
         await using var session = HeadlessUnitTestSession.StartNew(typeof(ViewerTestApplication));
-        await session.Dispatch(() =>
+        _ = await session.Dispatch<bool>(async () =>
         {
             I18NManager.Register(new JsonMarkdownLangPlugin(), LanguageHelper.DefaultLanguage);
             // Supply only the extension registry; do not initialize the real application's network/database services.
@@ -117,11 +118,15 @@ public sealed class ImageViewerRenderingTest
                         window.Content = null;
                         Dispatcher.UIThread.RunJobs();
                         window.Content = viewer;
-                        for (var frameIndex = 0; frameIndex < 10; frameIndex++)
+                        // The compositor resumes asynchronously after attachment. A fixed frame
+                        // count can finish before its worker runs on a busy build machine.
+                        var settlingTime = Stopwatch.StartNew();
+                        while (settlingTime.Elapsed < TimeSpan.FromSeconds(3))
                         {
                             using var settling = window.CaptureRenderedFrame();
                             if (Math.Abs(viewer.ViewerScrollView.ZoomFactor - zoom / 2) < 0.000001)
                                 break;
+                            await Task.Delay(16);
                         }
                     }
                     using var replaced = window.CaptureRenderedFrame();
@@ -143,6 +148,7 @@ public sealed class ImageViewerRenderingTest
                 window.Close();
                 appProperty.SetValue(null, previous);
             }
+            return true;
         }, CancellationToken.None);
     }
 

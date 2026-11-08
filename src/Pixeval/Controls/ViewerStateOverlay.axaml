@@ -40,7 +40,7 @@
                             VerticalAlignment="Center"
                             Background="{DynamicResource SystemFillColorCriticalBackgroundBrush}"
                             CornerRadius="16">
-                            <Grid RowDefinitions="Auto,*" RowSpacing="16">
+                            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="16">
                                 <fluent:SymbolIcon
                                     Foreground="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OnErrorContainer}}"
                                     IconVariant="Regular"
@@ -56,6 +56,14 @@
                                         Text="{TemplateBinding ErrorMessage}"
                                         TextWrapping="Wrap" />
                                 </ScrollViewer>
+                                <Button
+                                    x:Name="PART_RetryButton"
+                                    Grid.Row="2"
+                                    HorizontalAlignment="Center"
+                                    Command="{TemplateBinding RetryCommand}"
+                                    Content="{I18N {x:Static pixeval:WorkContainerResources+RefreshButton.Label}}"
+                                    IsVisible="{TemplateBinding RetryCommand,
+                                                                Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </Grid>
                         </m3:MaterialSurface>
                     </Border>

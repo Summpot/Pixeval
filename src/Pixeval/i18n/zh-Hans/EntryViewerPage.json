@@ -32,6 +32,8 @@
     "PageOrWork": "L：上一页\nR：上一篇",
     "Work": "L/R：上一篇"
   },
+  "PageSelector": "图像页码",
+  "PageSelectorHelp": "左右方向键切换图片页；Home 和 End 跳至首末页。",
   "AutoPlay": "自动播放",
   "AutoPlayInterval": {
     "Seconds1": "1 秒",

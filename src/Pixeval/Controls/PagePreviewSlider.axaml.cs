@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using Avalonia;
+using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
@@ -52,6 +53,8 @@ public class PagePreviewSlider : TemplatedControl
     private ContentControl? _previewContent;
     private bool _isDragging;
     private bool _isHovering;
+    private bool _isAttached;
+    private IPointer? _dragPointer;
     private double _previewPointerX;
 
     public IReadOnlyList<object>? ItemsSource
@@ -113,6 +116,47 @@ public class PagePreviewSlider : TemplatedControl
         SynchronizeState();
     }
 
+    protected override AutomationPeer OnCreateAutomationPeer() => new PagePreviewSliderAutomationPeer(this);
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _isAttached = true;
+        SubscribeToItemsSource();
+        SynchronizeState();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        _isAttached = false;
+        CancelInteraction();
+        UnsubscribeFromItemsSource();
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (e.Handled || e.KeyModifiers != KeyModifiers.None || !IsEffectivelyEnabled || ItemsCount <= 1)
+            return;
+
+        int? index = e.Key switch
+        {
+            Key.Left => SelectedIndex - 1,
+            Key.Right => SelectedIndex + 1,
+            Key.Home => 0,
+            Key.End => ItemsCount - 1,
+            _ => null
+        };
+        if (index is not { } selected)
+            return;
+
+        CancelInteraction();
+        SetCurrentValue(SelectedIndexProperty, CoerceIndex(selected));
+        // Consume boundary arrows as well, so the viewer cannot also change work.
+        e.Handled = true;
+    }
+
     protected override void OnPointerEntered(PointerEventArgs e)
     {
         base.OnPointerEntered(e);
@@ -150,6 +194,8 @@ public class PagePreviewSlider : TemplatedControl
         }
 
         _isDragging = true;
+        _dragPointer = e.Pointer;
+        Focus(NavigationMethod.Pointer);
         e.Pointer.Capture(this);
         UpdatePreviewFromPointer(e, commitSelection: true);
         e.Handled = true;
@@ -163,8 +209,9 @@ public class PagePreviewSlider : TemplatedControl
             return;
 
         UpdatePreviewFromPointer(e, commitSelection: true);
-        e.Pointer.Capture(null);
         _isDragging = false;
+        _dragPointer = null;
+        e.Pointer.Capture(null);
 
         if (!IsPointerOver)
             ClearPreview();
@@ -175,9 +222,11 @@ public class PagePreviewSlider : TemplatedControl
     protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
     {
         base.OnPointerCaptureLost(e);
+        var wasDragging = _isDragging;
         _isDragging = false;
+        _dragPointer = null;
 
-        if (!IsPointerOver)
+        if (wasDragging || !IsPointerOver)
             ClearPreview();
     }
 
@@ -187,8 +236,8 @@ public class PagePreviewSlider : TemplatedControl
 
         if (change.Property == ItemsSourceProperty)
         {
-            if (!ReferenceEquals(_itemsSource, change.OldValue))
-                UnsubscribeFromItemsSource();
+            CancelInteraction();
+            UnsubscribeFromItemsSource();
 
             _itemsSource = change.GetNewValue<IReadOnlyList<object>?>();
             SubscribeToItemsSource();
@@ -202,13 +251,19 @@ public class PagePreviewSlider : TemplatedControl
         {
             UpdatePreviewPopupState();
         }
+        else if (change.Property == IsEffectivelyEnabledProperty || change.Property == IsVisibleProperty)
+        {
+            if (!IsEffectivelyEnabled || !IsVisible)
+                CancelInteraction();
+            NotifyAutomationState();
+        }
     }
 
     private int ItemsCount => ItemsSource?.Count ?? 0;
 
     private void SubscribeToItemsSource()
     {
-        if (_itemsSource is INotifyCollectionChanged notifyCollectionChanged)
+        if (_isAttached && _notifyCollectionChanged is null && _itemsSource is INotifyCollectionChanged notifyCollectionChanged)
         {
             _notifyCollectionChanged = notifyCollectionChanged;
             _notifyCollectionChanged.CollectionChanged += ItemsSourceOnCollectionChanged;
@@ -232,6 +287,7 @@ public class PagePreviewSlider : TemplatedControl
 
     private void DetachTemplateHandlers()
     {
+        CancelInteraction();
         _track?.SizeChanged -= TemplatePartOnSizeChanged;
         _thumb?.SizeChanged -= TemplatePartOnSizeChanged;
         _track = null;
@@ -245,6 +301,8 @@ public class PagePreviewSlider : TemplatedControl
 
     private void SynchronizeState()
     {
+        if (ItemsCount <= 1)
+            CancelInteraction();
         SetCurrentValue(IsVisibleProperty, ItemsCount > 1);
 
         if (ItemsCount <= 0)
@@ -253,8 +311,10 @@ public class PagePreviewSlider : TemplatedControl
             PreviewIndex = -1;
             PreviewItem = null;
             _previewPointerX = 0;
+            SetCurrentValue(SelectedIndexProperty, 0);
             UpdatePreviewPopupState();
             UpdateVisualState();
+            NotifyAutomationState();
             return;
         }
 
@@ -280,6 +340,26 @@ public class PagePreviewSlider : TemplatedControl
         IndicatorText = BuildIndicatorText();
         UpdatePreviewPopupState();
         UpdateVisualState();
+        NotifyAutomationState();
+    }
+
+    private void NotifyAutomationState() =>
+        (ControlAutomationPeer.FromElement(this) as PagePreviewSliderAutomationPeer)?.NotifyState();
+
+    internal void SelectFromAutomation(int index)
+    {
+        CancelInteraction();
+        SetCurrentValue(SelectedIndexProperty, index);
+    }
+
+    private void CancelInteraction()
+    {
+        _isDragging = false;
+        var pointer = _dragPointer;
+        _dragPointer = null;
+        if (pointer is not null && ReferenceEquals(pointer.Captured, this))
+            pointer.Capture(null);
+        ClearPreview();
     }
 
     private void UpdatePreviewFromPointer(PointerEventArgs e, bool commitSelection)
@@ -383,7 +463,7 @@ public class PagePreviewSlider : TemplatedControl
             return 0;
 
         var normalized = double.Clamp(trackX / _track.Bounds.Width, 0, 1);
-        return CoerceIndex((int)double.Round(normalized * (ItemsCount - 1), MidpointRounding.AwayFromZero));
+        return CoerceIndex((int) double.Round(normalized * (ItemsCount - 1), MidpointRounding.AwayFromZero));
     }
 
     private int CoerceIndex(int index)

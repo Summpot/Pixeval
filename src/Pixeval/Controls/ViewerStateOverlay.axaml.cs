@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls.Primitives;
 
@@ -13,6 +14,15 @@ public sealed class ViewerStateOverlay : TemplatedControl
 
     public static readonly StyledProperty<string?> ErrorMessageProperty =
         AvaloniaProperty.Register<ViewerStateOverlay, string?>(nameof(ErrorMessage));
+
+    public static readonly StyledProperty<ICommand?> RetryCommandProperty =
+        AvaloniaProperty.Register<ViewerStateOverlay, ICommand?>(nameof(RetryCommand));
+
+    public ICommand? RetryCommand
+    {
+        get => GetValue(RetryCommandProperty);
+        set => SetValue(RetryCommandProperty, value);
+    }
 
     public bool IsLoading
     {

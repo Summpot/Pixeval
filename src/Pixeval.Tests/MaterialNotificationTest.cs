@@ -133,7 +133,8 @@ public sealed class MaterialNotificationTest
 
                 var timed = new Notification("Short notice", null, NotificationType.Success, TimeSpan.FromMilliseconds(300), onClose: () => closed++);
                 manager.Show(timed);
-                Render(window);
+                // Observe the initial state before rendering pumps timers; a capture can
+                // legitimately take longer than the notification's expiration interval.
                 Assert.IsFalse(FindCard(window, timed).IsClosing, "Expiration must not be replaced by immediate dismissal.");
                 await UntilAsync(window, () => closed is 3);
                 Assert.AreEqual(1, clicks);

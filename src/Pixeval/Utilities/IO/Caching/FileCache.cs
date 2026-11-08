@@ -144,6 +144,28 @@ internal sealed class FileCache(string cacheDirectory)
     public Task PurgeAsync(CancellationToken token = default) =>
         RunCacheMaintenanceAsync(Purge, token);
 
+    internal bool TryRemove(string key)
+    {
+        try
+        {
+            var path = GetCacheFilePath(key);
+            lock (GetCacheFileLock(path))
+            lock (_cacheStateLock)
+            {
+                if (_cacheMaintenanceInProgress)
+                    return false;
+                var removed = FileHelper.TryDeleteFile(path);
+                if (removed)
+                    _sizeInitialized = false;
+                return removed;
+            }
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private void Purge()
     {
         try

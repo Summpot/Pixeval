@@ -111,6 +111,72 @@ public sealed class PageContractTests
     public Task ViewerToolbar() => UiTestSession.RunAsync(TestContext, ViewerToolbarValidation.RunAsync);
 
     [TestMethod]
+    [DataRow("zh-Hans")]
+    [DataRow("en-US")]
+    [DataRow("fr-FR")]
+    [DataRow("ru-RU")]
+    public Task IllustrationReader(string culture) => UiTestSession.RunAsync(TestContext, IllustrationReaderValidation.RunAsync, culture);
+
+    [TestMethod]
+    [DataRow("zh-Hans")]
+    [DataRow("en-US")]
+    [DataRow("fr-FR")]
+    [DataRow("ru-RU")]
+    public Task IllustrationNavigation(string culture) => UiTestSession.RunAsync(TestContext, IllustrationNavigationValidation.RunAsync, culture);
+
+    [TestMethod]
+    [DataRow("zh-Hans")]
+    [DataRow("en-US")]
+    [DataRow("fr-FR")]
+    [DataRow("ru-RU")]
+    public Task IllustrationAutoPlay(string culture) => UiTestSession.RunAsync(TestContext, IllustrationAutoPlayValidation.RunAsync, culture);
+
+    [TestMethod]
+    [DataRow("zh-Hans")]
+    [DataRow("en-US")]
+    [DataRow("fr-FR")]
+    [DataRow("ru-RU")]
+    public Task IllustrationSave(string culture) => UiTestSession.RunAsync(TestContext, IllustrationSaveValidation.RunAsync, culture);
+
+    [TestMethod]
+    [DataRow("zh-Hans")]
+    [DataRow("en-US")]
+    [DataRow("fr-FR")]
+    [DataRow("ru-RU")]
+    public Task IllustrationTransform(string culture) => UiTestSession.RunAsync(TestContext, IllustrationTransformValidation.RunAsync, culture);
+
+    [TestMethod]
+    [DataRow("zh-Hans")]
+    [DataRow("en-US")]
+    [DataRow("fr-FR")]
+    [DataRow("ru-RU")]
+    public Task IllustrationOriginal(string culture) => UiTestSession.RunAsync(TestContext, IllustrationOriginalValidation.RunAsync, culture);
+
+    [TestMethod]
+    public Task IllustrationImageLoad() => UiTestSession.RunAsync(TestContext, IllustrationImageLoadValidation.RunAsync);
+
+    [TestMethod]
+    [DataRow("zh-Hans")]
+    [DataRow("en-US")]
+    [DataRow("fr-FR")]
+    [DataRow("ru-RU")]
+    public Task IllustrationCopy(string culture) => UiTestSession.RunAsync(TestContext, IllustrationCopyValidation.RunAsync, culture);
+
+    [TestMethod]
+    [DataRow("zh-Hans")]
+    [DataRow("en-US")]
+    [DataRow("fr-FR")]
+    [DataRow("ru-RU")]
+    public Task IllustrationInformation(string culture) => UiTestSession.RunAsync(TestContext, IllustrationInfoValidation.RunAsync, culture);
+
+    [TestMethod]
+    [DataRow("zh-Hans")]
+    [DataRow("en-US")]
+    [DataRow("fr-FR")]
+    [DataRow("ru-RU")]
+    public Task IllustrationAnimation(string culture) => UiTestSession.RunAsync(TestContext, IllustrationAnimationValidation.RunAsync, culture);
+
+    [TestMethod]
     public Task NovelReader() => UiTestSession.RunAsync(TestContext, NovelReaderValidation.RunAsync);
 
     [TestMethod]

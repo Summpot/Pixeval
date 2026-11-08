@@ -28,6 +28,7 @@ internal sealed class OfflineSearchFixture : IDisposable
     internal ConcurrentQueue<string> RequestLog { get; } = new();
     internal ConcurrentQueue<Uri> SearchRequests { get; } = new();
     internal ConcurrentDictionary<string, byte[]> ImageResponses { get; } = new();
+    internal Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>? ImageResponseFactory { get; set; }
     internal bool IsPremium { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? AuthResponseFactory { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? BookmarkResponseFactory { get; set; }
@@ -43,6 +44,7 @@ internal sealed class OfflineSearchFixture : IDisposable
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? RelatedResponseFactory { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? SearchResponseFactory { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? CommentResponseFactory { get; set; }
+    internal Func<HttpRequestMessage, CancellationToken, Task<string>>? AnimationResponseFactory { get; set; }
 
     internal OfflineSearchFixture(MakoClient client)
     {
@@ -76,6 +78,8 @@ internal sealed class OfflineSearchFixture : IDisposable
         RequestLog.Enqueue($"{request.Method} {uri.PathAndQuery}");
         if (ImageResponses.TryGetValue(uri.AbsoluteUri, out var image))
             return new(HttpStatusCode.OK) { RequestMessage = request, Content = new ByteArrayContent(image) };
+        if (uri.Host == "i.pximg.net" && ImageResponseFactory is { } imageResponse)
+            return await imageResponse(request, token).ConfigureAwait(false);
         if (BookmarkResponseFactory is { } bookmark && uri.AbsolutePath is
             "/v2/illust/bookmark/detail" or "/v2/novel/bookmark/detail" or "/v1/user/bookmark-tags/illust" or "/v1/user/bookmark-tags/novel")
             return new(HttpStatusCode.OK)
@@ -86,6 +90,9 @@ internal sealed class OfflineSearchFixture : IDisposable
         string json;
         switch (uri.AbsolutePath)
         {
+            case "/v1/ugoira/metadata" when AnimationResponseFactory is { } animation:
+                json = await animation(request, token).ConfigureAwait(false);
+                break;
             case "/v1/user/ai-show-settings":
                 json = "{\"show_ai\":true}";
                 break;

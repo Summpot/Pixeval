@@ -7,6 +7,7 @@
     xmlns:converters="using:Pixeval.Views.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Pixeval.Views.Viewers"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -20,6 +21,35 @@
     d:DesignHeight="450"
     d:DesignWidth="800">
 
+    <UserControl.Resources>
+        <ControlTheme x:Key="IllustrationInformationTabs" TargetType="TabbedPage">
+            <Setter Property="Foreground" Value="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OnSurface}}" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid>
+                        <TabControl
+                            x:Name="PART_TabControl"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"
+                            m3:TabRowAppearance.EdgePadding="0"
+                            m3:TabRowAppearance.IsScrollable="True"
+                            m3:TabRowAppearance.Variant="Secondary"
+                            Background="Transparent"
+                            Foreground="{TemplateBinding Foreground}"
+                            PageTransition="{TemplateBinding PageTransition}"
+                            Theme="{StaticResource MaterialTabControlTheme}">
+                            <TabControl.Styles>
+                                <Style Selector="TabControl /template/ m3|MaterialSurface#PART_TabRowSurface">
+                                    <Setter Property="Margin" Value="0,0,56,0" />
+                                </Style>
+                            </TabControl.Styles>
+                        </TabControl>
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+    </UserControl.Resources>
+
     <UserControl.Styles>
         <Style Selector="local|IllustrationViewerInfoPane#InfoPaneRoot">
             <Style Selector="^ local|WorkInfoPane#InfoPaneSection">
@@ -28,6 +58,10 @@
             </Style>
             <Style Selector="^ TabbedPage#TabbedPageSection">
                 <Setter Property="IsVisible" Value="False" />
+            </Style>
+            <Style Selector="^ TabbedPage#TabbedPageSection :is(Page)">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Foreground" Value="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OnSurface}}" />
             </Style>
 
             <Style Selector="^:docked">
@@ -85,15 +119,16 @@
                 </ListBox>
                 <CommandBar
                     x:Name="BottomActionBar"
-                    Margin="32,0"
+                    Margin="8,0"
                     HorizontalAlignment="Center"
                     Background="Transparent"
                     DefaultLabelPosition="Collapsed"
-                    IsDynamicOverflowEnabled="False">
+                    IsDynamicOverflowEnabled="True">
                     <CommandBarButton
                         Command="{Binding CurrentIllustration.BookmarkCommand, FallbackValue={x:Null}}"
                         CommandParameter="{Binding $self, Mode=OneTime}"
                         ContextRequested="AddToBookmarkButton_OnRightClick"
+                        DataContext="{Binding #InfoPaneRoot.DataContext}"
                         Icon="{markup1:SymbolIconEx Heart,
                                                     IconVariant={Binding CurrentIllustration.IsBookmarkedDisplay,
                                                                          Converter={x:Static converters:PixevalConverters.StateToIconVariant}}}"
@@ -102,12 +137,14 @@
                     <CommandBarButton
                         Command="{Binding CurrentIllustration.SaveCommand, FallbackValue={x:Null}}"
                         CommandParameter="{Binding $self, Mode=OneTime}"
+                        DataContext="{Binding #InfoPaneRoot.DataContext}"
                         Icon="{markup:SymbolIcon SaveMultiple}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.Save}}" />
                     <CommandBarSeparator />
                     <CommandBarButton
                         Command="{Binding CurrentIllustration.AddToWatchLaterCommand, FallbackValue={x:Null}}"
                         CommandParameter="{Binding $self, Mode=OneTime}"
+                        DataContext="{Binding #InfoPaneRoot.DataContext}"
                         Icon="{markup1:SymbolIconEx Clock,
                                                     IconVariant={Binding CurrentIllustration.IsInWatchLater,
                                                                          Converter={x:Static converters:PixevalConverters.BoolToIconVariant}}}"
@@ -119,11 +156,13 @@
                             Tag="{Binding CurrentIllustration.AppUri, FallbackValue={x:Null}}" />-->
                     <CommandBarButton
                         Click="{x:Static utilities:AvaloniaHelper.CopyTagToClipboard}"
+                        DataContext="{Binding #InfoPaneRoot.DataContext}"
                         Icon="{markup:SymbolIcon LinkMultiple}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.GenerateWebLink}}"
                         Tag="{Binding CurrentIllustration.WebsiteUri, FallbackValue={x:Null}}" />
                     <CommandBarButton
                         Click="{x:Static utilities:AvaloniaHelper.LaunchUriTagInWebBrowser}"
+                        DataContext="{Binding #InfoPaneRoot.DataContext}"
                         Icon="{markup:SymbolIcon GlobeArrowUp}"
                         Label="{I18N {x:Static pixeval:EntryItemResources.OpenInWebBrowser}}"
                         Tag="{Binding CurrentIllustration.WebsiteUri, FallbackValue={x:Null}}" />
@@ -136,8 +175,8 @@
                     <local:WorkInfoPane Name="InfoPaneSection" ArtworkInfo="{Binding CurrentIllustration.Entry, FallbackValue={x:Null}}">
                         <local:WorkInfoPane.ActionZone>
                             <Border
-                                Width="32"
-                                Height="32"
+                                Width="56"
+                                Height="48"
                                 VerticalAlignment="Top"
                                 IsHitTestVisible="False" />
                         </local:WorkInfoPane.ActionZone>
@@ -148,19 +187,19 @@
                         Background="Transparent"
                         IsVisible="{Binding #InfoPaneRoot.IsDocked}"
                         Pages="{Binding PanePages}"
-                        TabPlacement="Top">
-                        <TabbedPage.Resources>
-                            <Thickness x:Key="TabbedPageTabStripPadding">0,0,60,0</Thickness>
-                        </TabbedPage.Resources>
-                    </TabbedPage>
+                        TabPlacement="Top"
+                        Theme="{StaticResource IllustrationInformationTabs}" />
                 </Panel>
             </DockPanel>
         </DockPanel>
 
         <ToggleButton
+            MinWidth="48"
+            MinHeight="48"
             Margin="14"
             HorizontalAlignment="Right"
             VerticalAlignment="Bottom"
+            AutomationProperties.Name="{I18N {x:Static pixeval:EntryViewerPageResources.Pin}}"
             Content="{markup1:SymbolIconEx Symbol={markup1:EitherBinding {Binding #InfoPaneRoot.IsLocked},
                                                                          PinOff,
                                                                          Pin,
@@ -170,11 +209,13 @@
             Theme="{StaticResource TransparentToggleButtonStyle}"
             ToolTip.Tip="{I18N {x:Static pixeval:EntryViewerPageResources.Pin}}" />
         <Button
-            Width="32"
-            Height="32"
-            Margin="14"
+            x:Name="ToggleInformationButton"
+            Width="48"
+            Height="48"
+            Margin="0,0,8,0"
             HorizontalAlignment="Right"
             VerticalAlignment="Top"
+            AutomationProperties.Name="{I18N {x:Static pixeval:EntryViewerPageResources.InfoAndComments}}"
             Click="ChevronButtonClicked"
             Content="{markup1:SymbolIconEx Symbol={markup1:EitherBinding {Binding #InfoPaneRoot.IsDocked},
                                                                          ChevronUp,

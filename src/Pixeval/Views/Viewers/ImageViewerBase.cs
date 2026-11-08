@@ -6,12 +6,9 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using CommunityToolkit.Mvvm.Input;
 using Pixeval.Controls;
-using Pixeval.I18N;
-using Pixeval.Utilities;
 using Pixeval.ViewModels.Viewers;
 
 namespace Pixeval.Views.Viewers;
@@ -52,19 +49,37 @@ public abstract partial class ImageViewerBase : UserControl
 
     protected bool CanManipulateCurrentImage => CurrentPageViewModel?.HasDisplayImage is true;
 
-    private bool CanCopyCurrentImage => CurrentPageViewModel?.LoadSuccessfully is true;
+    private bool CanCopyCurrentImage => CurrentPageViewModel?.CopyCommand.CanExecute(this) is true;
+
+    private bool CanSaveCurrentImage => CurrentPageViewModel?.SaveImageCommand.CanExecute(this) is true;
+
+    private bool CanSaveAsCurrentImage => CurrentPageViewModel?.SaveAsCommand.CanExecute(this) is true;
 
     protected void SetCurrentPageViewModel(SingleViewerViewModel? currentPage)
     {
         if (ReferenceEquals(CurrentPageViewModel, currentPage))
             return;
 
-        CurrentPageViewModel?.PropertyChanged -= CurrentPageOnPropertyChanged;
+        if (CurrentPageViewModel is { } previous)
+        {
+            previous.PropertyChanged -= CurrentPageOnPropertyChanged;
+            previous.CopyCommand.CanExecuteChanged -= CurrentPageCommandOnCanExecuteChanged;
+            previous.SaveImageCommand.CanExecuteChanged -= CurrentPageCommandOnCanExecuteChanged;
+            previous.SaveAsCommand.CanExecuteChanged -= CurrentPageCommandOnCanExecuteChanged;
+        }
         CurrentPageViewModel = currentPage;
-        CurrentPageViewModel?.PropertyChanged += CurrentPageOnPropertyChanged;
+        if (currentPage is not null)
+        {
+            currentPage.PropertyChanged += CurrentPageOnPropertyChanged;
+            currentPage.CopyCommand.CanExecuteChanged += CurrentPageCommandOnCanExecuteChanged;
+            currentPage.SaveImageCommand.CanExecuteChanged += CurrentPageCommandOnCanExecuteChanged;
+            currentPage.SaveAsCommand.CanExecuteChanged += CurrentPageCommandOnCanExecuteChanged;
+        }
 
         NotifyCommandCanExecuteChanged();
     }
+
+    private void CurrentPageCommandOnCanExecuteChanged(object? sender, EventArgs e) => NotifyCommandCanExecuteChanged();
 
     protected void RaiseSelectionChanged(int newIndex, object? newItem) =>
         SelectionChanged?.Invoke(this, new ImageViewerSelectionChangedEventArgs(newIndex, newItem));
@@ -102,23 +117,11 @@ public abstract partial class ImageViewerBase : UserControl
     private void ZoomToOriginal() => ZoomFactor = 1;
 
     [RelayCommand(CanExecute = nameof(CanCopyCurrentImage))]
-    private async Task CopyAsync() => await CopyCurrentImageToClipboardAsync();
+    private Task CopyAsync() => CurrentPageViewModel?.CopyCommand.ExecuteAsync(this) ?? Task.CompletedTask;
 
-    [RelayCommand(CanExecute = nameof(CanCopyCurrentImage))]
-    private async Task SaveAsync() => await CopyCurrentImageToClipboardAsync();
+    [RelayCommand(CanExecute = nameof(CanSaveCurrentImage))]
+    private Task SaveAsync() => CurrentPageViewModel?.SaveImageCommand.ExecuteAsync(this) ?? Task.CompletedTask;
 
-    [RelayCommand(CanExecute = nameof(CanCopyCurrentImage))]
-    private async Task SaveAsAsync() => await CopyCurrentImageToClipboardAsync();
-
-    private async Task CopyCurrentImageToClipboardAsync()
-    {
-        if (CurrentPageViewModel?.DisplaySource?.Frames is not [var singleFrame])
-            return;
-        if (TopLevel.GetTopLevel(this) is not { ViewContainer: { } viewContainer, Clipboard: { } clipboard })
-            return;
-
-        await clipboard.SetBitmapAsync(singleFrame);
-        await clipboard.FlushAsync();
-        viewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.Copied));
-    }
+    [RelayCommand(CanExecute = nameof(CanSaveAsCurrentImage))]
+    private Task SaveAsAsync() => CurrentPageViewModel?.SaveAsCommand.ExecuteAsync(this) ?? Task.CompletedTask;
 }

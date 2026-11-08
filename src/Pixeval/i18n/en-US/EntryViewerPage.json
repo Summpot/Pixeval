@@ -32,6 +32,8 @@
     "PageOrWork": "L: Previous Page\nR: Previous Work",
     "Work": "L/R: Previous Work"
   },
+  "PageSelector": "Image page",
+  "PageSelectorHelp": "Use Left and Right to change image pages, or Home and End for the first and last page.",
   "AutoPlay": "Auto Play",
   "AutoPlayInterval": {
     "Seconds1": "1 second",

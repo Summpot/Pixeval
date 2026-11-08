@@ -35,6 +35,7 @@
 | --- | --- | --- | --- |
 | F01.1 | 启动空宿主，关闭更新说明；设置→应用切浅/深/系统，再开新标签 | 所有代表控件随主题改变；窗口动画作用域先于内容；关闭可结束进程 | MaterialThemeIntegrationTest；系统主题/原生窗口待验收 |
 | F01.2 | 设置应用字体为中文字体及含连续空格名称；打开编辑器、对话框、标签 | 文本无裁切；原字体顺序保留；代码编辑器继续等宽 | FontFamilyHelperTest、MaterialContentControlsTest；原生字体选择待验收 |
+| F01.3 | 同进程连续创建不同文化的应用，导航编辑器输入/撤销/保存后关闭 | App、服务和数据目录独立；编辑器键绑定留在同一 UI 工作线程；真实关闭释放外壳，无跨线程访问 | `UiSessionIsolationTests`、`NavigationEditor`、`NavigationInRussian`；不宣称支持并行应用或原生 IME |
 | F02.1 | 命令栏点击主命令、Tab→Enter/Space、打开溢出再次执行；切 CanExecute | 一次输入一次调用；参数同一；所有入口同步禁用；Toggle 回写一次 | MaterialThemeIntegrationTest、KeyboardShortcutTest；实际窄窗/长标签待验收 |
 | F02.2 | 卡片/工具栏右键及 Tooltip；鼠标移出菜单，Escape 关闭 | 菜单条件、顺序、分隔、快捷键提示保留；焦点回入口 | MaterialWrapperControlsTest；原生菜单焦点待验收 |
 | F02.3 | 插画浮动栏切翻页式/连续式、宽窄窗；操作主栏/溢出、长标签、自动播放右键菜单；鼠标移开后键盘聚焦 | 命令参数/CanExecute/Toggle 不因溢出改变；缩放百分比保留；键盘焦点或溢出菜单打开时浮动栏可见；标签完整换行；菜单可连续操作并由 Escape/外部点击关闭 | FloatingCommandBarTest、隔离宿主 viewer-toolbar；真实触摸、系统焦点、多屏 DPI 另行验收 |
@@ -104,16 +105,22 @@
 | F18.2 | 阅读器七项设置编辑、切主题/作品、替换字体集合并关闭；收藏/下载/稍后看 | 原范围/步长和自定义值优先；编辑器/页签保留且无重复通知，关闭退订；原字段持久化；既有动作保持 | `NovelReadingSettings`、`NovelActions`；原 YAML 往返与实际生成控件，不等同完整应用重启/原生字体与 IME 通过 |
 | F19.1 | 翻译器选择/禁用/移除、译文切换、取消后立即重试、快速换小说与关闭 | 无活动扩展时仍可切换已有缓存；旧结果不覆盖当前作品；同一扩展的共享结果不串到下一调用，其他扩展不被阻塞 | 四语言 `NovelTranslation`、`NovelTranslationTest`、`TextTransformationTest`；`NativeExtension` 使用真实文本消费入口。取消不承诺终止无取消 ABI 的扩展计算 |
 | F19.2 | Html/Md/OriginalTxt 及固定导出扩展保存临时目录；加载/导出失败 | 格式内容、图片、扩展优先级保持；失败不创建伪成功文件，临时文件清理；执行中取消仍须阻止迟到提交 | `NovelActions` 使用真实下载队列验证三种内置格式与托管格式扩展；`NovelNativeExport` 验证固定 C++ 示例不写文件时明确失败；`NovelDownloadTaskGroupTest` 保留。扩展执行中取消、完整成功原生格式与原生保存对话框仍待验收 |
-| F20.1 | 多页图预览滑块/页数/前后作品/信息面板，缺图→重试 | 视口适应和选中页不漂移；所有外层命令可达 | ImageViewerRenderingTest、几何测试；真实页面待验收 |
-| F20.2 | 收藏标签/复制/另存/原图/扩展动作，文件选择取消 | 原命令参数/能力门控不变；错误可见；不切换解码实现 | 扩展样本与平台文件能力待验收 |
+| F20.1 | Swipe/Continuous 正式页面换作品、信息面板固定/收起、详情失败/重试、请求中关闭 | 外层改变不扰动视口适应和选中页；信息页实例随作品稳定，窄窗动作可达；身份不匹配不显示为成功，旧详情不覆盖新作品；临时导航保留图像，真实关闭释放模型 | 四语言 `IllustrationReader`；ImageViewerRenderingTest、几何测试保留；图片错误与内层页签见 F20.4/F20.6，原生输入另验收 |
+| F20.2 | 收藏标签/复制/另存/原图/扩展动作，文件选择取消 | 原命令参数/能力门控不变；错误可见；不切换解码实现；关闭后迟到的文件/流不写入或通知 | 四语言 `IllustrationSave` 覆盖 Swipe 显示帧 PNG 的真实菜单、取消、能力不足、选择器/打开/写入失败、文件/流释放；原图/复制/转换分别见 F20.4/F20.5/F24.4；其余作品动作及原生平台文件能力另验收 |
+| F20.3 | 预览滑块 Tab/方向/Home/End、悬停/拖动、UIA，换源/卸载/父级禁用，前后作品及右键边界 | 页码一基显示且可见聚焦；边界键不同时换作品；过期拖动不覆盖新选择；关闭退订；溢出命令跟随当前作品 | `PagePreviewSliderInputTest` 的组件证据与四语言 `IllustrationNavigation` 的正式外壳证据分开；原生触摸、读屏和多屏 DPI 另验收 |
+| F20.4 | 初次图片/原图 HTTP 与解码失败、实际重试、损坏缓存、加载中早关闭 | 加载反馈结束且错误可恢复；原图失败保留当前帧；重试只失效相关缓存并共享请求；首次 Loaded 前正式关闭仍取消请求，迟到结果不写入或通知 | `IllustrationImageLoad` 覆盖 Swipe/Continuous 明暗宽窄窗；四语言 `IllustrationOriginal` 验证实际菜单；`FileCacheTest` 保留无关缓存、打开流和容量语义；大图性能另验收 |
+| F20.5 | 复制菜单、Ctrl+C/Ctrl+S/Ctrl+Shift+S、外部写入/刷新失败、重复输入和关闭 | 快捷键与菜单共享命令/忙状态；保存快捷键进入下载队列；剪贴板快照独立于查看器，提供方延迟读取和释放有效；关闭后不追加刷新/通知，另存输出正确释放 | 四语言 `IllustrationCopy` 使用正式 Swipe/Continuous 页面与外部剪贴板/存储边界夹具，PNG 精确像素与另存字节分别验证；系统剪贴板和原生文件对话框另验收 |
+| F20.6 | 信息/评论/相关作品页签，浅深色宽窄窗，方向键、折叠/展开、临时导航及关闭 | 保留真正的 TabbedPage 与页面实例；页签文字对比至少 4.5:1；选中页签进入窄窗视口；收起入口至少 48 DIP 且有名称；方向键不泄漏到图像导航，关闭卸载内页 | 四语言 `IllustrationInformation` 使用 Swipe 正式外壳、实际键盘输入并观察 Dispatcher 错误；完整正文组合与原生读屏/输入另验收 |
 | F21.1 | Swipe/Continuous，各方向、缩放/平移/适应/原始/左右旋转/镜像 | 图像几何和手势优先级一致；不能用装饰控件替代行为控件 | Geometry/Rendering/ScrollGestureProfiles/SwipeControl 测试 |
 | F21.2 | 缩略图→原图、重复更新、GIF/WebP/ugoira、快速关页 | 不重置用户视图；旧加载取消；动画资源释放且内存不持续增长 | ProgressiveImageDecoderTest、SizedImageDecodeTest、UpdatableAnimatedBitmapTest |
-| F22.1 | Sequential/Loop × CurrentWork/AllWorks，边界暂停/继续/换作品 | 间隔与边界保持；关闭取消旧播放任务，不再翻页 | 自动播放专项与真实计时待验收 |
+| F22.1 | Sequential/Loop × CurrentWork/AllWorks，单作品循环、暂停/继续、换标签/作品、待完成详情与关闭 | 实际间隔和边界正确；离开标签暂停，返回恢复；设置原字段往返；详情未完成不跳过作品，关闭停止时钟且不接受迟到结果 | 四语言 `IllustrationAutoPlay` 使用 Swipe 正式页面及真实 DispatcherTimer；ugoira 入口见 F22.2，原生时序与触摸另验收 |
+| F22.2 | ugoira ZIP 加载，菜单/Space/浮动工具栏暂停恢复，临时导航及关闭 | 保留帧数/间隔元数据；入口文案和播放状态同步；单帧动作禁用；返回保留暂停意愿，正式关闭禁用播放命令并释放帧 | 四语言 `IllustrationAnimation` 覆盖 Swipe/Continuous，浮动工具栏覆盖 Swipe；相同 PNG 帧夹具不证明实际帧推进、GIF/WebP 或 GPU/长期内存表现 |
 | F23.1 | 按快照每个设置叶节点执行旧值→编辑/非法值→生效→重启→导出导入 | 类型/单位/范围/枚举/默认值/副作用保持；敏感值不出证据 | NestedSettingsTest、LegacyAppSettingsMigrationTest、NetworkSettingsResilienceTest |
 | F23.2 | 临时配置执行重置/历史与缓存清理的取消分支；更新检查失败/成功 | 取消不改变数据；失败保留有效配置；安装重启单独测试 | 维护/安装器需单独假服务或人工环境 |
 | F24.1 | 固定测试扩展文件/压缩包、重复/格式/平台错误，启停、排序、卸载 | 优先级和配置保持；待卸载/过期项状态明确；重启可复现 | 官方固定 C++ 宿主已建立；卸载/终结器回归通过，含存活接口与最终库释放；安装/重启尚未完整验收 |
 | F24.2 | 扩展设置/帮助/图像/文本/导出消费入口 | 不改变 ABI；禁用后不可执行；失败隔离；不会卸载个人扩展 | 15 扩展/8 设置、Unicode/流转换、启停、颜色、完整时区日期/小数/基础值的 headless 编辑及八类文件重载已验证；原生输入/弹层未验收，完整 UI 不通过 |
 | F24.3 | 长名称/作者的窄窗管理卡片、键盘启停、上下移/置顶/置底、待卸载/取消及设置重载 | 元数据与动作完整可读；优先级和启用值持久化；待卸载不立即删除文件，取消恢复同一命令；未提供帮助的条目继续隐藏该入口 | `extension-management` 使用托管元数据和隔离文件哨兵；原生 ABI/设置仍由 `extensions` 模式单独验证，安装/完整重启另行验收 |
+| F24.4 | 图像转换主/次菜单、宿主优先级和禁用/移除、无效输出、离页期间禁用再启用、执行中关闭 | 菜单跟随活动宿主；空/损坏输出与异常不覆盖当前图像；已失效结果不复活；调用完成前输入输出流保持有效，随后释放且无迟到反馈 | 四语言 `IllustrationTransform` 使用正式 Swipe/Continuous 和托管扩展边界；临时导航显式返回，关闭走正式外壳；无取消 ABI，不承诺中断计算，真实原生流另由固定扩展测试验证 |
 | F25.1 | 临时数据库写浏览/稍后看记录，排序/滚动/重开/删除/清空取消 | 身份和记录语义保持；空状态可用；原作品仍能打开 | ArtworkHistoryPersistentManagerTest；实际列表见 F25.2，清空确认取消仍待验收 |
 | F25.2 | 真实历史/稍后观看页键盘切类型、排序、同 ID 不同类型、更新时间、数据库重开、跨数据库分页滚动、作品打开/删除及关闭后 Changed 通知 | 记录按类型隔离且不重复；原导航身份保持；稍后看菜单删除正确，数据源清空不影响另一数据库；关闭页不再处理通知 | `history-pages`；浏览删除通过 API，清空通过数据源；清空确认弹窗和原生输入另行验收 |
 | F26.1 | About/许可/支持者/帮助 Markdown、语言切换、长文本 | 原文案与回退保留，链接/复制动作保持；无乱码裁切 | I18NResilienceTest、MarkdownScrollChainingTest；代表窗口待验收 |

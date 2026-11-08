@@ -6,6 +6,7 @@
     xmlns:controls="using:Pixeval.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Pixeval.Views.Viewers"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -28,21 +29,6 @@
             DataContext="{Binding #Root.DataContext}" />
     </ContentPage.Icon>
 
-    <ContentPage.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.ThemeDictionaries>
-                <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="FloatingPaneBackgroundBrush">#DDFFFFFF</SolidColorBrush>
-                    <SolidColorBrush x:Key="FloatingPaneDockedBackgroundBrush">#EEFFFFFF</SolidColorBrush>
-                </ResourceDictionary>
-                <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="FloatingPaneBackgroundBrush">#DD1E1E1E</SolidColorBrush>
-                    <SolidColorBrush x:Key="FloatingPaneDockedBackgroundBrush">#EE1E1E1E</SolidColorBrush>
-                </ResourceDictionary>
-            </ResourceDictionary.ThemeDictionaries>
-        </ResourceDictionary>
-    </ContentPage.Resources>
-
     <ContentPage.Styles>
         <Style Selector="controls|FloatingPaneView#EntryViewerFloatingPaneView">
             <Setter Property="DockedPaneSize" Value="360" />
@@ -60,8 +46,8 @@
             </Setter>
 
             <Style Selector="^ Border#FloatingPaneBorder">
-                <Setter Property="Background" Value="{DynamicResource FloatingPaneBackgroundBrush}" />
-                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="Background" Value="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainer}}" />
+                <Setter Property="CornerRadius" Value="16" />
                 <Setter Property="HorizontalAlignment" Value="Stretch" />
                 <Setter Property="VerticalAlignment" Value="Stretch" />
             </Style>
@@ -70,7 +56,7 @@
                 <Setter Property="PaneVerticalAlignment" Value="Top" />
 
                 <Style Selector="^ Border#FloatingPaneBorder">
-                    <Setter Property="Background" Value="{DynamicResource FloatingPaneDockedBackgroundBrush}" />
+                    <Setter Property="Background" Value="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainer}}" />
                     <Setter Property="CornerRadius" Value="0" />
                 </Style>
             </Style>
@@ -174,7 +160,10 @@
                         CurrentWorkIndex="{Binding #Root.((viewers:IllustrationViewerPageViewModel)DataContext)?.CurrentWorkIndex}"
                         DataContext="{Binding CurrentImage}" />
 
-                    <controls:ViewerStateOverlay ErrorMessage="{Binding LoadErrorMessage}" IsLoading="{Binding IsLoading}" />
+                    <controls:ViewerStateOverlay
+                        ErrorMessage="{Binding LoadErrorMessage}"
+                        IsLoading="{Binding IsLoading}"
+                        RetryCommand="{Binding RetryCommand}" />
 
                     <!--  左翻页按钮  -->
                     <controls:PageButton
@@ -215,7 +204,7 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Bottom"
                         controls:FloatingPane.IsEnabled="True"
-                        Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                        Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SurfaceContainerHigh}}"
                         Classes.command-menu-open="{Binding #ZoomPane.IsOpen}"
                         ClipToBounds="False"
                         CornerRadius="20"
@@ -251,13 +240,17 @@
                                 <CommandBar.PrimaryCommands>
                                     <CommandBarToggleButton
                                         Command="{Binding CurrentImage.CurrentPage.PlayPauseCommand, FallbackValue={x:Null}}"
+                                        DataContext="{Binding #Root.DataContext}"
                                         Icon="{markup1:SymbolIconEx Symbol={markup1:EitherBinding {Binding CurrentImage.CurrentPage.IsPlaying, FallbackValue={x:False}},
                                                                                                   Pause,
                                                                                                   Play,
                                                                                                   x:TypeArguments=common:Symbol}}"
                                         IsChecked="{Binding CurrentImage.CurrentPage.IsPlaying, Mode=TwoWay, FallbackValue={x:False}}"
                                         IsEnabled="{Binding CurrentImage.CurrentPage.LoadSuccessfully, FallbackValue={x:False}}"
-                                        Label="{I18N {x:Static pixeval:MiscResources.Play}}">
+                                        Label="{markup1:EitherBinding {Binding CurrentImage.CurrentPage.IsPlaying, FallbackValue={x:False}},
+                                                                      {I18N {x:Static pixeval:MiscResources.Pause}},
+                                                                      {I18N {x:Static pixeval:MiscResources.Play}},
+                                                                      x:TypeArguments=x:String}">
                                         <CommandBarToggleButton.IsVisible>
                                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                                                 <Binding FallbackValue="False" Path="CurrentIllustration.IsPicGif" />
@@ -267,35 +260,40 @@
                                     </CommandBarToggleButton>
                                     <CommandBarButton
                                         Command="{Binding CurrentImage.CurrentPage.RotateCounterclockwiseCommand, FallbackValue={x:Null}}"
+                                        DataContext="{Binding #Root.DataContext}"
                                         Icon="{markup:SymbolIcon ArrowRotateCounterclockwise}"
                                         IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}"
                                         Label="{I18N {x:Static pixeval:EntryViewerPageResources.RotateCounterclockwise}}" />
                                     <CommandBarToggleButton
                                         Command="{Binding CurrentImage.CurrentPage.MirrorCommand, FallbackValue={x:Null}}"
+                                        DataContext="{Binding #Root.DataContext}"
                                         Icon="{markup:SymbolIcon FlipHorizontal}"
                                         IsChecked="{Binding CurrentImage.CurrentPage.IsMirrored, Mode=TwoWay, FallbackValue={x:False}}"
                                         IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}"
                                         Label="{I18N {x:Static pixeval:EntryViewerPageResources.Mirror}}" />
                                     <CommandBarButton
                                         Command="{Binding CurrentImage.CurrentPage.RotateClockwiseCommand, FallbackValue={x:Null}}"
+                                        DataContext="{Binding #Root.DataContext}"
                                         Icon="{markup:SymbolIcon ArrowRotateClockwise}"
                                         IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}"
                                         Label="{I18N {x:Static pixeval:EntryViewerPageResources.RotateClockwise}}" />
                                     <CommandBarSeparator x:Name="SwipeTransformSeparator" IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}" />
                                     <CommandBarButton
                                         Command="{Binding CurrentImage.CurrentPage.ZoomOutCommand, FallbackValue={x:Null}}"
+                                        DataContext="{Binding #Root.DataContext}"
                                         Icon="{markup:SymbolIcon ZoomOut}"
                                         IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}"
                                         Label="{I18N {x:Static pixeval:EntryViewerPageResources.ZoomOut}}" />
                                     <CommandBarButton
                                         Command="{Binding #I.ImageViewer.ZoomOutCommand}"
+                                        DataContext="{Binding #Root.DataContext}"
                                         Icon="{markup:SymbolIcon ZoomOut}"
                                         IsVisible="{Binding #I.IsSwipeMode, Converter={x:Static BoolConverters.Not}, Mode=OneTime}"
                                         Label="{I18N {x:Static pixeval:EntryViewerPageResources.ZoomOut}}" />
                                     <controls:CommandBarElementContainer IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}">
                                         <TextBlock Text="{Binding CurrentImage.CurrentPage.ZoomFactor, StringFormat={}{0:P0}, FallbackValue=100%}" />
                                     </controls:CommandBarElementContainer>
-                                    <controls:CommandBarElementContainer>
+                                    <controls:CommandBarElementContainer DataContext="{Binding #Root.DataContext}">
                                         <controls:CommandBarElementContainer.IsVisible>
                                             <Binding
                                                 Converter="{x:Static BoolConverters.Not}"
@@ -306,31 +304,37 @@
                                     </controls:CommandBarElementContainer>
                                     <CommandBarButton
                                         Command="{Binding CurrentImage.CurrentPage.ZoomInCommand, FallbackValue={x:Null}}"
+                                        DataContext="{Binding #Root.DataContext}"
                                         Icon="{markup:SymbolIcon ZoomIn}"
                                         IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}"
                                         Label="{I18N {x:Static pixeval:EntryViewerPageResources.ZoomIn}}" />
                                     <CommandBarButton
                                         Command="{Binding #I.ImageViewer.ZoomInCommand}"
+                                        DataContext="{Binding #Root.DataContext}"
                                         Icon="{markup:SymbolIcon ZoomIn}"
                                         IsVisible="{Binding #I.IsSwipeMode, Converter={x:Static BoolConverters.Not}, Mode=OneTime}"
                                         Label="{I18N {x:Static pixeval:EntryViewerPageResources.ZoomIn}}" />
                                     <CommandBarButton
                                         Command="{Binding CurrentImage.CurrentPage.ZoomToOriginalCommand, FallbackValue={x:Null}}"
+                                        DataContext="{Binding #Root.DataContext}"
                                         Icon="{markup:SymbolIcon RatioOneToOne}"
                                         IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}"
                                         Label="{I18N {x:Static pixeval:EntryViewerPageResources.ZoomToOriginal}}" />
                                     <CommandBarButton
                                         Command="{Binding #I.ImageViewer.ZoomToOriginalCommand}"
+                                        DataContext="{Binding #Root.DataContext}"
                                         Icon="{markup:SymbolIcon RatioOneToOne}"
                                         IsVisible="{Binding #I.IsSwipeMode, Converter={x:Static BoolConverters.Not}, Mode=OneTime}"
                                         Label="{I18N {x:Static pixeval:EntryViewerPageResources.ZoomToOriginal}}" />
                                     <CommandBarButton
                                         Command="{Binding #I.SwipeImageViewer.CurrentPage.ZoomToFitCommand, FallbackValue={x:Null}}"
+                                        DataContext="{Binding #Root.DataContext}"
                                         Icon="{markup:SymbolIcon PageFit}"
                                         IsVisible="{Binding #I.IsSwipeMode, Mode=OneTime}"
                                         Label="{I18N {x:Static pixeval:EntryViewerPageResources.ZoomToFit}}" />
                                     <CommandBarSeparator />
                                     <CommandBarToggleButton
+                                        DataContext="{Binding #Root.DataContext}"
                                         Icon="{markup:SymbolIcon SlidePlay}"
                                         IsChecked="{Binding IsAutoPlaying}"
                                         Label="{I18N {x:Static pixeval:EntryViewerPageResources.AutoPlay}}">
@@ -414,12 +418,14 @@
                                     <CommandBarButton
                                         Command="{Binding PrevCommand}"
                                         ContextRequested="PrevButton_OnRightClick"
+                                        DataContext="{Binding #Root.DataContext}"
                                         Icon="{markup:SymbolIcon ChevronLeft}"
                                         IsEnabled="{Binding PrevButtonText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                         Label="{Binding PrevButtonText}" />
                                     <CommandBarButton
                                         Command="{Binding NextCommand}"
                                         ContextRequested="NextButton_OnRightClick"
+                                        DataContext="{Binding #Root.DataContext}"
                                         Icon="{markup:SymbolIcon ChevronRight}"
                                         IsEnabled="{Binding NextButtonText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                         Label="{Binding NextButtonText}" />

@@ -36,6 +36,12 @@ public static class CacheHelper
 
     public static Task PurgeCacheAsync(CancellationToken token = default) => _FileCache.PurgeAsync(token);
 
+    internal static void InvalidateImage(string key)
+    {
+        if (App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache)
+            _ = _FileCache.TryRemove(key);
+    }
+
     public static Task EnforceCacheSizeLimitAsync(CancellationToken token = default)
     {
         var settings = App.AppViewModel.AppSettings.ApplicationSettings;

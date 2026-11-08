@@ -965,3 +965,63 @@ Windows 本地分组执行全量测试并专项复跑，按测试 ID/数据行�
 新增 UI 契约均进入 Pixeval.Tests，由正式 App/UiTestSession、组合 PageTestHost 和未派生的 TabViewContainer 执行；导航目标先验证实际选中/存活，再显式关闭并返回。未恢复导出工具的平行 UI/生命周期实现。XAML 经 XamlStyler、相关 C# 经 whitespace 格式化，资源 JSON、生成常量、gitlink 和 27 个最终源码哈希见 `static-validation.json`；127 个文档本地链接通过检查。`validation-summary.json` 如实记录完整运行的失败和 12 个小说 UI 目录，不混合试验代码结果；代码提交与一次批次文档提交分开，不补写文档自身哈希。
 
 未覆盖与下一轮起点：原生 IME、系统焦点/读屏/剪贴板/浏览器、保存对话框、触摸/DPI/GPU、Linux/macOS/移动端/Browser、远程 CI 及完整应用重启仍待验收；阅读设置 YAML 往返不等同完整重启。扩展没有取消 ABI，本轮文字翻译只取消等待，串行门保持至共享结果读完；不声称停止原生计算。完整系列联动、全部富文本语法组合及成功原生格式输出仍待验收。下一批优先独立处理上述正式导航/AvaloniaEdit 跨 App 线程缺口，保持真实控制与所有编辑/快捷键断言；也可继续独立的格式扩展执行中取消基线，核对迟到文件提交和任务最终状态（`next-step-export-cancellation.json` 尚未复现，不记为已确认故障）。扩展调用结束前须保持输入/输出流有效，不能简单取消等待后提前释放。继续后台验证，不自动恢复 computer use。
+
+
+## 2026-11-08 无人值守迁移批次（22:15 启动，跨日收尾）
+
+时间：约 22:15 启动（Asia/Shanghai），本轮约 130 分钟；结束时间及按该起点估算的时长见本批 `final-state.json`。因最终完整回归耗时，收尾超出目标时段；超出部分只完成这次运行与统一记账。基线 `33e8f7d9`，分支 `feat/material3expressive-migration`，开始时工作区干净。先处理上一批完整回归暴露的正式导航/AvaloniaEdit 跨 App 线程约束，再选择依赖已具备的 P14 局部功能。P14 使用已有主题、正式外壳、信息面板、设置及下载契约，未将前置阶段或整个图像阶段标记完成。全过程为后台构建、固定 HTTP、隔离数据和正式 App/TabViewContainer 的 headless 验证；没有调用 computer use、全局输入、系统剪贴板、真实账号写入、推送或远程发布，也没有启动桌面/AOT EXE。子模块、依赖、持久化格式、导航键及扩展 ABI 未改动。
+
+| 功能单元 / 步骤 | 本地提交 | 本轮完成范围 |
+| --- | --- | --- |
+| 连续正式应用隔离，P00.03d | `86bed6bd` | 测试程序集复用 headless 工作线程，PerTest 保留全新的 App、服务和数据；退出等待释放，程序集结束关闭线程。语法颜色使用不可变画刷；中文/俄语/英文连续编辑、撤销、保存及真实关闭验证隔离 |
+| 图像外层与详情恢复，P14.01a | `c5cb67b4` | Material 外层表面、宽窄窗信息面板；稳定页签实例；加载、错误、真实重试；拒绝错作品详情和迟到结果；空状态页数为零 |
+| 页码与作品导航，P14.02a | `97fc034b` | Material 页码条、48 像素输入目标、可见键盘焦点、Home/End/方向键与边界；UIA 整数页码范围；修复切换作品后浮动按钮及溢出命令上下文 |
+| 自动播放生命周期，P14.04a | `d2e1e8ca` | Sequential/Loop × CurrentWork/AllWorks、原间隔设置、暂停/恢复、单作品循环；临时离页暂停计时，返回保留播放意愿并重新计时；详情待完成不跳过，关闭终止旧计时 |
+| 显示图像另存，P14.03a | `9e0f10b5` | 真正的 PNG 另存菜单；先固定显示帧字节，保留原选择器选项；错误反馈、重复执行保护；取消选择及关闭后迟到的文件/流不写入、不提示，资源仍正确释放 |
+
+提交后复审补充：`f99c039a` 使父级禁用及自动化输入接管时取消旧拖动；`80f30d3f` 保留既有 Pixiv 应用链接前导零 ID 的数值身份，四语言通过真实导航覆盖，同时继续拒绝其他作品；`a82d7c49` 修正最终完整回归暴露的两处组件测试时序，详见下文。按 §3.2 正常追加修复，没有改写已经提交的历史。主计划只增加上述局部完成项及 P14「实施中」状态，父步骤保持未勾选。验收文档补充 F01/F20/F22 契约，宿主文档记录新方法、单工作线程与存储边界。新增文案写入四语言 JSON 并由 Language.tt 生成；法语既有缺译继续回退。
+
+证据根目录：`artifacts/m3e/2026-11-08-batch-2215/`。SDK `11.0.100-rc.3.26522.148`、runtime `10.0.14`，Avalonia `12.1.5`，M3E `859a69e563b2a01fc87a26255ee11c1d89959677`。先执行 `scripts/verify-m3e.ps1 -OutputDirectory artifacts/m3e/2026-11-08-batch-2215/session-full -ExtensionFixture <固定 C++ demo DLL>`，桌面 Debug、测试 Release 构建及完整测试 **527/527，零失败、零跳过**，覆盖上一批失败的俄语导航与连续 App 编辑契约。固定原生扩展 SHA256 为 `14A85A17F7B0D3002B66EC5DE5D073038237214FDC00D2F278DD4E3523DE85D6`。
+
+最终产品源码 `80f30d3f` 的完整回归使用同一脚本，输出为 `windows-closed/`，桌面 Debug 和测试 Release 构建成功。该次完整运行耗时约 50 分钟，结果为 **544/546，2 失败、0 跳过**。 两处原始失败分别是 `ViewerFitsPagesAndPreservesSizeAcrossSourceUpdates (True,False,True)` 在异步合成器恢复前耗尽固定十帧，以及 `ManagerPreservesDismissActionExpirationAndCapacity (False)` 在截图泵送计时器后才检查 300ms 通知的初始状态。测试改为在重新挂载后等待目标缩放（最多三秒），以及在首次渲染前观察通知初始状态；保留首帧、精确像素边界、原到期时间、关闭次数等断言。测试修复后的相邻专项 `timing-final/` **13/13，零失败、零跳过**，覆盖两个完整测试类。按测试 ID 和数据行名称取最终结果，分组覆盖为 **546/546，零未解决失败、零跳过**；产品源码在完整构建后没有变化，后续只修正上述两个测试的同步条件。 原始完整运行与最终专项分别记录，不把专项重跑冒充单次全量通过。较早的 `windows-final/` 在复审发现前导零身份回归后主动中止，由 `windows-closed/` 取代；`windows-final/aborted.json` 记录中止，不计为通过。
+
+新图像专项证据：`identity-final/` 详情/重试/真实链接 **4/4**；`navigation-final/` 页面导航与页码组件 **7/7**；`viewer-final/` 自动播放四语言和页码组件通过，其中旧另存夹具的四项失败保留并由 `save-final/` 的 **4/4** 取代。专项中的重复测试不累加为新增数量。Reader/Navigation 覆盖 zh-Hans/en-US/fr-FR/ru-RU、Swipe/Continuous、浅深主题及宽窄窗口；AutoPlay/Save 的真实页面验证范围为 Swipe。请求取消、命令执行、PNG 解码及字节、临时导航和真实关闭均由断言证明；截图只补充视觉检查。组件 UIA/捕获测试不能替代原生读屏、触摸或系统文件对话框。
+
+最终本地 Native AOT：`dotnet publish src/Pixeval.Desktop/Pixeval.Desktop.csproj -c Release -r win-x64 --self-contained true --artifacts-path artifacts/m3e/2026-11-08-batch-2215/aot-build -o artifacts/m3e/2026-11-08-batch-2215/native-aot-closed` 成功。`native-aot-header.json` 确认 x64 PE32+、CLR 头 RVA/size 为零，八个语言资源发布副本与源码一致；EXE SHA256 为 `E36197D08ACD69CA3CF1DE6E8EBF42A14E3C799C108096FDEF7DA2D5CE0B6972`，未启动。按警告代码和消息、去除生成 XAML 闭包编号规范化后，IL 裁剪/AOT 警告与上批为 **42→42，无增减**；历史按另一口径记录的 46 不直接混比。普通构建警告比较多出的四条诊断均能在上批日志定位，见 `warning-baseline-confirmation.json`，没有当作新增或已消除警告。
+
+关键失败证据保留：`navigation-baseline` 的 AvaloniaEdit 静态快捷键线程归属，`image-navigation-before` 的空命令上下文；自动播放的隐藏页计时与单作品末页循环由源码和最终行为验证覆盖。早期夹具对页面焦点、弹出菜单绑定时机、固定账号及图片命中位置的假设已按实际产品输入修正；俄语错误提示遮住图像时显式操作真实关闭按钮，再执行后续菜单，不在统一 Render/导航观察器里隐式恢复页面。所有页面仍经过正式 Shell 创建、选择、临时返回和关闭，没有另写业务或生命周期实现。
+
+修改的 XAML 经 XamlStyler，C# 经 whitespace 格式化；八个资源 JSON、五个 XAML、三个生成字符串、127 个文档本地链接、UTF-8 无 BOM、子模块未变及 `git diff --check` 通过，见 `static-validation.json`。最终源码哈希、TRX 汇总和验证归属分别见 `final-source-hashes.json`、`test-summary.json`、`validation-summary.json`。批次只在此追加一条记录，文档收尾单独提交，不补写其自身哈希。
+
+未覆盖与下一轮起点：P14 其他动作（复制、原图、图像转换扩展及其取消/迟到结果）、下载/解码失败与重试、内层信息页签完整视觉、动画播放和大图性能仍需独立功能单元；本轮不声称 P14/P15 整体完成。原生 IME、系统焦点/读屏/剪贴板/保存对话框、触摸/DPI/GPU、Linux/macOS/移动端/Browser、远程 CI 及完整应用重启保持待验收。下一批可优先图像原图/转换动作的关闭取消和迟到通知，再补内层页签视觉；`next-step-review.json` 只记录源码线索，未复现项不算已确认故障。继续后台验证，不自动启用 computer use。
+
+
+## 2026-11-09 无人值守迁移批次（00:26 启动）
+
+时间：00:26:30 启动，约 02:15 收尾（Asia/Shanghai），实际约 109 分钟；精确结束时间见本批 `final-state.json`。基线 `a51046a4`，分支 `feat/material3expressive-migration`，开始时工作区干净。检查计划、测试工程指引、最近提交和上一批执行记录后，选择已有正式外壳、图片加载与显示帧另存基线支持的 P14 局部单元。没有升级依赖、改变子模块、持久化格式、导航键或扩展 ABI；没有调用 computer use、前台输入、系统剪贴板、真实账号写入、推送或远程发布，也未启动桌面/AOT EXE。全过程使用隔离数据与外部边界夹具，页面通过正式 App 和组合式 PageTestHost/TabViewContainer 创建、导航和关闭。
+
+| 功能单元 / 步骤 | 本地提交 | 本轮完成范围 |
+| --- | --- | --- |
+| 图像转换扩展，P14.03b | `088c2617` | 转换菜单按当前活动宿主刷新并保持优先级；无效/空输出和调用失败保留显示图像并反馈错误；关闭、禁用后的旧结果不提交；扩展调用结束前保持输入输出流有效，结束后释放 |
+| 图像加载与原图恢复，P14.01b/P14.03c | `ab808e28` | HTTP/解码失败显示可重试状态，停止加载反馈；重试只失效对应缓存项；原图失败保留当前帧；正式页面首次 Loaded 前关闭也释放模型并取消请求 |
+| 复制与快捷键，P14.03d | `4485305c` | 剪贴板拥有独立显示帧快照；写入/刷新失败可见；Ctrl+C、Ctrl+S、Ctrl+Shift+S 共享当前模型的复制/下载/另存命令及忙状态，修复 Ctrl+S 错走复制；关闭后不追加通知/刷新，迟到读取仍有效 |
+| 信息页签 Material 表面，P14.01c | `9c020e97` | 局部模板保留真正的 TabbedPage/PART_TabControl，采用 Secondary Material 页签；浅深色文字对比、窄窗滚动、48 DIP 收起入口、本地化名称；方向键切信息/评论/相关作品，折叠与临时导航保留实例和选择 |
+| ugoira 播放入口，P14.04b | `a2fe9510` | 实际菜单勾选切换播放状态，菜单和浮动工具栏显示对应的播放/暂停文案；Space、工具栏与菜单同步；暂停后导航返回保持意愿，正式关闭禁用命令并释放帧 |
+
+提交后复审发现活动转换在页面临时卸载时仍需观察宿主禁用，追加 `92f31e9f`：仅在没有活动转换时解除宿主监听，调用结束再清理；增加真实导航离页期间禁用再启用的回归，旧结果仍被丢弃。按 §3.2 正常追加修复，未改写历史。父步骤及整个 P14 仍保持未完成；主计划只增加局部完成项，验收用例只更新新增契约。验证宿主使用方式和清单未变，没有重复改写宿主文档或生成清单。
+
+证据根目录：`artifacts/m3e/2026-11-09-batch-0026/`。SDK `11.0.100-rc.3.26522.148`、runtime `10.0.14`、Avalonia `12.1.5`、M3E `859a69e563b2a01fc87a26255ee11c1d89959677`。最终桌面 Debug 构建见 `desktop-debug-final-build.log`（10 警告、0 错误），测试 Release 构建见 `animation-final-build.log`（202 警告、0 错误）。普通构建日志按代码/消息去重比较为 **72→71，无新增**，减少已使用的 `Misc.Pause` 未引用提示；这是本批 `image-load-final-build.log` 与最终构建的对照，不冒充未执行的全基线重建。
+
+最终代码 `a2fe9510` 使用 `scripts/verify-m3e.ps1 -SkipBuild -OutputDirectory artifacts/m3e/2026-11-09-batch-0026/windows-final -ExtensionFixture <固定 C++ demo DLL>` 执行一次完整回归，**567/568 通过，1 失败、0 跳过**，耗时 41 分 11 秒。SkipBuild 使用上段已完成的最终构建；完整运行期间没有重建或覆盖默认测试输出。固定扩展沿用上一批可信库，SHA256 `14A85A17F7B0D3002B66EC5DE5D073038237214FDC00D2F278DD4E3523DE85D6`，来源和环境保存在 `windows-final/extension-fixture.json`、`commit.txt`、`dependencies.json`。本批新增 21 个图像 UI 数据行全部通过。唯一失败为既有 `DownloadPages` 的 `Escape closes command overflow`，发生于删除记录动作后的弹层关闭断言。保留原始失败；随后仅增加焦点/启用状态日志和失败消息，不改变输入、等待或断言条件，诊断专项 `download-focus-diagnostic/` **1/1 通过**。`download-focus-diagnostic.patch` 保存这两处诊断改动，复查后已撤回，产品源码和已提交测试保持 `a2fe9510`。该失败未稳定复现，根因未确认，不将复查通过称作修复，也不把分组结果冒充单次全量通过。下一批应针对删除后焦点、弹层关闭和指针命中时序复现此稳定性缺口。
+
+提交前相关专项：`transform-copy` 的转换四语言 4/4 通过（同次复制基线失败）；`transform-hidden` 的扩展四语言 4/4 通过（同次动图夹具失败）。`image-load-info` 的原图四语言及相邻组件通过，但早关闭与信息页对比失败；修复后 `image-load-final` 的加载/缓存/Reader/AutoPlay **11/11** 通过。`actions-animated` 的复制四语言 4/4 通过（同次信息页/动图仍失败）；`info-animation-input` 的信息页四语言 4/4 通过（同次动图夹具失败）。最后 `animation-final` 的动图/Reader/AutoPlay **12/12** 通过。混合运行中通过的子集和整次结果明确区分，不将混合失败运行写成全通过，也不累计重复测试为新增数量；完整 TRX 清单在 `test-summary.json`。
+
+新 UI 契约共 21 个数据行：Transform/Original/Copy/Information/Animation 各覆盖 zh-Hans/en-US/fr-FR/ru-RU，ImageLoad 在一行中覆盖 Swipe 浅色 700 与 Continuous 深色 360。前三类动作及动图按中文/法语 Swipe、英文/俄语 Continuous 分配；信息页验证 Swipe 的浅深色 1000/360 窗口。另加一项 FileCache 定向失效测试，保持无关缓存、已打开读取流及容量维护语义。截图抽查了信息页浅深色与窄窗、空相关作品和原图恢复；动图暂停由输入与绑定状态断言证明，静态截图不证明帧推进。PNG 剪贴板验证比较解码后的精确像素，另存继续比较精确输出字节。四语言资源只新增复制失败文案，并由 Language.tt 生成常量；既有缺译继续回退，不声称所有文字已翻译。
+
+关键失败证据保留：`transform-before` 的关闭后迟到写入；`image-load-info` 的首次 Loaded 前关闭未取消图片与原信息页深色对比；`animation-before` 的菜单没有切换播放状态。信息页最初的直接 Styles 嵌套选择器不合法，在实际 Dispatcher 错误观察下修正，后续保留该观察断言。夹具方面，复制 PNG 重编码增加 sRGB 块但像素一致，故改用精确像素比较；TabControl 原生仅支持方向键，测试从当前页连续 Left 返回首项，不伪造 Home 支持；ugoira 夹具补齐离线认证及 600x600/1920x1080 两个 ZIP 地址。`copy-info-diagnostic` 的 DisplayName 过滤命中零项，未计为验证通过。全部早期失败/零测试产物保留，最终结果另列。
+
+最终本地 Native AOT：`dotnet publish src/Pixeval.Desktop/Pixeval.Desktop.csproj -c Release -r win-x64 --self-contained true --artifacts-path artifacts/m3e/2026-11-09-batch-0026/aot-build -o artifacts/m3e/2026-11-09-batch-0026/native-aot-final` 成功，使用独立构建输出。`native-aot-header.json` 确认 x64 PE32+、CLR 头 RVA/size 均零，四个 ImageViewerPage 语言资源发布副本与源码一致；EXE SHA256 `A2A8A392D0BDB45E790474882A67D97E01174A4CB70954A4B495DF3180A03912`，未运行。14 个产品源码/资源哈希与发布前记录一致。IL 裁剪/AOT 警告对照上一批最终发布为 **42→42，无增减**，规范化口径和结果见 `aot-trim-warning-delta.json`；不把发布成功作为原生运行时证据。
+
+修改的 XAML 经 XamlStyler，相关 C# 经 whitespace 格式化；JSON/XAML 解析、UTF-8 无 BOM、文档本地链接、子模块状态和 diff whitespace 收尾结果在 `static-validation.json`。`final-source-hashes.json`、`aot-source-comparison.json`、`validation-summary.json` 和 `final-state.json` 保存源码归属、验证范围及实际时长。只在本批结束追加这一条台账，文档单独收尾提交，不补写它自身哈希。
+
+未覆盖与下一轮起点：P14 收藏/标签/稍后看/浏览器等动作的完整组合、GIF/WebP、动画实际帧推进与长时内存/大图性能仍待独立验收。本轮 ugoira 使用两个相同 PNG 帧验证元数据、控制和资源释放，不能证明画面帧节奏或 GPU 性能。扩展 ABI 没有取消入口，取消仅隔离旧结果，不停止已经执行的计算；本轮转换 UI 使用托管边界夹具，真实原生流 ABI 由既有固定扩展测试负责。原生 IME、系统焦点/读屏/剪贴板/保存对话框、触摸/DPI/GPU、其他平台、远程 CI 和完整应用重启保持待验收。下一批先复现上述 DownloadPages 溢出菜单稳定性缺口，再继续 P14.03 剩余作品动作的菜单/信息栏一致性及关闭边界，或建立动画帧推进专项；继续后台验证，不自动启用 computer use。

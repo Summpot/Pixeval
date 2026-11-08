@@ -3,13 +3,17 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:icons="using:FluentIcons.Avalonia">
-    <ControlTheme x:Key="{x:Type controls:PageButton}" TargetType="{x:Type controls:PageButton}">
+    <ControlTheme
+        x:DataType="controls:PageButton"
+        x:Key="{x:Type controls:PageButton}"
+        TargetType="{x:Type controls:PageButton}">
         <!--  This full-height image overlay has its own template, not a filled button surface.  -->
         <Setter Property="Background" Value="{DynamicResource ControlOnImageFillColorDefaultBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
         <Setter Property="Width" Value="100" />
         <Setter Property="Opacity" Value="0" />
         <Setter Property="FontSize" Value="48" />
+        <Setter Property="AutomationProperties.Name" Value="{Binding ToolTipText, RelativeSource={RelativeSource Self}}" />
         <Setter Property="Transitions">
             <Transitions>
                 <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
@@ -30,6 +34,9 @@
         </Setter>
         <Style Selector="^:pointerover">
             <Setter Property="Opacity" Value="0.6" />
+        </Style>
+        <Style Selector="^:focus-visible">
+            <Setter Property="Opacity" Value="1" />
         </Style>
     </ControlTheme>
 </ResourceDictionary>

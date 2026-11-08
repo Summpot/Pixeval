@@ -1,41 +1,63 @@
 <ResourceDictionary
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:Pixeval.Controls">
+    xmlns:controls="using:Pixeval.Controls"
+    xmlns:m3="https://github.com/Shirasagi0012/Material3Expressive.Avalonia"
+    xmlns:pixeval="using:Pixeval">
 
     <ControlTheme x:Key="{x:Type controls:PagePreviewSlider}" TargetType="{x:Type controls:PagePreviewSlider}">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="MinWidth" Value="160" />
-        <Setter Property="MinHeight" Value="14" />
+        <Setter Property="MinHeight" Value="48" />
+        <Setter Property="Focusable" Value="True" />
+        <Setter Property="AutomationProperties.Name" Value="{I18N {x:Static pixeval:EntryViewerPageResources.PageSelector}}" />
+        <Setter Property="AutomationProperties.HelpText" Value="{I18N {x:Static pixeval:EntryViewerPageResources.PageSelectorHelp}}" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="Template">
             <ControlTemplate>
-                <Border Padding="{TemplateBinding Padding}" Background="Transparent">
-                    <Grid Height="14">
+                <Border
+                    x:Name="PART_FocusBorder"
+                    Padding="{TemplateBinding Padding}"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
+                    BorderThickness="2"
+                    CornerRadius="12">
+                    <Grid
+                        MinHeight="48"
+                        ColumnDefinitions="*,Auto"
+                        ColumnSpacing="12">
                         <Border
                             x:Name="PART_Track"
-                            Height="10"
+                            Height="16"
                             VerticalAlignment="Center"
-                            Background="{DynamicResource ControlFillColorTertiaryBrush}"
+                            Background="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.SecondaryContainer}}"
                             CornerRadius="999" />
                         <Border
                             x:Name="PART_SelectedTrack"
                             Width="0"
-                            Height="10"
+                            Height="16"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Center"
                             Background="{DynamicResource AccentFillColorDefaultBrush}"
                             CornerRadius="999" />
-                        <Canvas x:Name="PART_ThumbCanvas" Height="14">
+                        <Canvas
+                            x:Name="PART_ThumbCanvas"
+                            Height="32"
+                            VerticalAlignment="Center">
                             <Border
                                 x:Name="PART_Thumb"
-                                Width="12"
-                                Height="12"
+                                Width="4"
+                                Height="32"
                                 Background="{DynamicResource AccentFillColorDefaultBrush}"
-                                BorderBrush="{DynamicResource SolidBackgroundFillColorBaseBrush}"
-                                BorderThickness="1"
-                                CornerRadius="999" />
+                                CornerRadius="2" />
                         </Canvas>
+                        <TextBlock
+                            Grid.Column="1"
+                            Margin="0,0,4,0"
+                            VerticalAlignment="Center"
+                            m3:MaterialText.Style="{m3:Typography LabelMedium}"
+                            Foreground="{m3:Token {x:Static m3:MaterialTokens+Sys+Color.OnSurface}}"
+                            Text="{TemplateBinding IndicatorText}" />
 
                         <Popup
                             x:Name="PART_PreviewPopup"
@@ -64,6 +86,13 @@
                 </Border>
             </ControlTemplate>
         </Setter>
+
+        <Style Selector="^:focus-visible /template/ Border#PART_FocusBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+        <Style Selector="^:disabled">
+            <Setter Property="Opacity" Value="0.38" />
+        </Style>
 
         <Style Selector="^:pointerover /template/ Border#PART_Thumb">
             <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />

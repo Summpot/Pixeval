@@ -4,12 +4,14 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Mako.Global.Enum;
 using Mako.Model;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +29,7 @@ namespace Pixeval.ViewModels.Viewers;
 public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewModel, IDisposable
 {
     private readonly DispatcherTimer _autoPlayTimer = new();
+    private bool _isPlaybackActive;
 
     private readonly Dictionary<int, IllustrationItemViewModel> _refreshedIllustrations = [];
 
@@ -35,11 +38,16 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
     private CancellationTokenSource _loadingCts = new();
 
     private readonly ISourceView<IllustrationItemViewModel>? _sourceView;
+    private readonly IIdentityInfo? _initialInfo;
+    private IArtworkInfo? _paneEntry;
+    private IReadOnlyList<Page> _panePages = [];
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RetryCommand))]
     public partial bool IsLoading { get; private set; }
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RetryCommand))]
     public partial string? LoadErrorMessage { get; private set; }
 
     [ObservableProperty]
@@ -62,6 +70,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
     public IllustrationViewerPageViewModel(IIdentityInfo info)
     {
+        _initialInfo = info;
         InitializeAutoPlayTimer();
         _ = LoadSingleIllustrationAsync(info, _loadingCts.Token);
     }
@@ -92,7 +101,17 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         CurrentWorkIndex = currentIllustrationIndex;
     }
 
-    public IReadOnlyList<Page> PanePages => CreatePanePages(CurrentIllustration?.Entry);
+    public IReadOnlyList<Page> PanePages
+    {
+        get
+        {
+            var entry = _disposed ? null : CurrentIllustration?.Entry;
+            if (ReferenceEquals(entry, _paneEntry))
+                return _panePages;
+            _paneEntry = entry;
+            return _panePages = CreatePanePages(entry);
+        }
+    }
 
     private static IReadOnlyList<Page> CreatePanePages(IArtworkInfo? entry)
     {
@@ -180,7 +199,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         get;
         set
         {
-            if (value is -1)
+            if (_disposed || value < 0 || value >= WorkCount)
                 return;
             if (value == field)
                 return;
@@ -285,6 +304,18 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         return _loadingCts.Token;
     }
 
+    private bool CanRetry => !_disposed && !IsLoading && LoadErrorMessage is not null;
+
+    [RelayCommand(CanExecute = nameof(CanRetry))]
+    private Task RetryAsync()
+    {
+        if (!CanRetry)
+            return Task.CompletedTask;
+        return CurrentIllustration is null && _initialInfo is { } info
+            ? LoadSingleIllustrationAsync(info, ResetLoadingToken())
+            : LoadCurrentIllustrationAsync();
+    }
+
     private async Task<IllustrationItemViewModel?> LoadIllustrationAsync(IIdentityInfo info, Action<IllustrationItemViewModel> onLoaded, CancellationToken token)
     {
         IsLoading = true;
@@ -293,7 +324,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         {
             var entry = await info.TryGetArtworkInfoAsync(token);
             token.ThrowIfCancellationRequested();
-            if (entry is null)
+            if (entry is null || !MatchesRequestedArtwork(entry, info))
             {
                 LoadErrorMessage = I18NManager.GetResource(EntryViewerPageResources.LoadFailed);
                 return null;
@@ -320,6 +351,19 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         }
     }
 
+    private static bool MatchesRequestedArtwork(IArtworkInfo entry, IIdentityInfo requested)
+    {
+        if (entry.Platform != requested.Platform)
+            return false;
+        if (entry.Id == requested.Id)
+            return true;
+        // Pixiv's existing service parses numeric IDs, including leading zeros
+        // from app links. Compare the same identity without accepting another work.
+        return requested.Platform == IPlatformInfo.Pixiv
+            && long.TryParse(requested.Id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id)
+            && id > 0 && entry.Id == id.ToString(CultureInfo.InvariantCulture);
+    }
+
     /// <summary>
     /// 当前插画的页面索引
     /// </summary>
@@ -328,7 +372,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
         get => CurrentImage?.SelectedPageIndex ?? 0;
         set
         {
-            if (CurrentImage is null)
+            if (_disposed || CurrentImage is null || value < 0 || value >= PageCount)
                 return;
 
             CurrentImage.SelectedPageIndex = value;
@@ -346,6 +390,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
     private void NotifyCurrentPageIndexChanged()
     {
+        RestartAutoPlayTimer();
         OnPropertyChanged(nameof(CurrentPageIndex));
         NotifyPageNavigationChanged();
     }
@@ -373,7 +418,7 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
             CurrentPageIndex = CurrentImage?.SelectedPageIndex ?? 0;
     }
 
-    public override int PageCount => CurrentImage?.PageCount ?? 1;
+    public override int PageCount => CurrentImage?.PageCount ?? 0;
 
     public override int WorkCount => Illustrations?.Count ?? 1;
 
@@ -432,21 +477,24 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
     [ObservableProperty] public partial bool IsAutoPlaying { get; set; }
 
-    partial void OnIsAutoPlayingChanged(bool value)
-    {
-        if (value)
-            StartAutoPlay();
-        else
-            StopAutoPlay();
-        return;
+    partial void OnIsAutoPlayingChanged(bool value) => RestartAutoPlayTimer();
 
-        void StartAutoPlay()
+    // Temporary tab detachment suspends the clock without discarding the user's
+    // requested play state. A return starts a full interval on the current page.
+    internal void SetPlaybackActive(bool active)
+    {
+        _isPlaybackActive = active && !_disposed;
+        RestartAutoPlayTimer();
+    }
+
+    private void RestartAutoPlayTimer()
+    {
+        _autoPlayTimer.Stop();
+        if (!_disposed && _isPlaybackActive && IsAutoPlaying)
         {
             UpdateAutoPlayTimerInterval();
             _autoPlayTimer.Start();
         }
-
-        void StopAutoPlay() => _autoPlayTimer.Stop();
     }
 
     private void InitializeAutoPlayTimer()
@@ -461,6 +509,11 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
 
     private void MoveAutoPlayNext()
     {
+        // A detail refresh temporarily has no pages; do not skip the pending work
+        // or take a modulo of zero while the original viewer is being replaced.
+        if (_disposed || !_isPlaybackActive || !IsAutoPlaying || IsLoading || CurrentImage is null || PageCount == 0)
+            return;
+
         switch (AutoPlayScope, AutoPlayMode)
         {
             case (IllustrationViewerAutoPlayScope.CurrentWork, IllustrationViewerAutoPlayMode.Sequential):
@@ -480,7 +533,12 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
                 break;
             case (IllustrationViewerAutoPlayScope.AllWorks, IllustrationViewerAutoPlayMode.Loop):
                 if (NextAction is PagedBehavior.None)
-                    CurrentWorkIndex = 0;
+                {
+                    if (WorkCount == 1)
+                        CurrentPageIndex = 0;
+                    else
+                        CurrentWorkIndex = 0;
+                }
                 else
                     NextCommand.Execute(null);
                 break;
@@ -503,6 +561,9 @@ public sealed partial class IllustrationViewerPageViewModel : PagedViewerViewMod
             return;
 
         _disposed = true;
+        _autoPlayTimer.Stop();
+        _autoPlayTimer.Tick -= AutoPlayTimerOnTick;
+        RetryCommand.NotifyCanExecuteChanged();
         IsLoading = false;
         _loadingCts.Cancel();
         _loadingCts.Dispose();

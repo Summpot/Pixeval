@@ -538,6 +538,8 @@ namespace Pixeval
         public const string Mirror = "EntryViewerPage.Mirror";
         public const string NextSeriesWork = "EntryViewerPage.NextSeriesWork";
         public const string OtherImageTransformerExtensions = "EntryViewerPage.OtherImageTransformerExtensions";
+        public const string PageSelector = "EntryViewerPage.PageSelector";
+        public const string PageSelectorHelp = "EntryViewerPage.PageSelectorHelp";
         public const string Pin = "EntryViewerPage.Pin";
         public const string PreviousSeriesWork = "EntryViewerPage.PreviousSeriesWork";
         public const string RotateClockwise = "EntryViewerPage.RotateClockwise";
@@ -1229,9 +1231,11 @@ namespace Pixeval
     public static class ImageViewerPageResources
     {
         public const string ApplyingTransformerExtensions = "ImageViewerPage.ApplyingTransformerExtensions";
+        public const string CopyImageFailed = "ImageViewerPage.CopyImageFailed";
         public const string LoadingOriginalImage = "ImageViewerPage.LoadingOriginalImage";
         public const string OriginalImageLoadFailed = "ImageViewerPage.OriginalImageLoadFailed";
         public const string OriginalImageLoadedSuccessfully = "ImageViewerPage.OriginalImageLoadedSuccessfully";
+        public const string SaveImageFailed = "ImageViewerPage.SaveImageFailed";
         public const string TransformerExtensionFailed = "ImageViewerPage.TransformerExtensionFailed";
         public const string TransformerExtensionFinishedSuccessfully = "ImageViewerPage.TransformerExtensionFinishedSuccessfully";
     }

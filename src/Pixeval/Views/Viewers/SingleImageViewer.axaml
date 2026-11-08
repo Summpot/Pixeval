@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ai="using:AnimatedControls.Avalonia"
     xmlns:common="using:FluentIcons.Common"
+    xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Views.Converters"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
@@ -62,14 +63,18 @@
             <!--  播放/暂停（仅动图可见）  -->
             <MenuItem
                 Command="{Binding PlayPauseCommand}"
-                Header="{I18N {x:Static pixeval:MiscResources.Play}}"
+                Header="{markup1:EitherBinding {Binding IsPlaying},
+                                               {I18N {x:Static pixeval:MiscResources.Pause}},
+                                               {I18N {x:Static pixeval:MiscResources.Play}},
+                                               x:TypeArguments=x:String}"
                 Icon="{markup1:SymbolIconEx Symbol={markup1:EitherBinding {Binding IsPlaying},
                                                                           Pause,
                                                                           Play,
                                                                           x:TypeArguments=common:Symbol}}"
                 InputGesture="Space"
                 IsChecked="{Binding IsPlaying, Mode=TwoWay}"
-                IsVisible="{Binding IsPicGif}" />
+                IsVisible="{Binding IsPicGif}"
+                ToggleType="CheckBox" />
             <!--  保存  -->
             <MenuItem
                 Command="{Binding CopyCommand}"
@@ -95,18 +100,18 @@
                 CommandParameter="{Binding $self}"
                 Header="{I18N {x:Static pixeval:EntryViewerPageResources.ViewOriginal}}"
                 Icon="{markup:SymbolIcon ImageGlobe}" />
-            <Separator IsVisible="{x:Static vm:SingleViewerViewModel.HasTransformerExtensions}" />
+            <Separator IsVisible="{Binding HasTransformerExtensions}" />
             <MenuItem
                 Command="{Binding PrimaryTransformerExtensionItem.Command, FallbackValue={x:Null}}"
                 CommandParameter="{Binding $self}"
                 Header="{Binding PrimaryTransformerExtensionItem.Label, FallbackValue={x:Null}}"
                 Icon="{markup1:SymbolIconEx Symbol={Binding PrimaryTransformerExtensionItem.Symbol}}"
-                IsVisible="{x:Static vm:SingleViewerViewModel.HasTransformerExtensions}"
+                IsVisible="{Binding HasTransformerExtensions}"
                 ToolTip.Tip="{Binding PrimaryTransformerExtensionItem.Description, FallbackValue={x:Null}}" />
             <MenuItem
                 Header="{I18N {x:Static pixeval:EntryViewerPageResources.OtherImageTransformerExtensions}}"
                 Icon="{markup:SymbolIcon ImageMultiple}"
-                IsVisible="{x:Static vm:SingleViewerViewModel.HasTransformerExtensions}"
+                IsVisible="{Binding HasTransformerExtensions}"
                 ItemsSource="{Binding TransformerExtensionItems}">
                 <MenuItem.ItemContainerTheme>
                     <ControlTheme
@@ -139,8 +144,14 @@
                 ToggleType="CheckBox" />
         </ContextMenu>
     </UserControl.ContextMenu>
-    <ContentPresenter
-        x:Name="ImagePresenter"
-        IsHitTestVisible="{Binding HasDisplayImage}"
-        PropertyChanged="ImagePresenter_OnPropertyChanged" />
+    <Grid>
+        <ContentPresenter
+            x:Name="ImagePresenter"
+            IsHitTestVisible="{Binding HasDisplayImage}"
+            PropertyChanged="ImagePresenter_OnPropertyChanged" />
+        <controls:ViewerStateOverlay
+            ErrorMessage="{Binding LoadErrorMessage}"
+            IsVisible="{Binding LoadErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+            RetryCommand="{Binding RetryImageCommand}" />
+    </Grid>
 </UserControl>
