@@ -37,9 +37,13 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
 {
     private bool _disposed;
 
+    internal FileCache FileCache { get; } = new(System.IO.Path.Combine(AppInfo.CacheFolder, "FileCache"));
+
     public ServiceProvider AppServiceProvider { get; private set; } = null!;
 
     public App App { get; } = app;
+
+    public PixevalSettings SettingsViewModel { get; } = new();
 
     public HistoryPersistHelper HistoryPersistHelper => AppServiceProvider.GetRequiredService<HistoryPersistHelper>();
 
@@ -73,10 +77,12 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
 
     private ServiceProvider CreateServiceProvider()
     {
-        var makoClient = new MakoClient(App.AppViewModel.AppSettings.ToMakoConfiguration(), logger);
+        var makoClient = App.CreateMakoClient(AppSettings.ToMakoConfiguration(), logger);
         makoClient.TokenRefreshed += MakoClientOnTokenRefreshed;
 
-        return new ServiceCollection()
+        var services = new ServiceCollection()
+            .AddTransient<IWindowActivationService, WindowActivationService>()
+            .AddSingleton<Pixeval.ViewModels.SearchPageViewModel>()
             .AddSingleton(_ => logger)
             .AddBooruParsers()
             .AddKeyedSingleton<IGetArtworkService, MakoClient>(IPlatformInfo.Pixiv, (provider, key) => makoClient)
@@ -109,7 +115,9 @@ public sealed class AppViewModel(App app, FileLogger logger) : IAsyncDisposable
             .AddSingleton<IPixevalMcpService>(t =>
                 new PixevalMcpService(this, t.GetRequiredService<FileLogger>()))
 #endif
-            .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+            ;
+        App.ConfigureServices(services);
+        return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
 
         void MakoClientOnTokenRefreshed(MakoClient sender, TokenResponse? tokenResponse)
         {

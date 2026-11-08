@@ -1,4 +1,4 @@
-<m3:Card
+﻿<m3:Card
     x:Class="Pixeval.Views.Entry.SeriesItem"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -49,7 +49,10 @@
                 Tag="{Binding AppUri}" />
         </ContextMenu>
     </m3:Card.ContextMenu>
-    <Grid ClipToBounds="True" ColumnDefinitions="96,*">
+    <Grid
+        x:Name="SeriesLayout"
+        ClipToBounds="True"
+        ColumnDefinitions="96,*">
         <Border ClipToBounds="True">
             <Image controls:Source.Cache="{Binding ThumbnailUrl}" Stretch="UniformToFill" />
         </Border>
@@ -75,7 +78,7 @@
                 ToolTip.Tip="{Binding Entry.User.Name}">
                 <TextBlock
                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                    MaxLines="2"
+                    MaxLines="1"
                     Text="{Binding Entry.User.Name}"
                     TextTrimming="CharacterEllipsis"
                     TextWrapping="Wrap" />

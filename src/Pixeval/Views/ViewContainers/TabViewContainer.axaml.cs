@@ -27,7 +27,7 @@ using TabView.Avalonia;
 
 namespace Pixeval.Views.ViewContainers;
 
-public partial class TabViewContainer : ViewContainerBase
+public sealed partial class TabViewContainer : ViewContainerBase
 {
     public static readonly DirectProperty<TabViewContainer, bool> CanCreateNewTabProperty =
         AvaloniaProperty.RegisterDirect<TabViewContainer, bool>(
@@ -35,7 +35,7 @@ public partial class TabViewContainer : ViewContainerBase
             static container => container.CanCreateNewTab);
 
     private NavigationConfiguration _navigationConfiguration = null!;
-    private bool _automaticUpdateStarted;
+    private readonly IWindowActivationService _activationService;
 
     public ObservableCollection<NavigationMenuItem> HeaderNavigationItems { get; } = [];
 
@@ -61,6 +61,7 @@ public partial class TabViewContainer : ViewContainerBase
 
     public TabViewContainer()
     {
+        _activationService = App.AppViewModel.AppServiceProvider.GetRequiredService<IWindowActivationService>();
         InitializeComponent();
 
         RebuildNavigation();
@@ -89,6 +90,11 @@ public partial class TabViewContainer : ViewContainerBase
     protected override async void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
+        if (TopLevel.GetTopLevel(this) is Window window)
+        {
+            window.Closed -= OnWindowClosed;
+            window.Closed += OnWindowClosed;
+        }
         Manager = new WindowNotificationManager(TopLevel.GetTopLevel(this))
         {
             MaxItems = 3,
@@ -97,70 +103,11 @@ public partial class TabViewContainer : ViewContainerBase
         FlushPendingNotifications();
         RegisterContentDialogHost(TopLevel.GetTopLevel(this));
 
-        if (AppInfo.AppVersion.UsesVelopack)
-        {
-            StartAutomaticUpdate();
-            if (App.AppViewModel.AppSettings.IsNewVersion
-                && await AppInfo.AppVersion.GetCurrentAppReleaseModelAsync() is { } currentRelease)
-            {
-                await CreateAcknowledgementAsync(
-                    SettingsPage.ReleaseTitle,
-                    SettingsPage.CreateReleaseNotes(currentRelease));
-            }
-
-            return;
-        }
-
-        await AppInfo.AppVersion.CheckForUpdateAsync();
-        var dialogTasks = new List<Task<ContentDialogResult>>();
-        if (App.AppViewModel.AppSettings.IsNewVersion)
-            dialogTasks.Add(CreateAcknowledgementAsync(
-                SettingsPage.ReleaseTitle,
-                SettingsPage.CreateReleaseNotes(AppInfo.AppVersion.CurrentAppReleaseModel)));
-        if (AppInfo.AppVersion is { UpdateAvailable: true, NewestAppReleaseModel: { } release })
-            dialogTasks.Add(CreateAcknowledgementAsync(
-                SettingsPage.GetReleaseTitle(release.Version),
-                SettingsPage.CreateReleaseNotes(release)));
-
-        await Task.WhenAll(dialogTasks);
+        await _activationService.ActivateAsync(this);
     }
 
-    private void StartAutomaticUpdate()
-    {
-        if (_automaticUpdateStarted)
-            return;
-
-        _automaticUpdateStarted = true;
-        _ = DownloadVelopackUpdateAutomaticallyAsync();
-    }
-
-    private async Task DownloadVelopackUpdateAutomaticallyAsync()
-    {
-        try
-        {
-            await AppInfo.AppVersion.CheckForUpdateAsync();
-            if (AppInfo.AppVersion is not
-                {
-                    UpdateAvailable: true,
-                    NewestVersion: { } version
-                })
-                return;
-
-            if (!await AppInfo.AppVersion.DownloadUpdateAsync())
-                return;
-
-            var readyVersion = AppInfo.AppVersion.PendingUpdateVersion ?? version;
-            ShowSuccess(I18NManager.GetResource(
-                SettingsMainViewResources.UpdateDownloadReadyFormatted,
-                readyVersion));
-        }
-        catch (Exception exception)
-        {
-            App.AppViewModel.AppServiceProvider.GetService<FileLogger>()?.LogError(
-                nameof(DownloadVelopackUpdateAutomaticallyAsync),
-                exception);
-        }
-    }
+    /// <summary>Raised after a page has been added, selected and any replaced page closed.</summary>
+    public event EventHandler<Page>? PageOpened;
 
     /// <inheritdoc />
     public override void NavigateTo(
@@ -178,9 +125,51 @@ public partial class TabViewContainer : ViewContainerBase
         if (removeCurrentPage)
             if (selected is not null)
             {
-                DisposeTab(selected);
-                _ = pages.Remove(selected);
+                ClosePage(selected);
             }
+        PageOpened?.Invoke(this, page);
+    }
+
+    private void OnWindowClosed(object? sender, EventArgs args)
+    {
+        if (sender is Window window)
+            window.Closed -= OnWindowClosed;
+        CloseAllPages();
+        if (DataContext is IDisposable disposable)
+            disposable.Dispose();
+        DataContext = null;
+    }
+
+    public IReadOnlyList<Page> Pages => TabsControl.Pages?.ToArray() ?? [];
+
+    public Page? SelectedPage => TabsControl.SelectedPage;
+
+    public void SelectPage(Page page)
+    {
+        if (TabsControl.Pages is IList<Page> pages && pages.Contains(page))
+            TabsControl.SelectedIndex = pages.IndexOf(page);
+    }
+
+    public void ClosePage(Page page)
+    {
+        if (TabsControl.Pages is not IList<Page> pages || !pages.Contains(page))
+            return;
+        RequestClose(page);
+        _ = pages.Remove(page);
+    }
+
+    private static void RequestClose(Control page)
+    {
+        var args = new RoutedEventArgs(ViewModelDisposal.RequestDisposeEvent, page);
+        page.RaiseEvent(args);
+        if (!args.Handled)
+            DisposeTab(page);
+    }
+
+    public void CloseAllPages()
+    {
+        foreach (var page in Pages)
+            ClosePage(page);
     }
 
     public void ReloadNavigation() => RebuildNavigation();
@@ -320,11 +309,7 @@ public partial class TabViewContainer : ViewContainerBase
         foreach (var target in targets)
         {
             // 复用单标签关闭的释放事件，让页面有机会处理自己的 ViewModel 生命周期。
-            var args = new RoutedEventArgs(ViewModelDisposal.RequestDisposeEvent, target);
-            target.RaiseEvent(args);
-            if (!args.Handled)
-                DisposeTab(target);
-            _ = pages.Remove(target);
+            ClosePage(target);
         }
     }
 
@@ -356,10 +341,7 @@ public partial class TabViewContainer : ViewContainerBase
             sender.SelectedIndex--;
         // 否则关闭最后一个标签页，相当于关闭当前窗口，找到 TopLevel(Window) 也没意义
 
-        var args = new RoutedEventArgs(ViewModelDisposal.RequestDisposeEvent, control);
-        control.RaiseEvent(args);
-        if (!args.Handled)
-            DisposeTab(control);
+        RequestClose(control);
     }
 
     private void OnViewModelDisposal(object? sender, ViewModelDisposalEventArgs e)
@@ -401,17 +383,6 @@ public partial class TabViewContainer : ViewContainerBase
             var container = new TabViewContainer();
             var window = new Window { Content = container }.Fork(host.Window);
             container.SetInterTabController(true);
-            window.Closed += static (sender, args) =>
-            {
-                if (sender is TopLevel { ViewContainer: TabViewContainer container })
-                {
-                    foreach (var page in container.TabsControl.Pages ?? [])
-                        DisposeTab(page);
-                    if (container.DataContext is IDisposable disposable)
-                        disposable.Dispose();
-                    container.DataContext = null;
-                }
-            };
 
             return new TabsHost(window, container.TabsControl);
         }

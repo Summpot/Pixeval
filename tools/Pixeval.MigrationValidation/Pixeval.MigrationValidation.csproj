@@ -5,9 +5,6 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <LangVersion>latest</LangVersion>
-        <!-- The headless storage fixture implements Avalonia's platform storage interfaces.
-             This opt-in is confined to the validation executable, never the product. -->
-        <AvaloniaAccessUnstablePrivateApis>true</AvaloniaAccessUnstablePrivateApis>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="../../src/Pixeval/Pixeval.csproj" />

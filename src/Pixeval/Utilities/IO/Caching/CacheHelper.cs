@@ -18,9 +18,9 @@ namespace Pixeval.Utilities.IO.Caching;
 
 public static class CacheHelper
 {
-    public static string CachePath { get; } = Path.Combine(AppInfo.CacheFolder, "FileCache");
+    public static string CachePath => Path.Combine(AppInfo.CacheFolder, "FileCache");
 
-    private static readonly FileCache _FileCache = new(CachePath);
+    private static FileCache _FileCache => App.AppViewModel.FileCache;
 
     /// <summary>
     /// Dispose无效果，可以反复用

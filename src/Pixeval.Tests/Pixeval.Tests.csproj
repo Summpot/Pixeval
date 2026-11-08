@@ -4,6 +4,8 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
+		<!-- Storage picker fixtures implement Avalonia platform interfaces; product does not opt in. -->
+		<AvaloniaAccessUnstablePrivateApis>true</AvaloniaAccessUnstablePrivateApis>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -21,4 +23,8 @@
 		<None Update="Fixtures\ProgressiveImages\*" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
+    <ItemGroup>
+        <Content Include="../Pixeval/i18n/**/*.json;../Pixeval/i18n/**/*.md"
+                 Link="i18n/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
 </Project>

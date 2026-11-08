@@ -27,7 +27,7 @@ public static class AppInfo
 
     private static string ClassicApplicationFolderPath { get; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentifier);
 
-    public static string ApplicationFolderPath { get; } = ApplicationDataDirectory.Override ?? (AppContext.BaseDirectory.Contains(
+    private static string DefaultApplicationFolderPath { get; } = AppContext.BaseDirectory.Contains(
             Path.Combine("WindowsApps", "PokerKo.4454907E5DDB5_"),
             StringComparison.OrdinalIgnoreCase)
         && !Directory.Exists(ClassicApplicationFolderPath)
@@ -38,27 +38,29 @@ public static class AppInfo
             "LocalCache",
             "Local",
             AppIdentifier)
-        : ClassicApplicationFolderPath);
+        : ClassicApplicationFolderPath;
 
-    public static string SettingsFolder { get; } = Path.Combine(ApplicationFolderPath, "Settings");
+    public static string ApplicationFolderPath => ApplicationDataDirectory.Override ?? DefaultApplicationFolderPath;
 
-    public static string CacheFolder { get; } = Path.Combine(ApplicationFolderPath, "Cache");
+    public static string SettingsFolder => Path.Combine(ApplicationFolderPath, "Settings");
 
-    public static string LogsFolder { get; } = Path.Combine(ApplicationFolderPath, "Logs");
+    public static string CacheFolder => Path.Combine(ApplicationFolderPath, "Cache");
 
-    public static string TempFolder { get; } = Path.Combine(ApplicationFolderPath, "Temp");
+    public static string LogsFolder => Path.Combine(ApplicationFolderPath, "Logs");
 
-    public static string ExtensionsFolder { get; } = Path.Combine(ApplicationFolderPath, "Extensions");
+    public static string TempFolder => Path.Combine(ApplicationFolderPath, "Temp");
 
-    private static string AppSettingsPath { get; } = Path.Combine(SettingsFolder, "settings.yaml");
+    public static string ExtensionsFolder => Path.Combine(ApplicationFolderPath, "Extensions");
 
-    private static string LoginContextPath { get; } = Path.Combine(SettingsFolder, "login_context.yaml");
+    private static string AppSettingsPath => Path.Combine(SettingsFolder, "settings.yaml");
 
-    private static string HomePageCardsPath { get; } = Path.Combine(SettingsFolder, "home_page_cards.yaml");
+    private static string LoginContextPath => Path.Combine(SettingsFolder, "login_context.yaml");
 
-    private static string NavigationMenuPath { get; } = Path.Combine(SettingsFolder, "navigation_menu.yaml");
+    private static string HomePageCardsPath => Path.Combine(SettingsFolder, "home_page_cards.yaml");
 
-    public static string DatabaseFilePath { get; } = Path.Combine(SettingsFolder, "Pixeval5.0.0.sqlite");
+    private static string NavigationMenuPath => Path.Combine(SettingsFolder, "navigation_menu.yaml");
+
+    public static string DatabaseFilePath => Path.Combine(SettingsFolder, "Pixeval5.0.0.sqlite");
 
     public static readonly Uri IconApplicationUri = new($"avares://{AppIdentifier}/Assets/logo.ico");
 
@@ -66,7 +68,9 @@ public static class AppInfo
 
     public static Versioning AppVersion { get; } = new();
 
-    static AppInfo()
+    static AppInfo() => InitializeDataDirectories();
+
+    internal static void InitializeDataDirectories()
     {
         _ = FileHelper.TryDeleteDirectory(TempFolder);
         // Ensure directories exist

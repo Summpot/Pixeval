@@ -24,6 +24,9 @@ public partial class LoginPage : IconContentPage
     private static LoginPage? _ActiveLoginPage;
     private CancellationTokenSource? _loadUsersCancellationTokenSource;
     private LoginAttempt? _loginAttempt;
+    private readonly FileLogger _logger = App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>();
+
+    internal Task LoginCompletion { get; private set; } = Task.CompletedTask;
 
     public LoginPage() => InitializeComponent();
 
@@ -143,8 +146,7 @@ public partial class LoginPage : IconContentPage
 
     public void ShowLoginError(Exception exception)
     {
-        App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
-            .LogError(nameof(LoginPage), exception);
+        _logger.LogError(nameof(LoginPage), exception);
         if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer)
             viewContainer.ShowError(
                 I18NManager.GetResource(MainPageResources.LoggingIn.Failed),
@@ -173,6 +175,7 @@ public partial class LoginPage : IconContentPage
 
         _ActiveLoginPage?.CancelLogin();
         _loginAttempt = new(viewModel, new());
+        LoginCompletion = _loginAttempt.Completion.Task;
         _ActiveLoginPage = this;
         viewModel.IsLoginInProgress = true;
         return _loginAttempt;
@@ -189,6 +192,7 @@ public partial class LoginPage : IconContentPage
             attempt.ViewModel.IsLoginInProgress = false;
         }
         attempt.Cancellation.Dispose();
+        attempt.Completion.TrySetResult();
     }
 
     private void CancelLogin()
@@ -208,8 +212,11 @@ public partial class LoginPage : IconContentPage
         if (ReferenceEquals(_loginAttempt, attempt) && !attempt.Cancellation.IsCancellationRequested)
             ShowLoginError(exception);
         else
-            App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>().LogError(nameof(LoginPage), exception);
+            _logger.LogError(nameof(LoginPage), exception);
     }
 
-    private sealed record LoginAttempt(LoginPageViewModel ViewModel, CancellationTokenSource Cancellation);
+    private sealed record LoginAttempt(LoginPageViewModel ViewModel, CancellationTokenSource Cancellation)
+    {
+        internal TaskCompletionSource Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
 }

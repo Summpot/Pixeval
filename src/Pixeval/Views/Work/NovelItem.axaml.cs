@@ -15,7 +15,12 @@ namespace Pixeval.Views.Work;
 
 public partial class NovelItem : WorkItem
 {
-    public NovelItem() => InitializeComponent();
+    public NovelItem()
+    {
+        InitializeComponent();
+        // Keep the author and tag actions inside a narrow card in the real tab shell.
+        SizeChanged += (_, e) => CoverBounds.MaxWidth = e.NewSize.Width < 360 ? 80 : double.PositiveInfinity;
+    }
 
     internal override void Recycle()
     {

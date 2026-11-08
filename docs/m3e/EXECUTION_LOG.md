@@ -910,3 +910,29 @@ CI：构建固定官方 demo 后把清单中的库传给验证脚本，上传提
 XAML 已经 XamlStyler，相关 C# 经 whitespace 格式化；结构化资源、工作流 YAML/PowerShell、文档本地链接及 `git diff --check` 通过。`verified-source-hashes.json` 固定 44 个源码/宿主/CI 文件；`static-validation.json`、`workflow-powershell-validation.json`、`inventory-comparison.json`、`cli-validation.json` 和 `final-state.json` 保存收尾结果。导航/页面/设置/首页来源清单不变，帮助文本包含全部新模式，无效模式返回 1 且不创建数据。功能提交与一次批次文档提交分开，不补写文档自身哈希。
 
 未覆盖与下一轮起点：原生 IME、系统焦点/读屏/文件启动、触摸/DPI/GPU、Linux/macOS/移动端/Browser 和远程 CI 仍待验收。普通 Mako 引擎取消限制枚举/后续分页及响应归属，不等于中断在途 HTTP；本轮直接详情/添加/删除令牌另有断言。数据库重读不等同完整应用重启，退出确认与恢复、真实服务权限和完整账号切换仍待验收。下一批优先 P12.04：非空分页、去重阈值、403/404 单项后继续、限流状态、取消/删除与批量提交边界；具体只读入口、现有单测覆盖和隔离下载传输要求见 `next-step-review.json`。继续后台验证，不自动启用 computer use。
+
+
+## 2026-11-08：正式 UI 可测试性重构（P00.03c）
+
+本批代码与记录作为一个完整功能提交，提交映射见 Git 历史。页面契约从 `tools/Pixeval.MigrationValidation` 迁入 `src/Pixeval.Tests/Ui`，作为 36 个可发现、可筛选的 MSTest 用例执行；包含原场景组合与俄语导航回归。产品 `App` 提供初始化前的依赖组合和正式启动入口，测试仅替换 HTTP 传输、窗口更新检查并隔离数据目录。搜索模型、设置视图模型、文件缓存和链接文字装饰按应用实例创建，退出时退订全局异常处理器。`PageTestHost` 通过正式标签页操作挂载/观察页面，不再自行实现导航或释放模型；另有 5 个直接使用未派生 `TabViewContainer` 的测试覆盖启动、替换、搜索路由/取消、关闭、数据库退出、迟到登录失败和连续应用的链接渲染。组件独立挂载与模型单测仍保留其各自证明范围。
+
+真实外壳暴露并修复了主窗口关闭未走完整释放路径、SQLite 恢复尚未结束就关闭连接、迟到登录错误访问已释放服务容器，以及跨应用复用设置/文字装饰所造成的 UI 线程绑定问题。正式导航也暴露了榜单重复初始化请求与窄内容区布局问题：保留显式刷新，避免相同榜单查询重置共享来源；修正 AdaptiveGrid 单项大于视口时的布局约束，并调整系列、小说、下载文件夹、详情和首页编辑抽屉的窄宽布局。新增网格回归。登录测试改为成功导航后重新打开账号页；预览操作重新获取真实导航后的焦点；评论列表关闭契约通过真实窗口释放，而非测试直接调用模型 Dispose。导航诊断滚动使用 ScrollViewer 实际支持的 PageDown。
+
+`verify-m3e.ps1` 和 Windows/Ubuntu 工作流统一执行测试项目，使用 `PIXEVAL_TEST_ARTIFACTS` 将截图、HTTP 记录、文化/运行时信息和隔离数据保存在本次输出目录，TRX 关联测试附件。原工具仅保留 inventory/capture/benchmark/ui；三个后台导出入口共享异步 headless 生命周期，避免清理数据库时阻塞 UI dispatcher。原 CLI 行为分支及重复 CI 循环已删除；原生扩展 UI 用例无显式可信库时仍如实跳过。主计划和 `VALIDATION_HOST.md` 已改为产品可测试性与正式测试入口，历史日志保留原执行方式。
+
+Windows 本地验证：完整覆盖按组执行及修复后相关复跑，去重后的 **508/508 通过、0 跳过**（原有 466 项、36 项页面契约、5 项正式外壳测试和 1 项网格回归）。`artifacts/ui-refactor-summary.json` 按测试 ID/数据行名称列出最终结果与对应 TRX；来源为 `ui-refactor-final-1/2/3/4` 与 `ui-refactor-closed-1/2`。其中 final-4 的扩展页渲染失败保留为复现证据，资源隔离修复后 closed-1 的原有测试、扩展页及外壳测试 **473/473** 通过；closed-2 的相关页面 **6/6** 通过。早期失败与中间构建不作最终通过证据。可信扩展沿用 `artifacts/m3e/2026-11-07/fixture-script-verified/fixture.json` 的固定库；未使用真实账号或用户扩展。
+
+桌面 Debug、测试 Release、导出工具 Release 构建通过，分别见 `ui-refactor-desktop-closed-build.log`、`ui-refactor-isolation-build.log`、`ui-refactor-export-closed-build.log`。警告保存在构建日志；测试中的存储选择器夹具显式启用 Avalonia 平台接口，产品没有此 opt-in，导出工具已移除不再需要的 opt-in。`ui-refactor-tool-inventory/capture/benchmark` 均正常退出：清单保持 22 个导航入口、33 个页面、6 个设置组、19 个首页来源；导出 42 张图片与 30 个基准工作负载样本。这些基准输出用于验证导出入口，不替代历史性能比较。相关 XAML 经 XamlStyler、C# 经 whitespace 格式化，工作流 YAML/PowerShell、更新文档的本地链接及 diff whitespace 检查通过。`ui-refactor-environment.log` 和 `ui-refactor-source-hashes.json` 保存本轮环境与源码状态。
+
+边界：应用仍有静态入口，集成测试按进程内串行运行，不声称同进程并行多应用已支持。原生 IME、系统焦点、GPU/DPI、其他操作系统和远程 CI 未在本轮运行；此前待验收的平台项目不因此变为完成。后续页面验收继续写入正式测试项目，不恢复工具中的平行 UI/生命周期实现。
+
+
+## 2026-11-08：以组合驱动正式外壳，封闭测试导航替代路径
+
+本批代码与记录按同一功能单元提交，提交映射见 Git 历史。`TabViewContainer` 改为 sealed，导航提交后发布用于观察结果的 `PageOpened` 事件。`PageTestHost` 改为普通组合对象，窗口直接承载其正式 `Shell`；移除导航 override、隐式目标关闭及自动返回。观察器只记录结果，目标页保持实际选中和存活；各场景在操作及断言之后显式调用正式关闭/选择入口。被替换的原页不允许由驱动器恢复。新架构测试禁止测试程序集定义任何 `ViewContainerBase` 派生类，新行为回归验证目标页不会被观察器自动关闭、替换页不会被错误回退。
+
+相应页面契约已切换到组合入口；历史、系列、用户、作品来源和相关列表等关闭契约移除直接 Dispose 模型的模拟，改走 `Shell.CloseAllPages()`。独立组件或模型的 Dispose 单测保持其有限证明范围。完整回归发现下载列表删除最后一个选中项后原命令失去可用焦点，测试改从仍启用的溢出入口发送 Escape，保留键盘关闭断言；没有改写产品关闭行为或增加自动重试。`src/Pixeval.Tests/AGENTS.md` 固化日常测试约定，主计划 §3.3/§10.3 和验证入口文档改为当前工程结构，后续批次无需额外重复“重构后”提示。
+
+Windows 本地分组执行全量测试并专项复跑，按测试 ID/数据行名称去重后 **511/511 通过、0 跳过**；包括原有 508 项、2 项组合驱动器回归和 1 项架构检查。详见 `artifacts/ui-composition-summary.json`；四组 TRX 在 `ui-composition-1/2/3/4`，下载测试修正及外壳/架构专项在 `ui-composition-closed`（9/9）。第二组的早期 Escape 失败保留为复现证据，由专项成功结果取代，不隐去失败记录。固定原生扩展仍使用此前 `fixture-script-verified/fixture.json` 指定的可信库，未访问个人账户或用户扩展。
+
+桌面 Debug 与测试 Release 构建通过，日志为 `ui-composition-desktop-build.log`、`ui-composition-final-build.log`；构建警告保留在日志。C# whitespace 格式化、文档链接及 diff 检查通过；最终源码清单在 `ui-composition-source-hashes.json`。测试仍进程内串行；本轮不扩展原生 IME、系统焦点、GPU/DPI 或其他平台的验收结论，远程 CI 未在本地替代验证。

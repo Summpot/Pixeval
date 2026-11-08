@@ -17,7 +17,7 @@ using Pixeval.Utilities;
 
 namespace Pixeval.Models.Database.Managers;
 
-public sealed class HistoryPersistHelper : IDisposable
+public sealed class HistoryPersistHelper : IDisposable, IAsyncDisposable
 {
     private readonly BrowseHistoryPersistentManager _browseHistoryPersistentManager;
     private readonly DownloadHistoryPersistentManager _downloadHistoryPersistentManager;
@@ -507,6 +507,14 @@ public sealed class HistoryPersistHelper : IDisposable
                 _removedDownloadHistoryKeys.Clear();
             });
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Dispose();
+        // The provider owns the shared SQLite connection. Do not let it close the
+        // native handle while a restore query is still executing on a worker.
+        await RestoreTask;
     }
 
     /// <inheritdoc />

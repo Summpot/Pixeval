@@ -12,6 +12,21 @@ public sealed class AdaptiveGridTest
     private const double Tolerance = 0.05;
 
     [TestMethod]
+    public void ItemWiderThanViewport_IsMeasuredAndArrangedWithinViewport()
+    {
+        var grid = new AdaptiveGrid { ItemSize = 300, LineSize = 250 };
+        var child = new Border();
+        grid.Children.Add(child);
+
+        grid.Measure(new(260, double.PositiveInfinity));
+        grid.Arrange(new(new Size(260, 500)));
+
+        Assert.AreEqual(260, child.Bounds.Width, Tolerance);
+        Assert.AreEqual(1, grid.ItemsPerLine);
+        Assert.IsTrue(child.Bounds.Right <= grid.Bounds.Width);
+    }
+
+    [TestMethod]
     public void Justify_WithFiniteAxes_UsesVirtualLineSlots()
     {
         var grid = CreateGrid(GridItemsAlignment.Justify);

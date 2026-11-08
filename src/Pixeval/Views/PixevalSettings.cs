@@ -32,7 +32,7 @@ public class PixevalSettings : ViewModelBase
 
     public static long MyId => Me.Id;
 
-    public static PixevalSettings Instance { get; } = new();
+    public static PixevalSettings Instance => App.AppViewModel.SettingsViewModel;
 
     public bool IsLoggedIn => App.AppViewModel.MakoClient.Me is not null;
 

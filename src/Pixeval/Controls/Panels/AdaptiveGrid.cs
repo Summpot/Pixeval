@@ -277,6 +277,10 @@ public class AdaptiveGrid : Panel, INavigableContainer, IOrientationBasedMeasure
         var availableMinor = this.Minor(availableSize);
         var availableMajor = this.Major(availableSize);
 
+        // A preferred item size must still fit a viewport narrower than one item.
+        if (itemSizeSet && double.IsFinite(availableMinor))
+            itemSize = double.Min(itemSize, availableMinor);
+
         var childConstraint = this.MinorMajorSize(
             itemSizeSet ? itemSize : availableMinor,
             lineSizeSet ? lineSize : availableMajor);

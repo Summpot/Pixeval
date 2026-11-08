@@ -15,7 +15,11 @@ namespace Pixeval.Views.Entry;
 
 public partial class SeriesItem : Card
 {
-    public SeriesItem() => InitializeComponent();
+    public SeriesItem()
+    {
+        InitializeComponent();
+        SizeChanged += (_, e) => SeriesLayout.ColumnDefinitions[0].Width = new GridLength(e.NewSize.Width < 320 ? 64 : 96);
+    }
 
     private void LatestContentButton_OnClick(object? sender, RoutedEventArgs e)
     {

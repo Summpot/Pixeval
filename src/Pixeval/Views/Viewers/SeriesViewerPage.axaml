@@ -87,9 +87,13 @@
                         Focusable="True"
                         HorizontalScrollBarVisibility="Disabled">
                         <Grid
+                            x:Name="ProfileGrid"
                             Margin="16"
                             ColumnDefinitions="72,*"
-                            ColumnSpacing="16">
+                            ColumnSpacing="16"
+                            RowDefinitions="Auto,Auto"
+                            RowSpacing="8"
+                            SizeChanged="ProfileGrid_OnSizeChanged">
                             <Image
                                 Width="72"
                                 Height="96"
@@ -97,6 +101,7 @@
                                 controls:Source.Cache="{Binding CoverUrl}"
                                 Stretch="Uniform" />
                             <StackPanel
+                                x:Name="ProfileText"
                                 Grid.Column="1"
                                 MaxWidth="650"
                                 HorizontalAlignment="Stretch"

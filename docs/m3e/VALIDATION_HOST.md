@@ -1,53 +1,79 @@
-# 隔离验证宿主
+# 正式 UI 测试与导出工具
 
-`tools/Pixeval.MigrationValidation` 只用于迁移验收，不是第二套产品 UI。页面、注册表、设置模型、资源、样式、导航容器和字体全部来自主项目。
+页面验收现属于 `src/Pixeval.Tests/Ui`，由 MSTest 发现并执行，分类为 `UI`。它们使用真实 `App.Initialize`、主题、服务注册及 `TabViewContainer`，不再覆盖应用初始化来绕过正式流程。测试只替换 HTTP 传输和外部更新检查，并为每个用例初始化独立数据目录。应用搜索模型、设置视图模型、文件缓存和链接文字装饰随应用实例隔离。当前应用仍有静态入口，因此这些集成测试明确串行运行；本次没有声称支持同进程并行的多个 Pixeval 应用。
 
-在仓库根目录使用系统 `dotnet`，由 `global.json` 的版本和 `rollForward` 策略解析 SDK；无需独立安装 10.0.401。记录 `dotnet --info` 中的实际 SDK/runtime 后运行：
+`PageTestHost` 是普通测试驱动器，持有 `App.CreateViewContainer()` 返回的正式 `Shell`；窗口直接承载该外壳。`TabViewContainer` 为 sealed，驱动器没有 UI 继承、导航 override 或隐式转换；`UiArchitectureTests` 禁止测试程序集定义另一种 `ViewContainerBase`。产品的 `PageOpened` 在加入/选中页面、完成替换后发布，驱动器只记录导航信息，目标页面保持真实的选中、加载和存活状态。该事件表示导航已提交，不替代 Loaded 或请求完成；场景按契约等待布局与异步结果。
+
+场景需要返回原页时，先断言导航结果，再显式调用 `CloseDestinationAndReturn()`，由正式 `ClosePage` / `SelectPage` 完成；替换导航已经关闭原页时，该操作失败，不会重建或复活它。初始挂载不计作被测导航；临时卸载和关闭仍是不同操作。关闭契约调用 `Shell.CloseAllPages()` 或 `Window.Close()`，不通过测试手动释放模型来替代。
+
+`ProductionShellTests` 覆盖启动、替换、搜索到结果页、关闭/取消、数据库退出、迟到登录失败和连续应用的链接渲染，并验证组合驱动器不会自动关闭目标或恢复已替换的原页。组件独立挂载与模型 Dispose 单测仅证明各自契约，不能扩大为完整应用关闭验收。
+
+```powershell
+dotnet build src/Pixeval.Tests/Pixeval.Tests.csproj -c Release
+# 全部 UI 场景；也可用 FullyQualifiedName~RankingPage 精确筛选。
+dotnet src/Pixeval.Tests/bin/Release/net10.0/Pixeval.Tests.dll --filter "TestCategory=UI" --report-trx --results-directory artifacts/ui-tests
+# 与 CI 相同的构建与完整测试（含 UI）；原生扩展样本必须由用户/仓库明确提供。
+./scripts/verify-m3e.ps1 -OutputDirectory artifacts/m3e/my-run -ExtensionFixture <固定样本库绝对路径>
+```
+
+没有 `PIXEVAL_TEST_EXTENSION_FIXTURE` 时原生扩展 UI 用例明确标为未执行，不将其当作通过；CI 构建固定样本并传入。截图与请求/契约日志通过 TestContext 作为测试附件关联到 TRX。验证脚本设置 `PIXEVAL_TEST_ARTIFACTS` 将这些附件及隔离数据保存在输出目录内，供 CI 上传；直接运行测试时也可显式设置该变量。失败时仍保留已生成附件和本次隔离数据，不能导入个人账号或配置。普通 UI 测试无需启动原生窗口或操作桌面。
+
+`tools/Pixeval.MigrationValidation` 仅保留以下辅助用途，不再承担页面行为测试：
 
 ```powershell
 dotnet build tools/Pixeval.MigrationValidation/Pixeval.MigrationValidation.csproj -c Release
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll inventory artifacts/m3e/my-run/inventory
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll capture artifacts/m3e/my-run/capture
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll benchmark artifacts/m3e/my-run/performance
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll navigation artifacts/m3e/my-run/navigation
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll search artifacts/m3e/my-run/search
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll search-options artifacts/m3e/my-run/search-options
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll search-page artifacts/m3e/my-run/search-page
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll saucenao artifacts/m3e/my-run/saucenao
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll user-pages artifacts/m3e/my-run/user-pages
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll user-details artifacts/m3e/my-run/user-details
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll series-page artifacts/m3e/my-run/series-page
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll series-details artifacts/m3e/my-run/series-details
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-info artifacts/m3e/my-run/work-info
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll comment-send artifacts/m3e/my-run/comment-send
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll comment-list artifacts/m3e/my-run/comment-list
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-series artifacts/m3e/my-run/work-series
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll download-pages artifacts/m3e/my-run/download-pages
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll subscription-editor artifacts/m3e/my-run/subscription-editor
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll download-folders artifacts/m3e/my-run/download-folders
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-feeds artifacts/m3e/my-run/work-feeds
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-sources artifacts/m3e/my-run/work-sources
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-related artifacts/m3e/my-run/work-related
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll history-pages artifacts/m3e/my-run/history-pages
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll home-cards artifacts/m3e/my-run/home-cards
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll home-parameters artifacts/m3e/my-run/home-parameters
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll home-sources artifacts/m3e/my-run/home-sources
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll spotlight artifacts/m3e/my-run/spotlight
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll login artifacts/m3e/my-run/login
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-cards artifacts/m3e/my-run/work-cards
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll work-selection artifacts/m3e/my-run/work-selection
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll extension-management artifacts/m3e/my-run/extension-management
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll bookmark-tags artifacts/m3e/my-run/bookmark-tags
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll bookmark-page artifacts/m3e/my-run/bookmark-page
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll ranking-page artifacts/m3e/my-run/ranking-page
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll documentation artifacts/m3e/my-run/documentation
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll dialogs artifacts/m3e/my-run/dialogs
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll ui artifacts/m3e/my-run/native
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll inventory artifacts/m3e/inventory-new
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll capture artifacts/m3e/capture-new
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll benchmark artifacts/m3e/benchmark-new
+dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll ui artifacts/m3e/ui-new
 ```
 
-每个输出路径必须不存在。宿主在任何 App/AppInfo 初始化之前设置独立数据目录；设置、账户数据库、扩展、历史、下载目标均指向输出目录下的 `data/`。不读取个人配置，不清理旧证据；不要向此宿主输入真实账号或令牌。验证结束保留数据用于诊断，分享前检查内容。
+输出目录必须不存在。`ui` 使用正式桌面生命周期，会执行更新检查，不是离线测试；仅用于明确需要原生交互的人工验收。Headless 不能证明原生 IME、系统剪贴板、浏览器、GPU、DPI 或跨平台行为。
 
-默认语言为 `zh-Hans`。可在启动前设置进程环境变量 `PIXEVAL_MIGRATION_CULTURE`，例如 PowerShell 的 `$env:PIXEVAL_MIGRATION_CULTURE = 'fr-FR'`，使用另一个全新输出目录运行同一模式；结束后用 `Remove-Item Env:PIXEVAL_MIGRATION_CULTURE` 恢复默认。当前应用提供中文、英语、法语和俄语翻译。inventory/headless 模式检查请求语言是否有对应翻译，并在 `validation-context.txt` 记录实际 UI 语言、runtime 和操作系统；无对应翻译则失败，不用回退语言冒充验证。某种语言缺失的具体资源仍按生产回退规则处理，文化名称存在不代表翻译全部齐全。固定业务样本文本仍可包含中文，语言参数只切换真实应用资源。
+## 测试定位
+
+下列名称是 `PageContractTests` 的 MSTest 方法，可通过 `FullyQualifiedName` 筛选；下文保留的短名是契约场景标识，**不再是工具 CLI 模式**。历史执行日志保持原样，记录的是当时执行方式。
+
+| 测试方法 | 场景实现 |
+| --- | --- |
+| `NavigationEditor` | `NavigationEditorValidation.cs` |
+| `NativeExtension` | `NativeExtensionValidation.cs` |
+| `SearchCompletion` | `SearchCompletionValidation.cs` |
+| `SearchArguments` | `SearchArgumentsValidation.cs` |
+| `SearchPage` | `SearchPageValidation.cs` |
+| `SauceNao` | `SauceNaoValidation.cs` |
+| `UserPages` | `UserPagesValidation.cs` |
+| `UserDetails` | `UserDetailsValidation.cs` |
+| `SeriesPage` | `SeriesPageValidation.cs` |
+| `SeriesDetails` | `SeriesDetailsValidation.cs` |
+| `WorkSeries` | `WorkSeriesValidation.cs` |
+| `WorkInfo` | `WorkInfoValidation.cs` |
+| `DownloadFolders` | `DownloadFoldersValidation.cs` |
+| `SubscriptionEditor` | `SubscriptionEditorValidation.cs` |
+| `DownloadPages` | `DownloadPagesValidation.cs` |
+| `CommentList` | `CommentListValidation.cs` |
+| `CommentSend` | `CommentSendValidation.cs` |
+| `WorkFeeds` | `WorkFeedsValidation.cs` |
+| `WorkSources` | `WorkSourcesValidation.cs` |
+| `WorkRelated` | `WorkRelatedValidation.cs` |
+| `HistoryPages` | `HistoryPagesValidation.cs` |
+| `HomeCards` | `HomeCardsValidation.cs` |
+| `HomeParameters` | `HomeParametersValidation.cs` |
+| `HomeSources` | `HomeSourcesValidation.cs` |
+| `Spotlight` | `SpotlightValidation.cs` |
+| `LoginLifetime` | `LoginLifetimeValidation.cs` |
+| `WorkCards` | `WorkCardsValidation.cs` |
+| `WorkSelection` | `WorkSelectionValidation.cs` |
+| `ExtensionManagement` | `ExtensionManagementValidation.cs` |
+| `BookmarkTags` | `BookmarkTagsValidation.cs` |
+| `BookmarksPage` | `BookmarksPageValidation.cs` |
+| `RankingPage` | `RankingPageValidation.cs` |
+| `ViewerToolbar` | `ViewerToolbarValidation.cs` |
+| `Documentation` | `DocumentationValidation.cs` |
+| `Dialog` | `DialogValidation.cs` |
+| `NavigationInRussian` | `NavigationEditorValidation.cs` |
+
+## 场景契约与证明边界
 
 ## inventory
 
@@ -69,7 +95,7 @@ dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationVa
 
 使用真实 App 桌面生命周期与外壳，在隔离目录正常启动。产品本身已有的更新检查等联网行为仍然存在。用于原生交互验收时记录操作、主题、缩放、输入设备和正常退出；启动成功或 accessibility tree 可见不算验收完成。
 
-可选第三参数为自己构建并信任的固定原生扩展库，复用 `extensions` 的单库复制流程，在 App 初始化前复制到本次全新数据目录。不安装到个人应用，不扫描外部扩展，也不绕过实际页面入口：
+可选第三参数为自己构建并信任的固定原生扩展库，使用单库复制流程，在 App 初始化前复制到本次全新数据目录。不安装到个人应用，不扫描外部扩展，也不绕过实际页面入口：
 
 ```powershell
 $fixture = Get-Content artifacts/m3e/my-fixture/fixture.json -Raw | ConvertFrom-Json
@@ -108,7 +134,7 @@ dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationVa
 
 在真实 ExtensionsPage/ExtensionService 中注册托管固定宿主元数据，验证浅深主题和宽窄窗：长名称/作者/描述、管理栏主项与溢出项标签、启停键盘操作及模型回写、上移/下移/置顶/置底、安排卸载/取消卸载。通过真实设置文件重载验证启停、优先级及待卸载目标；隔离目录内的占位文件必须在安排/取消时保持存在。有效帮助地址保留原入口及目标，空串/纯空白地址隐藏入口，不调用真实 URI launcher。
 
-这些占位文件只是文本哨兵，绝不作为原生库加载；此模式不需要第三个参数。输出 `extension-management-contracts.txt` 和页面截图。原生 ABI/设置编辑器仍由 `extensions` 模式验证；安装包、外部帮助/目录打开、批量过期扩展及重启后实际删除另行验收。
+这些占位文件只是文本哨兵，绝不作为原生库加载；该测试不需要原生扩展库。输出 `extension-management-contracts.txt` 和页面截图。原生 ABI/设置编辑器由 `NativeExtension` 测试验证；安装包、外部帮助/目录打开、批量过期扩展及重启后实际删除另行验收。
 
 ## bookmark-tags
 
@@ -226,7 +252,9 @@ dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationVa
 ./scripts/build-m3e-extension-fixture.ps1 -OutputDirectory artifacts/m3e/my-fixture -Generator 'Visual Studio 18 2026' -Architecture x64
 $fixture = Get-Content artifacts/m3e/my-fixture/fixture.json -Raw | ConvertFrom-Json
 ./scripts/verify-m3e.ps1 -OutputDirectory artifacts/m3e/my-tests -ExtensionFixture $fixture.library
-dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll extensions artifacts/m3e/my-extensions $fixture.library
+# 仅执行原生扩展 UI 契约时：
+$env:PIXEVAL_TEST_EXTENSION_FIXTURE = $fixture.library
+dotnet src/Pixeval.Tests/bin/Release/net10.0/Pixeval.Tests.dll --filter "FullyQualifiedName=Pixeval.Tests.Ui.PageContractTests.NativeExtension" --report-trx --results-directory artifacts/m3e/my-extensions
 ```
 
 Linux 可省略 Generator/Architecture，由 CMake 选择本机工具链。脚本只在新目录克隆精确提交、生成并构建官方 demo，记录日志和 DLL/SO 的 SHA256；IDL 生成器 net8.0 通过临时 DOTNET_ROLL_FORWARD=Major 使用已固定的 .NET 10 runtime，脚本 finally 恢复环境变量。
@@ -279,7 +307,7 @@ Linux 可省略 Generator/Architecture，由 CMake 选择本机工具链。脚�
 
 ## viewer-toolbar
 
-使用 `dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll viewer-toolbar <新证据目录>`。复用离线 HTTP 拦截器，以内置 Pixiv 图标作为固定图片响应，经过真实图像加载管道打开 IllustrationViewerPage；所有数据和浏览记录仅写入该次隔离目录，未知 HTTP 请求失败，不使用真实账号。
+使用 `FullyQualifiedName=Pixeval.Tests.Ui.PageContractTests.ViewerToolbar` 筛选测试。复用离线 HTTP 拦截器，以内置 Pixiv 图标作为固定图片响应，经过真实图像加载管道打开 IllustrationViewerPage；所有数据和浏览记录仅写入该次隔离目录，未知 HTTP 请求失败，不使用真实账号。
 
 浅深主题分别覆盖翻页式/连续式浏览，1000 和 420 DIP 窗宽。验证浮动栏与缩放百分比、旋转/镜像及模型回写、窄窗溢出缩放、Escape 关闭、键盘聚焦时保持可见、自动播放右键间隔菜单和双向开关。缩放断言等待原动画收敛，不修改生产动画时长。输出 `viewer-toolbar-contracts.txt`、`offline-requests.txt` 和页面 PNG；单元测试另覆盖命令参数、CanExecute、动态隐藏、长标签和溢出前后的同一切换控件。
 

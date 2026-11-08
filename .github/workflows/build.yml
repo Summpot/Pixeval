@@ -39,40 +39,11 @@ jobs:
         shell: pwsh
         run: ./scripts/build-m3e-extension-fixture.ps1 -OutputDirectory artifacts/m3e/extension-fixture
 
-      - name: Build desktop and run unit tests
+      - name: Build desktop and run unit and UI tests
         shell: pwsh
         run: |
           $fixture = Get-Content artifacts/m3e/extension-fixture/fixture.json -Raw | ConvertFrom-Json
           ./scripts/verify-m3e.ps1 -OutputDirectory artifacts/m3e/ci -ExtensionFixture $fixture.library
-
-      - name: Verify native extension pages and settings contracts
-        shell: pwsh
-        run: |
-          dotnet build tools/Pixeval.MigrationValidation/Pixeval.MigrationValidation.csproj -c Release --nologo
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $fixture = Get-Content artifacts/m3e/extension-fixture/fixture.json -Raw | ConvertFrom-Json
-          dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll extensions artifacts/m3e/extension-pages $fixture.library
-          exit $LASTEXITCODE
-
-      - name: Verify offline page contracts
-        shell: pwsh
-        run: |
-          $evidenceRoot = 'artifacts/m3e/offline-pages'
-          New-Item -ItemType Directory -Path $evidenceRoot -ErrorAction Stop | Out-Null
-          foreach ($mode in @('navigation', 'search', 'search-options', 'search-page', 'saucenao', 'user-pages', 'user-details', 'series-page', 'series-details', 'work-info', 'work-series', 'comment-send', 'comment-list', 'download-pages', 'subscription-editor', 'download-folders', 'work-feeds', 'work-sources', 'work-related', 'history-pages', 'home-cards', 'home-parameters', 'home-sources', 'spotlight', 'login', 'work-cards', 'work-selection', 'extension-management', 'bookmark-tags', 'bookmark-page', 'ranking-page', 'viewer-toolbar', 'documentation', 'dialogs')) {
-            $modeDirectory = Join-Path $evidenceRoot $mode
-            dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll $mode $modeDirectory *> "$modeDirectory.log"
-            $result = $LASTEXITCODE
-            Get-Content "$modeDirectory.log" | Write-Host
-            if ($result -ne 0) { exit $result }
-          }
-
-          $env:PIXEVAL_MIGRATION_CULTURE = 'ru-RU'
-          $localizedDirectory = Join-Path $evidenceRoot 'navigation-ru-RU'
-          dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationValidation.dll navigation $localizedDirectory *> "$localizedDirectory.log"
-          $result = $LASTEXITCODE
-          Get-Content "$localizedDirectory.log" | Write-Host
-          if ($result -ne 0) { exit $result }
 
       - name: Upload validation evidence
         if: always()
@@ -83,8 +54,3 @@ jobs:
             artifacts/m3e/ci
             artifacts/m3e/extension-fixture/*.log
             artifacts/m3e/extension-fixture/fixture.json
-            artifacts/m3e/extension-pages/*.png
-            artifacts/m3e/extension-pages/*.txt
-            artifacts/m3e/offline-pages/*.log
-            artifacts/m3e/offline-pages/*/*.png
-            artifacts/m3e/offline-pages/*/*.txt

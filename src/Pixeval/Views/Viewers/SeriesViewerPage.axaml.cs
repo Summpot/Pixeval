@@ -67,7 +67,16 @@ public partial class SeriesViewerPage : IconContentPage, IDisposable
             : null;
     }
 
-    /// <inheritdoc />
+    private void ProfileGrid_OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        // The tab shell also consumes horizontal space. Stack the profile at the
+        // available content width rather than assuming the page fills the window.
+        var narrow = e.NewSize.Width < 280;
+        Grid.SetRow(ProfileText, narrow ? 1 : 0);
+        Grid.SetColumn(ProfileText, narrow ? 0 : 1);
+        Grid.SetColumnSpan(ProfileText, narrow ? 2 : 1);
+    }
+
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);

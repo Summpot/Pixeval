@@ -14,6 +14,14 @@ public partial class DownloadFolder : UserControl
 
     public DownloadFolder() => InitializeComponent();
 
+    private void FolderLayout_OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        var narrow = e.NewSize.Width < 280;
+        Grid.SetRow(FolderText, narrow ? 1 : 0);
+        Grid.SetColumn(FolderText, narrow ? 0 : 1);
+        Grid.SetColumnSpan(FolderText, narrow ? 3 : 1);
+    }
+
     private void Button_OnClicked(object? sender, RoutedEventArgs e)
     {
         if (DataContext is DownloadFolderViewModel vm)

@@ -346,13 +346,31 @@
         </Style>
     </ControlTheme>
 
+    <!--  Decorations belong to this application, not Avalonia's first UI dispatcher.  -->
+    <ControlTheme
+        x:Key="{x:Type HyperlinkButton}"
+        BasedOn="{StaticResource {x:Type HyperlinkButton}}"
+        TargetType="{x:Type HyperlinkButton}">
+        <Style Selector="^ /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="TextBlock.TextDecorations">
+                <TextDecorationCollection>
+                    <TextDecoration Location="Underline" />
+                </TextDecorationCollection>
+            </Setter>
+        </Style>
+    </ControlTheme>
+
     <ControlTheme
         x:Key="InlineHyperlinkTheme"
         BasedOn="{StaticResource TransparentButtonStyle}"
         TargetType="{x:Type HyperlinkButton}">
         <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
         <Setter Property="m3:MaterialText.Style" Value="{m3:Typography BodyMedium}" />
-        <Setter Property="TextBlock.TextDecorations" Value="Underline" />
+        <Setter Property="TextBlock.TextDecorations">
+            <TextDecorationCollection>
+                <TextDecoration Location="Underline" />
+            </TextDecorationCollection>
+        </Setter>
     </ControlTheme>
 
     <ControlTheme

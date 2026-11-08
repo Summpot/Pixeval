@@ -16,6 +16,7 @@ namespace Pixeval.Views.Capability;
 
 public partial class WorkRankingPage : IconContentPage
 {
+    private (SimpleWorkType Type, RankOption Rank, DateTime Date)? _currentQuery;
     public WorkRankingPage() : this(PixevalSettings.SimpleWorkType, GetDefaultRankOption(PixevalSettings.SimpleWorkType), MaxDate)
     {
     }
@@ -28,7 +29,10 @@ public partial class WorkRankingPage : IconContentPage
         RankOptionComboBox.SelectedValue = rankOption;
         RankDateTimeCalendarDatePicker.SelectedDate = rankingDate;
         if (viewModel is not null)
+        {
+            _currentQuery = (simpleWorkType, rankOption, rankingDate.Date);
             WorkContainer.SetViewModel(viewModel);
+        }
         else
             ChangeSource();
     }
@@ -79,7 +83,7 @@ public partial class WorkRankingPage : IconContentPage
 
     private void WorkContainer_OnRefreshRequested(object? sender, RoutedEventArgs e)
     {
-        ChangeSource();
+        ChangeSource(force: true);
     }
 
     private void CalendarDatePicker_OnSelectedDateChanged(object? sender, SelectionChangedEventArgs e)
@@ -89,8 +93,14 @@ public partial class WorkRankingPage : IconContentPage
         ChangeSource();
     }
 
-    private void ChangeSource()
+    private void ChangeSource(bool force = false)
     {
+        var query = (SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>(),
+            RankOptionComboBox.GetSelectedValue<RankOption>(),
+            (RankDateTimeCalendarDatePicker.SelectedDate ?? MaxDate).Date);
+        if (!force && _currentQuery == query)
+            return;
+        _currentQuery = query;
         WorkContainer.ResetEngine(App.AppViewModel.MakoClient.WorkRanking(
             SimpleWorkTypeComboBox.GetSelectedValue<SimpleWorkType>(),
             RankOptionComboBox.GetSelectedValue<RankOption>(),

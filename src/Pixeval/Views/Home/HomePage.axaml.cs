@@ -1,6 +1,7 @@
 // Copyright (c) Pixeval.
 // Licensed under the GPL-3.0 License.
 
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using Avalonia.Controls;
@@ -28,6 +29,7 @@ public sealed partial class HomePage : DrawerPage
     {
         DataContext = ViewModel = new HomePageViewModel();
         InitializeComponent();
+        SizeChanged += (_, e) => DrawerLength = Math.Min(320, Math.Max(0, e.NewSize.Width));
 
         _cards = App.AppViewModel.HomePageCards;
         ViewModel.PropertyChanged += ViewModel_OnPropertyChanged;

@@ -31,12 +31,15 @@ using Pixeval.Views.ViewContainers;
 
 namespace Pixeval;
 
-public class App : Application
+public class App : Application, IAsyncDisposable
 {
     /// <summary>
     /// 确保随时能记录日志
     /// </summary>
     private FileLogger Logger { get; } = new(AppInfo.LogsFolder);
+
+    private readonly List<Action> _unregisterExceptionHandlers = [];
+    private bool _disposed;
 
     private bool _allowExitWithActiveSubscriptionSync;
     private bool _isExitConfirmationOpen;
@@ -49,6 +52,7 @@ public class App : Application
         AppViewModel = new AppViewModel(this, Logger);
         CultureInfo.CurrentUICulture = CultureInfo.CurrentCulture = LanguageHelper.FindClosest(AppViewModel.AppSettings.ApplicationSettings.CultureName);
         I18NManager.Initialize();
+        Pixeval.Models.Settings.LocalSettingsEntryHelper.Initialize();
         AppViewModel.InitializeProvider();
         AppViewModel.MakoClient.RateLimitEncountered += MakoClient_OnRateLimitEncountered;
 
@@ -64,6 +68,19 @@ public class App : Application
 #if DEBUG
         this.AttachDeveloperTools();
 #endif
+    }
+
+    /// <summary>Configure external services before any view resolves them.</summary>
+    protected internal virtual void ConfigureServices(IServiceCollection services) { }
+
+    protected internal virtual MakoClient CreateMakoClient(MakoConfiguration configuration, FileLogger logger) =>
+        new(configuration, logger);
+
+    public static TabViewContainer CreateViewContainer(bool enableTabTearOff = false)
+    {
+        var container = new TabViewContainer();
+        container.SetInterTabController(enableTabTearOff);
+        return container;
     }
 
     public static AppViewModel AppViewModel { get; private set; } = null!;
@@ -125,20 +142,26 @@ public class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        var viewContainer = new TabViewContainer();
+        // A UI platform owns window creation. Headless consumers initialize the same App
+        // and explicitly open views without triggering login or platform startup work.
+        if (ApplicationLifetime is not (IClassicDesktopStyleApplicationLifetime or ISingleViewApplicationLifetime))
+        {
+            base.OnFrameworkInitializationCompleted();
+            return;
+        }
+        var viewContainer = CreateViewContainer(ApplicationLifetime is IClassicDesktopStyleApplicationLifetime);
 
         switch (ApplicationLifetime)
         {
             case IClassicDesktopStyleApplicationLifetime desktop:
                 desktop.ShutdownMode = ShutdownMode.OnLastWindowClose;
-                desktop.Exit += async static (o, e) =>
+                desktop.Exit += async (o, e) =>
                 {
                     AppInfo.SaveContext();
                     AppInfo.AppVersion.ApplyPendingUpdateOnExit();
-                    await AppViewModel.DisposeAsync();
+                    await DisposeAsync();
                 };
 
-                viewContainer.SetInterTabController(true);
 #if PIXEVAL_MCP
                 _ = AppViewModel.AppServiceProvider.GetService<IPixevalMcpService>()?.StartAsync();
 #endif
@@ -156,17 +179,16 @@ public class App : Application
 
                 break;
             case ISingleViewApplicationLifetime singleViewPlatform:
-                viewContainer.SetInterTabController(false);
                 singleViewPlatform.MainView = viewContainer;
                 break;
         }
 
-        _ = LoginAsync(viewContainer);
+        _ = OpenInitialPageAsync(viewContainer);
 
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static async Task LoginAsync(ViewContainerBase viewContainer)
+    public static async Task OpenInitialPageAsync(ViewContainerBase viewContainer)
     {
         Exception? loginError = null;
         try
@@ -213,9 +235,28 @@ public class App : Application
                     I18NManager.GetResource(MiscResources.RateLimitNotification.ContentFormatted, args.RetryAt.ToLocalTime()));
         });
 
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+        AppViewModel.MakoClient.RateLimitEncountered -= MakoClient_OnRateLimitEncountered;
+        try
+        {
+            await AppViewModel.DisposeAsync();
+        }
+        finally
+        {
+            foreach (var unregister in _unregisterExceptionHandlers)
+                unregister();
+            _unregisterExceptionHandlers.Clear();
+            GC.SuppressFinalize(this);
+        }
+    }
+
     private void RegisterUnhandledExceptionHandler()
     {
-        Dispatcher.UIThread.UnhandledException += (_, e) =>
+        DispatcherUnhandledExceptionEventHandler dispatcherHandler = (_, e) =>
         {
             if (e.Exception is OutOfMemoryException or StackOverflowException or AccessViolationException)
             {
@@ -227,17 +268,23 @@ public class App : Application
             Logger.LogError(nameof(Dispatcher.UnhandledException), e.Exception);
             e.Handled = true;
         };
-        TaskScheduler.UnobservedTaskException += (o, e) =>
+        EventHandler<UnobservedTaskExceptionEventArgs> taskHandler = (o, e) =>
         {
             Logger.LogError(nameof(TaskScheduler.UnobservedTaskException), e.Exception);
             e.SetObserved();
         };
-        AppDomain.CurrentDomain.UnhandledException += (o, e) =>
+        UnhandledExceptionEventHandler domainHandler = (o, e) =>
         {
             if (e.IsTerminating)
                 Logger.LogCritical(nameof(AppDomain.UnhandledException), e.ExceptionObject as Exception);
             else
                 Logger.LogError(nameof(AppDomain.UnhandledException), e.ExceptionObject as Exception);
         };
+        Dispatcher.UIThread.UnhandledException += dispatcherHandler;
+        TaskScheduler.UnobservedTaskException += taskHandler;
+        AppDomain.CurrentDomain.UnhandledException += domainHandler;
+        _unregisterExceptionHandlers.Add(() => Dispatcher.UIThread.UnhandledException -= dispatcherHandler);
+        _unregisterExceptionHandlers.Add(() => TaskScheduler.UnobservedTaskException -= taskHandler);
+        _unregisterExceptionHandlers.Add(() => AppDomain.CurrentDomain.UnhandledException -= domainHandler);
     }
 }

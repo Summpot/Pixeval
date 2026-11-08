@@ -18,12 +18,10 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        if (args.Length is < 2 or > 3
-            || args[0] is not ("inventory" or "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "search-page" or "saucenao" or "user-pages" or "user-details" or "series-page" or "series-details" or "work-info" or "work-series" or "comment-send" or "comment-list" or "download-pages" or "subscription-editor" or "download-folders" or "work-feeds" or "work-sources" or "work-related" or "history-pages" or "home-cards" or "home-parameters" or "home-sources" or "spotlight" or "login" or "work-cards" or "work-selection" or "extension-management" or "bookmark-tags" or "bookmark-page" or "ranking-page" or "viewer-toolbar" or "documentation" or "dialogs" or "ui")
-            || args[0] is "extensions" && args.Length is not 3
-            || args.Length is 3 && args[0] is not ("extensions" or "ui"))
+        if (args.Length is < 2 or > 3 || args[0] is not ("inventory" or "capture" or "benchmark" or "ui")
+            || args.Length == 3 && args[0] != "ui")
         {
-            Console.Error.WriteLine("Usage: Pixeval.MigrationValidation <inventory|capture|benchmark|navigation|extensions|search|search-options|search-page|saucenao|user-pages|user-details|series-page|series-details|work-info|work-series|comment-send|comment-list|download-pages|subscription-editor|download-folders|work-feeds|work-sources|work-related|history-pages|home-cards|home-parameters|home-sources|spotlight|login|work-cards|work-selection|extension-management|bookmark-tags|bookmark-page|ranking-page|viewer-toolbar|documentation|dialogs|ui> <new evidence directory> [native fixture library: required for extensions, optional for ui]");
+            Console.Error.WriteLine("Usage: Pixeval.MigrationValidation <inventory|capture|benchmark|ui> <new output directory> [trusted native library for ui]");
             return 1;
         }
 
@@ -32,7 +30,7 @@ internal static class Program
             throw new IOException($"Use a new evidence directory: {outputDirectory}");
         _ = Directory.CreateDirectory(outputDirectory);
 
-        // Set before AppInfo or App construction. Neither mode reads the user's accounts,
+        // Set before AppInfo or App construction. No mode reads the user's accounts,
         // extensions, navigation, history or download destination.
         var dataDirectory = Path.Combine(outputDirectory, "data");
         AppContext.SetData("Pixeval.ApplicationDataDirectory", dataDirectory);
@@ -45,14 +43,11 @@ internal static class Program
         AppInfo.SaveAppSettings(settings);
         if (!File.Exists(Path.Combine(AppInfo.SettingsFolder, "settings.yaml")))
             throw new IOException("Could not initialize isolated settings.");
-        if (args.Length is 3)
+        if (args.Length == 3)
         {
             var library = Path.GetFullPath(args[2]);
-            if (!File.Exists(library))
-                throw new FileNotFoundException("The native fixture library does not exist.", library);
             File.Copy(library, Path.Combine(AppInfo.ExtensionsFolder, Path.GetFileName(library)));
         }
-
         if (args[0] is "ui")
         {
             // Use the real App lifecycle and shell, with the same desktop font setup.
@@ -63,27 +58,8 @@ internal static class Program
                 .StartWithClassicDesktopLifetime([]);
         }
 
-        if (args[0] is "capture" or "benchmark" or "navigation" or "extensions" or "search" or "search-options" or "search-page" or "saucenao" or "user-pages" or "user-details" or "series-page" or "series-details" or "work-info" or "work-series" or "comment-send" or "comment-list" or "download-pages" or "subscription-editor" or "download-folders" or "work-feeds" or "work-sources" or "work-related" or "history-pages" or "home-cards" or "home-parameters" or "home-sources" or "spotlight" or "login" or "work-cards" or "work-selection" or "extension-management" or "bookmark-tags" or "bookmark-page" or "ranking-page" or "viewer-toolbar" or "documentation" or "dialogs")
-        {
-            RunHeadlessAsync(args[0], outputDirectory).GetAwaiter().GetResult();
-            return 0;
-        }
-
-        _ = AppBuilder.Configure<InventoryApplication>()
-            .UseSkia()
-            .UseHeadless(new AvaloniaHeadlessPlatformOptions())
-            .WithPixevalFonts()
-            .SetupWithoutStarting();
-        try
-        {
-            WriteValidationContext(outputDirectory);
-            MigrationInventory.Export(Path.Combine(outputDirectory, "inventory.json"));
-            return 0;
-        }
-        finally
-        {
-            App.AppViewModel.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        }
+        RunHeadlessAsync(args[0], outputDirectory).GetAwaiter().GetResult();
+        return 0;
     }
 
     private static async Task RunHeadlessAsync(string mode, string directory)
@@ -99,116 +75,13 @@ internal static class Program
                 MigrationInventory.Export(Path.Combine(directory, "inventory.json"));
                 switch (mode)
                 {
+                    case "inventory":
+                        break;
                     case "capture":
                         await BaselineCapture.ExportAsync(directory);
                         break;
                     case "benchmark":
                         await PerformanceBaseline.ExportAsync(directory);
-                        break;
-                    case "navigation":
-                        await NavigationEditorValidation.RunAsync(directory);
-                        break;
-                    case "extensions":
-                        await NativeExtensionValidation.RunAsync(directory);
-                        break;
-                    case "search":
-                        await SearchCompletionValidation.RunAsync(directory);
-                        break;
-                    case "search-options":
-                        await SearchArgumentsValidation.RunAsync(directory);
-                        break;
-                    case "search-page":
-                        await SearchPageValidation.RunAsync(directory);
-                        break;
-                    case "saucenao":
-                        await SauceNaoValidation.RunAsync(directory);
-                        break;
-                    case "user-pages":
-                        await UserPagesValidation.RunAsync(directory);
-                        break;
-                    case "user-details":
-                        await UserDetailsValidation.RunAsync(directory);
-                        break;
-                    case "series-page":
-                        await SeriesPageValidation.RunAsync(directory);
-                        break;
-                    case "series-details":
-                        await SeriesDetailsValidation.RunAsync(directory);
-                        break;
-                    case "work-series":
-                        await WorkSeriesValidation.RunAsync(directory);
-                        break;
-                    case "work-info":
-                        await WorkInfoValidation.RunAsync(directory);
-                        break;
-                    case "download-folders":
-                        await DownloadFoldersValidation.RunAsync(directory);
-                        break;
-                    case "subscription-editor":
-                        await SubscriptionEditorValidation.RunAsync(directory);
-                        break;
-                    case "download-pages":
-                        await DownloadPagesValidation.RunAsync(directory);
-                        break;
-                    case "comment-list":
-                        await CommentListValidation.RunAsync(directory);
-                        break;
-                    case "comment-send":
-                        await CommentSendValidation.RunAsync(directory);
-                        break;
-                    case "work-feeds":
-                        await WorkFeedsValidation.RunAsync(directory);
-                        break;
-                    case "work-sources":
-                        await WorkSourcesValidation.RunAsync(directory);
-                        break;
-                    case "work-related":
-                        await WorkRelatedValidation.RunAsync(directory);
-                        break;
-                    case "history-pages":
-                        await HistoryPagesValidation.RunAsync(directory);
-                        break;
-                    case "home-cards":
-                        await HomeCardsValidation.RunAsync(directory);
-                        break;
-                    case "home-parameters":
-                        await HomeParametersValidation.RunAsync(directory);
-                        break;
-                    case "home-sources":
-                        await HomeSourcesValidation.RunAsync(directory);
-                        break;
-                    case "spotlight":
-                        await SpotlightValidation.RunAsync(directory);
-                        break;
-                    case "login":
-                        await LoginLifetimeValidation.RunAsync(directory);
-                        break;
-                    case "work-cards":
-                        await WorkCardsValidation.RunAsync(directory);
-                        break;
-                    case "work-selection":
-                        await WorkSelectionValidation.RunAsync(directory);
-                        break;
-                    case "extension-management":
-                        await ExtensionManagementValidation.RunAsync(directory);
-                        break;
-                    case "bookmark-tags":
-                        await BookmarkTagsValidation.RunAsync(directory);
-                        break;
-                    case "bookmark-page":
-                        await BookmarksPageValidation.RunAsync(directory);
-                        break;
-                    case "ranking-page":
-                        await RankingPageValidation.RunAsync(directory);
-                        break;
-                    case "viewer-toolbar":
-                        await ViewerToolbarValidation.RunAsync(directory);
-                        break;
-                    case "documentation":
-                        await DocumentationValidation.RunAsync(directory);
-                        break;
-                    case "dialogs":
-                        await DialogValidation.RunAsync(directory);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(mode));
@@ -217,7 +90,7 @@ internal static class Program
             }
             finally
             {
-                await App.AppViewModel.DisposeAsync();
+                await ((App)Application.Current!).DisposeAsync();
             }
         }, default);
     }
@@ -239,12 +112,6 @@ internal static class Program
 
     public sealed class InventoryApplication : App
     {
-        // Metadata export initializes the real settings registration but never navigates,
-        // logs in, starts MCP, loads artwork or installs a native window.
-        public override void OnFrameworkInitializationCompleted()
-        {
-        }
-
         public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<InventoryApplication>()
             .UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false, ShouldRenderOnUIThread = true })

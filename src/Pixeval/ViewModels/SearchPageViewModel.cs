@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Mako;
+using Microsoft.Extensions.DependencyInjection;
 using Mako.Global.Enum;
 using Mako.Model;
 using Pixeval.Collections;
@@ -16,11 +17,11 @@ namespace Pixeval.ViewModels;
 
 public partial class SearchPageViewModel : ViewModelBase
 {
-    public static SearchPageViewModel Instance { get; } = new();
+    public static SearchPageViewModel Instance => App.AppViewModel.AppServiceProvider.GetRequiredService<SearchPageViewModel>();
 
     private static MakoClient MakoClient => App.AppViewModel.MakoClient;
 
-    private SearchPageViewModel()
+    public SearchPageViewModel()
     {
         _ = LoadResourcesAsync();
     }

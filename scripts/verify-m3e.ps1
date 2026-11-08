@@ -9,6 +9,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
 $previousFixture = $env:PIXEVAL_TEST_EXTENSION_FIXTURE
+$previousArtifacts = $env:PIXEVAL_TEST_ARTIFACTS
 Push-Location $repoRoot
 try {
     # Explicit opt-in only; do not inherit a fixture from an unrelated terminal session.
@@ -35,6 +36,7 @@ try {
         throw "Evidence directory must be empty: $OutputDirectory"
     }
     New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
+    $env:PIXEVAL_TEST_ARTIFACTS = $OutputDirectory
     if ($ExtensionFixture) {
         Get-FileHash -LiteralPath $ExtensionFixture -Algorithm SHA256 |
             ConvertTo-Json | Set-Content (Join-Path $OutputDirectory 'extension-fixture.json')
@@ -78,5 +80,6 @@ try {
 }
 finally {
     $env:PIXEVAL_TEST_EXTENSION_FIXTURE = $previousFixture
+    $env:PIXEVAL_TEST_ARTIFACTS = $previousArtifacts
     Pop-Location
 }
