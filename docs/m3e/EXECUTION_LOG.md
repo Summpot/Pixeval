@@ -1099,3 +1099,37 @@ Windows 本地分组执行全量测试并专项复跑，按测试 ID/数据行�
 修改的 XAML 经仓库 XamlStyler/根配置格式化，C# 经 whitespace 检查；XAML 解析、UTF-8 无 BOM、文档本地链接、子模块及 diff whitespace 收尾结果见 `static-validation.json`，源码/验证归属见 `final-source-hashes.json`、`validation-summary.json` 和 `final-state.json`。主计划只调整实际局部状态及 P15 进入实施中，用例只增加新契约；宿主用法、清单和旧性能基准未变。批次只追加这一条记录，文档与两项测试诊断/初始化改进集中收尾提交，不补写它自身哈希。
 
 未覆盖：扩展 ABI 没有取消入口，只能隔离旧结果而不能强制停止在途计算；真实格式编码、原始下载的完整故障矩阵、应用重启恢复、完整作品菜单/模式组合、动画和长期内存/同条件性能仍待验收。原生 IME、系统焦点/读屏/剪贴板/浏览器/文件选择器、触摸/DPI/GPU、其他平台和远程 CI 保持待验收。下一轮继续保留 WorkCards 单次输入诊断，在有失败证据时追查选择原因；另可按具体依赖补动画长期资源寿命或下载记录移除后重加的资源交接，先复现后决定范围。父步骤及 P12/P14/P15 整体未勾选。继续后台验证，不自动启用 computer use。
+
+## 2026-11-09 无人值守批次：下载停止交接、动画寿命与 Continuous 旋转布局
+
+实际执行约 99 分钟，北京时间 13:41–15:20；起点 `e18e4dc5`，分支 `feat/material3expressive-migration`，开始工作区干净。读取仓库工程约束、计划 §3.2–3.4/10.3 及最近台账，选择已有正式下载/查看器入口和离线依赖支持的 P12/P15 功能单元。各单元完成实现、相关验证和审查后分别本地提交；未推送、对外发布或使用 computer use，没有启动桌面/AOT EXE 或操作全局输入、系统剪贴板。
+
+| 功能单元 / 步骤 | 本地提交 | 完成范围 |
+| --- | --- | --- |
+| 外部下载器停止确认，P12.04b | `12c429bf` | 暂停/取消仍等待首个终结回调，再清理临时文件、释放重试和同身份替换；重复终结、旧进度、同步异常及异常元数据隔离 |
+| 动画关闭回收，P15.04b | `df15d514` | GIF/WebP/ugoira × Swipe/Continuous 各五次播放/暂停、离开返回及正式关闭；页面、模型、图像控件/源与全部解码帧弱引用回收，正常文件缓存保留；仅补测试 |
+| 删除记录后的资源交接，P12.04c | `cbda6dc9` | 同身份停止屏障跨删除/清空、重加/恢复和连续替换保留；支持等待中暂停/继续，其他身份继续；清理按 key+等待实例匹配，通知重入不抹掉新映射，停止/释放解除监听 |
+| 可见渐进预览退出，P15.03b | `ad499d71` | 实际显示部分 GIF 首帧后换作品/ClosePage，取消旧寿命，迟到字节不更新、不通知、不发布残缺缓存；保留新作品图像/缓存，旧预览回收且响应释放；仅补测试 |
+| 动画查看器错误恢复，P15.03a | `f265d3ab` | 严格 ZIP、非空及帧/延迟数量匹配，条目读取失败释放已分配流；分文件 ugoira 原图失败保留可见帧，重试时仅清理相关缓存并恢复播放，换作品/关闭隔离迟到结果 |
+| Continuous 旋转布局，P15.01d | `925b0721` | 镜像后旋转参与实际页面测量，精确直角矩阵消除 270° 浮点误差；横/纵非方图不重叠，原始大小/读数、四角可达、页码导航、独立状态、撤销及正式关闭通过 |
+| Continuous 原图替换，P15.03c | `75f1ea02` | 已镜像/旋转非方图的非中心视区，经真实菜单替换同宽高比双倍源后，页面尺寸/偏移/CanvasZoom 和标记位置保持，像素倍率减半且新增细节可见；相邻页、导航及正式关闭通过；仅补测试 |
+
+证据根目录：`artifacts/m3e/2026-11-09-batch-1341/`。SDK `11.0.100-rc.3.26522.148`、runtime `10.0.14`、Avalonia `12.1.5`；M3E `859a69e563b2a01fc87a26255ee11c1d89959677`、AnimatedControls `7049a870151e79cfb7b69305706d69d3a5051f18`，全部子模块未变。复用 batch-1008 固定 revision `20c900a76cb427ad1dac38ed3f64463be2fd496b` 的 C++ 样本，显式提供 DLL，重核 SHA256 `F860A14BDF178EFACDB57AD849D1EA7741637C14E92D468AE3940AEDCB4CA440`，见 `native-fixture-reuse.json`。起点 Release 构建 206 警告/0 错误、选定下载寿命基线 9/9。
+
+关键专项均无跳过：`downloader/final` 24/24；`animation-lifetime/final` 17/17；`remove-readd/final` 73/73；`progressive-lifetime/adjacent` 42/42；`viewer-archive/final` 30/30、其不重叠相邻组 37/37；`continuous-geometry` 最终 4/4、渐进组 4/4、相邻组 52/52。这些专项相互有交集，不合计冒充全量；早期独立输出的源码归属保留在各目录 summary/hash 记录，最终组合由下述一次冻结源码全量验证。正式 UI 均使用 App、组合 PageTestHost 与 sealed TabViewContainer，没有另写导航/生命周期，也没有手动 Dispose 模型冒充正式关闭。
+
+有效旧版对照：外部下载器 7 失败/3 通过，证明提前放行、重复终结覆盖成功和旧写者持有文件时新任务启动；移除重加最初 12/12 失败；查看器归档 `before-revised` 10 失败/12 通过；Continuous `before-corrected` 4/4 失败。原始日志与 TRX 均保留：动画寿命首次六行是夹具保留已关闭 Window/Shell 的强引用，不是产品泄漏；归档早期四行用错 MediumUri/LargeUri，不算产品缺陷；Continuous 早期菜单坐标、合法末端钳位和虚拟化未预载假设均已纠正，未弱化最终像素/布局断言。外部异常元数据 getter 抛出导致停止确认挂起的问题在独立审查后纳入同一功能单元。
+
+两个行为边界明确保留。严格 ZIP 仅影响已确认的 SingleZipFile 生产调用方，移除“无效 ZIP 当普通图像”回退；分文件原图不能把缺失帧占位后冒充完整成功。Continuous 保留交叉轴有限尺寸适配与 CanvasZoom，因此旋转后实际像素倍率可变，显式原始大小才恢复 100%，不宣称原倍率/视区中心保持。Avalonia 12.1.5 的角度换算近似常数使 270° 矩阵对角项按八位取整成为非零，触发布局分支错误；仅此模板使用精确直角矩阵，未改子模块、Swipe 或全局变换行为，分析与渲染抽查见 `continuous-geometry/review-evidence.txt` / `root-visual-review.txt`。
+
+动画回收包含 18 次 ClosePage、6 次 CloseAllPages、6 次 Window.Close；正常压缩缓存保留，所有解码帧与页面弱引用回收。渐进用例实际收到 219 字节 GIF 的前 100 字节并显示红色首帧，离开后故意让不响应取消的读取返回剩余字节，验证绿色新作品未被覆盖。以上只证明固定样本和短周期托管寿命，进程内存是代理指标，不重生成历史性能基准，不推导长期 native/GPU 或同条件性能预算通过。下载状态使用独立只读 SQLite 核对；最终组合源码审查见 `integration-download-review.txt`，没有把组合推理冒充新增的原始下载器删除 UI 矩阵。
+
+重要边界在干净 `925b0721` 上执行一次 `scripts/verify-m3e.ps1 -OutputDirectory artifacts/m3e/2026-11-09-batch-1341/windows-final -ExtensionFixture <上述固定 DLL>`：桌面 Debug 10 警告/0 错误，测试 Release 206 警告/0 错误；完整回归 **728/728 通过、0 跳过**，耗时 **49 分 40.144 秒**。完整输入见 `full-input-commit.txt`、`full-input-source-hashes.json`、`full-input-provenance.txt`；干净状态的空管道未生成 worktree.txt，未事后补造原始空文件。运行期间原 15 个源码输入和默认测试/运行时程序集保持相同。本次 WorkCards 原八组场景通过；历史偶发选择问题根因仍未确认，卡片产品代码和单次输入断言未改。
+
+全量期间补齐的 `75f1ea02` 只有新测试文件，以独立 `--artifacts-path .../continuous-original/build` 构建；最终 `continuous-original/reviewed` **2/2 通过、0 跳过**，耗时 **19.926 秒**。横/纵偏移分别保持 `(200,0)` / `(0,200)`，标记质心不移，原图新增橙色细节确实呈现，显示倍率 1→0.5。早期失败来自假设离屏邻页 Visual 始终存在，改为实际虚拟面板已测量位置；审查后诊断输出也允许离屏第一页被回收，强几何断言保留。该新增测试不在较早全量程序集内，最终产品源码仍为 `925b0721`；来源见 `continuous-original/final-input-hashes.json`，默认程序集未被独立构建覆盖的比较见 `full-test-assembly-comparison.json`，未重复执行全量或无关长集合。
+
+Native AOT 命令 `dotnet publish src/Pixeval.Desktop/Pixeval.Desktop.csproj -c Release -r win-x64 --self-contained true --artifacts-path artifacts/m3e/2026-11-09-batch-1341/aot-build -o artifacts/m3e/2026-11-09-batch-1341/native-aot-final` 成功。EXE 为 x64 PE32+、CLR 头 RVA/size 均零，SHA256 `EFE436A126800370EE473BAEB1F486657B6509B60376910C5699DD27DB9A3180`，未运行。6 个产品文件、9 个测试文件与冻结输入相同，129 个发布语言 JSON 与源码一致；对上一批原始日志，IL 警告按原始代码/消息去重 46→46，单独仅规范化 XamlClosure 编号后 42→42，均无增减。见 `native-aot-header.json`、`aot-source-comparison.json`、`aot-warning-delta.json`；发布不等于原生运行验收，普通增量构建未重报的依赖警告不视为消除。
+
+XAML 经 XamlStyler、C# whitespace 检查；最终 UTF-8 无 BOM/CRLF、XAML 解析、文档链接、源码哈希、子模块和 diff 检查见 `static-validation.json`、`final-source-comparison.json`、`final-state.json`。本批仅追加此条台账，主计划和用例仅同步实际子项/契约；P12.04、P15.01/P15.03/P15.04 父项及 P12/P15 整体仍未勾选，宿主用法、清单和旧性能基准未变。
+
+未覆盖：无取消 ABI 的外部扩展无法强制中止，也不能保证永不确认或确认后继续写入的实现安全；不同身份同物理路径、完整 manager/进程重启交接和退出、全队列故障矩阵仍待验收。Continuous 原生拖动/触控板/触摸、全部缩放/模式组合、长期动画内存与同条件性能，以及原生 IME、系统焦点/读屏/剪贴板/文件能力、DPI/GPU、其他平台和远程 CI 保持待验收。下一轮可从 P15.03 快速切页/切源中的尺寸初始化及重复源更新竞态选择完整单元；保留 WorkCards 原单次输入诊断，有失败证据时再追查，不通过重复运行推定修复。继续后台验证，不自动启用 computer use。
