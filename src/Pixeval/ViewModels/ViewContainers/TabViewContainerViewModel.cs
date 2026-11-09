@@ -17,6 +17,8 @@ namespace Pixeval.ViewModels;
 public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
 {
     private CancellationTokenSource? _avatarLoadCancellationTokenSource;
+    private CancellationTokenSource? _accountLifetime;
+    private bool _isAiShowRequestPending;
     private bool _isDisposed;
 
     public TabViewContainerViewModel()
@@ -35,6 +37,19 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
         if (_isDisposed)
             return;
 
+        if (User?.Id != user?.Id)
+        {
+            _accountLifetime?.Cancel();
+            _accountLifetime?.Dispose();
+            _accountLifetime = user is null ? null : new();
+            _isAiShowRequestPending = false;
+        }
+        var accountLifetime = _accountLifetime;
+        // OAuth renewal also refreshes this profile. It must not cancel the
+        // settings request that triggered renewal or race it with another GET.
+        var refreshAiShow = !_isAiShowRequestPending;
+        if (refreshAiShow)
+            AiShowIdle = user is null;
         _avatarLoadCancellationTokenSource?.Cancel();
         _avatarLoadCancellationTokenSource?.Dispose();
         var cancellationTokenSource = new CancellationTokenSource();
@@ -75,7 +90,8 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
         }
 
         // await ToggleRestrictedModeAsync(true);
-        await RefreshAiShowAsync(cancellationTokenSource);
+        if (refreshAiShow && accountLifetime is not null)
+            await RefreshAiShowAsync(accountLifetime);
     }
 
     public void Dispose()
@@ -89,6 +105,9 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
         _avatarLoadCancellationTokenSource?.Cancel();
         _avatarLoadCancellationTokenSource?.Dispose();
         _avatarLoadCancellationTokenSource = null;
+        _accountLifetime?.Cancel();
+        _accountLifetime?.Dispose();
+        _accountLifetime = null;
         Avatar?.Dispose();
         Avatar = null;
         User = null;
@@ -97,6 +116,7 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IdText))]
     [NotifyPropertyChangedFor(nameof(Url))]
+    [NotifyCanExecuteChangedFor(nameof(ToggleAiShowCommand))]
     public partial TokenUser? User { get; private set; }
 
     [ObservableProperty] public partial IAnimatedBitmap? Avatar { get; private set; }
@@ -118,8 +138,7 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty] public partial bool AiShowCache { get; private set; }
 
-    [RelayCommand(CanExecute = nameof(AiShowIdle))]
-    private Task ToggleAiShowAsync() => ToggleAiShowAsync(false);
+    private bool CanToggleAiShow => !_isDisposed && User is not null && AiShowIdle;
 
     [RelayCommand(CanExecute = nameof(RestrictedModeIdle))]
     private Task ToggleRestrictedModeAsync() => ToggleRestrictedModeAsync(false);
@@ -141,44 +160,55 @@ public partial class TabViewContainerViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private async Task ToggleAiShowAsync(bool skipPost)
+    [RelayCommand(CanExecute = nameof(CanToggleAiShow), AllowConcurrentExecutions = true)]
+    private async Task ToggleAiShowAsync()
     {
-        if (!AiShowIdle)
+        if (!CanToggleAiShow || _accountLifetime is not { } generation
+            || !IsCurrentAccount(generation))
             return;
+        _isAiShowRequestPending = true;
         AiShowIdle = false;
         try
         {
-            AiShowCache = skipPost
-                ? await App.AppViewModel.MakoClient.GetAiShowSettingsAsync()
-                : await App.AppViewModel.MakoClient.PostAiShowSettingsAsync(!AiShowCache);
+            var aiShow = await App.AppViewModel.MakoClient.PostAiShowSettingsAsync(!AiShowCache, generation.Token);
+            if (IsCurrentAccount(generation))
+                AiShowCache = aiShow;
         }
         finally
         {
-            AiShowIdle = true;
+            if (IsCurrentAccount(generation))
+            {
+                _isAiShowRequestPending = false;
+                AiShowIdle = true;
+            }
         }
     }
 
     private async Task RefreshAiShowAsync(CancellationTokenSource generation)
     {
-        if (!IsCurrentGeneration(generation))
+        if (!IsCurrentAccount(generation))
             return;
 
+        _isAiShowRequestPending = true;
         AiShowIdle = false;
         try
         {
-            var aiShow = await App.AppViewModel.MakoClient.GetAiShowSettingsAsync();
-            if (IsCurrentGeneration(generation))
+            var aiShow = await App.AppViewModel.MakoClient.GetAiShowSettingsAsync(generation.Token);
+            if (IsCurrentAccount(generation))
                 AiShowCache = aiShow;
         }
         finally
         {
-            if (IsCurrentGeneration(generation))
+            if (IsCurrentAccount(generation))
+            {
+                _isAiShowRequestPending = false;
                 AiShowIdle = true;
+            }
         }
     }
 
-    private bool IsCurrentGeneration(CancellationTokenSource generation) =>
+    private bool IsCurrentAccount(CancellationTokenSource generation) =>
         !_isDisposed
         && !generation.IsCancellationRequested
-        && ReferenceEquals(_avatarLoadCancellationTokenSource, generation);
+        && ReferenceEquals(_accountLifetime, generation);
 }

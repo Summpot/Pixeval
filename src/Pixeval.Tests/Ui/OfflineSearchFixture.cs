@@ -31,6 +31,7 @@ internal sealed class OfflineSearchFixture : IDisposable
     internal Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>? ImageResponseFactory { get; set; }
     internal bool IsPremium { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? AuthResponseFactory { get; set; }
+    internal Func<HttpRequestMessage, CancellationToken, Task<string>>? AiShowResponseFactory { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? BookmarkResponseFactory { get; set; }
     internal Func<HttpRequestMessage, CancellationToken, Task<string>>? BookmarkWorksResponseFactory { get; set; }
     internal Func<Uri, string>? TrendingResponseFactory { get; set; }
@@ -92,6 +93,9 @@ internal sealed class OfflineSearchFixture : IDisposable
         {
             case "/v1/ugoira/metadata" when AnimationResponseFactory is { } animation:
                 json = await animation(request, token).ConfigureAwait(false);
+                break;
+            case "/v1/user/ai-show-settings" or "/v1/user/ai-show-settings/edit" when AiShowResponseFactory is { } aiShow:
+                json = await aiShow(request, token).ConfigureAwait(false);
                 break;
             case "/v1/user/ai-show-settings":
                 json = "{\"show_ai\":true}";
