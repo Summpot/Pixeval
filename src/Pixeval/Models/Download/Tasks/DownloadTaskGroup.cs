@@ -72,27 +72,37 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
         await _afterAllDownloadLock.WaitAsync();
         try
         {
-            if (!IsAllCompleted || IsAfterAllDownloadStarted || AfterAllDownloadAsync is null)
+            if (_isDisposed || CancellationTokenSource.IsCancellationRequested
+                || !IsAllCompleted || IsAfterAllDownloadStarted || AfterAllDownloadAsync is null)
                 return;
 
+            var token = CancellationTokenSource.Token;
             IsAfterAllDownloadStarted = true;
             Dispatcher.UIThread.Invoke(() => IsPending = true);
             try
             {
-                await AfterAllDownloadAsync.Invoke(this, CancellationTokenSource.Token);
+                token.ThrowIfCancellationRequested();
+                await AfterAllDownloadAsync.Invoke(this, token);
+                token.ThrowIfCancellationRequested();
                 IsAfterAllDownloadCompleted = true;
                 DatabaseEntry.State = DownloadState.Completed;
             }
-            catch (TaskCanceledException)
+            catch (Exception) when (token.IsCancellationRequested)
             {
-                // ignored
+                // Providers without a cancellation ABI can fail or succeed late.
+                // Both outcomes belong to the cancelled attempt, not a new error/success.
+                SetDatabaseState(DownloadState.Cancelled);
             }
             catch (Exception ex)
             {
                 SetError(ex);
             }
 
-            _ = Dispatcher.UIThread.Invoke(() => IsPending = false);
+            Dispatcher.UIThread.Invoke(() =>
+            {
+                IsPending = false;
+                IsProcessing = false;
+            });
         }
         finally
         {
@@ -140,7 +150,7 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
 
     public void Reset()
     {
-        if (CurrentState is not (DownloadState.Completed or DownloadState.Error or DownloadState.Cancelled))
+        if (_isDisposed || IsPending || CurrentState is not (DownloadState.Completed or DownloadState.Error or DownloadState.Cancelled))
             return;
         IsProcessing = true;
         IsAfterAllDownloadCompleted = false;
@@ -180,6 +190,8 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
 
     public void Resume()
     {
+        if (_isDisposed || IsPending)
+            return;
         IsProcessing = true;
         if (CancellationTokenSource.IsCancellationRequested)
         {
@@ -201,15 +213,17 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
     /// </summary>
     public void Cancel()
     {
-        if (CurrentState is not (DownloadState.Paused or DownloadState.Pending or DownloadState.Running or DownloadState.Queued))
+        if (_isDisposed || CurrentState is not (DownloadState.Paused or DownloadState.Pending or DownloadState.Running or DownloadState.Queued))
             return;
         IsProcessing = true;
         CancellationTokenSource.Cancel();
-        if (TasksSet.Count is 0)
+        if (TasksSet.Count is 0 || IsPending)
             SetDatabaseState(DownloadState.Cancelled);
         else
             TasksSet.ForEach(t => t.Cancel());
-        IsProcessing = false;
+        // The provider may still be using its input streams and output path.
+        // Keep retry disabled until its completion has unwound finalization.
+        IsProcessing = IsPending;
     }
 
     public abstract void Delete();
@@ -235,6 +249,8 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
                 return DatabaseEntry.State;
             if (_errorMessage is not null)
                 return DownloadState.Error;
+            if (IsAfterAllDownloadStarted && !IsAfterAllDownloadCompleted && CancellationTokenSource.IsCancellationRequested)
+                return DownloadState.Cancelled;
             if (TasksSet.Count is 0)
                 return IsPending ? DownloadState.Pending : DatabaseEntry.State;
             var isError = false;

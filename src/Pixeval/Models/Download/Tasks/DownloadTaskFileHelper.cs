@@ -8,16 +8,10 @@ namespace Pixeval.Models.Download.Tasks;
 
 internal static class DownloadTaskFileHelper
 {
-    public static bool ShouldSkipExistingFile(string destination, bool overwrite)
-    {
-        if (!File.Exists(destination))
-            return false;
-        if (!overwrite)
-            return true;
-
-        File.Delete(destination);
-        return false;
-    }
+    // Keep the previous output until the complete temporary file is committed.
+    // Cancellation or a provider failure must not destroy a usable download.
+    public static bool ShouldSkipExistingFile(string destination, bool overwrite) =>
+        !overwrite && File.Exists(destination);
 
     /// <returns><see langword="true" /> if the temporary file became the destination.</returns>
     public static bool CommitDownloadedFile(string temporaryFile, string destination, bool overwrite)

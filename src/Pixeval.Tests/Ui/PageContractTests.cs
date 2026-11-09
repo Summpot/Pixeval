@@ -211,6 +211,22 @@ public sealed class PageContractTests
     public Task NovelNativeExport() => UiTestSession.RunAsync(TestContext, NovelActionsValidation.RunNativeAsync, nativeExtension: true);
 
     [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public Task NovelExportCancellation(bool lateFailure, bool existingOutput) => UiTestSession.RunAsync(TestContext,
+        directory => ExportCancellationValidation.RunAsync(directory, lateFailure, existingOutput: existingOutput));
+
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public Task UgoiraExportCancellation(bool lateFailure, bool existingOutput) => UiTestSession.RunAsync(TestContext,
+        directory => ExportCancellationValidation.RunAsync(directory, lateFailure, animated: true, existingOutput: existingOutput));
+
+    [TestMethod]
     [DataRow("zh-Hans")]
     [DataRow("en-US")]
     [DataRow("fr-FR")]

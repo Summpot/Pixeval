@@ -132,7 +132,7 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
         ((INovelContext<Stream>) DocumentViewModel).InitImages();
         if (DestinationNovelFormat.ExtensionFormatExtension is { } extension)
         {
-            await FormatByExtensionAsync(extension);
+            await FormatByExtensionAsync(extension, token);
             return;
         }
 
@@ -160,6 +160,7 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
         {
             FileHelper.CreateParentDirectory(temporaryFile);
             await File.WriteAllTextAsync(temporaryFile, content, token);
+            token.ThrowIfCancellationRequested();
             _ = DownloadTaskFileHelper.CommitDownloadedFile(
                 temporaryFile,
                 NovelFile,
@@ -172,7 +173,7 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
         }
     }
 
-    private async Task FormatByExtensionAsync(string extension)
+    private async Task FormatByExtensionAsync(string extension, CancellationToken token)
     {
         if (DownloadTaskFileHelper.ShouldSkipExistingFile(NovelFile, OverwriteDownloadedFile))
         {
@@ -198,7 +199,9 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
             }
 
             FileHelper.CreateParentDirectory(temporaryFile);
+            token.ThrowIfCancellationRequested();
             await provider.FormatNovelAsync(NovelContent.Text, temporaryFile, streams);
+            token.ThrowIfCancellationRequested();
             _ = DownloadTaskFileHelper.CommitDownloadedFile(
                 temporaryFile,
                 NovelFile,

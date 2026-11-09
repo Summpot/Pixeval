@@ -133,7 +133,7 @@ public class UgoiraDownloadTaskGroup : DownloadTaskGroup
 
         if (DestinationUgoiraFormat.ExtensionFormatExtension is { } extension)
         {
-            await FormatByExtensionAsync(extension);
+            await FormatByExtensionAsync(extension, token);
             return;
         }
 
@@ -152,6 +152,7 @@ public class UgoiraDownloadTaskGroup : DownloadTaskGroup
             FileHelper.CreateParentDirectory(temporaryFile);
             await File.WriteAllTextAsync(temporaryFile,
                 string.Join(',', MsDelays.Select(t => t.ToString())), token);
+            token.ThrowIfCancellationRequested();
             _ = DownloadTaskFileHelper.CommitDownloadedFile(
                 temporaryFile,
                 CsvFile,
@@ -194,7 +195,7 @@ public class UgoiraDownloadTaskGroup : DownloadTaskGroup
         FileHelper.DeleteEmptyFolder(FolderPath);
     }
 
-    private async Task FormatByExtensionAsync(string extension)
+    private async Task FormatByExtensionAsync(string extension, CancellationToken token)
     {
         if (DownloadTaskFileHelper.ShouldSkipExistingFile(DestinationFile, OverwriteDownloadedFile))
         {
@@ -217,7 +218,9 @@ public class UgoiraDownloadTaskGroup : DownloadTaskGroup
 
             var dict = streams.Zip(MsDelays).ToDictionary(t => t.First, t => t.Second);
 
+            token.ThrowIfCancellationRequested();
             await provider.FormatImageAsync(dict, temporaryFile);
+            token.ThrowIfCancellationRequested();
             _ = DownloadTaskFileHelper.CommitDownloadedFile(
                 temporaryFile,
                 DestinationFile,
@@ -229,11 +232,10 @@ public class UgoiraDownloadTaskGroup : DownloadTaskGroup
                 await stream.DisposeAsync();
             if (File.Exists(temporaryFile))
                 File.Delete(temporaryFile);
+            foreach (var imageDownloadTask in TasksSet)
+                imageDownloadTask.Delete();
+            FileHelper.DeleteEmptyFolder(FolderPath);
         }
-
-        foreach (var imageDownloadTask in TasksSet)
-            imageDownloadTask.Delete();
-        FileHelper.DeleteEmptyFolder(FolderPath);
     }
 
     private static UgoiraDownloadFormatToken GetFormatToken(DownloadHistoryEntryBase entry)
