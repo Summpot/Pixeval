@@ -78,7 +78,7 @@ public partial class IllustrationViewerInfoPane : UserControl
                 if (token.IsCancellationRequested)
                     return;
                 await target.AddToBookmarkCommand.ExecuteAsync((selection.Tags, selection.IsPrivate, this));
-                if (!token.IsCancellationRequested && target.IsFavorite)
+                if (!token.IsCancellationRequested && target.LastBookmarkSucceeded)
                     TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.AddedToBookmark));
             },
             PlacementMode.TopEdgeAlignedRight, token);

@@ -1,4 +1,4 @@
-﻿<UserControl
+<UserControl
     x:Class="Pixeval.Views.Work.WorkContainer"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -89,8 +89,14 @@
                         Click="AddAllToBookmarkButton_OnClicked"
                         ContextRequested="AddAllToBookmarkButton_OnRightClicked"
                         Icon="{markup:SymbolIcon Heart}"
-                        IsEnabled="{Binding !!SelectedEntries.Count}"
-                        Label="{I18N {x:Static local:EntryItemResources.AddToBookmark}}" />
+                        Label="{I18N {x:Static local:EntryItemResources.AddToBookmark}}">
+                        <CommandBarButton.IsEnabled>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                <Binding Path="!!SelectedEntries.Count" />
+                                <Binding Converter="{x:Static BoolConverters.Not}" Path="$parent[work:WorkContainer].IsBookmarkBatchPending" />
+                            </MultiBinding>
+                        </CommandBarButton.IsEnabled>
+                    </CommandBarButton>
                     <CommandBarButton
                         Click="SaveAllButton_OnClicked"
                         Icon="{markup:SymbolIcon Save}"

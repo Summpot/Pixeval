@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Collections;
@@ -13,6 +14,8 @@ using Avalonia.Controls.Selection;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
+using Mako;
 using Mako.Global.Enum;
 using Mako.Model;
 using Misaki;
@@ -38,6 +41,28 @@ public partial class WorkContainer : UserControl
     private int _filterCompletionSourceCount = -1;
     private IReadOnlyList<FilterCompletionDefinition> _tagValueCompletions = [];
     private IReadOnlyList<FilterCompletionDefinition> _authorValueCompletions = [];
+    private CancellationTokenSource? _bookmarkLifetime;
+    private object? _bookmarkBatch;
+    private MakoClient? _bookmarkClient;
+    private EventHandler<MakoClient, TokenResponse?>? _bookmarkAccountObserver;
+    private long? _bookmarkAccountId;
+    private BookmarkAccountState? _bookmarkAccountState;
+    private long _bookmarkLifetimeAccountEpoch;
+
+    private sealed class BookmarkAccountState(long accountId)
+    {
+        public long AccountId = accountId;
+        public long Epoch;
+    }
+
+    public static readonly DirectProperty<WorkContainer, bool> IsBookmarkBatchPendingProperty =
+        AvaloniaProperty.RegisterDirect<WorkContainer, bool>(nameof(IsBookmarkBatchPending), o => o.IsBookmarkBatchPending);
+
+    public bool IsBookmarkBatchPending
+    {
+        get;
+        private set => SetAndRaise(IsBookmarkBatchPendingProperty, ref field, value);
+    }
 
     public static readonly DirectProperty<WorkContainer, bool> IsRefreshEnabledProperty = AvaloniaProperty.RegisterDirect<WorkContainer, bool>(
         nameof(IsRefreshEnabled),
@@ -159,24 +184,33 @@ public partial class WorkContainer : UserControl
 
     private async void AddAllToBookmarkButton_OnClicked(object? sender, RoutedEventArgs e)
     {
-        await AddToBookmarkAsync(null, (false, null)).ConfigureAwait(false);
+        if (IsLoaded && DataContext is IOperableViewViewModel viewModel)
+            await AddBatchToBookmarkAsync([.. viewModel.SelectedEntries], (false, null), BookmarkToken);
     }
 
     private async void AddAllToBookmarkButton_OnRightClicked(object? sender, ContextRequestedEventArgs e)
     {
-        await ShowBookmarkTagSelectorAsync(AddAllToBookmarkButton, null).ConfigureAwait(false);
+        await ShowBookmarkTagSelectorAsync(AddAllToBookmarkButton, null);
     }
 
     private async void WorkView_OnRequestAddToBookmark(Control sender, IWorkViewModel e)
     {
-        await ShowBookmarkTagSelectorAsync(sender, e).ConfigureAwait(false);
+        await ShowBookmarkTagSelectorAsync(sender, e);
     }
 
     private async Task ShowBookmarkTagSelectorAsync(Control placementTarget, IWorkViewModel? target)
     {
-        if (target is null && DataContext is not IOperableViewViewModel { SelectedEntries.Count: > 0 })
+        if (!IsLoaded || target is null && (IsBookmarkBatchPending
+            || DataContext is not IOperableViewViewModel { SelectedEntries.Count: > 0 }))
             return;
 
+        var token = BookmarkToken;
+        var accountId = _bookmarkAccountId;
+        var accountEpoch = _bookmarkLifetimeAccountEpoch;
+        var accountState = _bookmarkAccountState;
+        IWorkViewModel[] targets = target is null && DataContext is IOperableViewViewModel viewModel
+            ? [.. viewModel.SelectedEntries]
+            : [];
         var id = target is { Entry.Id: { } idStr } && long.TryParse(idStr, out var idLong) ? idLong : 0;
         var type = target is NovelItemViewModel || DataContext is NovelViewViewModel or SimpleOperableViewViewModel<NovelItemViewModel>
             ? SimpleWorkType.Novel
@@ -186,33 +220,159 @@ public partial class WorkContainer : UserControl
             placementTarget,
             type,
             id,
-            async e => await AddToBookmarkAsync(target, e),
-            PlacementMode.Bottom);
+            async e =>
+            {
+                if (!IsCurrentBookmark(token, accountId, accountEpoch, accountState))
+                    return;
+                if (target is null)
+                    await AddBatchToBookmarkAsync(targets, e, token);
+                else
+                {
+                    await target.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, this));
+                    if (IsCurrentBookmark(token, accountId, accountEpoch, accountState) && target.LastBookmarkSucceeded)
+                        TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.AddedToBookmark));
+                }
+            },
+            PlacementMode.Bottom, token);
     }
 
-    private async Task AddToBookmarkAsync(IWorkViewModel? target, (bool IsPrivate, IReadOnlyList<string>? Tags) e)
+    private CancellationToken BookmarkToken
     {
-        if (target is not null)
+        get
         {
-            await target.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, this));
-            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.AddedToBookmark));
-            return;
+            // A token event can arrive from the OAuth worker. Catch an account
+            // change here as well, before accepting another UI action.
+            var accountEpoch = _bookmarkAccountState is { } state ? Volatile.Read(ref state.Epoch) : 0;
+            if (_bookmarkAccountId != _bookmarkClient?.Me?.Id || _bookmarkLifetimeAccountEpoch != accountEpoch)
+            {
+                CancelBookmark();
+                _bookmarkAccountId = _bookmarkClient?.Me?.Id;
+                _bookmarkLifetimeAccountEpoch = accountEpoch;
+            }
+            return (_bookmarkLifetime ??= new()).Token;
         }
+    }
 
-        if (DataContext is not IOperableViewViewModel viewModel)
+    private bool IsCurrentBookmark(CancellationToken token, long? accountId, long accountEpoch, BookmarkAccountState? accountState) =>
+        !token.IsCancellationRequested && _bookmarkClient is { } client && client.Me?.Id == accountId
+        && accountState is { } state && ReferenceEquals(_bookmarkAccountState, state)
+        && Volatile.Read(ref state.Epoch) == accountEpoch;
+
+    private async Task AddBatchToBookmarkAsync(IReadOnlyList<IWorkViewModel> targets,
+        (bool IsPrivate, IReadOnlyList<string>? Tags) selection, CancellationToken token)
+    {
+        if (IsBookmarkBatchPending || token.IsCancellationRequested || targets.Count == 0)
             return;
 
-        if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer
-            && viewModel.SelectedEntries.Count >= 20
-            && await viewContainer.CreateOkCancelAsync(
-                I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.ForBookmarkTitle),
-                I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.Content)) is not ContentDialogResult.Primary)
-            return;
+        var batch = new object();
+        var accountId = _bookmarkAccountId;
+        var accountEpoch = _bookmarkLifetimeAccountEpoch;
+        var accountState = _bookmarkAccountState;
+        _bookmarkBatch = batch;
+        IsBookmarkBatchPending = true;
+        var tags = selection.Tags?.ToArray();
+        var restoreConfirmationFocus = false;
+        try
+        {
+            if (TopLevel.GetTopLevel(this)?.ViewContainer is { } viewContainer
+                && targets.Count >= 20
+                && await viewContainer.CreateOkCancelAsync(
+                    I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.ForBookmarkTitle),
+                    I18NManager.GetResource(WorkContainerResources.SelectedTooManyItems.Content), token) is not ContentDialogResult.Primary)
+            {
+                restoreConfirmationFocus = !token.IsCancellationRequested;
+                return;
+            }
 
-        foreach (var i in viewModel.SelectedEntries)
-            await i.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, this));
-        if (viewModel.SelectedEntries.Count is var c and > 0)
-            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(I18NManager.GetResource(WorkContainerResources.AddedAllToBookmarkContentFormatted, c));
+            var completed = 0;
+            foreach (var target in targets)
+            {
+                // A sent write can finish, but leaving this source must not send
+                // further writes or report success in a later page lifetime.
+                if (!IsCurrentBookmark(token, accountId, accountEpoch, accountState))
+                    return;
+                if (!target.AddToBookmarkCommand.CanExecute((tags, selection.IsPrivate, this))
+                    || target.BookmarkCommand.IsRunning)
+                    continue;
+                await target.AddToBookmarkCommand.ExecuteAsync((tags, selection.IsPrivate, this));
+                if (target.LastBookmarkSucceeded)
+                    completed++;
+            }
+            if (IsCurrentBookmark(token, accountId, accountEpoch, accountState) && completed > 0)
+                TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(I18NManager.GetResource(WorkContainerResources.AddedAllToBookmarkContentFormatted, completed));
+        }
+        finally
+        {
+            if (ReferenceEquals(_bookmarkBatch, batch))
+            {
+                _bookmarkBatch = null;
+                IsBookmarkBatchPending = false;
+                if (restoreConfirmationFocus && !token.IsCancellationRequested && IsLoaded)
+                    (AddAllToBookmarkButton.IsEffectivelyVisible && AddAllToBookmarkButton.IsEffectivelyEnabled
+                        ? (Control) AddAllToBookmarkButton
+                        : SelectionToggleButton).Focus();
+            }
+        }
+    }
+
+    private void CancelBookmark()
+    {
+        _bookmarkLifetime?.Cancel();
+        _bookmarkLifetime?.Dispose();
+        _bookmarkLifetime = null;
+        _bookmarkBatch = null;
+        IsBookmarkBatchPending = false;
+    }
+
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        CancelBookmark();
+        base.OnDataContextChanged(e);
+    }
+
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+        _bookmarkClient = App.AppViewModel.MakoClient;
+        _bookmarkAccountId = _bookmarkClient.Me?.Id;
+        var state = new BookmarkAccountState(_bookmarkAccountId ?? 0);
+        _bookmarkAccountState = state;
+        EventHandler<MakoClient, TokenResponse?> observer = null!;
+        observer = (client, response) =>
+        {
+            if (!ReferenceEquals(Volatile.Read(ref _bookmarkAccountObserver), observer))
+                return;
+            var accountId = response?.User.Id ?? 0;
+            if (Interlocked.Exchange(ref state.AccountId, accountId) == accountId)
+                return;
+            var lifetime = Volatile.Read(ref _bookmarkLifetime);
+            // An already executing observer from a previous attachment only
+            // advances its own state, never a newly mounted page's generation.
+            Interlocked.Increment(ref state.Epoch);
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (!ReferenceEquals(_bookmarkAccountObserver, observer))
+                    return;
+                // Do not cancel a new operation accepted after this event, or
+                // a same-account OAuth renewal between two batch requests.
+                if (ReferenceEquals(_bookmarkLifetime, lifetime))
+                    CancelBookmark();
+                _bookmarkAccountId = client.Me?.Id;
+            });
+        };
+        _bookmarkAccountObserver = observer;
+        _bookmarkClient.TokenRefreshed += observer;
+    }
+
+    protected override void OnUnloaded(RoutedEventArgs e)
+    {
+        if (_bookmarkClient is { } client)
+            client.TokenRefreshed -= _bookmarkAccountObserver;
+        _bookmarkClient = null;
+        _bookmarkAccountObserver = null;
+        _bookmarkAccountState = null;
+        CancelBookmark();
+        base.OnUnloaded(e);
     }
 
     private async void SaveAllButton_OnClicked(object? sender, RoutedEventArgs e)
@@ -391,6 +551,7 @@ public partial class WorkContainer : UserControl
 
     public void ResetEngine(IAsyncEnumerable<IArtworkInfo> newEngine)
     {
+        CancelBookmark();
         WorkView.ResetEngine(newEngine);
     }
 

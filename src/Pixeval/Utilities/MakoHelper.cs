@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Mako;
 using Mako.Global.Enum;
 using Mako.Model;
 using Misaki;
@@ -84,12 +85,34 @@ public static class MakoHelper
             Novel => SimpleWorkType.Novel,
             _ => throw new ArgumentOutOfRangeException(nameof(entry))
         };
-        var result = await (favorite
-            ? App.AppViewModel.MakoClient.PostWorkBookmarkAsync(simpleWorkType, entry.Id, privately ? PrivacyPolicy.Private : PrivacyPolicy.Public, tags, token)
-            : App.AppViewModel.MakoClient.RemoveWorkBookmarkAsync(simpleWorkType, entry.Id, token));
-        if (result)
+        var client = App.AppViewModel.MakoClient;
+        var accountId = client.Me?.Id;
+        var invalidated = 0;
+        client.TokenRefreshed += OnTokenRefreshed;
+        try
+        {
+            var succeeded = await (favorite
+                ? client.PostWorkBookmarkAsync(simpleWorkType, entry.Id, privately ? PrivacyPolicy.Private : PrivacyPolicy.Public, tags, token)
+                : client.RemoveWorkBookmarkAsync(simpleWorkType, entry.Id, token));
+            if (!succeeded || token.IsCancellationRequested || Volatile.Read(ref invalidated) != 0
+                || client.Me?.Id != accountId)
+                return false;
+
             entry.IsFavorite = favorite;
-        return entry.IsFavorite;
+            return true;
+        }
+        finally
+        {
+            client.TokenRefreshed -= OnTokenRefreshed;
+        }
+
+        void OnTokenRefreshed(MakoClient sender, TokenResponse? response)
+        {
+            // Account A -> B -> A is still a different request lifetime. OAuth
+            // renewal for A alone must keep the operation valid.
+            if (response?.User.Id != accountId)
+                Interlocked.Exchange(ref invalidated, 1);
+        }
     }
 
     public static string? ToMakoProxy(ProxyType type, string? proxy) =>

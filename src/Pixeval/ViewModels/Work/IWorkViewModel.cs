@@ -19,6 +19,8 @@ public interface IWorkViewModel : INotifyPropertyChanged
     /// <inheritdoc cref="WorkEntryViewModel{T}.AddToBookmarkCommand"/>
     IAsyncRelayCommand<(IReadOnlyList<string>? Tags, bool IsPrivate, Control? Control)> AddToBookmarkCommand { get; }
 
+    bool LastBookmarkSucceeded { get; }
+
     /// <inheritdoc cref="WorkEntryViewModel{T}.BookmarkCommand"/>
     IAsyncRelayCommand<Control?> BookmarkCommand { get; }
 

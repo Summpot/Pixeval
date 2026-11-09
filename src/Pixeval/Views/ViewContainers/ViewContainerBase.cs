@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
@@ -25,10 +26,10 @@ public abstract class ViewContainerBase : ContentControl
             DialogHost = new(topLevel);
     }
 
-    public Task<ContentDialogResult> ShowContentDialogAsync(ContentDialog dialog) =>
-        DialogHost.ShowAsync(dialog);
+    public Task<ContentDialogResult> ShowContentDialogAsync(ContentDialog dialog, CancellationToken token = default) =>
+        DialogHost.ShowAsync(dialog, token);
 
-    public Task<ContentDialogResult> CreateOkCancelAsync(string title, object? content) =>
+    public Task<ContentDialogResult> CreateOkCancelAsync(string title, object? content, CancellationToken token = default) =>
         ShowContentDialogAsync(new()
         {
             Title = title,
@@ -36,7 +37,7 @@ public abstract class ViewContainerBase : ContentControl
             PrimaryButtonText = I18NManager.GetResource(ContentDialogResources.OkButtonContent),
             CloseButtonText = I18NManager.GetResource(ContentDialogResources.CancelButtonContent),
             DefaultButton = ContentDialogButton.Primary
-        });
+        }, token);
 
     public Task<ContentDialogResult> CreateAcknowledgementAsync(string title, object? content) =>
         ShowContentDialogAsync(new()
