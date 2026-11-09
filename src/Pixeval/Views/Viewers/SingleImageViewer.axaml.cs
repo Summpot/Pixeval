@@ -137,7 +137,7 @@ public partial class SingleImageViewer : UserControl
             _pendingView = _pendingView is { } pending
                 ? pending.Resize(e.NewSize)
                 : new(e.NewSize,
-                    GetViewportAnchor(e.OldSize, scrollView.Viewport, scrollView.Offset, scrollView.ZoomFactor),
+                    GetViewportAnchor(GetDisplaySize(e.OldSize), scrollView.Viewport, scrollView.Offset, scrollView.ZoomFactor),
                     GetReplacementZoomFactor(scrollView.ZoomFactor, e.OldSize, e.NewSize));
         }
         else
@@ -160,7 +160,7 @@ public partial class SingleImageViewer : UserControl
                 case null:
                     SetViewerControls(null, null);
                     break;
-                case ScrollView { Content: AnimatedImage image } scrollView:
+                case ScrollView { Content: LayoutTransformControl { Child: AnimatedImage image } } scrollView:
                     SetViewerControls(image, scrollView);
                     break;
                 case AnimatedImage image:
@@ -186,14 +186,15 @@ public partial class SingleImageViewer : UserControl
         imageSize is { Width: > 0, Height: > 0 } && bounds is { Width: > 0, Height: > 0 }
             ? double.Min(bounds.Width / imageSize.Width, bounds.Height / imageSize.Height) : 1;
 
-    private double GetFitZoomFactor(Size viewport, Size imageSize)
+    private double GetFitZoomFactor(Size viewport, Size imageSize) => GetPixelScale(viewport, GetDisplaySize(imageSize));
+
+    private Size GetDisplaySize(Size imageSize)
     {
-        // Rotation is a render transform, so the scrolling coordinates remain
-        // in source space. Only the fit scale uses the displayed bounding size.
+        // Swipe's layout transform exposes the rotated bounds to the scroll presenter.
+        // Fit and replacement anchors use that same displayed coordinate space.
         var rotation = (DataContext as SingleViewerViewModel)?.RotationDegree ?? 0;
-        var displaySize = rotation % 180 is 90 or -90
+        return rotation % 180 is 90 or -90
             ? new Size(imageSize.Height, imageSize.Width) : imageSize;
-        return GetPixelScale(viewport, displaySize);
     }
 
     internal static double GetReplacementZoomFactor(double zoomFactor, Size oldSize, Size newSize) =>
@@ -302,7 +303,7 @@ public partial class SingleImageViewer : UserControl
             return;
         }
         _pendingView = null;
-        _ = scrollView.ScrollTo(GetAnchorOffset(pending.Anchor, size, viewport, zoom), false);
+        _ = scrollView.ScrollTo(GetAnchorOffset(pending.Anchor, GetDisplaySize(size), viewport, zoom), false);
         InitialFitApplied = true;
         PublishZoomFactor();
     }

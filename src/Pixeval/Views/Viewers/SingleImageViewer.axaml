@@ -23,20 +23,20 @@
                 IsHorizontalMeasureInfinite="True"
                 IsVerticalMeasureInfinite="True"
                 Theme="{StaticResource ViewerScrollViewTheme}">
-                <ai:AnimatedImage
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    IsPlaying="{Binding IsPlaying}"
-                    RenderTransformOrigin="50%,50%"
-                    Source="{Binding DisplaySource}"
-                    Stretch="Uniform">
-                    <ai:AnimatedImage.RenderTransform>
+                <LayoutTransformControl HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <LayoutTransformControl.LayoutTransform>
                         <TransformGroup>
                             <ScaleTransform ScaleX="{Binding MirrorScaleX}" />
                             <RotateTransform Angle="{Binding RotationDegree}" />
                         </TransformGroup>
-                    </ai:AnimatedImage.RenderTransform>
-                </ai:AnimatedImage>
+                    </LayoutTransformControl.LayoutTransform>
+                    <ai:AnimatedImage
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        IsPlaying="{Binding IsPlaying}"
+                        Source="{Binding DisplaySource}"
+                        Stretch="Uniform" />
+                </LayoutTransformControl>
             </scroll:ScrollView>
         </DataTemplate>
 
