@@ -4,6 +4,10 @@
     xmlns:controls="using:Pixeval.Controls"
     xmlns:pixeval="using:Pixeval">
 
+    <Style Selector="CommandBar">
+        <Setter Property="controls:CommandBarKeyboardDismiss.IsEnabled" Value="True" />
+    </Style>
+
     <Style Selector="CommandBar /template/ CommandBarButton#PART_OverflowButton">
         <Setter Property="controls:CommandBarOverflowLabel.Text" Value="{I18N {x:Static pixeval:MiscResources.MoreCommands}}" />
     </Style>

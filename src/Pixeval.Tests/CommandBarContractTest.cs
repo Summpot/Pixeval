@@ -161,6 +161,67 @@ public sealed class CommandBarContractTest
         }, CancellationToken.None);
     }
 
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task OverflowEscapeStillClosesAfterItsLastActionDisablesItself(bool dark)
+    {
+        await using var session = HeadlessUnitTestSession.StartNew(typeof(MaterialThemeIntegrationTest.MaterialTestApplication));
+        await session.Dispatch(() =>
+        {
+            var calls = 0;
+            var enabled = true;
+            RelayCommand? command = null;
+            command = new RelayCommand(() =>
+            {
+                calls++;
+                enabled = false;
+                command!.NotifyCanExecuteChanged();
+            }, () => enabled);
+            var action = Action("Remove selected records", command, new object());
+            var bar = new CommandBar { SecondaryCommands = { action } };
+            var other = new CommandBar { SecondaryCommands = { Action("Unrelated action", new RelayCommand(() => { }), new object()) } };
+            var window = new Window
+            {
+                Width = 360,
+                Height = 400,
+                RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light,
+                Content = new StackPanel { Children = { bar, other } }
+            };
+            try
+            {
+                window.Show();
+                Render(window);
+                var more = bar.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "PART_OverflowButton");
+                Assert.IsTrue(more.Focus(NavigationMethod.Tab));
+                Press(window, Key.Enter);
+                Render(window);
+                Assert.IsTrue(bar.IsOpen && action.IsEffectivelyVisible);
+                Click(window, action);
+                Assert.AreEqual(1, calls);
+                Assert.IsFalse(action.IsEffectivelyEnabled);
+                // If dismissal already happened, reopen with every action disabled.
+                // There is no enabled menu item to take keyboard focus in this state.
+                if (!bar.IsOpen)
+                {
+                    Assert.IsTrue(more.Focus(NavigationMethod.Tab));
+                    Press(window, Key.Enter);
+                    Render(window);
+                }
+                Assert.IsTrue(bar.IsOpen);
+                Assert.IsTrue(more.Focus(NavigationMethod.Tab));
+                Press(window, Key.Escape);
+                Render(window);
+                Assert.IsFalse(bar.IsOpen, "Escape from the overflow entry must also close a menu whose actions are disabled.");
+                Assert.AreSame(more, window.FocusManager!.GetFocusedElement());
+                Assert.IsFalse(other.IsOpen);
+                Press(window, Key.Escape);
+                Assert.AreEqual(1, calls, "Escape never invokes the destructive action again.");
+            }
+            finally { window.Content = null; window.Close(); }
+        }, CancellationToken.None);
+    }
+
     private static void AssertCompleteLabel(CommandBarButton button)
     {
         var label = button.GetVisualDescendants().OfType<ContentPresenter>().Single(p => p.Name is "PART_Label");
