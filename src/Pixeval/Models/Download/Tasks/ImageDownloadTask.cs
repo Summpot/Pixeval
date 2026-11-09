@@ -217,15 +217,27 @@ public partial class ImageDownloadTask : ViewModelBase, ISingleDownloadTaskBase,
 
                 if (GetExtensionService().ActiveDownloaders.FirstOrDefault() is { } downloader)
                 {
-                    var notifier = new ProgressNotifier(this);
-                    FileHelper.CreateParentDirectory(DownloadTempDestination);
-                    downloader.Download(notifier, Uri.OriginalString, DownloadTempDestination);
-                    while (!notifier.Finished)
-                        await Task.Delay(1000, CancellationTokenSource.Token);
-                    if (notifier.Exception is null)
-                        await CommitDownloadedFileAsync(overwrite);
-                    else
-                        await SetErrorAsync(notifier.Exception);
+                    var notifier = new ProgressNotifier(this, token);
+                    try
+                    {
+                        FileHelper.CreateParentDirectory(DownloadTempDestination);
+                        downloader.Download(notifier, Uri.OriginalString, DownloadTempDestination);
+                        // The downloader ABI has no cancellation method. Keep the
+                        // attempt alive until the writer releases its destination;
+                        // pause/cancel must not let a new attempt reuse that file.
+                        var error = await notifier.Completion;
+                        token.ThrowIfCancellationRequested();
+                        if (error is null)
+                            await CommitDownloadedFileAsync(overwrite);
+                        else
+                            await SetErrorAsync(error);
+                    }
+                    finally
+                    {
+                        notifier.StopReporting();
+                        if (token.IsCancellationRequested && File.Exists(DownloadTempDestination))
+                            File.Delete(DownloadTempDestination);
+                    }
                     return;
                 }
             }
@@ -391,21 +403,62 @@ public partial class ImageDownloadTask : ViewModelBase, ISingleDownloadTaskBase,
     }
 
     [GeneratedComClass]
-    private partial class ProgressNotifier(IProgress<double> progress)
+    private partial class ProgressNotifier(IProgress<double> progress, CancellationToken token)
         : IProgressNotifier
     {
-        public bool Finished { get; private set; }
+        private readonly object _gate = new();
 
-        public Exception? Exception { get; private set; }
+        private readonly TaskCompletionSource<Exception?> _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public void ProgressChanged(double value) => progress.Report(value);
+        private IProgress<double>? _progress = progress;
 
-        public void Completed() => Finished = true;
+        private bool _finished;
 
-        public void Aborted(IException? exception)
+        public Task<Exception?> Completion => _completion.Task;
+
+        public void ProgressChanged(double value)
         {
-            Finished = true;
-            Exception = exception?.ToException() ?? new OperationCanceledException();
+            lock (_gate)
+                if (!token.IsCancellationRequested)
+                    _progress?.Report(value);
+        }
+
+        public void Completed() => Finish(null, false);
+
+        public void Aborted(IException? exception) => Finish(exception, true);
+
+        private void Finish(IException? exception, bool aborted)
+        {
+            lock (_gate)
+            {
+                if (_finished)
+                    return;
+                _finished = true;
+                _progress = null;
+            }
+
+            Exception? error = null;
+            if (aborted)
+                try
+                {
+                    error = exception?.ToException() ?? new OperationCanceledException();
+                }
+                catch (Exception ex)
+                {
+                    // Exception metadata comes from the external provider too.
+                    // A broken getter must not leave the acknowledged run pending.
+                    error = ex;
+                }
+            _completion.TrySetResult(error);
+        }
+
+        public void StopReporting()
+        {
+            lock (_gate)
+            {
+                _finished = true;
+                _progress = null;
+            }
         }
     }
 }
