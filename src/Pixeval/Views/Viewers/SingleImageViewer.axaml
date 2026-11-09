@@ -6,6 +6,7 @@
     xmlns:common="using:FluentIcons.Common"
     xmlns:controls="using:Pixeval.Controls"
     xmlns:converters="using:Pixeval.Views.Converters"
+    xmlns:local="using:Pixeval.Views.Viewers"
     xmlns:markup="using:FluentIcons.Avalonia.Markup"
     xmlns:markup1="using:Pixeval.Views.Markup"
     xmlns:pixeval="using:Pixeval"
@@ -41,20 +42,20 @@
         </DataTemplate>
 
         <DataTemplate x:Key="PlainImageTemplate" DataType="{x:Type vm:SingleViewerViewModel}">
-            <ai:AnimatedImage
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                IsPlaying="{Binding IsPlaying}"
-                RenderTransformOrigin="50%,50%"
-                Source="{Binding DisplaySource}"
-                Stretch="Uniform">
-                <ai:AnimatedImage.RenderTransform>
+            <LayoutTransformControl HorizontalAlignment="Center" VerticalAlignment="Center">
+                <LayoutTransformControl.LayoutTransform>
                     <TransformGroup>
                         <ScaleTransform ScaleX="{Binding MirrorScaleX}" />
-                        <RotateTransform Angle="{Binding RotationDegree}" />
+                        <MatrixTransform Matrix="{Binding RotationDegree, Converter={x:Static local:SingleImageViewer.RotationMatrixConverter}}" />
                     </TransformGroup>
-                </ai:AnimatedImage.RenderTransform>
-            </ai:AnimatedImage>
+                </LayoutTransformControl.LayoutTransform>
+                <ai:AnimatedImage
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    IsPlaying="{Binding IsPlaying}"
+                    Source="{Binding DisplaySource}"
+                    Stretch="Uniform" />
+            </LayoutTransformControl>
         </DataTemplate>
     </UserControl.Resources>
 

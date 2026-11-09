@@ -8,6 +8,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Templates;
+using Avalonia.Data.Converters;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using Pixeval.ViewModels.Viewers;
@@ -22,6 +23,18 @@ public partial class SingleImageViewer : UserControl
 {
     private const string ScrollableImageTemplateKey = "ScrollableImageTemplate";
     private const string PlainImageTemplateKey = "PlainImageTemplate";
+
+    // Continuous layout has one finite axis. Exact quarter turns keep floating
+    // point residues from changing the transformed child's measure constraints.
+    public static readonly FuncValueConverter<int, Matrix> RotationMatrixConverter = new(degrees =>
+        (((degrees % 360) + 360) % 360) switch
+        {
+            0 => Matrix.Identity,
+            90 => new(0, 1, -1, 0, 0, 0),
+            180 => new(-1, 0, 0, -1, 0, 0),
+            270 => new(0, -1, 1, 0, 0, 0),
+            _ => Matrix.CreateRotation(degrees * Math.PI / 180)
+        });
 
     public static readonly StyledProperty<bool> UseScrollViewProperty =
         AvaloniaProperty.Register<SingleImageViewer, bool>(nameof(UseScrollView), defaultValue: true);
@@ -163,7 +176,7 @@ public partial class SingleImageViewer : UserControl
                 case ScrollView { Content: LayoutTransformControl { Child: AnimatedImage image } } scrollView:
                     SetViewerControls(image, scrollView);
                     break;
-                case AnimatedImage image:
+                case LayoutTransformControl { Child: AnimatedImage image }:
                     SetViewerControls(image, null);
                     break;
             }
