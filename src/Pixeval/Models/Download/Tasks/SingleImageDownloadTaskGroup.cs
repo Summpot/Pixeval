@@ -35,27 +35,20 @@ public class SingleImageDownloadTaskGroup : SingleImageDownloadTaskGroupBase
         DestinationIllustrationFormat = GetFormatToken(entry);
     }
 
-    protected override async Task AfterDownloadAsyncOverride(ImageDownloadTask sender, CancellationToken token = default)
+    protected override bool RequiresPostProcessing => DestinationIllustrationFormat.IsExtension;
+
+    protected override async Task ProcessDownloadedFileAsync(string source, string destination, CancellationToken token)
     {
         if (DestinationIllustrationFormat.ExtensionFormatExtension is not { } extension)
             return;
 
         var provider = GetExtensionService().GetStaticImageFormatProvider(extension)
                        ?? throw new NotSupportedException(extension);
-        var tempPath = sender.Destination + ".source";
-        if (File.Exists(tempPath))
-            File.Delete(tempPath);
-        FileHelper.Move(sender.Destination, tempPath);
-        try
-        {
-            await using var stream = File.OpenAsyncRead(tempPath);
-            await provider.FormatImageAsync(stream, sender.Destination);
-        }
-        finally
-        {
-            if (File.Exists(tempPath))
-                File.Delete(tempPath);
-        }
+        token.ThrowIfCancellationRequested();
+        await using var stream = File.OpenAsyncRead(source);
+        // The extension ABI has no cancellation method; retain the input until
+        // acknowledgement. The caller isolates any late output before commit.
+        await provider.FormatImageAsync(stream, destination);
     }
 
     private static IllustrationDownloadFormatToken GetFormatToken(DownloadHistoryEntryBase entry)

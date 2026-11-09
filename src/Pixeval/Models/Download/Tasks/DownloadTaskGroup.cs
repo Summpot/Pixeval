@@ -150,7 +150,7 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
 
     public void Reset()
     {
-        if (_isDisposed || IsPending || CurrentState is not (DownloadState.Completed or DownloadState.Error or DownloadState.Cancelled))
+        if (_isDisposed || IsPending || IsProcessing || CurrentState is not (DownloadState.Completed or DownloadState.Error or DownloadState.Cancelled))
             return;
         IsProcessing = true;
         IsAfterAllDownloadCompleted = false;
@@ -190,7 +190,7 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
 
     public void Resume()
     {
-        if (_isDisposed || IsPending)
+        if (_isDisposed || IsPending || IsProcessing)
             return;
         IsProcessing = true;
         if (CancellationTokenSource.IsCancellationRequested)
@@ -239,7 +239,15 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
     [NotifyPropertyChangedFor(nameof(CurrentState))]
     public partial bool IsPending { get; set; }
 
-    [ObservableProperty] public partial bool IsProcessing { get; set; }
+    private bool _isProcessing;
+
+    public bool IsProcessing
+    {
+        // A stopped group cannot restart until every child has released the old
+        // attempt. Keep the row and the public restart methods on the same gate.
+        get => _isProcessing || TasksSet.Any(task => task.IsProcessing);
+        set => SetProperty(ref _isProcessing, value);
+    }
 
     public DownloadState CurrentState
     {
@@ -326,6 +334,7 @@ public abstract partial class DownloadTaskGroup(DownloadHistoryEntryBase entry) 
                 nameof(ImageDownloadTask.ProgressPercentage) => nameof(ProgressPercentage),
                 nameof(ImageDownloadTask.CurrentState) => nameof(CurrentState),
                 nameof(ImageDownloadTask.ErrorMessage) => nameof(ErrorMessage),
+                nameof(ImageDownloadTask.IsProcessing) => nameof(IsProcessing),
                 _ => ""
             });
         };

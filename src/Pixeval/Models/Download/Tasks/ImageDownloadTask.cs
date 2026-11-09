@@ -46,12 +46,16 @@ public partial class ImageDownloadTask : ViewModelBase, ISingleDownloadTaskBase,
     {
         if (File.Exists(DownloadTempDestination))
             File.Delete(DownloadTempDestination);
-        if (_hasCommittedDestination && File.Exists(Destination))
-            File.Delete(Destination);
+        if (_hasCommittedDestination && File.Exists(DownloadDestination))
+            File.Delete(DownloadDestination);
         return Task.CompletedTask;
     }
 
     protected virtual Task AfterDownloadAsyncOverride(ImageDownloadTask sender, CancellationToken token = default) => Task.CompletedTask;
+
+    protected virtual bool RequiresPostProcessing => false;
+
+    protected virtual Task ProcessDownloadedFileAsync(string source, string destination, CancellationToken token) => Task.CompletedTask;
 
     private Task InvokeAfterDownloadAsyncOverride(ImageDownloadTask sender, CancellationToken token) =>
         WasDownloadSkipped ? Task.CompletedTask : AfterDownloadAsyncOverride(sender, token);
@@ -60,7 +64,9 @@ public partial class ImageDownloadTask : ViewModelBase, ISingleDownloadTaskBase,
 
     public string Destination { get; }
 
-    private string DownloadTempDestination => Destination + IoHelper.PixevalTempExtension;
+    protected virtual string DownloadDestination => Destination;
+
+    private string DownloadTempDestination => DownloadDestination + IoHelper.PixevalTempExtension;
 
     internal bool WasDownloadSkipped { get; private set; }
 
@@ -83,6 +89,12 @@ public partial class ImageDownloadTask : ViewModelBase, ISingleDownloadTaskBase,
 
     private bool _isRunning;
 
+    private readonly SemaphoreSlim _runLock = new(1, 1);
+
+    private bool _isCompleting;
+
+    private int _attemptVersion;
+
     private bool _isDisposed;
 
     private bool _hasCommittedDestination;
@@ -101,23 +113,52 @@ public partial class ImageDownloadTask : ViewModelBase, ISingleDownloadTaskBase,
     private async Task PendingCompleteAsync()
     {
         ProgressPercentage = 100;
-        // CurrentState = DownloadState.Pending;
+        _isCompleting = true;
         CurrentState = DownloadState.Completed;
         await Task.Run(async () => await AfterDownloadAsync.Invoke(this, CancellationTokenSource.Token), CancellationTokenSource.Token);
     }
 
     private async Task CommitDownloadedFileAsync(bool overwrite)
     {
-        _hasCommittedDestination = DownloadTaskFileHelper.CommitDownloadedFile(
-            DownloadTempDestination,
-            Destination,
-            overwrite);
-        WasDownloadSkipped = !_hasCommittedDestination;
+        var token = CancellationTokenSource.Token;
+        token.ThrowIfCancellationRequested();
+        var preparedFile = DownloadTempDestination;
+        try
+        {
+            if (RequiresPostProcessing)
+            {
+                preparedFile += ".formatted";
+                if (File.Exists(preparedFile))
+                    File.Delete(preparedFile);
+                CurrentState = DownloadState.Pending;
+                ProgressPercentage = 100;
+                await Task.Run(() => ProcessDownloadedFileAsync(DownloadTempDestination, preparedFile, token), token);
+                token.ThrowIfCancellationRequested();
+            }
+            _hasCommittedDestination = DownloadTaskFileHelper.CommitDownloadedFile(
+                preparedFile,
+                DownloadDestination,
+                overwrite);
+            WasDownloadSkipped = !_hasCommittedDestination;
+        }
+        finally
+        {
+            if (RequiresPostProcessing)
+            {
+                if (File.Exists(preparedFile))
+                    File.Delete(preparedFile);
+                if (File.Exists(DownloadTempDestination))
+                    File.Delete(DownloadTempDestination);
+            }
+        }
+        // Group finalization observes completed raw children through this event.
+        // Single-file conversion must finish before publishing that completion.
         await PendingCompleteAsync();
     }
 
     private async Task SetErrorAsync(Exception ex)
     {
+        _isCompleting = true;
         ErrorMessage = ex.ToString();
         CurrentState = DownloadState.Error;
         await DownloadErrorAsync.Invoke(this);
@@ -125,10 +166,29 @@ public partial class ImageDownloadTask : ViewModelBase, ISingleDownloadTaskBase,
 
     public virtual async Task StartAsync(HttpClient httpClient)
     {
-        if (CurrentState is not DownloadState.Queued)
-            return;
+        // A group can enable retry from its final child completion callback.
+        // Accept that queued attempt, but do not reuse its files until the old
+        // callback and stopped event have both unwound.
+        await _runLock.WaitAsync();
         try
         {
+            await StartCoreAsync(httpClient);
+        }
+        finally
+        {
+            _runLock.Release();
+        }
+    }
+
+    private async Task StartCoreAsync(HttpClient httpClient)
+    {
+        if (_isDisposed || CurrentState is not DownloadState.Queued)
+            return;
+        var token = CancellationTokenSource.Token;
+        var attemptVersion = Volatile.Read(ref _attemptVersion);
+        try
+        {
+            _isCompleting = false;
             CurrentState = DownloadState.Running;
             await SetRunningAsync(true);
             WasDownloadSkipped = false;
@@ -172,9 +232,10 @@ public partial class ImageDownloadTask : ViewModelBase, ISingleDownloadTaskBase,
 
             await DownloadDirectlyAsync(httpClient, overwrite);
         }
-        catch (TaskCanceledException)
+        catch (Exception) when (token.IsCancellationRequested || attemptVersion != Volatile.Read(ref _attemptVersion))
         {
-            // ignored
+            // A late provider result belongs to the cancelled attempt. A final
+            // child callback can also throw after its group has queued a retry.
         }
         catch (Exception ex)
         {
@@ -183,6 +244,8 @@ public partial class ImageDownloadTask : ViewModelBase, ISingleDownloadTaskBase,
         finally
         {
             await SetRunningAsync(false);
+            _isCompleting = false;
+            IsProcessing = false;
         }
     }
 
@@ -207,14 +270,15 @@ public partial class ImageDownloadTask : ViewModelBase, ISingleDownloadTaskBase,
 
     public void Reset()
     {
-        if (CurrentState is not (DownloadState.Completed or DownloadState.Error or DownloadState.Cancelled))
+        if (_isDisposed || (_isRunning && !_isCompleting) || CurrentState is not (DownloadState.Completed or DownloadState.Error or DownloadState.Cancelled))
             return;
+        Interlocked.Increment(ref _attemptVersion);
         IsProcessing = true;
         ErrorMessage = null;
         ProgressPercentage = 0;
         WasDownloadSkipped = false;
         _hasCommittedDestination = false;
-        Delete();
+        DeleteForReset();
         if (CancellationTokenSource.IsCancellationRequested)
         {
             CancellationTokenSource.Dispose();
@@ -227,18 +291,18 @@ public partial class ImageDownloadTask : ViewModelBase, ISingleDownloadTaskBase,
 
     public void Pause()
     {
-        if (CurrentState is not (DownloadState.Queued or DownloadState.Running))
+        if (_isDisposed || CurrentState is not (DownloadState.Queued or DownloadState.Running))
             return;
         IsProcessing = true;
         CancellationTokenSource.Cancel();
         CurrentState = DownloadState.Paused;
         DownloadPaused?.Invoke(this);
-        IsProcessing = false;
+        IsProcessing = _isRunning;
     }
 
     public void Resume()
     {
-        if (CurrentState is not DownloadState.Paused)
+        if (_isDisposed || _isRunning || CurrentState is not DownloadState.Paused)
             return;
         IsProcessing = true;
         if (CancellationTokenSource.IsCancellationRequested)
@@ -253,19 +317,31 @@ public partial class ImageDownloadTask : ViewModelBase, ISingleDownloadTaskBase,
 
     public void Cancel()
     {
-        if (CurrentState is not (DownloadState.Paused or DownloadState.Pending or DownloadState.Running or DownloadState.Queued))
+        if (_isDisposed || CurrentState is not (DownloadState.Paused or DownloadState.Pending or DownloadState.Running or DownloadState.Queued))
             return;
         IsProcessing = true;
         CancellationTokenSource.Cancel();
         CurrentState = DownloadState.Cancelled;
         DownloadCancelled?.Invoke(this);
-        IsProcessing = false;
+        IsProcessing = _isRunning;
     }
 
-    public void Delete()
+    protected virtual void DeleteForReset()
     {
-        if (File.Exists(Destination))
-            File.Delete(Destination);
+        // A failed/cancelled replacement still owns the previous usable output.
+        if (RequiresPostProcessing && OverwriteDownloadedFile)
+        {
+            if (File.Exists(DownloadTempDestination))
+                File.Delete(DownloadTempDestination);
+            return;
+        }
+        Delete();
+    }
+
+    public virtual void Delete()
+    {
+        if (File.Exists(DownloadDestination))
+            File.Delete(DownloadDestination);
 
         if (File.Exists(DownloadTempDestination))
             File.Delete(DownloadTempDestination);

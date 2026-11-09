@@ -40,11 +40,13 @@ public class SingleAnimatedImageDownloadTaskGroup : SingleImageDownloadTaskGroup
         DestinationUgoiraFormat = GetFormatToken(entry);
     }
 
-    protected override async Task AfterDownloadAsyncOverride(ImageDownloadTask sender, CancellationToken token = default)
+    protected override bool RequiresPostProcessing => DestinationUgoiraFormat.IsExtension;
+
+    protected override async Task ProcessDownloadedFileAsync(string source, string destination, CancellationToken token)
     {
         if (DestinationUgoiraFormat.ExtensionFormatExtension is { } extension)
         {
-            await FormatByExtensionAsync(sender, extension);
+            await FormatByExtensionAsync(source, destination, extension, token);
             return;
         }
 
@@ -55,44 +57,40 @@ public class SingleAnimatedImageDownloadTaskGroup : SingleImageDownloadTaskGroup
         throw new NotSupportedException(builtInFormat.ToString());
     }
 
-    private async Task FormatByExtensionAsync(ImageDownloadTask sender, string extension)
+    private async Task FormatByExtensionAsync(string source, string destination, string extension, CancellationToken token)
     {
         var provider = GetExtensionService().GetAnimatedImageFormatProvider(extension)
                        ?? throw new NotSupportedException(extension);
-        var tempPath = sender.Destination + ".source";
-        if (File.Exists(tempPath))
-            File.Delete(tempPath);
-        FileHelper.Move(sender.Destination, tempPath);
         IReadOnlyDictionary<Stream, int>? streams = null;
         try
         {
             switch (Entry.PreferredAnimatedImageType)
             {
                 case SingleAnimatedImageType.SingleZipFile:
-                    await Entry.ZipImageDelays!.TryPreloadListAsync(Entry);
-                    await using (var read = File.OpenAsyncRead(tempPath))
+                    await Entry.ZipImageDelays!.TryPreloadListAsync(Entry, token);
+                    token.ThrowIfCancellationRequested();
+                    await using (var read = File.OpenAsyncRead(source))
                         streams = (await Streams.ReadZipAsync(read, true))
                             .ToArray<Stream>()
                             .Zip(Entry.ZipImageDelays!)
                             .ToDictionary(t => t.First, t => t.Second);
                     break;
                 case SingleAnimatedImageType.SingleFile:
-                    await using (var read = File.OpenAsyncRead(tempPath))
+                    await using (var read = File.OpenAsyncRead(source))
                         streams = await IoHelper.SplitAnimatedImageStreamAsync(read);
                     break;
                 default:
                     throw new NotSupportedException(Entry.PreferredAnimatedImageType.ToString());
             }
 
-            await provider.FormatImageAsync(streams, sender.Destination);
+            token.ThrowIfCancellationRequested();
+            await provider.FormatImageAsync(streams, destination);
         }
         finally
         {
             if (streams is not null)
                 foreach (var stream in streams.Keys)
                     await stream.DisposeAsync();
-            if (File.Exists(tempPath))
-                File.Delete(tempPath);
         }
     }
 
