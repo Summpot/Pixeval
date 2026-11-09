@@ -1133,3 +1133,31 @@ Native AOT 命令 `dotnet publish src/Pixeval.Desktop/Pixeval.Desktop.csproj -c 
 XAML 经 XamlStyler、C# whitespace 检查；最终 UTF-8 无 BOM/CRLF、XAML 解析、文档链接、源码哈希、子模块和 diff 检查见 `static-validation.json`、`final-source-comparison.json`、`final-state.json`。本批仅追加此条台账，主计划和用例仅同步实际子项/契约；P12.04、P15.01/P15.03/P15.04 父项及 P12/P15 整体仍未勾选，宿主用法、清单和旧性能基准未变。
 
 未覆盖：无取消 ABI 的外部扩展无法强制中止，也不能保证永不确认或确认后继续写入的实现安全；不同身份同物理路径、完整 manager/进程重启交接和退出、全队列故障矩阵仍待验收。Continuous 原生拖动/触控板/触摸、全部缩放/模式组合、长期动画内存与同条件性能，以及原生 IME、系统焦点/读屏/剪贴板/文件能力、DPI/GPU、其他平台和远程 CI 保持待验收。下一轮可从 P15.03 快速切页/切源中的尺寸初始化及重复源更新竞态选择完整单元；保留 WorkCards 原单次输入诊断，有失败证据时再追查，不通过重复运行推定修复。继续后台验证，不自动启用 computer use。
+
+## 2026-11-09 无人值守批次：批量收藏、账号设置与快速翻页
+
+实际执行约 114 分钟，北京时间 15:51–17:45；起点 `b5f01fb3`，分支 `feat/material3expressive-migration`，初始工作区干净。读取工程约束、计划 §3.2–3.4/10.3 和最近台账后，选择已有正式外壳、Material 命令/弹层、固定 HTTP 与查看器基线支持的局部功能；没有把前置阶段整体标记完成。实现、专项验证和审查按功能本地提交，结束统一记账。未推送、对外发布、使用 computer use 或启动桌面/AOT EXE。
+
+| 功能单元 / 步骤 | 本地提交 | 完成范围 |
+| --- | --- | --- |
+| Swipe 快速切页，P15.03d | `f276209c` | 页码键盘连发确实打断过渡；三页不同宽高比图片乱序完成后，当前源、显示尺寸、倍率和各页旋转/镜像状态正确；在途正式关闭取消并隔离迟到图像，仅补测试 |
+| 账号菜单 AI 设置，P07.03a | `9f722a54` | 账号寿命独立于头像加载，旧账号/退出/关闭的响应不回写值或忙状态；新账号可在旧请求未结束时操作，同账号令牌续期不自取消或竞争本窗口 GET |
+| 批量收藏，P08.03c | `7bb9506a` | 固定作品及标签/隐私快照、重复提交门控、原确认阈值和取消焦点；换源/离页/关闭停止后续请求，跨账号及 A→B→A 隔离旧结果；按本次真实请求结果计数，已收藏条目更新失败不冒充成功 |
+
+证据根目录 `artifacts/m3e/2026-11-09-batch-1551/`。SDK `11.0.100-rc.3.26522.148`、runtime `10.0.14`、Avalonia `12.1.5`；子模块保持起点版本。复用 batch-1008 固定 revision `20c900a76cb427ad1dac38ed3f64463be2fd496b` 的 C++ 样本，显式传入并核对 SHA256 `F860A14BDF178EFACDB57AD849D1EA7741637C14E92D468AE3940AEDCB4CA440`，见 `native-fixture-reuse.json`。
+
+专项：快速翻页及相邻组 `rapid-pages/reviewed` 30/30；账号设置最终 `account-settings/frozen` 6/6；收藏与四语言阅读器相邻组 `bookmark/closed` 36/36，最后挂载状态隔离修正的 `bookmark/account-closed` 5/5。均无跳过，部分有交集，不相加充当全量。收藏使用插画浅色宽窗、小说深色窄窗的固定配对，不冒充全部主题/尺寸组合。正式导航/关闭均经过组合 PageTestHost 的 sealed 产品 Shell；没有替换导航或手动释放模型来证明关闭。
+
+有效失败对照保留：收藏 `before` 2/2 失败证明重复提交；`outcome-before` 4 失败/2 通过证明已收藏条目更新失败仍计成功及旧账号结果回写可见 Entry/心形。中间版 A→B→A 两行失败后加入即时账号版本及每次挂载独立状态，审查进一步隔离正在执行的旧 observer；最终源码另经全量。账号 `before-routed` 4/4 失败；第一版修复曾在真实令牌续期时自取消，已用独立账号 CTS 修正。早期账号按钮/POST 路由，以及收藏关闭目标取自模板加载前空 SelectedPage 的失败属于夹具问题，不算产品缺陷；原始日志、输入说明和汇总均保留。
+
+P16.02 标签关闭试验完整撤回，未提交部分修复或削弱断言。旧版 15 行为 7 失败/8 通过，暴露后台标签关闭切换活动页及 veto 前释放；使用 TabClosed 和薄适配器的最终方案仍有 3/20 行失败：移除活动项之前的后台标签会使当前内容卸载/重载。证据 `tab-closing/deferred/handoff.txt` 包含完整测试、补丁、锁定依赖及调用顺序；去除过渡动画仍能复现。关闭嵌入容器的独立两行通过，不应混入上述缺陷。后续需要针对 TabView.Avalonia/Avalonia 容器索引和选择投影处理，不能靠忽略生命周期、私有反射或测试专用导航掩盖。
+
+在干净 `7bb9506a` 上执行一次 `scripts/verify-m3e.ps1 -OutputDirectory artifacts/m3e/2026-11-09-batch-1551/windows-final -ExtensionFixture <上述固定 DLL>`：桌面 Debug 10 警告/0 错误，测试 Release 206 警告/0 错误；完整回归 **766/767 通过、1 失败、0 跳过**，耗时 **50m 51s 438ms**。本批新增的 37 行均在此全量通过；13 个本批变更源码全部在此冻结输入内，记录见 `full-input-provenance.json` / `full-input-source-hashes.json`；运行期间默认测试 DLL/依赖哈希保持不变，独立 AOT 输出不覆盖它们。测试进程实际退出码 2、脚本退出码 1，不能记为全量通过。
+
+WorkCards 在 Novel-Dark-1000 的原单次指针选择断言失败：点击前命中 Border，窗口未记录按下，释放及捕获对象为 PopupOverlayLayer，选中数始终为零。历史 batch-1008 已有同类症状，但旧记录缺少事件明细；本次成功场景也会打开 Tooltip，不能仅凭提示框定因，亦不能排除本轮可达改动对时序的影响。仅在 Git 忽略的 `card-capture/` 副本增加全局 PointerPressed、raw input 及 Tooltip/host 瞬时位置观察，条件编译替换单文件并使用独立输出，原点击、等待和断言未改；唯一一次 WorkCards 诊断 1/1 通过（原八场景），未复现失败。该成功样本的 Down/Up 均归属 Border，观察本身也可能影响时序，不能覆盖原全量失败或宣称修复。原源码及 137 个默认测试运行文件哈希未变，未将诊断副本提交；下一次观察入口及依赖捕获链见 `card-capture/handoff.txt`。
+
+Native AOT 以 `dotnet publish src/Pixeval.Desktop/Pixeval.Desktop.csproj -c Release -r win-x64 --self-contained true --artifacts-path artifacts/m3e/2026-11-09-batch-1551/aot-build -o artifacts/m3e/2026-11-09-batch-1551/native-aot-final` 成功发布，真实退出码记录为零。EXE 为 x64 PE32+、CLR 目录 RVA/size 均零，SHA256 `2CCF7BADD5F602AF80D5FC40FE4BD1E8D9E10886200D42ADCA83BE3478F7DAD1`，未运行；9 个变更产品文件及 129 个发布语言 JSON 与源码一致。对前批原始日志，IL 警告按代码/完整消息去重 46→46、无增减，只规范化 XamlClosure 编号后 42→42、无增减。见 `native-aot-header.json`、`aot-source-comparison.json` 和 `aot-warning-delta.json`；增量构建未重报的警告不视为消除，发布不等于原生运行验收。
+
+XAML Styler、C# whitespace、UTF-8 无 BOM/CRLF、XAML 解析、文档链接、diff 和子模块检查通过，见 `static-validation.json`、`final-source-comparison.json`、`final-state.json`。本批仅追加此条记录，主计划与用例只同步新子项/契约；宿主用法、清单和性能基准未变。P07/P08/P15 父项仍未勾选，P16.02 保持待验收。
+
+边界：已发送的远程收藏写入不能撤回；这里验证停止后续发送及本地旧结果隔离。账号 AI 设置仍各窗口独立缓存，没有全局写入广播/串行；其 A→B→A 保护来自代码审查，未冒充额外用例。真实服务权限、原生 OAuth/IME、系统焦点/读屏/剪贴板/浏览器/文件能力、触摸/DPI/GPU、其他平台及完整性能矩阵待验收。下一轮优先依据 WorkCards 的输入派发/弹层捕获证据定位失败，保持原单次点击和断言；之后可选 P08.03 批量保存的选择快照与入队交接，或处理 P16.02 的上游容器问题。继续后台验证，不自动启用 computer use。
