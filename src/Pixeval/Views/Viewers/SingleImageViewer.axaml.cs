@@ -122,7 +122,7 @@ public partial class SingleImageViewer : UserControl
     {
         if (ImageViewer?.Source is { Size: { Width: > 0, Height: > 0 } size }
             && ViewerScrollView is { Viewport: { Width: > 0, Height: > 0 } viewport })
-            _pendingView = new(size, new(0.5, 0.5), GetPixelScale(viewport, size), true);
+            _pendingView = new(size, new(0.5, 0.5), GetFitZoomFactor(viewport, size), true);
         QueueViewUpdate();
     }
 
@@ -185,6 +185,16 @@ public partial class SingleImageViewer : UserControl
     internal static double GetPixelScale(Size bounds, Size imageSize) =>
         imageSize is { Width: > 0, Height: > 0 } && bounds is { Width: > 0, Height: > 0 }
             ? double.Min(bounds.Width / imageSize.Width, bounds.Height / imageSize.Height) : 1;
+
+    private double GetFitZoomFactor(Size viewport, Size imageSize)
+    {
+        // Rotation is a render transform, so the scrolling coordinates remain
+        // in source space. Only the fit scale uses the displayed bounding size.
+        var rotation = (DataContext as SingleViewerViewModel)?.RotationDegree ?? 0;
+        var displaySize = rotation % 180 is 90 or -90
+            ? new Size(imageSize.Height, imageSize.Width) : imageSize;
+        return GetPixelScale(viewport, displaySize);
+    }
 
     internal static double GetReplacementZoomFactor(double zoomFactor, Size oldSize, Size newSize) =>
         zoomFactor * GetPixelScale(oldSize, newSize);
@@ -281,7 +291,7 @@ public partial class SingleImageViewer : UserControl
             return;
 
         if (!InitialFitApplied && _pendingView is null)
-            _pendingView = new(size, new(0.5, 0.5), GetPixelScale(viewport, size));
+            _pendingView = new(size, new(0.5, 0.5), GetFitZoomFactor(viewport, size));
         if (_pendingView is not { } pending || pending.Size != size || _zoomOperation is not null)
             return;
 
