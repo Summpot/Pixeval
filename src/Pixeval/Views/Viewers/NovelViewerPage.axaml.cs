@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Threading.Tasks;
+using System.Threading;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -16,6 +16,7 @@ using Pixeval.Controls;
 using Pixeval.I18N;
 using Pixeval.Models.Extensions;
 using Pixeval.Utilities;
+using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Work;
 
@@ -28,6 +29,9 @@ public partial class NovelViewerPage : IconContentPage
     private readonly List<ExtensionsHostModel> _observedExtensionHosts = [];
     private NovelViewerPageViewModel? _observedReader;
     private (long Novel, int Page)? _readingPosition;
+    private NovelViewerPageViewModel? _bookmarkReader;
+    private NovelItemViewModel? _bookmarkTarget;
+    private CancellationTokenSource? _bookmarkLifetime;
 
     private void ReaderOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -112,23 +116,53 @@ public partial class NovelViewerPage : IconContentPage
 
     private async void AddToBookmarkButton_OnClick(object? sender, ContextRequestedEventArgs e)
     {
-        if (sender is Control c && ViewModel.CurrentNovel is { Entry.Id: var id })
-            await BookmarkTagSelectorFlyoutHelper.ShowAsync(
-                c,
-                SimpleWorkType.Novel,
-                id,
-                AddToBookmarkAsync,
-                PlacementMode.Bottom);
+        if (!IsLoaded || sender is not Control anchor
+            || ViewModel.CurrentNovel is not { IsBookmarkSupported: true } target
+            || (target.IsBookmarkedDisplay & HeartButtonState.Pending) != 0
+            || !target.AddToBookmarkCommand.CanExecute((null, false, this)))
+            return;
+
+        e.Handled = true;
+        CancelBookmark();
+        _bookmarkReader = ViewModel;
+        _bookmarkTarget = target;
+        _bookmarkReader.PropertyChanged += BookmarkReaderOnPropertyChanged;
+        _bookmarkLifetime = new();
+        var token = _bookmarkLifetime.Token;
+        await BookmarkTagSelectorFlyoutHelper.ShowAsync(
+            anchor, SimpleWorkType.Novel, target.Entry.Id,
+            async selection =>
+            {
+                if (token.IsCancellationRequested)
+                    return;
+                await target.AddToBookmarkCommand.ExecuteAsync((selection.Tags, selection.IsPrivate, this));
+                if (!token.IsCancellationRequested && target.IsFavorite)
+                    TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(I18NManager.GetResource(MiscResources.AddedToBookmark));
+            },
+            PlacementMode.Bottom, token);
     }
 
-    private async Task AddToBookmarkAsync((bool IsPrivate, IReadOnlyList<string>? Tags) e)
+    private void BookmarkReaderOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (ViewModel.CurrentNovel is { } current)
-        {
-            await current.AddToBookmarkCommand.ExecuteAsync((e.Tags, e.IsPrivate, this));
-            TopLevel.GetTopLevel(this)?.ViewContainer?.ShowSuccess(
-                I18NManager.GetResource(MiscResources.AddedToBookmark));
-        }
+        if (e.PropertyName == nameof(NovelViewerPageViewModel.CurrentNovel)
+            && !ReferenceEquals(_bookmarkTarget, _bookmarkReader?.CurrentNovel))
+            CancelBookmark();
+    }
+
+    private void CancelBookmark()
+    {
+        _bookmarkReader?.PropertyChanged -= BookmarkReaderOnPropertyChanged;
+        _bookmarkReader = null;
+        _bookmarkTarget = null;
+        _bookmarkLifetime?.Cancel();
+        _bookmarkLifetime?.Dispose();
+        _bookmarkLifetime = null;
+    }
+
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        CancelBookmark();
+        base.OnDataContextChanged(e);
     }
 
     private static bool TryParsePageLink(string url, out int pageIndex)
@@ -159,6 +193,7 @@ public partial class NovelViewerPage : IconContentPage
 
     protected override void OnUnloaded(RoutedEventArgs e)
     {
+        CancelBookmark();
         if (_observedReader is { } model)
             model.PropertyChanged -= ReaderOnPropertyChanged;
         _observedReader = null;

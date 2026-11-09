@@ -208,6 +208,13 @@ public sealed class PageContractTests
     public Task NovelActions(string culture) => UiTestSession.RunAsync(TestContext, NovelActionsValidation.RunAsync, culture);
 
     [TestMethod]
+    [DataRow("zh-Hans")]
+    [DataRow("en-US")]
+    [DataRow("fr-FR")]
+    [DataRow("ru-RU")]
+    public Task NovelBookmarkLifetime(string culture) => UiTestSession.RunAsync(TestContext, NovelBookmarkLifetimeValidation.RunAsync, culture);
+
+    [TestMethod]
     public Task NovelNativeExport() => UiTestSession.RunAsync(TestContext, NovelActionsValidation.RunNativeAsync, nativeExtension: true);
 
     [TestMethod]
