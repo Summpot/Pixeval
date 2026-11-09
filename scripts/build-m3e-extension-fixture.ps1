@@ -21,15 +21,15 @@ $previousRollForward = $env:DOTNET_ROLL_FORWARD
 New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 Push-Location $repoRoot
 try {
-    $expectedSdk = (Get-Content global.json -Raw | ConvertFrom-Json).sdk.version
+    # Match verify-m3e.ps1: global.json chooses the SDK, including rollForward.
     $actualSdk = & $dotnetPath --version
-    if ($LASTEXITCODE -ne 0 -or $actualSdk -ne $expectedSdk) {
-        throw "Expected SDK $expectedSdk; resolved '$actualSdk'."
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Could not resolve an SDK using global.json. Install an SDK allowed by its version and rollForward policy.'
     }
     $env:DOTNET_ROOT = Split-Path $dotnetPath -Parent
     $env:PATH = $env:DOTNET_ROOT + [IO.Path]::PathSeparator + $env:PATH
-    # The pinned SDK's IDL generator targets net8.0; permit it to run on the pinned
-    # .NET 10 validation runtime without installing another global runtime.
+    # The fixture's IDL generator targets net8.0; permit it to use an installed
+    # compatible runtime without installing another global runtime.
     $env:DOTNET_ROLL_FORWARD = 'Major'
 
     function Invoke-FixtureCommand([string] $Name, [string] $Command, [string[]] $Arguments) {
