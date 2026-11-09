@@ -232,6 +232,10 @@ public class NovelDownloadTaskGroup : DownloadTaskGroup
 
     protected override void BeforeReset()
     {
+        // Overwrite already replaces the destination at commit. A retry must not
+        // discard the previous result before its provider has finished.
+        if (OverwriteDownloadedFile)
+            return;
         if (File.Exists(NovelFile))
             File.Delete(NovelFile);
     }

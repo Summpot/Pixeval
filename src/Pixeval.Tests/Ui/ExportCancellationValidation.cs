@@ -150,6 +150,22 @@ internal static class ExportCancellationValidation
             await UntilAsync(() => exporter.Calls == 2 && exporter.Pending is not null);
             Require(task.CurrentState == DownloadState.Pending && !task.GetToken().Token.IsCancellationRequested,
                 "Retry reuses the task with a fresh token and freshly downloaded inputs");
+            if (existingOutput)
+            {
+                Require(File.Exists(paths.NovelFile) && File.ReadAllText(paths.NovelFile) == "Existing output must survive cancellation",
+                    "Starting a retry must retain the previous output until replacement is complete");
+                await ActivateAsync(window, primary);
+                Require(task.GetToken().Token.IsCancellationRequested, "The retry can also be cancelled through its actual row");
+                exporter.Complete(!lateFailure);
+                await UntilAsync(() => !task.IsPending);
+                Require(task.CurrentState == DownloadState.Cancelled && task.DatabaseEntry.State == DownloadState.Cancelled
+                    && File.ReadAllText(paths.NovelFile) == "Existing output must survive cancellation"
+                    && exporter.Streams.All(stream => !stream.GetCanRead()) && !Directory.Exists(paths.ImageFolderPath),
+                    "Repeated cancellation preserves the original output and releases the retried provider's inputs");
+                await RenderAsync(window);
+                await ActivateAsync(window, primary);
+                await UntilAsync(() => exporter.Calls == 3 && exporter.Pending is not null);
+            }
             exporter.Complete(false);
             await UntilAsync(() => task.CurrentState is DownloadState.Completed or DownloadState.Error);
             Require(task.CurrentState == DownloadState.Completed && File.ReadAllText(paths.NovelFile).EndsWith("Export after cancel", StringComparison.Ordinal),

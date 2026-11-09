@@ -171,6 +171,9 @@ public class UgoiraDownloadTaskGroup : DownloadTaskGroup
 
     protected override void BeforeReset()
     {
+        // Preserve the previous result across retries when commit will overwrite it.
+        if (OverwriteDownloadedFile)
+            return;
         if (DestinationUgoiraFormat.BuiltInFormat is UgoiraDownloadFormat.Original)
         {
             if (File.Exists(CsvFile))
