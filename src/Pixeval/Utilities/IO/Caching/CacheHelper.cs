@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AnimatedControls.Avalonia;
@@ -84,19 +85,21 @@ public static class CacheHelper
             IReadOnlyList<MemoryStream>? zip = null;
             try
             {
-                ArgumentNullException.ThrowIfNull(frame.ZipImageDelays);
-                await frame.ZipImageDelays.TryPreloadListAsync(platform, token: token);
-                zip = await Streams.ReadZipAsync(sourceStream, true);
-                sourceStream = null;
+                var delaySource = frame.ZipImageDelays
+                    ?? throw new InvalidDataException("The animation archive has no frame delays.");
+                await delaySource.TryPreloadListAsync(platform, token: token);
+                var delays = delaySource.ToArray();
+                zip = await Streams.ReadZipAsync(sourceStream, false, token);
                 token.ThrowIfCancellationRequested();
-                var loadedBitmap = IAnimatedBitmap.Load(zip, frame.ZipImageDelays, true);
+                if (zip.Count == 0 || zip.Count != delays.Length)
+                    throw new InvalidDataException("The animation archive must contain at least one frame and exactly one delay per frame.");
+                var loadedBitmap = IAnimatedBitmap.Load(zip, delays, true);
                 zip = null;
                 return loadedBitmap;
             }
             finally
             {
-                if (sourceStream is not null)
-                    await sourceStream.DisposeAsync();
+                await sourceStream.DisposeAsync();
                 if (zip is not null)
                     foreach (var stream in zip)
                         await stream.DisposeAsync();
@@ -175,62 +178,36 @@ public static class CacheHelper
         if (frame.PreferredAnimatedImageType is not SingleAnimatedImageType.MultiFiles)
             throw new InvalidOperationException(
                 $"{nameof(IAnimatedImageFrame.PreferredAnimatedImageType)} should be {nameof(SingleAnimatedImageType.MultiFiles)}");
-        await frame.MultiImageUris!.TryPreloadListAsync(platform, token: token);
-        var client = App.AppViewModel.AppServiceProvider.GetRequiredKeyedService<IDownloadHttpClientService>(platform)
-            .GetImageDownloadClient();
-        var count = frame.MultiImageUris!.Count;
-        var imageList = new List<BitmapOrStream>(count);
+        var frames = frame.MultiImageUris
+            ?? throw new InvalidDataException("The animation has no image frames.");
+        await frames.TryPreloadListAsync(platform, token: token);
+        var count = frames.Count;
+        if (count == 0)
+            throw new InvalidDataException("The animation has no image frames.");
+        var imageList = new List<Stream>(count);
         var delayList = new List<int>(count);
         var ratio = 1d / count;
         var startProgress = 0d;
         IAnimatedBitmap? bitmap = null;
         try
         {
-            foreach (var (uri, msDelay) in frame.MultiImageUris)
+            foreach (var (uri, msDelay) in frames)
             {
-                BitmapOrStream stream;
-                try
-                {
-                    var key = uri.OriginalString;
-                    if (TryGetStream(key) is { } s)
-                        stream = s;
-                    else
-                    {
-                        var useFileCache = App.AppViewModel.AppSettings.ApplicationSettings.UseFileCache;
-                        var sp = startProgress;
-                        if (await client.DownloadMemoryStreamAsync(
-                                uri,
-                                progress?.Let(t => new Progress<double>(d => t.Report(sp + (ratio * d)))),
-                                token: token, onDataAvailable: onDataAvailable) is Result<Stream>.Success(var s2))
-                        {
-                            if (useFileCache)
-                            {
-                                _ = TryCacheStream(key, s2);
-                                s2.Position = 0;
-                            }
-
-                            stream = s2;
-                        }
-                        else
-                            stream = WrappedImageNotAvailable.Value;
-                    }
-                }
-                catch (OperationCanceledException) when (token.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    App.AppViewModel.AppServiceProvider.GetRequiredService<FileLogger>()
-                        .LogError(nameof(GetAnimatedImageSeparatedAsync), e);
-                    stream = WrappedImageNotAvailable.Value;
-                }
-
+                token.ThrowIfCancellationRequested();
+                var sp = startProgress;
+                var stream = await GetStreamAsync(platform, uri.OriginalString,
+                    progress?.Let(t => new Progress<double>(d => t.Report(sp + (ratio * d)))),
+                    onDataAvailable, token)
+                    ?? throw new InvalidDataException("An animation frame could not be downloaded.");
+                // A placeholder frame would make an incomplete original look
+                // successful. Keep every acquired stream owned until all frames
+                // are available, then let the decoder take ownership together.
                 imageList.Add(stream);
                 delayList.Add(msDelay);
                 startProgress += 100 * ratio;
             }
 
+            token.ThrowIfCancellationRequested();
             bitmap = IAnimatedBitmap.Load(imageList, delayList, true);
             return bitmap;
         }
@@ -238,7 +215,7 @@ public static class CacheHelper
         {
             if (bitmap is null)
                 foreach (var image in imageList)
-                    image.Dispose();
+                    await image.DisposeAsync();
         }
     }
 

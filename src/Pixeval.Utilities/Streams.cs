@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.IO;
 
@@ -47,36 +48,38 @@ public static class Streams
         return s;
     }
 
-    public static async Task<IReadOnlyList<MemoryStream>> ReadZipAsync(Stream zipStream, bool dispose)
+    public static async Task<IReadOnlyList<MemoryStream>> ReadZipAsync(Stream zipStream, bool dispose, CancellationToken token = default)
     {
-        if (zipStream is not MemoryStream ms)
-        {
-            ms = await zipStream.CopyToMemoryStreamAsync(dispose);
-            dispose = true;
-        }
-
+        ArgumentNullException.ThrowIfNull(zipStream);
+        List<MemoryStream> frames = [];
         try
         {
-            var list = new List<MemoryStream>();
-            // Dispose ZipArchive会导致ms也被Dispose
-            var archive = new ZipArchive(ms, ZipArchiveMode.Read);
-            // ZipArchive不支持多线程
+            token.ThrowIfCancellationRequested();
+            using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read, true);
             foreach (var entry in archive.Entries)
             {
-                await using var stream = await entry.OpenAsync();
-                var s = _RecyclableMemoryStreamManager.GetStream();
-                await stream.CopyToAsync(s);
-                s.Position = 0;
-                list.Add(s);
+                token.ThrowIfCancellationRequested();
+                var frame = RentStream();
+                // Own each output before opening or copying its entry. A later
+                // malformed entry must not orphan already extracted frames.
+                frames.Add(frame);
+                await using var input = await entry.OpenAsync(token);
+                await input.CopyToAsync(frame, token);
+                frame.Position = 0;
             }
-            if (dispose)
-                await ms.DisposeAsync();
-            return list;
+            token.ThrowIfCancellationRequested();
+            return frames;
         }
-        catch (InvalidDataException)
+        catch
         {
-            ms.Position = 0;
-            return [ms];
+            foreach (var frame in frames)
+                await frame.DisposeAsync();
+            throw;
+        }
+        finally
+        {
+            if (dispose)
+                await zipStream.DisposeAsync();
         }
     }
 
