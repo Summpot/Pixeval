@@ -9,6 +9,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
 using Pixeval.Controls;
@@ -96,11 +97,16 @@ internal static class IllustrationWorkActionsValidation
                 "Changing the displayed work dismisses its old tag popup without writing to either work");
             Require(ReferenceEquals(bookmark.Command, model.CurrentIllustration!.BookmarkCommand)
                 && ReferenceEquals(watch.Command, model.CurrentIllustration.AddToWatchLaterCommand), "Information actions rebind to the next work");
+            window.Width = 360;
+            window.RequestedThemeVariant = ThemeVariant.Dark;
+            await RenderAsync(window);
+            await CheckLinksAsync();
             model.PrevWorkCommand.Execute(null);
             await UntilAsync(() => model.CurrentWorkIndex == 0 && model.CurrentImage?.CurrentPage?.LoadSuccessfully == true);
             window.Width = 360;
             window.RequestedThemeVariant = ThemeVariant.Dark;
             await RenderAsync(window);
+            await CheckLinksAsync();
             selector = await OpenTagsAsync();
             await ActivateAsync(window, selector.FindControl<Button>("ConfirmButton")!);
             var tagged = await NextAsync();
@@ -131,6 +137,23 @@ internal static class IllustrationWorkActionsValidation
             await RenderAsync(window);
             Require(TopLevel.GetTopLevel(selector) is null && !requests.Reader.TryPeek(out _), "A late tag read cannot reopen or submit from the closed viewer");
             report.Add("PASS real tab close during tag load, no late popup or submission");
+
+            async Task CheckLinksAsync()
+            {
+                var current = model.CurrentIllustration!;
+                var copy = bar.PrimaryCommands.OfType<CommandBarButton>().Single(b => b.Label == I18NManager.GetResource(EntryItemResources.GenerateWebLink));
+                var browser = bar.PrimaryCommands.OfType<CommandBarButton>().Single(b => b.Label == I18NManager.GetResource(EntryItemResources.OpenInWebBrowser));
+                if (copy.IsInOverflow) await OpenOverflowAsync(window, bar);
+                Require(Equals(copy.Tag, current.WebsiteUri), "The overflow web-link binding follows the displayed illustration");
+                await ActivateAsync(window, copy);
+                Require(await window.Clipboard!.TryGetTextAsync() == current.WebsiteUri.OriginalString,
+                    "The actual copy action sends the displayed illustration URI to the headless clipboard");
+                if (browser.IsInOverflow) await OpenOverflowAsync(window, bar);
+                Require(Equals(browser.Tag, current.WebsiteUri), "The overflow browser binding follows the displayed illustration");
+                await ActivateAsync(window, browser);
+                Require(host.Navigations == 0, "The headless external-browser action does not replace the reader");
+                report.Add("PASS narrow web link copy and browser URI after work change: " + current.Id);
+            }
 
             async Task<TagSelector> OpenTagsAsync(bool waitForLoad = true)
             {

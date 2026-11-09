@@ -1025,3 +1025,40 @@ Windows 本地分组执行全量测试并专项复跑，按测试 ID/数据行�
 修改的 XAML 经 XamlStyler，相关 C# 经 whitespace 格式化；JSON/XAML 解析、UTF-8 无 BOM、文档本地链接、子模块状态和 diff whitespace 收尾结果在 `static-validation.json`。`final-source-hashes.json`、`aot-source-comparison.json`、`validation-summary.json` 和 `final-state.json` 保存源码归属、验证范围及实际时长。只在本批结束追加这一条台账，文档单独收尾提交，不补写它自身哈希。
 
 未覆盖与下一轮起点：P14 收藏/标签/稍后看/浏览器等动作的完整组合、GIF/WebP、动画实际帧推进与长时内存/大图性能仍待独立验收。本轮 ugoira 使用两个相同 PNG 帧验证元数据、控制和资源释放，不能证明画面帧节奏或 GPU 性能。扩展 ABI 没有取消入口，取消仅隔离旧结果，不停止已经执行的计算；本轮转换 UI 使用托管边界夹具，真实原生流 ABI 由既有固定扩展测试负责。原生 IME、系统焦点/读屏/剪贴板/保存对话框、触摸/DPI/GPU、其他平台、远程 CI 和完整应用重启保持待验收。下一批先复现上述 DownloadPages 溢出菜单稳定性缺口，再继续 P14.03 剩余作品动作的菜单/信息栏一致性及关闭边界，或建立动画帧推进专项；继续后台验证，不自动启用 computer use。
+
+## 2026-11-09 无人值守批次：作品动作、动画帧与导出取消
+
+实际执行约 92 分钟，北京时间 10:09–11:41；起点 `47e76380a0e5320b40f9f78e8117ef665a569d3d`，分支 `feat/material3expressive-migration`，开始工作区干净。读取计划 §3.2–3.4/10.3、测试工程指引和最近台账，先处理既有溢出菜单缺口，再完成依赖已具备的 P13/P14 局部契约。选择依据是既有正式阅读器/查看器、标签弹层、下载队列和固定扩展夹具已具备可复用的离线契约；本批沿用这些入口，未替换全局主题或窗口容器，未以局部通过放行其原生前置条件。未推送、对外发布或使用 computer use；没有启动桌面/AOT EXE，没有全局输入或系统剪贴板操作。
+
+| 功能单元 / 步骤 | 本地提交 | 完成范围 |
+| --- | --- | --- |
+| 普通命令栏 Escape，P02.04c | `e4978ca3` | 最后一个溢出动作禁用、焦点回到入口时，Escape 仍关闭弹层且不重复执行命令；保留上游弹层内部路由 |
+| 插画作品动作，P14.03e | `b4bf4b4f` | 收藏标签弹层绑定打开时的作品；换作品、卸载及关闭取消读取并关闭弹层；在途提交保留原作品归属，不对后续页面寿命发成功通知。四语言验证信息栏收藏增删、私密标签、稍后看持久化及宽窄窗 |
+| 解码动画播放，P14.04c | `0e844105` | 单图元数据下实际解码为多帧的 GIF/WebP 仍显示播放入口，禁用静态帧动作；GIF/WebP 与 ugoira 通过真实像素推进、循环、暂停、返回及关闭验证 |
+| 小说/ugoira 导出取消，P13.05b/P14.03f | `cc107949`、`9da7379b` | 取消后不提交迟到输出、不转成成功或错误；保持输入流到扩展确认完成，期间禁用重试并拒绝重置/继续替换令牌；清理临时文件并允许真实下载行重试。开启覆盖时保留旧文件直到成功提交，包括再次重试/取消；非覆盖重置语义保留 |
+| 固定原生样本构建 | `22e6bc40` | 样本脚本遵守仓库 `global.json` 的 `rollForward`，与正式验证脚本一致；不再强制安装一个与仓库解析结果不同的精确 SDK |
+| 小说收藏弹层归属，P13.05c | `7a4fe21f` | 捕获打开弹层时的小说；切小说、换上下文、离页和正式关闭取消弹层寿命。原请求可以完成并更新原小说，但不能通知返回后的页面；关闭时取消标签读取 |
+
+补充修复在首个导出单元提交后的复审中发现，按 §3.2 正常追加，未改写历史。父步骤与 P13/P14/P15 整体均未勾选；这里只收尾上述局部契约。
+
+证据根目录：`artifacts/m3e/2026-11-09-batch-1008/`。SDK `11.0.100-rc.3.26522.148`、runtime `10.0.14`、Avalonia `12.1.5`；M3E `859a69e563b2a01fc87a26255ee11c1d89959677`、AnimatedControls `7049a870151e79cfb7b69305706d69d3a5051f18`，全部子模块未变。固定 C++ 样本通过 `scripts/build-m3e-extension-fixture.ps1 -OutputDirectory artifacts/m3e/2026-11-09-batch-1008/native-fixture -Architecture x64` 从仓库固定 revision `20c900a76cb427ad1dac38ed3f64463be2fd496b` 构建；DLL SHA256 `F860A14BDF178EFACDB57AD849D1EA7741637C14E92D468AE3940AEDCB4CA440`，来源和环境见 `native-fixture/fixture.json`。
+
+重要边界执行一次 `scripts/verify-m3e.ps1 -OutputDirectory artifacts/m3e/2026-11-09-batch-1008/windows-final -ExtensionFixture <上述固定 DLL>`，桌面 Debug 构建 14 警告/0 错误，测试 Release 构建 206 警告/0 错误；完整回归结果为 **585/586 通过，1 失败、0 跳过**，耗时 **43 分 28.553 秒**。运行的产品代码是 `cc107949`，`worktree.txt` 记录当时尚未提交的样本构建脚本修改。全量开始后发现的重试保留输出补丁使用 `--artifacts-path .../retry-build` 独立构建，默认测试程序集前后 SHA256 一致（`full-test-assembly-hashes*.json`）；没有覆盖运行中的测试输出。
+
+最终补丁 `9da7379b` 的独立专项 `export-retry-final/` **39/39 通过、0 跳过**，包括 DownloadPages、小说动作/固定原生导出、两类导出取消和相邻下载单元测试；构建 202 警告/0 错误。该专项与全量结果分开记录，不冒充一次最终源码全量重跑。其他提交前证据：`work-actions-payload` 4/4；`export-before` 的 GIF/WebP 四行通过、小说取消两行失败；`frame-final` 31/35 通过（四个 GIF/WebP 测试尚未按真实右键打开菜单），其通过子集含 ugoira、复制/转换和渲染/动画组件；`export-preserve` 24/24。混合运行的成功子集不改写为整次通过，全部 TRX 归档在 `test-summary.json`。
+
+失败证据保留：`overflow-before` 在入口焦点路径稳定失败 2/2，原有 `DownloadPages` 基线单次通过；因此修复的是已证实的漏路由，不宣称仅凭专项已经确定上批偶发失败的唯一根因。`work-actions-before` 四语言均暴露换作品后旧弹层仍存在；`frame-capability-before` 在保留新测试/绑定、仅还原旧动画判定时四行均缺少播放能力。`export-before` 的取消后迟到成功创建文件、迟到失败变 Error；`ugoira-export-before` 暴露晚提交及失败残留输入；`export-final` 的已有输出四行暴露提前删除（另两行动图仅缺离线缩略图夹具）；`export-retry-before` 四个已有文件用例稳定暴露重试前删除。其余早期失败包含元组 CanExecute 参数、`tags[]` 请求字段、三帧夹具数量和菜单加载时机等测试/实现调整，日志原样保留。
+
+动画证据来自实际渲染像素采样：GIF/WebP 红绿蓝三帧，ugoira 两个不同颜色 PNG；播放观测到颜色变化及循环，暂停和导航返回后约 700ms 不推进。抽查已保存的不同颜色画面、深色窄窗私密标签弹层和取消后的真实下载行。它不证明严格帧间隔、GPU、触摸或长期内存无增长。新增页面测试仍使用正式 App、组合式 PageTestHost 和真实导航/关闭，仅外部 HTTP/存储/扩展边界替换，没有测试专用导航或手动 Dispose 模型来冒充关闭。
+
+全量运行期间继续完成的小说收藏单元也使用独立构建输出：`novel-bookmark-before` 四语言 4/4 在换小说后弹层未关闭处失败，`novel-bookmark-final` **46/46 通过、0 跳过**，涵盖新寿命场景、小说阅读/设置/Markdown/翻译/导出取消、共享标签及插画作品动作。编译 202 警告/0 错误；真实关闭断言读取令牌取消，深色窄窗弹层截图已抽查。最终产品源码为 `7a4fe21f`；追加的重试修复和小说单元分别由上述专项验证，不宣称被较早启动的全量程序集覆盖。
+
+收尾补充两项直接验证，随本记录提交：`export-persistence` **8/8**，从独立只读 SQLite 连接核对取消、重复取消及成功重试的状态、格式令牌与错误字段，未把内存对象检查冒充落盘；`work-links` **4/4**，验证信息栏窄窗溢出中的实际网页链接复制和浏览器 URI 在两件作品间正确切换，使用 headless 剪贴板/启动器。它们只改测试，最终产品源码仍为 `7a4fe21f`。另对该最终源码执行独立输出的桌面 Debug 构建，`desktop-debug-final-build.log` 为 14 警告/0 错误。
+
+完整回归唯一失败是 `WorkCards` 的 `Novel-Light-1000` 场景，断言为 `A pointer click in selection mode toggles exactly once`；原始截图 `windows-final/ui/WorkCards/7a50b758fe284c92b96d7ba1d0568ab8/card-failure-Novel-Light-1000.png` 与 TRX 原样保留。`DownloadPages` 和本批新增的 18 个数据行在这次全量中全部通过。随后仅添加事件/命中/焦点/计数日志的 `work-cards-diagnostic` **1/1** 通过，覆盖原八组场景；目标场景命中 Border、ClickCount=1、选择 0→1、导航数不变。针对失败截图中标题提示的假设，`work-cards-tooltip` 单独运行 `Novel-Light-1000`，通过真实悬停等待提示打开再执行原选择点击，**1/1** 通过，不能据此确定或排除瞬态时序根因。最后的 `work-cards-sequence` 将全量中的相邻场景按 HomeSources → Spotlight → LoginLifetime → WorkCards 顺序组合运行，**4/4** 通过（4 分 17.629 秒），仍未复现；这不能覆盖全量之前的全部全局状态。三次诊断使用的补丁已保存并撤回，原卡片测试及产品卡片代码未修改；首次诊断补丁插入同名点击位置导致的编译失败也保留在日志。该问题尚未稳定复现、因果未确认，不将定向通过写成修复，也不把全量改写为通过。
+
+最终 AOT：`dotnet publish src/Pixeval.Desktop/Pixeval.Desktop.csproj -c Release -r win-x64 --self-contained true --artifacts-path artifacts/m3e/2026-11-09-batch-1008/aot-build -o artifacts/m3e/2026-11-09-batch-1008/native-aot-final` 成功。PE 为 x64 PE32+，CLR 头 RVA/size 均为零；EXE SHA256 `ED70985FE97524DD8C4E08FB2F4B3C7AA87AC42DFEB2186DFF2EB66C93990778`，未运行。12 个变更产品源码哈希与发布输入相同，129 个发布语言 JSON 与源码一致，见 `native-aot-header.json` / `aot-source-comparison.json`。按原始代码/消息去重有 46 条 IL 裁剪/AOT 诊断，未规范化生成闭包编号；本地没有上批原始发布日志，不与历史规范化的 42 条直接比较，也不声称无新增 AOT 警告。
+
+修改的 XAML 经 XamlStyler，C# 经 whitespace 格式化；最终编码/XAML/本地链接/子模块和 `git diff --check` 见 `static-validation.json`，源码哈希见 `final-source-hashes.json`。普通构建消息比较见 `build-warning-delta.json`；增量构建未输出的依赖警告不视为消除。批次只在此追加一条记录，其余文档只改实际状态、契约及 SDK 使用方式，不生成无变化的清单，不补写文档提交自身哈希。
+
+剩余范围：信息栏以外作品动作的完整组合、系统浏览器/剪贴板/保存对话框、单文件图像/动画及漫画格式提供器的取消提交、完整系列联动/重启、大图与长期内存性能仍未完整验收。扩展 ABI 没有取消入口，取消只隔离结果，不能停止已经执行的计算；本批取消矩阵在提供器尚未确认完成时发起，不等同整个下载引擎的并发/故障注入验收。原生 IME、系统焦点/读屏、触摸/DPI/GPU、其他平台及远程 CI 保持待验收。下一轮先根据原始 WorkCards 附件和诊断记录调查该选择稳定性缺口，再按具体依赖选择剩余作品菜单一致性或其他格式导出边界；后者的源码起点见 `remaining-format-audit.txt`，没有把源码审计冒充已复现缺陷。继续后台验证，不自动启用 computer use。

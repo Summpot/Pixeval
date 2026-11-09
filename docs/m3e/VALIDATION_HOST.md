@@ -20,6 +20,8 @@ dotnet src/Pixeval.Tests/bin/Release/net10.0/Pixeval.Tests.dll --filter "TestCat
 
 没有 `PIXEVAL_TEST_EXTENSION_FIXTURE` 时原生扩展 UI 用例明确标为未执行，不将其当作通过；CI 构建固定样本并传入。截图与请求/契约日志通过 TestContext 作为测试附件关联到 TRX。验证脚本设置 `PIXEVAL_TEST_ARTIFACTS` 将这些附件及隔离数据保存在输出目录内，供 CI 上传；直接运行测试时也可显式设置该变量。失败时仍保留已生成附件和本次隔离数据，不能导入个人账号或配置。普通 UI 测试无需启动原生窗口或操作桌面。
 
+固定原生样本使用 `scripts/build-m3e-extension-fixture.ps1 -OutputDirectory <新目录> -Architecture x64` 构建（架构参数按平台选择）。它与验证脚本一样由 `dotnet` 按仓库 `global.json` 的 `version` / `rollForward` 解析 SDK，不要求解析结果与 `version` 字段字符串完全相同；固定源码 revision、实际 SDK、库路径和 SHA256 写入 `fixture.json`。将其中的库路径显式传给 `verify-m3e.ps1 -ExtensionFixture`，不从个人扩展目录自动选库。
+
 `tools/Pixeval.MigrationValidation` 仅保留以下辅助用途，不再承担页面行为测试：
 
 ```powershell
@@ -75,11 +77,16 @@ dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationVa
 | `IllustrationNavigation`（四语言 DataRow） | `IllustrationNavigationValidation.cs` |
 | `IllustrationAutoPlay`（四语言 DataRow） | `IllustrationAutoPlayValidation.cs` |
 | `IllustrationSave`（四语言 DataRow） | `IllustrationSaveValidation.cs` |
+| `IllustrationWorkActions`（四语言 DataRow） | `IllustrationWorkActionsValidation.cs` |
+| `IllustrationAnimation`（四语言 DataRow） | `IllustrationAnimationValidation.cs` |
+| `IllustrationFramePlayback`（GIF/WebP × Swipe/Continuous） | `IllustrationFramePlaybackValidation.cs` |
 | `NovelReader` | `NovelReaderValidation.cs` |
 | `NovelReadingSettings` | `NovelReadingSettingsValidation.cs` |
 | `NovelMarkdown` | `NovelMarkdownValidation.cs` |
 | `NovelTranslation`（四语言 DataRow） | `NovelTranslationValidation.cs` |
 | `NovelActions`（四语言 DataRow） | `NovelActionsValidation.cs` |
+| `NovelBookmarkLifetime`（四语言 DataRow） | `NovelBookmarkLifetimeValidation.cs` |
+| `NovelExportCancellation` / `UgoiraExportCancellation` | `ExportCancellationValidation.cs` |
 | `NovelNativeExport`（需固定原生扩展样本） | `NovelActionsValidation.cs` |
 | `Documentation` | `DocumentationValidation.cs` |
 | `Dialog` | `DialogValidation.cs` |
@@ -87,11 +94,13 @@ dotnet tools/Pixeval.MigrationValidation/bin/Release/net10.0/Pixeval.MigrationVa
 
 ## 场景契约与证明边界
 
-图像场景通过 `IllustrationReaderFixture` 提供固定图片和可控详情 HTTP，保留正式页面、图像管线及标签生命周期。`IllustrationReader` / `IllustrationNavigation` 覆盖 Swipe/Continuous、浅深主题、宽窄窗、详情重试、身份检查、页码/作品输入和溢出命令绑定；独立 `PagePreviewSliderInputTest` 证明拖动、事件订阅与 UIA 范围，不能单独替代页面导航证据。图片下载/解码失败、内层页签完整视觉及原生手势另行验收。
+图像场景通过 `IllustrationReaderFixture` 提供固定图片和可控详情 HTTP，保留正式页面、图像管线及标签生命周期。`IllustrationReader` / `IllustrationNavigation` 覆盖 Swipe/Continuous、浅深主题、宽窄窗、详情重试、身份检查、页码/作品输入和溢出命令绑定；独立 `PagePreviewSliderInputTest` 证明拖动、事件订阅与 UIA 范围，不能单独替代页面导航证据。图片恢复与信息页签局部契约分别见 `IllustrationImageLoad` / `IllustrationInformation`；完整视觉矩阵与原生手势另行验收。
 
 `IllustrationAutoPlay` 在 Swipe 正式页面通过右键菜单、键盘和真实 DispatcherTimer 验证模式/范围、间隔、暂停/恢复、单作品循环、临时导航及待完成详情/关闭；使用隔离设置文件核对原字段，不以手动调用计时回调代替播放。`IllustrationSave` 通过真实图像菜单触发 PNG 另存，只在存储边界使用内存提供器；验证可解码输出、取消、能力不足和选择器/打开/写入错误，以及关闭后迟到文件/流的释放。它不证明系统保存对话框、磁盘权限、剪贴板、转换扩展或动画控制已通过。
 
-小说场景通过 `NovelReaderFixture` 提供固定正文、封面/插图与可控迟到响应；阅读页面、设置生成器、翻译菜单、下载队列和实际格式转换仍使用产品实现。托管扩展仅替换外部 SDK 边界。`NovelNativeExport` 使用与 `NativeExtension` 相同的固定 C++ 样本：该示例格式提供器完成调用但不写文件，因此验收的是消费者明确报告失败，不是成功原生格式导出。原生保存对话框、系统剪贴板/浏览器、扩展执行中取消和完整重启另行验收。
+小说场景通过 `NovelReaderFixture` 提供固定正文、封面/插图与可控迟到响应；阅读页面、设置生成器、翻译菜单、下载队列和实际格式转换仍使用产品实现。托管扩展仅替换外部 SDK 边界。`NovelNativeExport` 使用与 `NativeExtension` 相同的固定 C++ 样本：该示例格式提供器完成调用但不写文件，因此验收的是消费者明确报告失败，不是成功原生格式导出。取消专项使用真实下载行与可延迟完成的托管提供器，保持输入流到确认完成，并从独立只读 SQLite 连接读取状态；不等同完整应用重启或中断无取消 ABI 的计算。原生保存对话框、系统剪贴板/浏览器及完整重启另行验收。
+
+`IllustrationWorkActions` / `NovelBookmarkLifetime` 通过实际标签弹层、换作品、正式离页返回和关闭验证作品归属；网页链接使用 headless 剪贴板/启动器。动画专项采样实际渲染颜色而非只读播放属性，保存每种颜色的帧和采样时间；它证明帧推进、暂停和关闭资源释放，不证明严格帧时序、GPU 或长期内存性能。
 
 ## inventory
 

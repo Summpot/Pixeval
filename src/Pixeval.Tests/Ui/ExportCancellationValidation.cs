@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Pixeval.Download;
 using Pixeval.Extensions.Common;
 using Pixeval.Extensions.Common.FormatProviders;
+using Pixeval.Models.Database;
 using Pixeval.Models.Download;
 using Pixeval.Models.Download.Tasks;
 using Pixeval.Models.Extensions;
@@ -20,6 +21,7 @@ using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Download;
 using Pixeval.Views.Viewers;
+using SQLite;
 using static Pixeval.Tests.Ui.NovelReaderValidation;
 
 namespace Pixeval.Tests.Ui;
@@ -140,6 +142,7 @@ internal static class ExportCancellationValidation
                 "A cancelled provider must never publish its late output file or overwrite an existing output");
             Require(task.CurrentState == DownloadState.Cancelled && task.DatabaseEntry.State == DownloadState.Cancelled
                 && task.ErrorMessage is null && !task.IsProcessing, "Cancelled finalization remains cancelled without a late success/error");
+            RequirePersisted(task, DownloadState.Cancelled);
             Require(busyAfterCancel, "A cancelled provider remains busy until its streams can safely be released");
             Require(inputStreams.All(stream => !stream.GetCanRead()) && !Directory.Exists(paths.ImageFolderPath),
                 "After acknowledgement, input streams and partial export files are released");
@@ -162,6 +165,7 @@ internal static class ExportCancellationValidation
                     && File.ReadAllText(paths.NovelFile) == "Existing output must survive cancellation"
                     && exporter.Streams.All(stream => !stream.GetCanRead()) && !Directory.Exists(paths.ImageFolderPath),
                     "Repeated cancellation preserves the original output and releases the retried provider's inputs");
+                RequirePersisted(task, DownloadState.Cancelled);
                 await RenderAsync(window);
                 await ActivateAsync(window, primary);
                 await UntilAsync(() => exporter.Calls == 3 && exporter.Pending is not null);
@@ -171,6 +175,8 @@ internal static class ExportCancellationValidation
             Require(task.CurrentState == DownloadState.Completed && File.ReadAllText(paths.NovelFile).EndsWith("Export after cancel", StringComparison.Ordinal),
                 "The uncancelled retry publishes its complete file exactly once");
             Require(exporter.Streams.All(stream => !stream.GetCanRead()) && !Directory.Exists(paths.ImageFolderPath), "Successful retry also releases all temporary inputs");
+            RequirePersisted(task, DownloadState.Completed);
+            report.Add("PASS separate read-only SQLite connections restore cancelled/retried states, format token and cleared error");
             report.Add($"PASS animated={animated}, lateFailure={lateFailure}, existingOutput={existingOutput}: real reader save, row cancel, input lifetime, cancelled state, row retry and committed output");
             host.Shell.CloseAllPages();
             Require(fixture.Http.UnexpectedRequests.IsEmpty, "Export cancellation only uses isolated content and images");
@@ -182,6 +188,17 @@ internal static class ExportCancellationValidation
             window.Close();
             extensions.HostModels.Remove(extensionHost);
         }
+    }
+
+    private static void RequirePersisted(DownloadTaskGroup task, DownloadState state)
+    {
+        var database = App.AppViewModel.AppServiceProvider.GetRequiredService<SQLiteConnection>();
+        Require(File.Exists(database.DatabasePath), "Persistence is verified against the isolated database file");
+        using var reopened = new SQLiteConnection(database.DatabasePath, SQLiteOpenFlags.ReadOnly);
+        var destination = task.TokenizedDestination;
+        var entry = reopened.Table<DownloadHistoryEntry>().Where(record => record.Destination == destination).ToList().Single();
+        Require(entry.State == state && entry.ErrorMessage is null && entry.FormatToken == task.DatabaseEntry.FormatToken,
+            "A separate database connection must see the completed attempt's state and original format: " + entry.State);
     }
 
     private sealed class Exporter : INovelFormatProviderExtension, IAnimatedImageFormatProviderExtension
