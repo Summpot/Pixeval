@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Misaki;
+using Pixeval.Download;
 using Pixeval.Extensions.Common.FormatProviders;
 using Pixeval.Models.Database;
 using Pixeval.Models.Extensions;
@@ -46,7 +47,9 @@ public class MangaDownloadTaskGroup : DownloadTaskGroup
         foreach (var page in Entry.Pages)
         {
             var path = IoHelper.ReplaceTokenExtensionFromUrl(TokenizedDestination, page.ImageUri, page.SetIndex);
-            var imageDownloadTask = new ImageDownloadTask(page.ImageUri, path, DatabaseEntry.State);
+            var imageDownloadTask = DestinationIllustrationFormat.IsExtension
+                ? new StagedImageDownloadTask(page.ImageUri, path, DatabaseEntry.State)
+                : new ImageDownloadTask(page.ImageUri, path, DatabaseEntry.State);
             AddToTasksSet(imageDownloadTask);
         }
 
@@ -58,33 +61,39 @@ public class MangaDownloadTaskGroup : DownloadTaskGroup
         if (DestinationIllustrationFormat.ExtensionFormatExtension is not { } extension)
             return;
 
-        var provider = GetExtensionService().GetStaticImageFormatProvider(extension)
-                       ?? throw new NotSupportedException(extension);
-        foreach (var task in TasksSet)
+        try
         {
-            if (task.WasDownloadSkipped)
-                continue;
+            var provider = GetExtensionService().GetStaticImageFormatProvider(extension)
+                           ?? throw new NotSupportedException(extension);
+            // Keep the existing all-downloads-first, serial-provider ordering. Raw
+            // pages are private inputs; only a completed conversion may replace a page.
+            foreach (StagedImageDownloadTask task in TasksSet)
+            {
+                token.ThrowIfCancellationRequested();
+                if (task.WasDownloadSkipped)
+                    continue;
 
-            var tempPath = task.Destination + ".source";
-            if (File.Exists(tempPath))
-                File.Delete(tempPath);
-            FileHelper.Move(task.Destination, tempPath);
-            try
-            {
-                await using var stream = File.OpenAsyncRead(tempPath);
-                await provider.FormatImageAsync(stream, task.Destination);
+                var temporaryFile = task.Destination + ".formatted" + IoHelper.PixevalTempExtension;
+                if (File.Exists(temporaryFile))
+                    File.Delete(temporaryFile);
+                try
+                {
+                    await using var stream = File.OpenAsyncRead(task.SourceDestination);
+                    await provider.FormatImageAsync(stream, temporaryFile);
+                    token.ThrowIfCancellationRequested();
+                    _ = DownloadTaskFileHelper.CommitDownloadedFile(temporaryFile, task.Destination, task.OverwriteOutput);
+                }
+                finally
+                {
+                    if (File.Exists(temporaryFile))
+                        File.Delete(temporaryFile);
+                }
             }
-            catch
-            {
-                if (File.Exists(task.Destination))
-                    File.Delete(task.Destination);
-                throw;
-            }
-            finally
-            {
-                if (File.Exists(tempPath))
-                    File.Delete(tempPath);
-            }
+        }
+        finally
+        {
+            foreach (StagedImageDownloadTask task in TasksSet)
+                task.DeleteSource();
         }
     }
 
@@ -117,4 +126,38 @@ public class MangaDownloadTaskGroup : DownloadTaskGroup
 
     private static ExtensionService GetExtensionService() =>
         App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>();
+
+    private sealed class StagedImageDownloadTask(Uri uri, string destination, DownloadState state)
+        : ImageDownloadTask(uri, destination, state)
+    {
+        internal string SourceDestination => Destination + ".source" + IoHelper.PixevalTempExtension;
+
+        protected override string DownloadDestination => SourceDestination;
+
+        internal bool OverwriteOutput { get; private set; }
+
+        protected override Task DownloadStartedAsyncOverride(ImageDownloadTask sender)
+        {
+            OverwriteOutput = OverwriteDownloadedFile;
+            DeleteSource();
+            return Task.CompletedTask;
+        }
+
+        internal void DeleteSource() => base.Delete();
+
+        protected override void DeleteForReset()
+        {
+            if (OverwriteDownloadedFile)
+                DeleteSource();
+            else
+                Delete();
+        }
+
+        public override void Delete()
+        {
+            DeleteSource();
+            if (File.Exists(Destination))
+                File.Delete(Destination);
+        }
+    }
 }
