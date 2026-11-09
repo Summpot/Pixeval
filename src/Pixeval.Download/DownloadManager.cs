@@ -47,6 +47,8 @@ public sealed class DownloadManager : IDisposable
 
     private readonly ConditionalWeakTable<IDownloadTaskGroupBase, Task> _replacementWaits = new();
 
+    private readonly ConcurrentDictionary<DownloadTaskKey, Task> _removedTaskWaits = [];
+
     private readonly CancellationTokenSource _replacementCancellationTokenSource = new();
 
     private bool _disposed;
@@ -77,6 +79,7 @@ public sealed class DownloadManager : IDisposable
         _disposed = true;
         _replacementCancellationTokenSource.Cancel();
         _replacementCancellationTokenSource.Dispose();
+        _removedTaskWaits.Clear();
         _ = _downloadTaskChannel.Writer.TryComplete();
         _throttle.Dispose();
         foreach (var task in QueuedTasks)
@@ -100,18 +103,15 @@ public sealed class DownloadManager : IDisposable
         if (v is not null && QueuedTasks.IndexOf(v) is var existingIndex and >= 0)
         {
             v.Cancel();
-            var stopped = WaitForStoppedAsync(v, _replacementCancellationTokenSource.Token);
-            // A queued replacement may itself be replaced or paused/resumed.
-            // Keep its inherited predecessor wait on the instance, not a token.
-            if (_replacementWaits.TryGetValue(v, out var inherited))
-                stopped = Task.WhenAll(inherited, stopped);
-            _replacementWaits.AddOrUpdate(taskGroup, stopped);
+            _replacementWaits.AddOrUpdate(taskGroup, GetStopWait(v));
+            InheritRemovedTaskWait(taskGroup);
             QueuedTasks[existingIndex] = taskGroup;
             if (existingIndex > 0)
                 QueuedTasks.Move(existingIndex, 0);
         }
         else
         {
+            InheritRemovedTaskWait(taskGroup);
             QueuedTasks.Insert(0, taskGroup);
         }
 
@@ -128,6 +128,7 @@ public sealed class DownloadManager : IDisposable
         if (_disposed || !_taskQuerySet.TryAdd(taskGroup.Key, taskGroup))
             return false;
 
+        InheritRemovedTaskWait(taskGroup);
         QueuedTasks.Add(taskGroup);
         taskGroup.SubscribeProgress(_downloadTaskChannel.Writer);
         if (taskGroup.CurrentState is DownloadState.Queued)
@@ -220,6 +221,57 @@ public sealed class DownloadManager : IDisposable
         }
     }
 
+    private Task GetStopWait(IDownloadTaskGroupBase task)
+    {
+        if (_disposed)
+            return Task.CompletedTask;
+        var stopped = WaitForStoppedAsync(task, _replacementCancellationTokenSource.Token);
+        // A queued replacement may itself be replaced, paused, or removed.
+        // Its predecessor still owns the files until the entire chain stops.
+        return _replacementWaits.TryGetValue(task, out var inherited)
+            ? Task.WhenAll(inherited, stopped)
+            : stopped;
+    }
+
+    private void RememberRemovedTaskWait(IDownloadTaskGroupBase task)
+    {
+        var stopped = GetStopWait(task);
+        if (_removedTaskWaits.TryGetValue(task.Key, out var inherited))
+            stopped = Task.WhenAll(inherited, stopped);
+        if (stopped.IsCompleted)
+            return;
+
+        // History disappears immediately, but removing a row does not release
+        // an in-flight provider's input streams and temporary output paths.
+        _removedTaskWaits[task.Key] = stopped;
+        _ = ForgetRemovedTaskWaitAsync(task.Key, stopped);
+    }
+
+    private void InheritRemovedTaskWait(IDownloadTaskGroupBase task)
+    {
+        if (!_removedTaskWaits.TryRemove(task.Key, out var stopped))
+            return;
+        if (_replacementWaits.TryGetValue(task, out var inherited))
+            stopped = Task.WhenAll(inherited, stopped);
+        _replacementWaits.AddOrUpdate(task, stopped);
+    }
+
+    private async Task ForgetRemovedTaskWaitAsync(DownloadTaskKey key, Task stopped)
+    {
+        try
+        {
+            await stopped.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+        }
+        finally
+        {
+            // A later removal can install another wait under the same identity.
+            _ = _removedTaskWaits.TryRemove(new KeyValuePair<DownloadTaskKey, Task>(key, stopped));
+        }
+    }
+
     /// <summary>
     /// 清除指定任务
     /// </summary>
@@ -228,11 +280,12 @@ public sealed class DownloadManager : IDisposable
     {
         var taskToRemove = _taskQuerySet.GetValueOrDefault(taskGroup.Key, taskGroup);
         taskToRemove.Cancel();
-        if (!QueuedTasks.Remove(taskToRemove))
+        if (!QueuedTasks.Contains(taskToRemove))
             return false;
 
+        RememberRemovedTaskWait(taskToRemove);
         _ = _taskQuerySet.TryRemove(taskToRemove.Key, out _);
-        return true;
+        return QueuedTasks.Remove(taskToRemove);
     }
 
     /// <summary>
@@ -241,9 +294,12 @@ public sealed class DownloadManager : IDisposable
     public void ClearTasks()
     {
         foreach (var task in QueuedTasks)
+        {
             task.Cancel();
-        QueuedTasks.Clear();
+            RememberRemovedTaskWait(task);
+        }
         _taskQuerySet.Clear();
+        QueuedTasks.Clear();
     }
 
     /// <summary>

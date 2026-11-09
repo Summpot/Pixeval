@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Net.Http;
 using System.Threading;
@@ -19,6 +20,147 @@ namespace Pixeval.Tests;
 public sealed class DownloadManagerReplacementTests
 {
     public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public Task ReaddingFromRemovalNotificationPreservesTheNewIdentity(bool clear) =>
+        UiTestSession.RunAsync(TestContext, async _ =>
+        {
+            using var client = new HttpClient();
+            using var manager = new DownloadManager(client, 2);
+            using var original = new ControlledGroup("same", alreadyStopping: true);
+            using var replacement = new ControlledGroup("same");
+            using var independent = new ControlledGroup("independent");
+            manager.QueueTask(original);
+            var readded = false;
+            manager.QueuedTasks.CollectionChanged += OnChanged;
+            try
+            {
+                if (clear)
+                    manager.ClearTasks();
+                else
+                    Assert.IsTrue(manager.TryRemoveTask(original));
+                Assert.IsTrue(readded);
+                Assert.HasCount(1, manager.QueuedTasks);
+                Assert.AreSame(replacement, manager.QueuedTasks[0]);
+                manager.QueueTask(independent);
+                await independent.Child.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.AreEqual(0, replacement.InitializationCount,
+                    "A collection notification cannot bypass the removed provider's resource ownership.");
+                original.ReleaseStop();
+                await replacement.Child.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.AreEqual(1, replacement.Child.StartCount,
+                    "Finishing removal must not erase the mapping installed by its own collection notification.");
+            }
+            finally
+            {
+                manager.QueuedTasks.CollectionChanged -= OnChanged;
+                original.ReleaseStop();
+            }
+
+            void OnChanged(object? sender, NotifyCollectionChangedEventArgs args)
+            {
+                if (readded || args.Action != (clear ? NotifyCollectionChangedAction.Reset : NotifyCollectionChangedAction.Remove))
+                    return;
+                readded = true;
+                manager.QueueTask(replacement);
+            }
+        });
+
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public Task RemovedTaskRetainsItsStopBarrierAcrossReaddition(bool clear, bool restore) =>
+        UiTestSession.RunAsync(TestContext, async _ =>
+        {
+            using var client = new HttpClient();
+            using var manager = new DownloadManager(client, 2);
+            using var original = new ControlledGroup("same", alreadyStopping: true);
+            using var middle = new ControlledGroup("same");
+            using var latest = new ControlledGroup("same");
+            using var independent = new ControlledGroup("independent");
+            manager.QueueTask(original);
+            Remove(original);
+            Assert.IsEmpty(manager.QueuedTasks);
+            if (restore)
+                Assert.IsTrue(manager.TryRestoreTask(middle));
+            else
+                manager.QueueTask(middle);
+            Remove(middle);
+            manager.QueueTask(latest);
+            manager.QueueTask(independent);
+            await independent.Child.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            try
+            {
+                Assert.AreEqual(0, middle.InitializationCount,
+                    "Readding a removed identity must inherit its unacknowledged predecessor.");
+                Assert.AreEqual(0, latest.InitializationCount,
+                    "Removing the waiting replacement must retain the original stop barrier.");
+                Assert.AreEqual(1, original.ListenerCount);
+                original.ReleaseStop();
+                await latest.Child.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                await original.ListenerRemoved.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.AreEqual(0, original.ListenerCount);
+                Assert.AreEqual(0, middle.Child.StartCount);
+                Assert.AreEqual(1, latest.Child.StartCount);
+                Assert.AreSame(latest, manager.QueuedTasks[1]);
+            }
+            finally
+            {
+                original.ReleaseStop();
+            }
+
+            void Remove(ControlledGroup task)
+            {
+                if (clear)
+                    manager.ClearTasks();
+                else
+                    Assert.IsTrue(manager.TryRemoveTask(task));
+            }
+        });
+
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public Task DisposingManagerDetachesRemovedPredecessorWait(bool clear, bool readd) =>
+        UiTestSession.RunAsync(TestContext, async _ =>
+        {
+            using var client = new HttpClient();
+            using var manager = new DownloadManager(client, 2);
+            using var original = new ControlledGroup("same", alreadyStopping: true);
+            using var replacement = new ControlledGroup("same");
+            using var independent = new ControlledGroup("independent");
+            manager.QueueTask(original);
+            if (clear)
+                manager.ClearTasks();
+            else
+                Assert.IsTrue(manager.TryRemoveTask(original));
+            if (readd)
+                manager.QueueTask(replacement);
+            manager.QueueTask(independent);
+            await independent.Child.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            try
+            {
+                Assert.AreEqual(1, original.ListenerCount);
+                Assert.AreEqual(0, replacement.InitializationCount);
+                manager.Dispose();
+                await original.ListenerRemoved.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.AreEqual(0, original.ListenerCount);
+                original.ReleaseStop();
+                await Dispatcher.UIThread.InvokeAsync(static () => { }, DispatcherPriority.Background);
+                Assert.AreEqual(0, replacement.Child.StartCount);
+                Assert.AreEqual(readd, replacement.WasDisposed);
+            }
+            finally
+            {
+                original.ReleaseStop();
+            }
+        });
 
     [TestMethod]
     [DataRow(false)]

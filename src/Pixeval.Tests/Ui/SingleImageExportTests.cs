@@ -87,7 +87,17 @@ public sealed class SingleImageExportTests
     public Task RepeatedSaveWaitsForThePreviousExporter(string source, bool lateFailure) =>
         UiTestSession.RunAsync(TestContext, directory => RunReplacementAsync(directory, source, lateFailure));
 
-    private static async Task RunReplacementAsync(string directory, string source, bool lateFailure)
+    [TestMethod]
+    [DataRow("static", "keep", false)]
+    [DataRow("static", "delete", true)]
+    [DataRow("static", "clear", false)]
+    [DataRow("zip", "keep", true)]
+    [DataRow("zip", "delete", false)]
+    [DataRow("zip", "clear", true)]
+    public Task RemovedSaveWaitsForThePreviousExporter(string source, string removal, bool lateFailure) =>
+        UiTestSession.RunAsync(TestContext, directory => RunReplacementAsync(directory, source, lateFailure, removal));
+
+    private static async Task RunReplacementAsync(string directory, string source, bool lateFailure, string? removal = null)
     {
         using var fixture = new IllustrationReaderFixture();
         var history = App.AppViewModel.HistoryPersistHelper;
@@ -117,6 +127,8 @@ public sealed class SingleImageExportTests
             var oldRequest = exporter.Requests.Single();
             destination = old.Destination;
             File.WriteAllText(destination, "Previous complete output");
+            if (removal is not null)
+                await RemoveAsync(old);
             var intermediate = await SaveAgainAsync();
             await RenderAsync(window);
             report.Add($"After repeated save: old={old.CurrentState}; replacement={intermediate.CurrentState}; provider calls={exporter.Requests.Count}; error={intermediate.ErrorMessage}");
@@ -130,6 +142,8 @@ public sealed class SingleImageExportTests
             Require(intermediate.CurrentState == DownloadState.Paused, "A replacement waiting for the previous exporter can still be paused");
             await ActivateAsync(window, primary);
             Require(intermediate.CurrentState == DownloadState.Queued, "Resuming the replacement restores its queued state");
+            if (removal is not null)
+                await RemoveAsync(intermediate);
             var latest = await SaveAgainAsync();
             Require(!ReferenceEquals(old, latest) && !ReferenceEquals(intermediate, latest), "Repeated saves use distinct production task instances");
 
@@ -158,8 +172,10 @@ public sealed class SingleImageExportTests
             Require(old.CurrentState == DownloadState.Cancelled && old.ErrorMessage is null
                 && intermediate.CurrentState == DownloadState.Cancelled && !old.IsProcessing,
                 "Old late success/failure remains cancelled and cannot execute the superseded middle task");
-            Require(oldRequest.Streams.All(stream => !stream.GetCanRead()) && File.ReadAllText(destination) == "Previous complete output",
+            Require(oldRequest.Streams.All(stream => !stream.GetCanRead())
+                && (removal == "delete" ? !File.Exists(destination) : File.ReadAllText(destination) == "Previous complete output"),
                 "Old inputs are released and their late output does not replace the previous complete file");
+            RequirePersisted(latest, DownloadState.Queued);
             var current = exporter.Requests.Last();
             Require(!current.Completed && current.Destination.Contains(entry.Id, StringComparison.Ordinal), "The third provider invocation belongs to the newest task");
             current.Complete(false);
@@ -171,7 +187,7 @@ public sealed class SingleImageExportTests
             Require(Directory.GetFiles(Path.GetDirectoryName(destination)!).Length == 2, "Only the two complete destination files remain");
             await RenderAsync(window);
             Save(window, directory, "replacement-completed");
-            report.Add($"PASS {source}/lateFailure={lateFailure}: repeated SaveCommand, paused/resumed replacement, third save, independent progress, cancelled old result, newest output and persisted state");
+            report.Add($"PASS {source}/removal={removal ?? "replace"}/lateFailure={lateFailure}: repeated SaveCommand, paused/resumed replacement, third save, independent progress, cancelled old result, newest output and persisted state");
         }
         finally
         {
@@ -192,6 +208,31 @@ public sealed class SingleImageExportTests
         }
         DownloadItem FindRow(SingleImageDownloadTaskGroupBase task) => page.GetVisualDescendants().OfType<DownloadItem>().Single(control =>
             control.DataContext is DownloadItemViewModel vm && ReferenceEquals(vm.DownloadTask, task));
+
+        async Task RemoveAsync(SingleImageDownloadTaskGroupBase task)
+        {
+            if (removal == "clear")
+                history.DownloadManager.ClearTasks();
+            else
+            {
+                await RenderAsync(window);
+                var view = page.GetVisualDescendants().OfType<DownloadItemView>().Single();
+                var list = view.FindControl<ListBox>("ListBox")!;
+                list.UnselectAll();
+                list.SelectedItem = list.Items.OfType<DownloadItemViewModel>().Single(item => ReferenceEquals(item.DownloadTask, task));
+                view.FindControl<CheckBox>("DeleteLocalFilesCheckBox")!.IsChecked = removal == "delete";
+                await RenderAsync(window);
+                var bulk = view.FindControl<CommandBar>("BulkCommands")!;
+                await ActivateAsync(window, (CommandBarButton) bulk.PrimaryCommands[7]);
+            }
+            Require(!history.DownloadManager.QueuedTasks.Contains(task), "Removed history leaves the production download queue immediately");
+            Require(File.Exists(destination) == (removal != "delete"), "History removal preserves the explicit local-file deletion choice");
+            var database = App.AppViewModel.AppServiceProvider.GetRequiredService<SQLiteConnection>();
+            using var reopened = new SQLiteConnection(database.DatabasePath, SQLiteOpenFlags.ReadOnly);
+            var recordDestination = task.DatabaseEntry.Destination;
+            Require(reopened.Table<DownloadHistoryEntry>().Count(record => record.Destination == recordDestination) == 0,
+                "A removed task has no persisted history while its provider is still acknowledging cancellation");
+        }
     }
 
     private static async Task RunInvalidZipAsync(string directory, string scenario)
@@ -503,7 +544,8 @@ public sealed class SingleImageExportTests
         using var reopened = new SQLiteConnection(database.DatabasePath, SQLiteOpenFlags.ReadOnly);
         var destination = task.DatabaseEntry.Destination;
         var entry = reopened.Table<DownloadHistoryEntry>().Where(record => record.Destination == destination).ToList().Single();
-        Require(entry.State == state && entry.ErrorMessage == task.ErrorMessage && entry.FormatToken == task.DatabaseEntry.FormatToken,
+        Require(entry.HistoryEntryId == task.DatabaseEntry.HistoryEntryId
+            && entry.State == state && entry.ErrorMessage == task.ErrorMessage && entry.FormatToken == task.DatabaseEntry.FormatToken,
             "Independent SQLite reads preserve state, error and format token: " + entry.State);
     }
 
