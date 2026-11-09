@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -62,22 +63,42 @@ public class SingleAnimatedImageDownloadTaskGroup : SingleImageDownloadTaskGroup
         var provider = GetExtensionService().GetAnimatedImageFormatProvider(extension)
                        ?? throw new NotSupportedException(extension);
         IReadOnlyDictionary<Stream, int>? streams = null;
+        List<Stream> ownedStreams = [];
         try
         {
             switch (Entry.PreferredAnimatedImageType)
             {
                 case SingleAnimatedImageType.SingleZipFile:
-                    await Entry.ZipImageDelays!.TryPreloadListAsync(Entry, token);
+                    var delaySource = Entry.ZipImageDelays
+                        ?? throw new InvalidDataException("The animation archive has no frame delays.");
+                    await delaySource.TryPreloadListAsync(Entry, token);
                     token.ThrowIfCancellationRequested();
+                    var delays = delaySource.ToArray();
                     await using (var read = File.OpenAsyncRead(source))
-                        streams = (await Streams.ReadZipAsync(read, true))
-                            .ToArray<Stream>()
-                            .Zip(Entry.ZipImageDelays!)
-                            .ToDictionary(t => t.First, t => t.Second);
+                    using (var archive = new ZipArchive(read, ZipArchiveMode.Read, true))
+                    {
+                        if (archive.Entries.Count == 0 || archive.Entries.Count != delays.Length)
+                            throw new InvalidDataException("The animation archive must contain at least one frame and exactly one delay per frame.");
+                        var frames = new Dictionary<Stream, int>(archive.Entries.Count);
+                        for (var i = 0; i < archive.Entries.Count; i++)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            var frame = Streams.RentStream();
+                            // Register ownership before opening/copying an entry,
+                            // so an error in this or a later entry releases every frame.
+                            ownedStreams.Add(frame);
+                            await using var input = await archive.Entries[i].OpenAsync(token);
+                            await input.CopyToAsync(frame, token);
+                            frame.Position = 0;
+                            frames.Add(frame, delays[i]);
+                        }
+                        streams = frames;
+                    }
                     break;
                 case SingleAnimatedImageType.SingleFile:
                     await using (var read = File.OpenAsyncRead(source))
                         streams = await IoHelper.SplitAnimatedImageStreamAsync(read);
+                    ownedStreams.AddRange(streams.Keys);
                     break;
                 default:
                     throw new NotSupportedException(Entry.PreferredAnimatedImageType.ToString());
@@ -88,9 +109,8 @@ public class SingleAnimatedImageDownloadTaskGroup : SingleImageDownloadTaskGroup
         }
         finally
         {
-            if (streams is not null)
-                foreach (var stream in streams.Keys)
-                    await stream.DisposeAsync();
+            foreach (var stream in ownedStreams)
+                await stream.DisposeAsync();
         }
     }
 

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
+using System.Diagnostics.Tracing;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
@@ -19,6 +21,7 @@ using Pixeval.Models.Download;
 using Pixeval.Models.Download.Tasks;
 using Pixeval.Models.Extensions;
 using Pixeval.Models.Options;
+using Pixeval.Utilities;
 using Pixeval.ViewModels;
 using Pixeval.Views.Download;
 using SQLite;
@@ -60,6 +63,147 @@ public sealed class SingleImageExportTests
     [DataRow("frames.webp")]
     public Task SingleImageExportDestinationRace(string source) =>
         UiTestSession.RunAsync(TestContext, directory => RunAsync(directory, source, false, false, true, true));
+
+    [TestMethod]
+    [DataRow("short-delays")]
+    [DataRow("long-delays")]
+    [DataRow("empty-zip")]
+    [DataRow("invalid-zip")]
+    [DataRow("invalid-second-entry")]
+    [DataRow("metadata-failure")]
+    public Task SingleZipExportRejectsInvalidInputAndRetries(string scenario) =>
+        UiTestSession.RunAsync(TestContext, directory => RunInvalidZipAsync(directory, scenario));
+
+    private static async Task RunInvalidZipAsync(string directory, string scenario)
+    {
+        using var fixture = new IllustrationReaderFixture();
+        var history = App.AppViewModel.HistoryPersistHelper;
+        await history.RestoreTask;
+        var extensions = App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>();
+        var exporter = new Exporter(2);
+        using var extensionHost = new ExtensionsHostModel(new Host(exporter), []);
+        extensions.HostModels.Add(extensionHost);
+        var settings = App.AppViewModel.AppSettings.DownloadSettings;
+        settings.DownloadFormats.UgoiraDownloadFormat = UgoiraDownloadFormatToken.Extension(exporter);
+        settings.OverwriteDownloadedFile = true;
+        const string uri = "https://i.pximg.net/m3e/invalid-single-export.zip";
+        var goodZip = CreateZip(2);
+        var bytes = scenario switch
+        {
+            "empty-zip" => CreateZip(0),
+            "invalid-zip" => new byte[] { 1, 2, 3, 4 },
+            "invalid-second-entry" => CorruptSecondEntry(goodZip),
+            _ => goodZip
+        };
+        fixture.Http.ImageResponses[uri] = bytes;
+        var entry = new AnimatedSample(IllustrationReaderFixture.Sample(996491, 1), new Uri(uri), true)
+        {
+            DelaysOverride = scenario switch
+            {
+                "short-delays" => [100],
+                "long-delays" => [100, 200, 300],
+                "metadata-failure" => PreloadableList.ToPreloadableList<int>(_ => Task.FromException<IReadOnlyList<int>>(new InvalidDataException("Fixed metadata failure"))),
+                _ => [100, 200]
+            }
+        };
+        var factory = App.AppViewModel.AppServiceProvider.GetRequiredService<IllustrationDownloadTaskFactory>();
+        var task = (SingleImageDownloadTaskGroupBase) factory.Create(entry, Path.Combine(directory, "exports", "@{id}.@{ext}"));
+        Directory.CreateDirectory(Path.GetDirectoryName(task.Destination)!);
+        File.WriteAllText(task.Destination, "Previous complete output");
+        var page = new DownloadPage();
+        var host = new PageTestHost { Content = page };
+        var window = new Window { Width = 700, Height = 700, Content = host.Shell };
+        List<string> report = [];
+        using var allocations = new StreamEvents();
+        try
+        {
+            window.Show();
+            await RenderAsync(window);
+            // Establish that the public diagnostics report individual allocations
+            // and explicit disposal; no reflection or product test hook is used.
+            using (Streams.RentStream()) { }
+            Require(allocations.CreatedCount > 0 && allocations.Unreleased.Length == 0, "Pooled-stream diagnostics must be enabled and paired by stream ID");
+            allocations.Reset();
+            history.DownloadManager.QueueTask(task);
+            await UntilAsync(() => exporter.Pending is not null || task.CurrentState is DownloadState.Error);
+            if (exporter.Pending is not null)
+            {
+                exporter.Complete(false);
+                await UntilAsync(() => task.CurrentState is DownloadState.Completed or DownloadState.Error);
+            }
+            await RenderAsync(window);
+            report.Add($"Before retry: state={task.CurrentState}, provider invocations={exporter.Invocations}, streams created={allocations.CreatedCount}, unreleased=[{string.Join(',', allocations.Unreleased)}]");
+            Require(allocations.Unreleased.Length == 0, "Every extracted stream must receive explicit disposal, including frames rejected before provider invocation");
+            Require(task.CurrentState == DownloadState.Error && task.ErrorMessage is not null && exporter.Invocations == 0,
+                "Invalid ZIP/metadata is rejected before the provider runs, rather than silently truncating frame-delay pairs");
+            Require(File.ReadAllText(task.Destination) == "Previous complete output", "Invalid input preserves the previous usable output");
+            RequireReleased([], task.Destination);
+            RequirePersisted(task, DownloadState.Error);
+            Save(window, directory, "single-zip-error");
+            var row = page.GetVisualDescendants().OfType<DownloadItem>().Single(control =>
+                control.DataContext is DownloadItemViewModel vm && ReferenceEquals(vm.DownloadTask, task));
+            var primary = row.FindControl<CommandBarButton>("PrimaryActionButton")!;
+            fixture.Http.ImageResponses[uri] = goodZip;
+            entry.DelaysOverride = [100, 200];
+            allocations.Reset();
+            await ActivateAsync(window, primary);
+            await UntilAsync(() => exporter.Pending is not null);
+            Require(task.CurrentState == DownloadState.Pending && exporter.Invocations == 1,
+                "The same task retries with corrected input through its actual row");
+            var providerStreams = exporter.Streams;
+            exporter.Complete(false);
+            await UntilAsync(() => task.CurrentState == DownloadState.Completed);
+            Require(File.ReadAllText(task.Destination) == "Complete formatted output" && task.ErrorMessage is null,
+                "Corrected ZIP and metadata publish one complete output and clear the earlier error");
+            RequireReleased(providerStreams, task.Destination);
+            RequirePersisted(task, DownloadState.Completed);
+            Require(allocations.CreatedCount >= 2 && allocations.Unreleased.Length == 0,
+                "Successful retry also pairs every extracted pooled stream with explicit disposal");
+            report.Add($"PASS {scenario}: rejected before provider, original output and SQLite error retained; real retry committed; streams created={allocations.CreatedCount}, unreleased=[]");
+            host.Shell.CloseAllPages();
+            Require(fixture.Http.UnexpectedRequests.IsEmpty, "Invalid ZIP scenarios only use isolated fixed requests");
+        }
+        finally
+        {
+            if (exporter.Pending is not null)
+            {
+                task.Cancel();
+                exporter.Complete(false);
+                await UntilAsync(() => !task.IsProcessing);
+            }
+            File.WriteAllLines(Path.Combine(directory, "single-zip-contracts.txt"), report);
+            window.Close();
+            extensions.HostModels.Remove(extensionHost);
+        }
+
+        byte[] CreateZip(int frames)
+        {
+            using var buffer = new MemoryStream();
+            using (var zip = new ZipArchive(buffer, ZipArchiveMode.Create, true))
+                for (var i = 0; i < frames; i++)
+                {
+                    using var frame = zip.CreateEntry($"{i:D6}.png", CompressionLevel.NoCompression).Open();
+                    frame.Write(fixture.Http.ImageResponses[IllustrationReaderFixture.ImageUri]);
+                }
+            return buffer.ToArray();
+        }
+    }
+
+    private static byte[] CorruptSecondEntry(byte[] source)
+    {
+        var bytes = source.ToArray();
+        var entries = 0;
+        for (var i = 0; i < bytes.Length - 12; i++)
+            if (BitConverter.ToUInt32(bytes, i) == 0x02014b50 && ++entries == 2)
+            {
+                // Unsupported compression on the second central directory entry
+                // lets the first frame allocate before extraction fails.
+                bytes[i + 10] = 99;
+                bytes[i + 11] = 0;
+                return bytes;
+            }
+        throw new InvalidOperationException("The fixed ZIP must have two central directory entries");
+    }
 
     private static async Task RunAsync(string directory, string source, bool lateFailure, bool existingOutput, bool noOverwrite, bool destinationRace = false)
     {
@@ -212,6 +356,7 @@ public sealed class SingleImageExportTests
     {
         private readonly Uri _uri;
         private readonly bool _zip;
+        internal IPreloadableList<int>? DelaysOverride { get; set; }
         [SetsRequiredMembers]
         internal AnimatedSample(Illustration sample, Uri uri, bool zip) : base(sample)
         {
@@ -221,7 +366,7 @@ public sealed class SingleImageExportTests
         }
         SingleAnimatedImageType IAnimatedImageFrame.PreferredAnimatedImageType => _zip ? SingleAnimatedImageType.SingleZipFile : SingleAnimatedImageType.SingleFile;
         Uri? IAnimatedImageFrame.SingleImageUri => _uri;
-        IPreloadableList<int>? IAnimatedImageFrame.ZipImageDelays => _zip ? [100, 200] : null;
+        IPreloadableList<int>? IAnimatedImageFrame.ZipImageDelays => DelaysOverride ?? (_zip ? [100, 200] : null);
         IPreloadableList<(Uri Uri, int MsDelay)>? IAnimatedImageFrame.MultiImageUris => null;
     }
 
@@ -245,12 +390,18 @@ public sealed class SingleImageExportTests
     private sealed class Exporter(int frames) : IStaticImageFormatProviderExtension, IAnimatedImageFormatProviderExtension
     {
         internal int Calls { get; private set; }
+        internal int Invocations { get; private set; }
         internal ITaskCompletionSource? Pending { get; private set; }
         internal IStream[] Streams { get; private set; } = [];
         private string _destination = "";
-        public void FormatImage(ITaskCompletionSource task, IStream input, string destinationPath) => Begin(task, [input], destinationPath);
+        public void FormatImage(ITaskCompletionSource task, IStream input, string destinationPath)
+        {
+            Invocations++;
+            Begin(task, [input], destinationPath);
+        }
         public void FormatImage(ITaskCompletionSource task, IStream[] imagesKeys, int[] imagesValues, string destinationPath, int imagesCount)
         {
+            Invocations++;
             Require(imagesCount == frames && imagesValues.All(delay => delay > 0), "Every decoded frame and positive delay reaches the provider");
             if (frames == 2) Require(imagesValues.SequenceEqual(new[] { 100, 200 }), "ZIP preserves the source frame delays");
             Begin(task, imagesKeys, destinationPath);
@@ -283,6 +434,38 @@ public sealed class SingleImageExportTests
         public string GetFormatDescription() => "Offline single-image exporter";
         public void OnExtensionLoaded() { }
         public void OnExtensionUnloaded() { }
+    }
+
+    private sealed class StreamEvents : EventListener
+    {
+        private readonly ConcurrentDictionary<string, byte> _created = new();
+        private readonly ConcurrentDictionary<string, byte> _disposed = new();
+        private readonly ConcurrentDictionary<string, byte> _finalized = new();
+        internal StreamEvents()
+        {
+            foreach (var source in EventSource.GetSources()) Enable(source);
+        }
+        internal int CreatedCount => _created.Count;
+        internal string[] Unreleased => _created.Keys.Where(id => !_disposed.ContainsKey(id) || _finalized.ContainsKey(id)).Order().ToArray();
+        internal void Reset() { _created.Clear(); _disposed.Clear(); _finalized.Clear(); }
+        protected override void OnEventSourceCreated(EventSource eventSource)
+        {
+            if (_created is not null) Enable(eventSource);
+        }
+        private void Enable(EventSource source)
+        {
+            if (source.Name.Contains("RecyclableMemoryStream", StringComparison.Ordinal))
+                EnableEvents(source, EventLevel.Verbose);
+        }
+        protected override void OnEventWritten(EventWrittenEventArgs eventData)
+        {
+            if (_created is null || eventData.Payload is not { Count: > 0 } payload || payload[0]?.ToString() is not { } id) return;
+            if (eventData.EventName == "MemoryStreamCreated") _created.TryAdd(id, 0);
+            else if (eventData.EventName == "MemoryStreamDisposed") _disposed.TryAdd(id, 0);
+            // The pool also emits disposal during finalization. That is a leak,
+            // not proof that the owning export explicitly released its stream.
+            else if (eventData.EventName == "MemoryStreamFinalized") _finalized.TryAdd(id, 0);
+        }
     }
 
     private sealed class Host(Exporter exporter) : IExtensionsHost
