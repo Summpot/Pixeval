@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Collections;
@@ -77,7 +78,7 @@ public partial class TagSelector : UserControl
             items.RemoveAt(0);
     }
 
-    public async Task ResetSourceAsync()
+    public async Task ResetSourceAsync(CancellationToken token = default)
     {
         if (IsLoading)
             return;
@@ -93,6 +94,7 @@ public partial class TagSelector : UserControl
                 var publicTagsTask = GetTagsAsync(PrivacyPolicy.Public);
                 var privateTagsTask = GetTagsAsync(PrivacyPolicy.Private);
                 await Task.WhenAll(publicTagsTask, privateTagsTask);
+                token.ThrowIfCancellationRequested();
                 var tagSource = publicTagsTask.Result;
                 tagSource.AddRange(privateTagsTask.Result);
                 tagSource.Add(GetAddTag());
@@ -100,7 +102,8 @@ public partial class TagSelector : UserControl
             }
             else
             {
-                var bookmarkDetail = await App.AppViewModel.MakoClient.GetWorkBookmarkDetailAsync(WorkType, WorkId);
+                var bookmarkDetail = await App.AppViewModel.MakoClient.GetWorkBookmarkDetailAsync(WorkType, WorkId, token);
+                token.ThrowIfCancellationRequested();
                 IsPrivate = bookmarkDetail.Restrict is PrivacyPolicy.Private;
                 var tags = bookmarkDetail.Tags.Select(BookmarkDetailBookmarkTag.Create).ToArray();
                 TagsSource = [.. tags, GetAddTag()];
@@ -114,7 +117,7 @@ public partial class TagSelector : UserControl
 
         return;
 
-        async Task<AvaloniaList<BookmarkTag>> GetTagsAsync(PrivacyPolicy policy) => [.. await App.AppViewModel.MakoClient.WorkBookmarkTags(WorkType, PixevalSettings.MyId, policy).ToListAsync()];
+        async Task<AvaloniaList<BookmarkTag>> GetTagsAsync(PrivacyPolicy policy) => [.. await App.AppViewModel.MakoClient.WorkBookmarkTags(WorkType, PixevalSettings.MyId, policy).ToListAsync(token)];
     }
 
     private AddNewBookmarkTag GetAddTag()

@@ -3,11 +3,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Mako.Global.Enum;
 
@@ -20,8 +22,16 @@ public static class BookmarkTagSelectorFlyoutHelper
         SimpleWorkType workType,
         long workId,
         Func<(bool IsPrivate, IReadOnlyList<string>? Tags), Task> onTagsSelected,
-        PlacementMode placement = PlacementMode.Bottom)
+        PlacementMode placement = PlacementMode.Bottom,
+        CancellationToken cancellationToken = default)
     {
+        if (cancellationToken.IsCancellationRequested)
+            return;
+
+        var loading = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var loadingToken = loading.Token;
+        CancellationTokenRegistration cancellation = default;
+        var isClosed = false;
         var flyout = new Flyout
         {
             Placement = placement
@@ -59,19 +69,45 @@ public static class BookmarkTagSelectorFlyoutHelper
         };
         flyout.Closed += (_, _) =>
         {
+            isClosed = true;
             tagSelector.TagsSelected -= OnTagsSelected;
             if (topLevel is not null)
                 topLevel.SizeChanged -= OnSizeChanged;
+            cancellation.Dispose();
+            loading.Cancel();
+            loading.Dispose();
         };
         flyout.ShowAt(placementTarget);
-        await tagSelector.ResetSourceAsync();
+        cancellation = cancellationToken.Register(() =>
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+                Hide();
+            else
+                Dispatcher.UIThread.Post(Hide);
+        });
+        // Registration can synchronously close the popup if cancellation raced ShowAt.
+        if (isClosed)
+            cancellation.Dispose();
+        try
+        {
+            await tagSelector.ResetSourceAsync(loadingToken);
+        }
+        catch (OperationCanceledException) when (loadingToken.IsCancellationRequested)
+        {
+        }
         return;
+
+        void Hide()
+        {
+            if (!isClosed)
+                flyout.Hide();
+        }
 
         void OnSizeChanged(object? sender, SizeChangedEventArgs e) => content.MaxWidth = Math.Max(0, e.NewSize.Width - 48);
 
         async void OnTagsSelected(TagSelector sender, (bool IsPrivate, IReadOnlyList<string>? Tags) e)
         {
-            if (isSubmitting)
+            if (isSubmitting || isClosed || cancellationToken.IsCancellationRequested)
                 return;
             isSubmitting = true;
             var submittedFrom = TopLevel.GetTopLevel(tagSelector)?.FocusManager?.GetFocusedElement() as Control;

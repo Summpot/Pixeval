@@ -177,6 +177,13 @@ public sealed class PageContractTests
     public Task IllustrationAnimation(string culture) => UiTestSession.RunAsync(TestContext, IllustrationAnimationValidation.RunAsync, culture);
 
     [TestMethod]
+    [DataRow("zh-Hans")]
+    [DataRow("en-US")]
+    [DataRow("fr-FR")]
+    [DataRow("ru-RU")]
+    public Task IllustrationWorkActions(string culture) => UiTestSession.RunAsync(TestContext, IllustrationWorkActionsValidation.RunAsync, culture);
+
+    [TestMethod]
     public Task NovelReader() => UiTestSession.RunAsync(TestContext, NovelReaderValidation.RunAsync);
 
     [TestMethod]
