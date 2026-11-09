@@ -253,7 +253,7 @@
                                                                       x:TypeArguments=x:String}">
                                         <CommandBarToggleButton.IsVisible>
                                             <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                                <Binding FallbackValue="False" Path="CurrentIllustration.IsPicGif" />
+                                                <Binding FallbackValue="False" Path="CurrentImage.CurrentPage.IsPicGif" />
                                                 <Binding Mode="OneTime" Path="#I.IsSwipeMode" />
                                             </MultiBinding>
                                         </CommandBarToggleButton.IsVisible>

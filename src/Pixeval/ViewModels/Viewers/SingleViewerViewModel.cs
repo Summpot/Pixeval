@@ -95,6 +95,9 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
     private void NotifyDisplayImageChanged()
     {
         OnPropertyChanged(nameof(HasDisplayImage));
+        OnPropertyChanged(nameof(IsPicGif));
+        PlayPauseCommand.NotifyCanExecuteChanged();
+        TransformExtensionCommand.NotifyCanExecuteChanged();
         MirrorCommand.NotifyCanExecuteChanged();
         RotateClockwiseCommand.NotifyCanExecuteChanged();
         RotateCounterclockwiseCommand.NotifyCanExecuteChanged();
@@ -182,7 +185,7 @@ public sealed partial class SingleViewerViewModel : ViewModelBase, IDisposable
         ReleaseLoadingPreview();
     }
 
-    public bool IsPicGif => _entry.ImageType is ImageType.SingleAnimatedImage;
+    public bool IsPicGif => _entry.ImageType is ImageType.SingleAnimatedImage || DisplaySource.FrameCount > 1;
 
     private bool IsGifLoadSuccessfully => !_disposed && LoadSuccessfully && IsPicGif;
 

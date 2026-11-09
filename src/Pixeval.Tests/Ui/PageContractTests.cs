@@ -184,6 +184,14 @@ public sealed class PageContractTests
     public Task IllustrationWorkActions(string culture) => UiTestSession.RunAsync(TestContext, IllustrationWorkActionsValidation.RunAsync, culture);
 
     [TestMethod]
+    [DataRow("frames.gif", false)]
+    [DataRow("frames.gif", true)]
+    [DataRow("frames.webp", false)]
+    [DataRow("frames.webp", true)]
+    public Task IllustrationFramePlayback(string file, bool continuous) => UiTestSession.RunAsync(TestContext,
+        directory => IllustrationFramePlaybackValidation.RunAsync(directory, file, continuous));
+
+    [TestMethod]
     public Task NovelReader() => UiTestSession.RunAsync(TestContext, NovelReaderValidation.RunAsync);
 
     [TestMethod]

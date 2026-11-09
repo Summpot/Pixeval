@@ -17,6 +17,7 @@ using Pixeval.Models.Options;
 using Pixeval.ViewModels;
 using Pixeval.ViewModels.Viewers;
 using Pixeval.Views.Viewers;
+using SkiaSharp;
 using static Pixeval.Tests.Ui.NovelReaderValidation;
 
 namespace Pixeval.Tests.Ui;
@@ -29,14 +30,15 @@ internal static class IllustrationAnimationValidation
         await App.AppViewModel.MakoClient.SetTokenAsync("fixture-animation");
         await App.AppViewModel.MakoClient.ValidateTokenAsync();
         const string zipUri = "https://i.pximg.net/m3e/animation-1920x1080.zip";
-        var png = fixture.Http.ImageResponses[IllustrationReaderFixture.ImageUri];
+        var png = IllustrationFramePlaybackValidation.Png(SKColors.Red);
+        var secondFrame = IllustrationFramePlaybackValidation.Png(SKColors.Green);
         using (var buffer = new MemoryStream())
         {
             using (var zip = new ZipArchive(buffer, ZipArchiveMode.Create, true))
                 for (var i = 0; i < 2; i++)
                 {
                     using var frame = zip.CreateEntry($"{i:D6}.png").Open();
-                    frame.Write(png);
+                    frame.Write(i == 0 ? png : secondFrame);
                 }
             fixture.Http.ImageResponses[zipUri] = buffer.ToArray();
             fixture.Http.ImageResponses[zipUri.Replace("1920x1080", "600x600")] = buffer.ToArray();
@@ -70,8 +72,10 @@ internal static class IllustrationAnimationValidation
                 && image.DisplaySource.Delays.SequenceEqual(new[] { 100, 200 }), "The real ugoira ZIP retains both decoded frames and frame intervals");
             Require(!image.CopyCommand.CanExecute(null) && !image.SaveAsCommand.CanExecute(null)
                 && !image.TransformExtensionCommand.CanExecute(null), "Single-frame actions are unavailable for animation");
+            await IllustrationFramePlaybackValidation.ObserveAsync(window, directory, "ugoira-playing", true);
             await ToggleMenuAsync();
             Require(!image.IsPlaying && !Animated().IsPlaying, "The actual animation menu pauses the animated image");
+            await IllustrationFramePlaybackValidation.ObserveAsync(window, directory, "ugoira-paused", false);
             report.Add("PASS ugoira ZIP frames/intervals, animation capability gates and actual menu pause");
             window.Width = 360;
             window.RequestedThemeVariant = ThemeVariant.Dark;
@@ -101,6 +105,7 @@ internal static class IllustrationAnimationValidation
             Require(!image.IsPlaying && !Animated().IsPlaying, "Temporary navigation retains the user's paused animation");
             await ToggleMenuAsync();
             Require(image.IsPlaying && Animated().IsPlaying, "Remounted animation resumes through the same menu");
+            await IllustrationFramePlaybackValidation.ObserveAsync(window, directory, "ugoira-resumed", true);
             var source = image.OriginalSource!;
             host.Shell.ClosePage(page);
             Require(!image.PlayPauseCommand.CanExecute(null) && model.CurrentImage is null && source.FrameCount == 0,
