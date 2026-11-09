@@ -2,9 +2,12 @@
 // Licensed under the GPL v3 License.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -40,7 +43,11 @@ public sealed class DownloadManager : IDisposable
     /// <summary>
     /// 与<see cref="QueuedTasks"/>内容一样，但是用于快速查询
     /// </summary>
-    private readonly Dictionary<DownloadTaskKey, IDownloadTaskGroupBase> _taskQuerySet = [];
+    private readonly ConcurrentDictionary<DownloadTaskKey, IDownloadTaskGroupBase> _taskQuerySet = [];
+
+    private readonly ConditionalWeakTable<IDownloadTaskGroupBase, Task> _replacementWaits = new();
+
+    private readonly CancellationTokenSource _replacementCancellationTokenSource = new();
 
     private bool _disposed;
 
@@ -68,6 +75,8 @@ public sealed class DownloadManager : IDisposable
             return;
 
         _disposed = true;
+        _replacementCancellationTokenSource.Cancel();
+        _replacementCancellationTokenSource.Dispose();
         _ = _downloadTaskChannel.Writer.TryComplete();
         _throttle.Dispose();
         foreach (var task in QueuedTasks)
@@ -82,6 +91,8 @@ public sealed class DownloadManager : IDisposable
     /// </remarks>
     public void QueueTask(IDownloadTaskGroupBase taskGroup)
     {
+        if (_disposed)
+            return;
         if (_taskQuerySet.TryGetValue(taskGroup.Key, out var v) && v == taskGroup)
             return;
         _taskQuerySet[taskGroup.Key] = taskGroup;
@@ -89,6 +100,12 @@ public sealed class DownloadManager : IDisposable
         if (v is not null && QueuedTasks.IndexOf(v) is var existingIndex and >= 0)
         {
             v.Cancel();
+            var stopped = WaitForStoppedAsync(v, _replacementCancellationTokenSource.Token);
+            // A queued replacement may itself be replaced or paused/resumed.
+            // Keep its inherited predecessor wait on the instance, not a token.
+            if (_replacementWaits.TryGetValue(v, out var inherited))
+                stopped = Task.WhenAll(inherited, stopped);
+            _replacementWaits.AddOrUpdate(taskGroup, stopped);
             QueuedTasks[existingIndex] = taskGroup;
             if (existingIndex > 0)
                 QueuedTasks.Move(existingIndex, 0);
@@ -128,10 +145,24 @@ public sealed class DownloadManager : IDisposable
             while (await _downloadTaskChannel.Reader.WaitToReadAsync())
                 while (await _throttle && _downloadTaskChannel.Reader.TryRead(out var taskToken) && taskToken is { Token.IsCancellationRequested: false, Task: var taskGroup })
                 {
+                    if (!IsCurrentTask(taskToken))
+                        continue;
+                    if (_replacementWaits.TryGetValue(taskGroup, out var stopped) && !stopped.IsCompleted)
+                    {
+                        // Do not block other destinations behind a provider that
+                        // has no cancellation ABI and has not acknowledged yet.
+                        _ = RequeueAfterStoppedAsync(taskToken, stopped);
+                        continue;
+                    }
                     await taskGroup.InitializeTaskGroupAsync();
+
+                    if (!IsCurrentTask(taskToken))
+                        continue;
 
                     foreach (var subTask in taskGroup)
                     {
+                        if (!IsCurrentTask(taskToken))
+                            break;
                         // 需要判断是否处于Queued状态才能运行
                         if (subTask.CurrentState is DownloadState.Queued)
                         {
@@ -146,6 +177,49 @@ public sealed class DownloadManager : IDisposable
         }
     }
 
+    private bool IsCurrentTask(DownloadToken token) =>
+        !_disposed && !token.Token.IsCancellationRequested
+        && _taskQuerySet.TryGetValue(token.Task.Key, out var current)
+        && ReferenceEquals(current, token.Task);
+
+    private async Task RequeueAfterStoppedAsync(DownloadToken token, Task stopped)
+    {
+        try
+        {
+            await stopped.ConfigureAwait(false);
+            if (IsCurrentTask(token))
+                _ = _downloadTaskChannel.Writer.TryWrite(token);
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+        }
+    }
+
+    private static async Task WaitForStoppedAsync(IDownloadTaskGroupBase task, CancellationToken token)
+    {
+        if (!task.IsProcessing)
+            return;
+        var stopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void OnPropertyChanged(object? sender, PropertyChangedEventArgs args)
+        {
+            if (args.PropertyName is nameof(IDownloadTaskBase.IsProcessing) && !task.IsProcessing)
+                stopped.TrySetResult();
+        }
+        task.PropertyChanged += OnPropertyChanged;
+        try
+        {
+            using var registration = token.Register(() => stopped.TrySetCanceled(token));
+            // Completion can race the subscription; check again after attaching.
+            if (!task.IsProcessing)
+                stopped.TrySetResult();
+            await stopped.Task.ConfigureAwait(false);
+        }
+        finally
+        {
+            task.PropertyChanged -= OnPropertyChanged;
+        }
+    }
+
     /// <summary>
     /// 清除指定任务
     /// </summary>
@@ -157,7 +231,7 @@ public sealed class DownloadManager : IDisposable
         if (!QueuedTasks.Remove(taskToRemove))
             return false;
 
-        _ = _taskQuerySet.Remove(taskToRemove.Key);
+        _ = _taskQuerySet.TryRemove(taskToRemove.Key, out _);
         return true;
     }
 

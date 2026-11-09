@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.VisualTree;
@@ -73,6 +74,125 @@ public sealed class SingleImageExportTests
     [DataRow("metadata-failure")]
     public Task SingleZipExportRejectsInvalidInputAndRetries(string scenario) =>
         UiTestSession.RunAsync(TestContext, directory => RunInvalidZipAsync(directory, scenario));
+
+    [TestMethod]
+    [DataRow("static", false)]
+    [DataRow("static", true)]
+    [DataRow("zip", false)]
+    [DataRow("zip", true)]
+    [DataRow("frames.gif", false)]
+    [DataRow("frames.gif", true)]
+    [DataRow("frames.webp", false)]
+    [DataRow("frames.webp", true)]
+    public Task RepeatedSaveWaitsForThePreviousExporter(string source, bool lateFailure) =>
+        UiTestSession.RunAsync(TestContext, directory => RunReplacementAsync(directory, source, lateFailure));
+
+    private static async Task RunReplacementAsync(string directory, string source, bool lateFailure)
+    {
+        using var fixture = new IllustrationReaderFixture();
+        var history = App.AppViewModel.HistoryPersistHelper;
+        await history.RestoreTask;
+        var extensions = App.AppViewModel.AppServiceProvider.GetRequiredService<ExtensionService>();
+        var exporter = new ReplacementExporter();
+        using var extensionHost = new ExtensionsHostModel(new Host(exporter), []);
+        extensions.HostModels.Add(extensionHost);
+        var settings = App.AppViewModel.AppSettings.DownloadSettings;
+        settings.DownloadFormats.IllustrationDownloadFormat = IllustrationDownloadFormatToken.Extension(exporter);
+        settings.DownloadFormats.UgoiraDownloadFormat = UgoiraDownloadFormatToken.Extension(exporter);
+        settings.OverwriteDownloadedFile = true;
+        settings.DownloadPathMacro = Path.Combine(directory, "exports", "@{id}.@{ext}");
+        var entry = CreateEntry(fixture, source);
+        var item = new IllustrationItemViewModel(entry);
+        var destination = "";
+        var page = new DownloadPage();
+        var host = new PageTestHost { Content = page };
+        var window = new Window { Width = 700, Height = 850, Content = host.Shell };
+        List<SingleImageDownloadTaskGroupBase> attempts = [];
+        List<string> report = [];
+        try
+        {
+            window.Show();
+            var old = await SaveAgainAsync();
+            await UntilAsync(() => exporter.Requests.Count == 1);
+            var oldRequest = exporter.Requests.Single();
+            destination = old.Destination;
+            File.WriteAllText(destination, "Previous complete output");
+            var intermediate = await SaveAgainAsync();
+            await RenderAsync(window);
+            report.Add($"After repeated save: old={old.CurrentState}; replacement={intermediate.CurrentState}; provider calls={exporter.Requests.Count}; error={intermediate.ErrorMessage}");
+            Require(old.GetToken().Token.IsCancellationRequested && old.IsProcessing,
+                "Repeated save cancels the old task while keeping its provider inputs alive");
+            Require(intermediate.CurrentState == DownloadState.Queued && exporter.Requests.Count == 1,
+                "The replacement must wait for the old provider before touching its shared temporary files: " + intermediate.CurrentState);
+            var row = FindRow(intermediate);
+            var primary = row.FindControl<CommandBarButton>("PrimaryActionButton")!;
+            await ActivateAsync(window, primary);
+            Require(intermediate.CurrentState == DownloadState.Paused, "A replacement waiting for the previous exporter can still be paused");
+            await ActivateAsync(window, primary);
+            Require(intermediate.CurrentState == DownloadState.Queued, "Resuming the replacement restores its queued state");
+            var latest = await SaveAgainAsync();
+            Require(!ReferenceEquals(old, latest) && !ReferenceEquals(intermediate, latest), "Repeated saves use distinct production task instances");
+
+            // A different destination must progress while this replacement chain
+            // waits. Its provider entry is also a deterministic scheduling barrier.
+            var independentItem = new IllustrationItemViewModel(IllustrationReaderFixture.Sample(996492, 1));
+            await independentItem.SaveCommand.ExecuteAsync(null);
+            var independent = history.DownloadManager.QueuedTasks.OfType<SingleImageDownloadTaskGroupBase>().Single(task => task.Id == "996492");
+            attempts.Add(independent);
+            await UntilAsync(() => exporter.Requests.Any(request => request.Destination.Contains("996492", StringComparison.Ordinal))
+                || latest.CurrentState == DownloadState.Error);
+            report.Add($"While old provider pending: old={old.CurrentState}; intermediate={intermediate.CurrentState}; latest={latest.CurrentState}; provider calls={exporter.Requests.Count}");
+            Require(latest.CurrentState == DownloadState.Queued
+                && exporter.Requests.Count(request => !request.Destination.Contains("996492", StringComparison.Ordinal)) == 1,
+                "Paused/resumed and chained replacements must not reuse the old exporter's temporary files before acknowledgement");
+            var independentRequest = exporter.Requests.Single(request => request.Destination.Contains("996492", StringComparison.Ordinal));
+            independentRequest.Complete(false);
+            await UntilAsync(() => independent.CurrentState == DownloadState.Completed);
+            Require(!oldRequest.Completed && latest.CurrentState == DownloadState.Queued,
+                "An unrelated destination completes without waiting for the blocked replacement");
+
+            oldRequest.Complete(lateFailure);
+            await UntilAsync(() => exporter.Requests.Count == 3 || latest.CurrentState == DownloadState.Error);
+            Require(latest.CurrentState == DownloadState.Pending && exporter.Requests.Count == 3,
+                "Only the newest replacement starts after the old provider and cleanup have finished");
+            Require(old.CurrentState == DownloadState.Cancelled && old.ErrorMessage is null
+                && intermediate.CurrentState == DownloadState.Cancelled && !old.IsProcessing,
+                "Old late success/failure remains cancelled and cannot execute the superseded middle task");
+            Require(oldRequest.Streams.All(stream => !stream.GetCanRead()) && File.ReadAllText(destination) == "Previous complete output",
+                "Old inputs are released and their late output does not replace the previous complete file");
+            var current = exporter.Requests.Last();
+            Require(!current.Completed && current.Destination.Contains(entry.Id, StringComparison.Ordinal), "The third provider invocation belongs to the newest task");
+            current.Complete(false);
+            await UntilAsync(() => latest.CurrentState == DownloadState.Completed);
+            Require(File.ReadAllText(destination) == current.Output && latest.ErrorMessage is null,
+                "The newest task commits its own complete output without old cleanup deleting it");
+            RequirePersisted(latest, DownloadState.Completed);
+            Require(exporter.Requests.All(request => request.Streams.All(stream => !stream.GetCanRead())), "Every acknowledged provider releases its original inputs");
+            Require(Directory.GetFiles(Path.GetDirectoryName(destination)!).Length == 2, "Only the two complete destination files remain");
+            await RenderAsync(window);
+            Save(window, directory, "replacement-completed");
+            report.Add($"PASS {source}/lateFailure={lateFailure}: repeated SaveCommand, paused/resumed replacement, third save, independent progress, cancelled old result, newest output and persisted state");
+        }
+        finally
+        {
+            foreach (var task in attempts) task.Cancel();
+            foreach (var request in exporter.Requests.Where(request => !request.Completed)) request.Complete(false);
+            await UntilAsync(() => attempts.All(task => !task.IsProcessing));
+            File.WriteAllLines(Path.Combine(directory, "replacement-contracts.txt"), report);
+            window.Close();
+            extensions.HostModels.Remove(extensionHost);
+        }
+
+        async Task<SingleImageDownloadTaskGroupBase> SaveAgainAsync()
+        {
+            await item.SaveCommand.ExecuteAsync(null);
+            var task = history.DownloadManager.QueuedTasks.OfType<SingleImageDownloadTaskGroupBase>().Single(task => task.Id == entry.Id);
+            attempts.Add(task);
+            return task;
+        }
+        DownloadItem FindRow(SingleImageDownloadTaskGroupBase task) => page.GetVisualDescendants().OfType<DownloadItem>().Single(control =>
+            control.DataContext is DownloadItemViewModel vm && ReferenceEquals(vm.DownloadTask, task));
+    }
 
     private static async Task RunInvalidZipAsync(string directory, string scenario)
     {
@@ -468,7 +588,41 @@ public sealed class SingleImageExportTests
         }
     }
 
-    private sealed class Host(Exporter exporter) : IExtensionsHost
+    private sealed class ReplacementExporter : IStaticImageFormatProviderExtension, IAnimatedImageFormatProviderExtension
+    {
+        private readonly ConcurrentQueue<Request> _requests = new();
+        private int _count;
+        internal IReadOnlyList<Request> Requests => _requests.ToArray();
+        public void FormatImage(ITaskCompletionSource task, IStream input, string destinationPath) => Begin(task, [input], destinationPath);
+        public void FormatImage(ITaskCompletionSource task, IStream[] imagesKeys, int[] imagesValues, string destinationPath, int imagesCount) => Begin(task, imagesKeys, destinationPath);
+        private void Begin(ITaskCompletionSource task, IStream[] streams, string destination)
+        {
+            File.WriteAllText(destination, "Partial replacement export");
+            _requests.Enqueue(new(task, streams, destination, Interlocked.Increment(ref _count)));
+        }
+        public string GetFormatExtension() => "replacement-fixture";
+        public string GetFormatDescription() => "Offline replacement exporter";
+        public void OnExtensionLoaded() { }
+        public void OnExtensionUnloaded() { }
+
+        internal sealed class Request(ITaskCompletionSource task, IStream[] streams, string destination, int index)
+        {
+            internal IStream[] Streams => streams;
+            internal string Destination => destination;
+            internal string Output => "Complete replacement export " + index;
+            internal bool Completed { get; private set; }
+            internal void Complete(bool fail)
+            {
+                Require(!Completed && streams.All(stream => stream.GetCanRead()), "A pending replacement exporter retains each original input until acknowledgement");
+                Completed = true;
+                File.WriteAllText(destination, Output);
+                if (fail) task.SetException(new InvalidOperationException("Late replaced exporter failure"));
+                else task.SetCompleted();
+            }
+        }
+    }
+
+    private sealed class Host(IExtension exporter) : IExtensionsHost
     {
         public string GetExtensionName() => "Single image export fixture";
         public string GetAuthorName() => "Pixeval tests";
