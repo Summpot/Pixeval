@@ -9,9 +9,11 @@ using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
+using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -258,8 +260,7 @@ internal static class WorkCardsValidation
                         Require(routes.Count == routeCount && model.SelectedEntries.Count == 1, "Enter in selection mode selects the work without opening it");
                         await ActivateAsync(window, card, Key.Space, PhysicalKey.Space);
                         Require(routes.Count == routeCount && model.SelectedEntries.Count == 0, "Space toggles the same selection without navigation");
-                        await ClickAsync(window, card, new Point(card.Bounds.Width / 2, 12));
-                        Require(routes.Count == routeCount && model.SelectedEntries.Count == 1, "A pointer click in selection mode toggles exactly once");
+                        await ValidatePointerSelectionAsync(window, card, model, routes, routeCount, directory, scenario);
                         var itemContainer = (ListBoxItem) list.ContainerFromIndex(0)!;
                         await ActivateAsync(window, itemContainer, Key.Enter, PhysicalKey.Enter);
                         Require(routes.Count == routeCount && model.SelectedEntries.Count == 0, "Enter after list arrow navigation preserves the selection contract");
@@ -335,6 +336,40 @@ internal static class WorkCardsValidation
 
     private static string Text(string key) => I18NManager.GetResource(key);
 
+    private static async Task ValidatePointerSelectionAsync(Window window, WorkItem card, IOperableViewViewModel model,
+        List<(Type Page, string? Id)> routes, int routeCount, string directory, string scenario)
+    {
+        // Preserve the first failing input: retries would conceal whether a popup,
+        // button activation or subsequent selection change consumed that click.
+        List<string> trace = [$"scenario={scenario}; expectedRoutes={routeCount}"];
+        EventHandler<PointerPressedEventArgs> pressed = (_, e) => Record($"pressed source={e.Source}; count={e.ClickCount}; handled={e.Handled}; captured={e.Pointer.Captured}; position={e.GetPosition(window)}");
+        EventHandler<PointerReleasedEventArgs> released = (_, e) => Record($"released source={e.Source}; handled={e.Handled}; captured={e.Pointer.Captured}; position={e.GetPosition(window)}");
+        EventHandler<RoutedEventArgs> clicked = (_, e) => Record($"click source={e.Source}; handled={e.Handled}");
+        EventHandler<SelectionChangedEventArgs> selectionChanged = (_, e) => Record($"selection added={e.AddedItems.Count}; removed={e.RemovedItems.Count}");
+        window.AddHandler(InputElement.PointerPressedEvent, pressed, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, true);
+        window.AddHandler(InputElement.PointerReleasedEvent, released, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, true);
+        window.AddHandler(Button.ClickEvent, clicked, RoutingStrategies.Bubble, true);
+        window.AddHandler(SelectingItemsControl.SelectionChangedEvent, selectionChanged, RoutingStrategies.Bubble, true);
+        try
+        {
+            await ClickAsync(window, card, new Point(card.Bounds.Width / 2, 12), beforeClick: point =>
+                Record($"before point={point}; hit={window.InputHitTest(point)}; focus={window.FocusManager?.GetFocusedElement()}"));
+            Record("after");
+            Require(routes.Count == routeCount && model.SelectedEntries.Count == 1,
+                "A pointer click in selection mode toggles exactly once; " + string.Join(" | ", trace));
+        }
+        finally
+        {
+            window.RemoveHandler(InputElement.PointerPressedEvent, pressed);
+            window.RemoveHandler(InputElement.PointerReleasedEvent, released);
+            window.RemoveHandler(Button.ClickEvent, clicked);
+            window.RemoveHandler(SelectingItemsControl.SelectionChangedEvent, selectionChanged);
+            File.AppendAllLines(Path.Combine(directory, "pointer-selection-events.txt"), trace);
+        }
+
+        void Record(string message) => trace.Add($"{DateTime.UtcNow:O} {message}; selected={model.SelectedEntries.Count}; routes={routes.Count}; pressed={card.IsPressed}; pointerOver={card.IsPointerOver}; tooltip={ToolTip.GetIsOpen(card)}");
+    }
+
     private static async Task ValidateRangeAndDoubleClickAsync(Window window, WorkView view,
         PageTestHost container, IArtworkInfo template, SimpleWorkType type)
     {
@@ -386,12 +421,14 @@ internal static class WorkCardsValidation
         window.KeyRelease(key, RawInputModifiers.None, physical, null);
     }
 
-    private static async Task ClickAsync(Window window, Control control, Point? offset = null, MouseButton button = MouseButton.Left)
+    private static async Task ClickAsync(Window window, Control control, Point? offset = null, MouseButton button = MouseButton.Left,
+        Action<Point>? beforeClick = null)
     {
         await DismissNotificationsAsync(window);
         control.BringIntoView();
         await RenderAsync(window);
         var point = control.TranslatePoint(offset ?? new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
+        beforeClick?.Invoke(point);
         window.MouseDown(point, button);
         window.MouseUp(point, button);
         await RenderAsync(window);

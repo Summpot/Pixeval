@@ -1062,3 +1062,40 @@ Windows 本地分组执行全量测试并专项复跑，按测试 ID/数据行�
 修改的 XAML 经 XamlStyler，C# 经 whitespace 格式化；最终编码/XAML/本地链接/子模块和 `git diff --check` 见 `static-validation.json`，源码哈希见 `final-source-hashes.json`。普通构建消息比较见 `build-warning-delta.json`；增量构建未输出的依赖警告不视为消除。批次只在此追加一条记录，其余文档只改实际状态、契约及 SDK 使用方式，不生成无变化的清单，不补写文档提交自身哈希。
 
 剩余范围：信息栏以外作品动作的完整组合、系统浏览器/剪贴板/保存对话框、单文件图像/动画及漫画格式提供器的取消提交、完整系列联动/重启、大图与长期内存性能仍未完整验收。扩展 ABI 没有取消入口，取消只隔离结果，不能停止已经执行的计算；本批取消矩阵在提供器尚未确认完成时发起，不等同整个下载引擎的并发/故障注入验收。原生 IME、系统焦点/读屏、触摸/DPI/GPU、其他平台及远程 CI 保持待验收。下一轮先根据原始 WorkCards 附件和诊断记录调查该选择稳定性缺口，再按具体依赖选择剩余作品菜单一致性或其他格式导出边界；后者的源码起点见 `remaining-format-audit.txt`，没有把源码审计冒充已复现缺陷。继续后台验证，不自动启用 computer use。
+
+## 2026-11-09 无人值守批次：图像导出、旋转几何与关闭回收
+
+实际执行约 88 分钟，北京时间 12:01–13:29；起点 `142b40b6`，分支 `feat/material3expressive-migration`，开始工作区干净。读取计划 §3.2–3.4/10.3、测试工程约束及最近台账，先保留 WorkCards 原失败的诊断入口，再选择已有正式查看器、下载队列、固定格式提供器和渲染证据支持的 P12/P14/P15 局部契约。未替换全局主题或窗口容器，未推送、对外发布或使用 computer use；没有启动桌面/AOT EXE，没有全局输入和系统剪贴板操作。
+
+| 功能单元 / 步骤 | 本地提交 | 完成范围 |
+| --- | --- | --- |
+| 按页图像操控，P15.01a | `70aff745` | 四语言选定 Swipe/Continuous、横/纵组合的真实菜单和窄窗工具栏，验证镜像、顺逆旋转/回绕、实际四色像素、每页独立状态、导航返回及正式关闭；测试补齐，产品行为未改 |
+| 单文件格式导出，P14.03g | `6ffac97b` | 静态图及 ZIP/GIF/WebP 在扩展完成后才提交最终输出、发布完成状态；取消隔离迟到成功/失败，保留旧输出，维持流寿命和重试门控；子任务停止及完成/错误回调的重入归属纳入同一单元 |
+| 漫画格式导出，P14.03h | `d0859c87` | 保留全部原始页下载后逐页串行转换和原最终路径；第二页取消/错误保留已提交页及未替换旧页，不启动后续转换；重试、混合非覆盖与目标竞争有证据 |
+| 旋转适应，P15.01b | `30e2e7e6` | 非方图顺逆旋转后的显式适应及带已有旋转状态的首次适应，按显示宽高求比例；实际缩放与四角标记可见性验证 |
+| 动画 ZIP 错误恢复，P14.03i | `98c80e78` | 拒绝空/无效 ZIP、延迟数少/多、后续条目损坏及元数据失败；解压前登记每条流的所有权，错误后显式释放并允许更正输入重试 |
+| 4K 静态图关闭回收，P15.04a | `b541bde6` | 正式 Swipe/Continuous 各五次加载、渲染及 ClosePage；页面、页面模型、单图模型、图源和解码帧共 50 个弱引用在排空渲染/GC 后均可回收；未发现需要产品修改的泄漏 |
+| 重复保存的资源交接，P12.04a | `e14234af` | 格式转换中的同身份新实例等待旧调用结束及任务停止后才调度，连续替换与暂停/继续保留等待，其他身份按原并发额度继续；初始化迟到、管理器释放及监听退订有回归 |
+| 旋转平移与原图锚点，P15.01c | `b53c2cd0` | Swipe 原镜像→旋转变换参与布局，四直角方向的实际拖动可达显示长轴两端，短轴无额外范围；真实原图菜单加载两倍分辨率后缩放减半，在布局取整容差内保持实际视区和可见标记位置 |
+
+证据根目录：`artifacts/m3e/2026-11-09-batch-1201/`。SDK `11.0.100-rc.3.26522.148`、runtime `10.0.14`、Avalonia `12.1.5`；M3E `859a69e563b2a01fc87a26255ee11c1d89959677`、AnimatedControls `7049a870151e79cfb7b69305706d69d3a5051f18`，子模块未变。复用上一批由固定 revision `20c900a76cb427ad1dac38ed3f64463be2fd496b` 构建的 C++ 样本，DLL SHA256 `F860A14BDF178EFACDB57AD849D1EA7741637C14E92D468AE3940AEDCB4CA440`，本次验证脚本重新记录哈希；未重复构建相同夹具。
+
+提交前关键专项：`manipulation-directions` 4/4；`single-export-error-final` 25/25；`group-lifetime-adjacent` 24/24；`manga-final` 6/6；`rotated-fit-final` 31/31；`single-zip-final` 22/22；`memory-first` 2/2。这些运行有交集，不相加作为全量数量。完整 TRX（包括早期失败）见 `test-summary.json`。单图走正式任务工厂/下载管理器和真实 DownloadPage 行，漫画另经正式阅读器 Save；格式提供器为受控托管边界，输出用于验证生命周期，不证明任意真实编码器格式正确。取消/错误/重试状态从独立只读 SQLite 连接核对，不冒充完整进程重启恢复。覆盖模式重试保留旧输出，显式删除和非覆盖模式重置仍沿用原有删除语义。
+
+失败证据保留：`single-export-before` 八行暴露提前 Completed；`group-lifetime-before` 两行暴露子任务未停止但组允许重启；`manga-before` 4 失败/1 通过，使用原漫画实现但已包含共享 ImageDownloadTask 工作区改动，不是纯起点基线；`rotated-fit-before` 四行暴露长宽未交换造成的比例错误/四角裁切。`single-zip-before` 和 `single-zip-disposal-before` 各 5 失败/1 通过，后者用最终测试程序集配对归档旧产品 DLL，分别证明延迟不匹配及第二条目异常遗留池流；结束后恢复固定产品 DLL，未回退源码。公开流池事件按 GUID 区分显式 Dispose 与终结器回收，不能据此扩大为任意 native 内存验证。
+
+收尾包含两项测试改进：非 UI 的 DownloadManager 模型测试等待既有 SubscriptionFoldersLoadTask，再从测试线程修改队列。TCS 门闩复现初始加载与测试插入重复文件夹，证据 `manager-race-analysis.json` / `manager-race.patch`，修正后 `manager-fixed` 9/9；未改变产品任意线程并发契约。WorkCards 只在原单次点击及原断言外围记录命中、按下/抬起、Click、选择、焦点和 Tooltip；没有重试、额外延迟或削弱断言。`cards-diagnostic` 原八场景 1/1 通过，成功样本也可能在 down/up 间打开提示，不能据此确认上批偶发失败根因。
+
+重要边界执行一次 `scripts/verify-m3e.ps1 -OutputDirectory artifacts/m3e/2026-11-09-batch-1201/windows-final -ExtensionFixture <上述固定 DLL>`：桌面 Debug 10 警告/0 错误、测试 Release 206 警告/0 错误；完整回归 **636/636 通过、0 跳过**，耗时 **46 分 53.406 秒**。输入为 `b541bde6` 及当时两个未提交的测试改进，记录在 `windows-final/worktree.txt` 和 `full-input-source-hashes.json`；本次 WorkCards 原八组场景通过，但其历史偶发根因仍未确认。后两个功能单元使用独立 `--artifacts-path` 构建，默认测试/产品程序集哈希始终相同；Download 程序集仍带 `b541bde6` 构建版本及全量开始时的时间戳。两份测试文件只做 LF→CRLF，归一化内容不变。完整差异归属见 `full-source-comparison.json`，不能把较早全量说成最终补丁的全量重跑。
+
+完整回归运行期间的复审揭示两个相邻缺口，依 §3.2 正常追加独立单元，没有改写已提交历史。替换调度的 `replacement-diagnostic-before` 八行全部失败：静态图删除旧提供器持有的临时输入时出现 IOException，ZIP/GIF/WebP 在旧提供器未确认时已进入第二次调用。修复后 `replacement-final` **65/65**、`replacement-subscription-final` **15/15**、`replacement-lifecycle` **3/3**，三组互不重叠；验证真实 SaveCommand 连续保存、等待中的暂停/继续、独立目标先完成、最新文件和 SQLite 记录、初始化晚到及 Dispose 后不复活/退订。第一次 `replacement-before` 有两行夹具误点重试导致清理超时，保留但不作精确失败依据。该单元的资源交接证据限定为格式提供器执行期间同 DownloadTaskKey 的 QueueTask 替换。ActiveDownloaders 轮询可因取消提前退出，任务停止不等于外部原始下载器已确认停止，该路径保留待验收；移除记录后重加或不同身份同物理路径也未覆盖。
+
+旋转平移的有效旧版对照为 `rotated-pan-correct-before`：横/纵图的 ±90° 四行失败，0°/180° 四行通过；真实拖动已进入 Interaction，但旧 extent 沿错误轴，四角不可达。仅两个查看器文件曾临时还原用于独立旧版编译，其余工作区保持；不是纯起点仓库基线。早期漏鼠标按钮状态、命中工具栏的日志仅为输入诊断，不计为产品拖动失败。修复后的 `rotated-pan-final` **57/57**，耗时 **6 分 17.195 秒**，含八个新增场景和操控、适应、关闭回收、几何/手势/渲染/Swipe、工具栏及四语言阅读器/导航/原图/转换相邻契约。保留同一 AnimatedImage、手势引擎与 Continuous 路径，实际滚动内容命中不一定是 AnimatedImage 自身。抽查两端角标及非中心原图替换前后标记位置。最终显式重新编译产品，未使用时间戳还原可能留下的旧增量输出；来源和无效早期诊断见 `rotated-pan-evidence.txt`。两个追加单元各自有独立复审与冻结源码哈希，未重复执行整次全量。
+
+4K 样本保留正常文件缓存，避开测试驱动器持有页面的强引用；专用运行的 Swipe 第二至第五次关闭后托管存量 12,428,776→12,436,144 字节，Continuous 12,810,976→12,878,632 字节，全部五类弱引用回收。`memory-summary.json` 保存逐次采样；private bytes/working set 只是进程代理指标。这是固定静态图短周期证据，旧性能基线为另一工作负载和 runtime，未重生成 `PERFORMANCE_BASELINE.json` 或声称性能改善/预算通过。
+
+最终产品源码为 `b53c2cd0`。独立桌面 Debug 构建 `--artifacts-path artifacts/m3e/2026-11-09-batch-1201/desktop-final-build` 通过，14 警告/0 错误。Native AOT 命令 `dotnet publish src/Pixeval.Desktop/Pixeval.Desktop.csproj -c Release -r win-x64 --self-contained true --artifacts-path artifacts/m3e/2026-11-09-batch-1201/aot-build -o artifacts/m3e/2026-11-09-batch-1201/native-aot-final` 成功。PE 为 x64 PE32+，CLR 头 RVA/size 均零，EXE SHA256 `B6E47F923CC4446B58D70379C3A272C927DFD2E52D660482F813C09BA1E3C5F5`，未运行。8 个变更产品源码与发布输入哈希一致，129 个发布语言 JSON 与源码一致。与上一批原始发布日志比较，IL 裁剪/AOT 警告按原始代码/消息去重 **46→46，无增减**；仅规范化 XamlClosure 编号后为 42→42，同样无增减。结果见 `native-aot-header.json`、`aot-source-comparison.json`、`aot-warning-delta.json`；发布成功不等于原生运行时验收通过，普通增量构建未重报的依赖警告也不视为消除。
+
+修改的 XAML 经仓库 XamlStyler/根配置格式化，C# 经 whitespace 检查；XAML 解析、UTF-8 无 BOM、文档本地链接、子模块及 diff whitespace 收尾结果见 `static-validation.json`，源码/验证归属见 `final-source-hashes.json`、`validation-summary.json` 和 `final-state.json`。主计划只调整实际局部状态及 P15 进入实施中，用例只增加新契约；宿主用法、清单和旧性能基准未变。批次只追加这一条记录，文档与两项测试诊断/初始化改进集中收尾提交，不补写它自身哈希。
+
+未覆盖：扩展 ABI 没有取消入口，只能隔离旧结果而不能强制停止在途计算；真实格式编码、原始下载的完整故障矩阵、应用重启恢复、完整作品菜单/模式组合、动画和长期内存/同条件性能仍待验收。原生 IME、系统焦点/读屏/剪贴板/浏览器/文件选择器、触摸/DPI/GPU、其他平台和远程 CI 保持待验收。下一轮继续保留 WorkCards 单次输入诊断，在有失败证据时追查选择原因；另可按具体依赖补动画长期资源寿命或下载记录移除后重加的资源交接，先复现后决定范围。父步骤及 P12/P14/P15 整体未勾选。继续后台验证，不自动启用 computer use。
